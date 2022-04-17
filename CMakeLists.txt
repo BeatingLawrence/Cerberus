@@ -11,39 +11,34 @@ FetchContent_Declare(
   googletest
 )
 
+file(GLOB_RECURSE src_files CONFIGURE_DEPENDS
+    "src/*"
+)
+
+file(GLOB_RECURSE test_files CONFIGURE_DEPENDS
+    "test/*"
+)
+
 add_library(Cerberus SHARED
-  Cerberus_global.h
-  cerberus.cpp
-  cerberus.h
   cpp.astylerc
-  src/thread/thread.h
-  src/thread/thread.cpp
-  src/time/time.h
-  src/time/time.cpp
-  src/mutex/mutex.h
-  src/mutex/mutex.cpp
-  src/mutex/mutexlocker.h
-  src/mutex/mutexlocker.cpp
-  src/message/slot/baseslot.h
-  src/message/slot/baseslot.cpp
-  src/message/messagequeue.h
-  src/message/messagequeue.cpp
-  src/message/message.h
-  src/message/message.cpp
-  src/exception/exception.h
-  src/exception/exception.cpp
-  src/exception/exceptioncatalog.h
-  src/define.h
-  src/message/slot/charslot.h
-  src/message/slot/charslot.cpp
+  ${src_files}
 )
 
 target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY)
 
-add_executable(
-  test/test main.cpp 
-  test/threadtest.cpp
+install(TARGETS Cerberus DESTINATION lib)
+install(DIRECTORY src/. DESTINATION include/cerberus)
+
+add_executable(test
+  ${test_files}
 )
+
+target_include_directories(test PUBLIC
+    "../Dist/include"
+)
+
+find_library(CERBERUS_LIBRARY NAMES Cerberus PATHS "../Dist/lib" PATH_SUFFIXES lib)
+target_link_libraries(test LINK_PUBLIC ${CERBERUS_LIBRARY})
 
 find_library(GTEST_LIBRARY NAMES gtest PATHS "/usr/lib" PATH_SUFFIXES lib)
 target_link_libraries(test LINK_PUBLIC ${GTEST_LIBRARY})

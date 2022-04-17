@@ -15,12 +15,11 @@
  *  A terminated Thread cannot be resumed.
  */
 
-#include "Cerberus_global.h"
 #include <thread>
 #include <chrono>
-
-#include "../time/time.h"
+#include "../Cerberus_global.h"
 #include "../mutex/mutex.h"
+#include "../time/time.h"
 
 namespace cerberus
 {

@@ -1,5 +1,6 @@
 #include "cerberus.h"
 #include <cstring>
+#include <cstdarg>
 
 using namespace cerberus;
 
@@ -8,7 +9,7 @@ Cerberus::Cerberus()
 {
 }
 //=============================================================================
-std::string Cerberus::print(const char* format, ...)
+std::string Cerberus::strPrint(const char* format, ...)
 {
     std::string ret;
 
@@ -26,7 +27,7 @@ std::string Cerberus::print(const char* format, ...)
             if(required > 0)
             {
                 ret.resize(required);
-                vsnprintf(&ret[0], required, format, list);
+                vsnprintf(&ret[0], required + 1, format, list);
             }
 
             va_end(testList);

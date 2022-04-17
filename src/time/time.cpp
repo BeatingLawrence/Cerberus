@@ -3,7 +3,7 @@
 using namespace cerberus::time;
 
 //=============================================================================
-Time::cerberus_time Time::create(uint64_t count, Unit unit)
+cerberus_time Time::create(uint64_t count, Unit unit)
 {
     return cerberus_time(new Time(count, unit));
 }

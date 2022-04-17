@@ -9,7 +9,7 @@ namespace cerberus
     class CERBERUS_EXPORT Cerberus
     {
         public:
-            static std::string print(const char* format, ...);
+            static std::string strPrint(const char* format, ...);
 
             Cerberus();
     };

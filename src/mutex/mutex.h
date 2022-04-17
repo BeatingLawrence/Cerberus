@@ -11,7 +11,7 @@
  */
 
 #include <mutex>
-#include "Cerberus_global.h"
+#include "../Cerberus_global.h"
 
 namespace cerberus
 {
