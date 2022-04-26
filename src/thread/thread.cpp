@@ -17,11 +17,11 @@ void cerberus::thread::Thread::_thread()
 
     while(!getTerminateFlag())
     {
-        if(getPausedFlag())
+        if(getPausedFlag())     // paused
         {
             std::this_thread::yield();
         }
-        else
+        else                    // execute
         {
             if(firstRun)
             {

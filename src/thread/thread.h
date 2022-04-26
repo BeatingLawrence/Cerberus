@@ -8,7 +8,7 @@
  *
  *  The Thread may be of three different types:
  *
- *      - Non-Periodic: The Thread will only wake up from sleep state when a message is pushed into its message queue.
+ *      - Non-Periodic: The Thread will constntly wake up as long as messages are present in the queue.
  *                      The start() method will enable the thread and make it consuming all the queue constantly with no delay between cycles.
  *                      The stop() method will disable it. Be careful of this, the message queue could grew up hugely.
  *
@@ -24,14 +24,14 @@
  *  join() can be used in any case to wait for the thread to terminate and to retrieve the return value.
  *
  *  When a periodic Thread is paused or when a Non-Periodic Thread is waiting for messages, the system scheduler is informed
- *  and the Thread will not consume much machine cycles.
+ *  and the Thread will not consume many machine cycles.
  *
  *  A terminated Thread cannot be resumed.
  *
- *  User can access the queue at any time inside the tick() using the nextMessage(); nextMessageKeep() or isQueueEmpty(); methods
+ *  User can access the queue at any time inside the tick() using the nextMessage() nextMessageKeep() or isQueueEmpty() methods
  *
  *  warmUp() will be called on the first start, before the first tick() execution.
- *  coolDown() will be called after the last run of tick(), after terminate() is called.
+ *  coolDown() will be called after the last run of tick(), after terminate() is called. When its execution finishes, the join() releases.
  */
 
 #include <thread>
@@ -95,7 +95,7 @@ namespace cerberus
                 void stop();
 
                 //Blocks until thread terminates and returns the last tick() exit value.
-                //If stop is true, the Thread is also terminated.
+                //If stop is true (default), the Thread is also terminated.
                 int join(bool stop = true);
 
                 //Terminates the Thread

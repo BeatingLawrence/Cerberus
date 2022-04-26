@@ -1,20 +1,20 @@
 #include "testthread.h"
-#include <iostream>
+#include <cerberus/cerberus.h>
 
 int TestThread::tick()
 {
-    std::cout << "TICK" << std::endl;
+    cerberus::Cerberus::stdoutPrint("TICK");
     return 10;
 }
 
 void TestThread::warmUp()
 {
-    std::cout << "warm-up" << std::endl;
+    cerberus::Cerberus::stdoutPrint("warm-up");
 }
 
 void TestThread::coolDown()
 {
-    std::cout << "cool-down" << std::endl;
+    cerberus::Cerberus::stdoutPrint("cool-down");
 }
 
 TestThread::TestThread() : cerberus::thread::Thread(Thread::ThreadPeriodicity::TP_Periodic, 500)
