@@ -7,7 +7,6 @@
  *  memory accesses done by threads.
  *
  *  This implementation offers locking, unlocking and conditional-locking of mutexes.
- *
  */
 
 #include <mutex>

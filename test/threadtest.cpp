@@ -1,6 +1,12 @@
 #include <gtest/gtest.h>
+#include "./testthread.h"
+#include <thread>
+#include <chrono>
 
-TEST(firstTest, test1)
+TEST(threadTest, thread_creation)
 {
-    EXPECT_EQ(10, 10);
+    TestThread thread;
+    thread.start();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    EXPECT_EQ(thread.join(), 10);
 }

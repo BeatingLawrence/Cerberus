@@ -3,11 +3,6 @@
 using namespace cerberus::time;
 
 //=============================================================================
-cerberus_time Time::create(uint64_t count, Unit unit)
-{
-    return cerberus_time(new Time(count, unit));
-}
-//=============================================================================
 Time::Time() :
     m_period_uS(0)
 {
@@ -42,7 +37,7 @@ Time::Time(uint64_t count, Unit unit)
 //=============================================================================
 bool Time::isValid() const
 {
-    return (m_period_uS == 0);
+    return (m_period_uS != 0);
 }
 //=============================================================================
 uint64_t Time::getMicroseconds() const

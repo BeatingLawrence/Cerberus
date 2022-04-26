@@ -3,16 +3,35 @@
 
 /*  This class provides an implementation of a thread.
  *
- *  To run code in using this Thread class, the developer has to write a derived class which extends this one
- *  and overrides the tick() method [protected virtual].
+ *  To run code using this Thread class, the developer has to write a derived class which extends this one
+ *  and overrides the tick() method [protected virtual] (and eventually warmUp() and coolDown()).
  *
- *  The Thread object can always be started or stopped anytime by any other thread using start() and stop() methods.
- *  When a thread is stopped, it is putted in a paused state; the system scheduler is informed and manages the machines cycles accordingly.
- *  When a thread is started, it simply resumes its loop of code.
+ *  The Thread may be of three different types:
  *
- *  To finally terminate the Thread execution, use the terminate() method.
+ *      - Non-Periodic: The Thread will only wake up from sleep state when a message is pushed into its message queue.
+ *                      The start() method will enable the thread and make it consuming all the queue constantly with no delay between cycles.
+ *                      The stop() method will disable it. Be careful of this, the message queue could grew up hugely.
+ *
+ *      - Periodic:     The Thread will wake up from sleep state every time a period of time passes.
+ *                      The start() method will resume the cycle.
+ *                      The stop() method will pause the cycle.
+ *
+ *      - One-Shot:     The Thread will run only once.
+ *                      The start() method will begin the execution.
+ *                      The stop() method does nothing.
+ *                      The terminate() method does nothing.
+ *
+ *  join() can be used in any case to wait for the thread to terminate and to retrieve the return value.
+ *
+ *  When a periodic Thread is paused or when a Non-Periodic Thread is waiting for messages, the system scheduler is informed
+ *  and the Thread will not consume much machine cycles.
  *
  *  A terminated Thread cannot be resumed.
+ *
+ *  User can access the queue at any time inside the tick() using the nextMessage(); nextMessageKeep() or isQueueEmpty(); methods
+ *
+ *  warmUp() will be called on the first start, before the first tick() execution.
+ *  coolDown() will be called after the last run of tick(), after terminate() is called.
  */
 
 #include <thread>
@@ -20,13 +39,22 @@
 #include "../Cerberus_global.h"
 #include "../mutex/mutex.h"
 #include "../time/time.h"
+#include "./threadbase.h"
 
 namespace cerberus
 {
     namespace thread
     {
-        class CERBERUS_EXPORT Thread
+        class CERBERUS_EXPORT Thread : public cerberus::thread::ThreadBase
         {
+            public:
+                enum ThreadPeriodicity
+                {
+                    TP_NonPeriodic,
+                    TP_Periodic,
+                    TP_OneShot,
+                };
+
             private:
                 std::thread m_thread;
 
@@ -36,34 +64,28 @@ namespace cerberus
 
                 void _thread();
 
-                mutex::Mutex m_mutex;
-
-                bool m_periodic;
-
-                bool m_executeFlag; //Do not use directly!
-
-                bool m_terminateFlag; //Do not use directly!
-
-                void _setExecuteFlag(bool state);
-
-                void _setTerminateFlag(bool state);
-
-                bool _getExecuteFlag();
-
-                bool _getTerminateFlag();
+                ThreadPeriodicity m_periodicity;
 
                 int m_retValue;
 
             protected:
                 virtual int tick();
 
+                virtual void warmUp();
+
+                virtual void coolDown();
+
+                void sleep(const time::Time& time);
+
             public:
-                //Constructs a non-periodic thread by default. Passing a valid Time will construct a periodic one.
-                Thread(const time::Time& period = time::Time());
+                //Constructs a non-periodic thread by default. If periodicity is TP_Periodic a valid time must be specified.
+                Thread(ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& period = time::Time());
 
                 Thread(const Thread& other) = delete;
 
-                //Terminates the Thread if not already terminated, before destructing it
+                Thread(Thread&& other) = delete;
+
+                //Terminates the Thread if not already terminated, before destructing it. Could block (join)
                 virtual ~Thread();
 
                 //Starts the thread execution
@@ -72,8 +94,9 @@ namespace cerberus
                 //Stops the thread execution
                 void stop();
 
-                //Blocks until thread terminates and returns the last tick() exit value
-                int join();
+                //Blocks until thread terminates and returns the last tick() exit value.
+                //If stop is true, the Thread is also terminated.
+                int join(bool stop = true);
 
                 //Terminates the Thread
                 void terminate();
@@ -81,4 +104,4 @@ namespace cerberus
     }
 }
 
-#endif // CERBERUS_H
+#endif // THREAD_THREAD_H

@@ -16,8 +16,6 @@ namespace cerberus
 {
     namespace time
     {
-        typedef std::shared_ptr<class Time> cerberus_time;
-
         class CERBERUS_EXPORT Time
         {
             private:
@@ -32,8 +30,6 @@ namespace cerberus
                     U_Minute,
                     U_Hour,
                 };
-
-                static cerberus_time create(uint64_t count, Unit unit = U_MilliSecond);
 
                 //Constructs an invalid Time object
                 Time();

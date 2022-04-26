@@ -3,11 +3,11 @@
 
 /*  This class provides a message queue implementation.
  *
- *  The queue consists in a list of pointers to messages.
+ *  The queue consists in a list of shared-pointers to Messages.
  *
  *  Respecting the behavoir of a queue, it is only
  *  possible to insert elements at the end of the queue and
- *  extract (and read) them from the beginning.
+ *  extract them from the beginning.
  *
  *  It is also possible to access to the first element read-only, without extracting.
  *
@@ -16,37 +16,33 @@
  */
 
 #include <list>
-#include <memory>
 #include "./message.h"
 
 namespace cerberus
 {
     namespace message
     {
-        typedef std::shared_ptr<class MessageQueue> cerberus_messageQueue;
-
         class MessageQueue
         {
             private:
                 std::list<cerberus_message> m_queue;
 
             public:
-                static cerberus_messageQueue create();
-
-                static cerberus_messageQueue create(const MessageQueue& other);
-
+                //Constructs an empty message queue
                 MessageQueue();
 
-                MessageQueue(const MessageQueue& other);
+                MessageQueue(const MessageQueue& other) = delete;
+
+                MessageQueue(MessageQueue&& other) = delete;
 
                 //Adds a message at the end of the queue
                 void add(cerberus_message message);
 
                 //Returns the first message in the queue and removes it
-                cerberus_message nextRemove();
+                cerberus_message next();
 
-                //Returns the first message in the queue
-                cerberus_message next() const;
+                //Returns the first message in the queue without modifying the queue
+                cerberus_message nextKeep() const;
 
                 //Returns the size of the queue
                 size_t size() const;

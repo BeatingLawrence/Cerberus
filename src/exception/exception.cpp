@@ -28,11 +28,11 @@ Exception::Exception(const char* text, uint32_t line, const char* fileName, cons
 
     if(type == nullptr)
     {
-        m_error = cerberus::Cerberus::strPrint("Unspecified exception in %s line %u: %s", fileName, line, text);
+        m_error = cerberus::Cerberus::strPrint("Unspecified exception in %s line %u: %s", file.c_str(), line, text);
     }
     else
     {
-        m_error = cerberus::Cerberus::strPrint("%s exception in %s line %u: %s", type, fileName, line, text);
+        m_error = cerberus::Cerberus::strPrint("%s exception in %s line %u: %s", type, file.c_str(), line, text);
     }
 }
 //=============================================================================

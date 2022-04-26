@@ -4,12 +4,11 @@
 /*  This class provides a convenient and secure way to lock and unlock mutexes.
  *
  *  When a MutexLocker is constructed, the corresponding mutex passed as
- *  argument is locked. When the MutexLocker is distructed afterwards, the mutex
- *  is unlocked.
+ *  argument is locked. When the MutexLocker is distructed afterwards, the
+ *  associated mutex is unlocked.
  *
  *  In this way, the developer has not to remember to unlock a specific mutex.
  *  It will be automatically unlocked while the thread will reach the end of the calling method.
- *
  */
 
 #include "./mutex.h"

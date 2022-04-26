@@ -4,22 +4,7 @@
 using namespace cerberus::message;
 
 //=============================================================================
-cerberus_messageQueue MessageQueue::create()
-{
-    return cerberus_messageQueue(new MessageQueue());
-}
-//=============================================================================
-cerberus_messageQueue MessageQueue::create(const MessageQueue& other)
-{
-    return cerberus_messageQueue(new MessageQueue(other));
-}
-//=============================================================================
 MessageQueue::MessageQueue()
-{
-    // noop
-}
-//=============================================================================
-MessageQueue::MessageQueue(const MessageQueue& other) : m_queue(other.m_queue)
 {
     // noop
 }
@@ -29,7 +14,7 @@ void MessageQueue::add(cerberus_message message)
     m_queue.push_back(message);
 }
 //=============================================================================
-cerberus_message MessageQueue::nextRemove()
+cerberus_message MessageQueue::next()
 {
     if(m_queue.empty())
     {
@@ -41,7 +26,7 @@ cerberus_message MessageQueue::nextRemove()
     return next;
 }
 //=============================================================================
-cerberus_message MessageQueue::next() const
+cerberus_message MessageQueue::nextKeep() const
 {
     if(m_queue.empty())
     {

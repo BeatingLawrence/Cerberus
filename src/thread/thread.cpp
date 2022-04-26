@@ -1,7 +1,9 @@
 #include "thread.h"
 #include <chrono>
+#include <iostream>
 
 #include "../mutex/mutexlocker.h"
+#include "../exception/exceptioncatalog.h"
 
 //=============================================================================
 void cerberus::thread::Thread::_staticThread(Thread* context)
@@ -11,46 +13,47 @@ void cerberus::thread::Thread::_staticThread(Thread* context)
 //=============================================================================
 void cerberus::thread::Thread::_thread()
 {
-    while(!_getTerminateFlag())
+    bool firstRun = true;
+
+    while(!getTerminateFlag())
     {
-        if(_getExecuteFlag())
-        {
-            m_retValue = tick();
-        }
-        else
+        if(getPausedFlag())
         {
             std::this_thread::yield();
         }
-
-        if(m_periodic)
+        else
         {
-            std::this_thread::sleep_for(m_period);
+            if(firstRun)
+            {
+                warmUp();
+                firstRun = false;
+            }
+
+            if(m_periodicity == TP_OneShot)
+            {
+                m_retValue = tick();
+                setTerminateFlag(true);
+            }
+            else if(m_periodicity == TP_NonPeriodic)
+            {
+                if(isQueueEmpty())
+                {
+                    std::this_thread::yield();
+                }
+                else
+                {
+                    m_retValue = tick();
+                }
+            }
+            else if(m_periodicity == TP_Periodic)
+            {
+                m_retValue = tick();
+                std::this_thread::sleep_for(m_period);
+            }
         }
     }
-}
-//=============================================================================
-void cerberus::thread::Thread::_setExecuteFlag(bool state)
-{
-    mutex::MutexLocker locker(&m_mutex);
-    m_executeFlag = state;
-}
-//=============================================================================
-void cerberus::thread::Thread::_setTerminateFlag(bool state)
-{
-    mutex::MutexLocker locker(&m_mutex);
-    m_terminateFlag = state;
-}
-//=============================================================================
-bool cerberus::thread::Thread::_getExecuteFlag()
-{
-    mutex::MutexLocker locker(&m_mutex);
-    return m_executeFlag;
-}
-//=============================================================================
-bool cerberus::thread::Thread::_getTerminateFlag()
-{
-    mutex::MutexLocker locker(&m_mutex);
-    return m_terminateFlag;
+
+    coolDown();
 }
 //=============================================================================
 int cerberus::thread::Thread::tick()
@@ -59,52 +62,85 @@ int cerberus::thread::Thread::tick()
     return 0;
 }
 //=============================================================================
-cerberus::thread::Thread::Thread(const time::Time& time) :
+void cerberus::thread::Thread::warmUp()
+{
+    // noop
+}
+//=============================================================================
+void cerberus::thread::Thread::coolDown()
+{
+    // noop
+}
+//=============================================================================
+void cerberus::thread::Thread::sleep(const time::Time& time)
+{
+    std::this_thread::sleep_for(std::chrono::microseconds(time.getMicroseconds()));
+}
+//=============================================================================
+cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const time::Time& time) :
+    ThreadBase(),
     m_thread(_staticThread, this),
-    m_periodic(false),
-    m_executeFlag(false),
-    m_terminateFlag(false),
+    m_periodicity(periodicity),
     m_retValue(0)
 {
-    if(time.isValid())
+    if(periodicity == ThreadPeriodicity::TP_NonPeriodic)
     {
-        m_period = std::chrono::microseconds(time.getMicroseconds());
-        m_periodic = true;
+        //log non periodic thread creation
+    }
+    else if(periodicity == ThreadPeriodicity::TP_Periodic)
+    {
+        //log periodic thread creation
+        if(time.isValid())
+        {
+            m_period = std::chrono::microseconds(time.getMicroseconds());
+        }
+        else
+        {
+            throw cerberusIllegalArgumentExc("cannot construct a periodic thread using an invalid time");
+        }
+    }
+    else if(periodicity == ThreadPeriodicity::TP_OneShot)
+    {
+        //log oneshot thread creation
+    }
+    else
+    {
+        throw cerberusIllegalArgumentExc("invalid periodicity specifier");
     }
 }
 //=============================================================================
 cerberus::thread::Thread::~Thread()
 {
-    if(_getTerminateFlag() == false)
-    {
-        _setTerminateFlag(true);
-        join();
-    }
+    join(!getTerminateFlag());
 }
 //=============================================================================
 void cerberus::thread::Thread::start()
 {
-    _setExecuteFlag(true);
+    setPausedFlag(false);
 }
 //=============================================================================
 void cerberus::thread::Thread::stop()
 {
-    _setExecuteFlag(false);
+    setPausedFlag(true);
 }
 //=============================================================================
-int cerberus::thread::Thread::join()
+int cerberus::thread::Thread::join(bool stop)
 {
-    if(!m_thread.joinable())
+    if(stop && !getTerminateFlag())
     {
-        return 0;
+        terminate();
     }
 
-    m_thread.join();
+    if(m_thread.joinable())
+    {
+        m_thread.join();
+    }
+
     return m_retValue;
 }
 //=============================================================================
 void cerberus::thread::Thread::terminate()
 {
-    _setTerminateFlag(true);
+    setTerminateFlag(true);
 }
 //=============================================================================
