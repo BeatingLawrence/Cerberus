@@ -2,6 +2,7 @@
 #define CERBERUS_MESSAGE_SLOT_CHARSLOT_H
 
 #include "baseslot.h"
+#include "../../Cerberus_global.h"
 
 namespace cerberus
 {
@@ -9,7 +10,7 @@ namespace cerberus
     {
         namespace slot
         {
-            class CharSlot : public BaseSlot
+            class CERBERUS_EXPORT CharSlot : public BaseSlot
             {
                 private:
                     char m_value;
@@ -17,7 +18,7 @@ namespace cerberus
                 public:
                     static cerberus_slot create(char value = 0);
 
-                    static cerberus_slot create(const CharSlot& other);
+                    static cerberus_slot createFrom(const CharSlot& other);
 
                     CharSlot() = delete;
 

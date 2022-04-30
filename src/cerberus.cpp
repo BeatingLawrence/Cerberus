@@ -17,6 +17,7 @@ Cerberus::Cerberus() :
     m_useColorInTerminal(false),
     m_initFlag(false)
 {
+    // noop
 }
 //=============================================================================
 Cerberus* Cerberus::provider()
@@ -57,7 +58,7 @@ bool Cerberus::_isColorSupported()
 {
     bool colorSupported = false;
 #ifdef WINDOWS_SYSTEM
-    throw cerberusImplementationMissExc("Windows terminal management not implemented yet!")
+    colorSupported = false; //TODO add windows terminal management
 #else
 
     if(isatty(fileno(stdout)) == 1)

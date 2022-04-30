@@ -9,17 +9,17 @@ cerberus_slot CharSlot::create(char value)
     return cerberus_slot(new CharSlot(value));
 }
 //=============================================================================
-cerberus_slot CharSlot::create(const CharSlot& other)
+cerberus_slot CharSlot::createFrom(const CharSlot& other)
 {
     return cerberus_slot(new CharSlot(other));
 }
 //=============================================================================
-CharSlot::CharSlot(char value) : BaseSlot(SLOT_CHAR_ID), m_value(value)
+CharSlot::CharSlot(char value) : BaseSlot(BaseSlot::ST_CHAR), m_value(value)
 {
     // noop
 }
 //=============================================================================
-CharSlot::CharSlot(const CharSlot& other) : BaseSlot(other.id()), m_value(other.m_value)
+CharSlot::CharSlot(const CharSlot& other) : BaseSlot(other.type()), m_value(other.m_value)
 {
     // noop
 }

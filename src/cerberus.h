@@ -1,8 +1,8 @@
 #ifndef CERBERUS_H
 #define CERBERUS_H
 
-#include "Cerberus_global.h"
 #include <string>
+#include "Cerberus_global.h"
 
 namespace cerberus
 {

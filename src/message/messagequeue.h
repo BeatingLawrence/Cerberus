@@ -17,12 +17,13 @@
 
 #include <list>
 #include "./message.h"
+#include "../Cerberus_global.h"
 
 namespace cerberus
 {
     namespace message
     {
-        class MessageQueue
+        class CERBERUS_EXPORT MessageQueue
         {
             private:
                 std::list<cerberus_message> m_queue;

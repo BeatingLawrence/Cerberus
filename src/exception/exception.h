@@ -3,12 +3,13 @@
 
 #include <exception>
 #include <string>
+#include "../Cerberus_global.h"
 
 namespace cerberus
 {
     namespace exception
     {
-        class Exception : public std::exception
+        class CERBERUS_EXPORT Exception : public std::exception
         {
             private:
                 std::string m_error;
