@@ -3,6 +3,9 @@
 #include <cstdarg>
 #include <iostream>
 #include "./exception/exceptioncatalog.h"
+#include "./mutex/mutexlocker.h"
+
+#include "./message/slot/charslot.h"
 
 #ifdef WINDOWS_SYSTEM
     // noop
@@ -54,6 +57,47 @@ void Cerberus::init(const CerberusInitParms& parms)
     m_initFlag = true;
 }
 //=============================================================================
+uint32_t Cerberus::registerMessage(const message::Message& message, const std::string& name)
+{
+    if(message.count() == 0)
+    {
+        throw cerberusIllegalArgumentExc("Cannot register an empty message");
+    }
+
+    if(m_register.messageTemplateNameAlreadyExists(name))
+    {
+        throw cerberusIllegalArgumentExc("Given message name is already registered");
+    }
+
+    message::MessageTemplate tmplt(message, name);
+    return m_register.addMessageTemplate(tmplt);
+}
+//=============================================================================
+void Cerberus::forgetMessage(uint32_t id)
+{
+    m_register.removeMessageTemplate(id);
+}
+//=============================================================================
+uint32_t Cerberus::messageIdByName(const std::string& name) const
+{
+    return m_register.messageIdByName(name);
+}
+//=============================================================================
+message::cerberus_message Cerberus::messageConstruct(uint32_t id) const
+{
+    message::MessageTemplate found = m_register.messageTemplateById(id);
+    message::cerberus_message message = message::Message::create();
+    message->setId(id);
+
+    for(size_t i = 0; i < found.count(); i++)
+    {
+        message::slot::cerberus_slot slot = _newSlot(found.getSlotTypeAt(i));
+        message->addSlot(slot);
+    }
+
+    return message;
+}
+//=============================================================================
 bool Cerberus::_isColorSupported()
 {
     bool colorSupported = false;
@@ -102,6 +146,58 @@ std::string Cerberus::_parseFormattingData(const TerminalFormatting& data)
     return toReturn;
 }
 //=============================================================================
+message::slot::cerberus_slot Cerberus::_newSlot(message::slot::BaseSlot::SlotType type)
+{
+    switch(type)
+    {
+        case message::slot::BaseSlot::ST_UCHAR:
+            return message::slot::CharSlot::create();
+            break;
+
+        case message::slot::BaseSlot::ST_CHAR:
+            // TODO to implement
+            break;
+
+        case message::slot::BaseSlot::ST_USHORT:
+            // TODO to implement
+            break;
+
+        case message::slot::BaseSlot::ST_SHORT:
+            // TODO to implement
+            break;
+
+        case message::slot::BaseSlot::ST_ULONG:
+            // TODO to implement
+            break;
+
+        case message::slot::BaseSlot::ST_LONG:
+            // TODO to implement
+            break;
+
+        case message::slot::BaseSlot::ST_ULONGLONG:
+            // TODO to implement
+            break;
+
+        case message::slot::BaseSlot::ST_LONGLONG:
+            // TODO to implement
+            break;
+
+        case message::slot::BaseSlot::ST_FLOAT:
+            // TODO to implement
+            break;
+
+        case message::slot::BaseSlot::ST_DOUBLE:
+            // TODO to implement
+            break;
+
+        case message::slot::BaseSlot::ST_BOOL:
+            // TODO to implement
+            break;
+    }
+
+    throw cerberusIllegalArgumentExc("Factory given ID does not exist or is not yet implemented");
+}
+//=============================================================================
 std::string Cerberus::strPrint(const char* format, ...)
 {
     std::string ret;
@@ -129,6 +225,26 @@ std::string Cerberus::strPrint(const char* format, ...)
     }
 
     return ret;
+}
+//=============================================================================
+void Cerberus::log(const std::string& str, LogLevel logLevel)
+{
+    mutex::MutexLocker locker(&m_logMutex);
+
+    switch(logLevel)
+    {
+        case LL_Info:       //writes on stdout
+            break;
+
+        case LL_Warning:    //writes on stdout
+            break;
+
+        case LL_Error:      //writes on stderr
+            break;
+
+        case LL_Debug:      //writes on stdout
+            break;
+    }
 }
 //=============================================================================
 void Cerberus::stdoutPrint(const std::string& str)

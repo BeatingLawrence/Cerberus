@@ -3,12 +3,12 @@
 using namespace cerberus::message;
 
 //=============================================================================
-MessageTemplate::MessageTemplate(const std::string& name) : m_name(name), m_id(0)
+MessageTemplate::MessageTemplate(const std::string& name) : m_name(name)
 {
     // noop
 }
 //=============================================================================
-MessageTemplate::MessageTemplate(const Message& message, const std::string& name) : m_name(name), m_id(message.id())
+MessageTemplate::MessageTemplate(const Message& message, const std::string& name) : m_name(name)
 {
     for(size_t i = 0; i < message.count(); i++)
     {
@@ -31,14 +31,8 @@ std::string MessageTemplate::name() const
     return m_name;
 }
 //=============================================================================
-uint32_t MessageTemplate::id() const
+uint32_t MessageTemplate::count() const
 {
-    return m_id;
+    return m_types.size();
 }
 //=============================================================================
-void MessageTemplate::setId(uint32_t id)
-{
-    m_id = id;
-}
-//=============================================================================
-

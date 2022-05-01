@@ -23,8 +23,6 @@ namespace cerberus
 
                 std::string m_name;
 
-                uint32_t m_id;
-
             public:
                 MessageTemplate() = delete;
 
@@ -45,11 +43,8 @@ namespace cerberus
                 //Returns the template name
                 std::string name() const;
 
-                //Returns the ID of the template
-                uint32_t id() const;
-
-                //Sets the ID of the template
-                void setId(uint32_t id);
+                //Returns the number of slots contained in this template
+                uint32_t count() const;
         };
     }
 }

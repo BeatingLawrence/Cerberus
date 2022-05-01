@@ -1,5 +1,6 @@
 #include "register.h"
 #include "./exception/exceptioncatalog.h"
+#include "./mutex/mutexlocker.h"
 
 using namespace cerberus;
 
@@ -11,7 +12,7 @@ uint32_t Register::_findAvailableId_messageTemplates()  // TODO to optimize
         return 1;
     }
 
-    uint32_t id = m_messageTemplates.front().id();
+    uint32_t id = m_messageTemplates.front().first;
 
     while(true)
     {
@@ -19,7 +20,7 @@ uint32_t Register::_findAvailableId_messageTemplates()  // TODO to optimize
 
         for(auto& el : m_messageTemplates)
         {
-            if(el.id() == id)
+            if(el.first == id)
             {
                 id++;
                 finalIteration = false;
@@ -40,17 +41,19 @@ Register::Register()
 //=============================================================================
 uint32_t Register::addMessageTemplate(const message::MessageTemplate& toAdd)
 {
-    message::MessageTemplate msgtmp(toAdd);
-    msgtmp.setId(_findAvailableId_messageTemplates());
-    m_messageTemplates.push_back(msgtmp);
-    return msgtmp.id();
+    mutex::MutexLocker locker(&m_messageTemplateMutex);
+    std::pair<uint32_t, message::MessageTemplate> pair(_findAvailableId_messageTemplates(), toAdd);
+    m_messageTemplates.push_back(pair);
+    return pair.first;
 }
 //=============================================================================
 void Register::removeMessageTemplate(uint32_t idToRemove)
 {
+    mutex::MutexLocker locker(&m_messageTemplateMutex);
+
     for(auto it = m_messageTemplates.begin(); it != m_messageTemplates.end(); it++)
     {
-        if((*it).id() == idToRemove)
+        if((*it).first == idToRemove)
         {
             m_messageTemplates.erase(it);
             return;
@@ -60,16 +63,48 @@ void Register::removeMessageTemplate(uint32_t idToRemove)
     throw cerberusIllegalArgumentExc("Given ID does not exist");
 }
 //=============================================================================
-message::MessageTemplate Register::messageTemplateById(uint32_t id) const
+uint32_t Register::messageIdByName(const std::string& name) const
 {
+    mutex::MutexLocker locker(&m_messageTemplateMutex);
+
     for(auto& el : m_messageTemplates)
     {
-        if(el.id() == id)
+        if(el.second.name().compare(name) == 0)
         {
-            return el;
+            return el.first;
+        }
+    }
+
+    return Invalid_ID;
+}
+//=============================================================================
+message::MessageTemplate Register::messageTemplateById(uint32_t id) const
+{
+    mutex::MutexLocker locker(&m_messageTemplateMutex);
+
+    for(auto& el : m_messageTemplates)
+    {
+        if(el.first == id)
+        {
+            return el.second;
         }
     }
 
     throw cerberusIllegalArgumentExc("Given ID does not exist");
+}
+//=============================================================================
+bool Register::messageTemplateNameAlreadyExists(const std::string& name) const
+{
+    mutex::MutexLocker locker(&m_messageTemplateMutex);
+
+    for(auto& el : m_messageTemplates)
+    {
+        if(el.second.name().compare(name) == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 //=============================================================================
