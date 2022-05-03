@@ -29,7 +29,7 @@ target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY)
 install(TARGETS Cerberus DESTINATION lib)
 install(DIRECTORY src/. DESTINATION include/cerberus)
 
-add_executable(test
+add_executable(test EXCLUDE_FROM_ALL
   ${test_files}
 )
 

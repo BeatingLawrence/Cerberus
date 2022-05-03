@@ -229,7 +229,8 @@ std::string Cerberus::strPrint(const char* format, ...)
 //=============================================================================
 void Cerberus::log(const std::string& str, LogLevel logLevel)
 {
-    mutex::MutexLocker locker(&m_logMutex);
+    static mutex::Mutex mutex;
+    mutex::MutexLocker locker(&mutex);
 
     switch(logLevel)
     {

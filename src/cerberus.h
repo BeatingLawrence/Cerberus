@@ -39,8 +39,6 @@ namespace cerberus
 
             std::string _parseFormattingData(const TerminalFormatting& data);
 
-            static mutex::Mutex m_logMutex;
-
             bool m_initFlag;
 
             Register m_register;
