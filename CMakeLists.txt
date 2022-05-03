@@ -6,6 +6,8 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_DEBUG_POSTFIX -d)
+
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -37,8 +39,11 @@ target_include_directories(test PUBLIC
     "../Dist/include"
 )
 
-find_library(CERBERUS_LIBRARY NAMES Cerberus PATHS "../Dist/lib" PATH_SUFFIXES lib)
-target_link_libraries(test LINK_PUBLIC ${CERBERUS_LIBRARY})
+if(EXISTS "../Dist/lib/libCerberus-d.so")
+    message(STATUS "Cerberus debug library found!")
+    find_library(CERBERUS_LIBRARY NAMES Cerberus-d PATHS "../Dist/lib" PATH_SUFFIXES lib)
+    target_link_libraries(test LINK_PUBLIC ${CERBERUS_LIBRARY})
+endif()
 
 find_library(GTEST_LIBRARY NAMES gtest PATHS "/usr/lib" PATH_SUFFIXES lib)
 target_link_libraries(test LINK_PUBLIC ${GTEST_LIBRARY})
