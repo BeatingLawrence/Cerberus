@@ -3,18 +3,18 @@
 
 int TestThread::tick()
 {
-    cerberus::Cerberus::stdoutPrint("TICK");
+    cerberus::Cerberus::log("TICK");
     return 10;
 }
 
 void TestThread::warmUp()
 {
-    cerberus::Cerberus::stdoutPrint("warm-up");
+    cerberus::Cerberus::log("Warm-up");
 }
 
 void TestThread::coolDown()
 {
-    cerberus::Cerberus::stdoutPrint("cool-down");
+    cerberus::Cerberus::log("Cool-down");
 }
 
 TestThread::TestThread() : cerberus::thread::Thread(Thread::ThreadPeriodicity::TP_Periodic, 500)

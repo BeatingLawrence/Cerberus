@@ -4,6 +4,8 @@
 #include <iostream>
 #include "./exception/exceptioncatalog.h"
 #include "./mutex/mutexlocker.h"
+#include <chrono>
+#include <ctime>
 
 #include "./message/slot/charslot.h"
 
@@ -14,10 +16,11 @@
 #endif
 
 using namespace cerberus;
+const char* Cerberus::EndOfFormatting = "\033[0m";
 
 //=============================================================================
 Cerberus::Cerberus() :
-    m_useColorInTerminal(false),
+    m_useFormattedTerminal(false),
     m_initFlag(false)
 {
     // noop
@@ -33,7 +36,7 @@ void Cerberus::init(const CerberusInitParms& parms)
 {
     if(m_initFlag)
     {
-        stderrPrint("Cerberus already initted, skipping init() call..");
+        log("Cerberus already initted, skipping init() call..");
         return;
     }
 
@@ -41,19 +44,24 @@ void Cerberus::init(const CerberusInitParms& parms)
 
     if(parms.terminalFormattingDisabled)
     {
-        m_useColorInTerminal = false;
+        m_useFormattedTerminal = false;
     }
     else
     {
-        m_useColorInTerminal = _isColorSupported();
+        m_useFormattedTerminal = _isColorSupported();
     }
 
-    if(m_useColorInTerminal)
+    if(m_useFormattedTerminal)
     {
-        m_stdout_terminalFormatting = _parseFormattingData(parms.stdout_formatting);
-        m_stderr_terminalFormatting = _parseFormattingData(parms.stderr_formatting);
+        m_infoLogTerminalFormatting = _parseFormattingData(parms.terminal.infoRole);
+        m_warningLogTerminalFormatting = _parseFormattingData(parms.terminal.warningRole);
+        m_errorLogTerminalFormatting = _parseFormattingData(parms.terminal.errorRole);
+        m_debugLogTerminalFormatting = _parseFormattingData(parms.terminal.debugRole);
+        std::cout << m_infoLogTerminalFormatting << std::endl;
+        std::cout << m_warningLogTerminalFormatting << std::endl;
     }
 
+    //Do other stuff..
     m_initFlag = true;
 }
 //=============================================================================
@@ -114,7 +122,7 @@ bool Cerberus::_isColorSupported()
     return colorSupported;
 }
 //=============================================================================
-std::string Cerberus::_parseFormattingData(const TerminalFormatting& data)
+std::string Cerberus::_parseFormattingData(const CerberusCustomizedLogRole& data)
 {
     std::string toReturn;
     toReturn = "\033[";
@@ -195,7 +203,7 @@ message::slot::cerberus_slot Cerberus::_newSlot(message::slot::BaseSlot::SlotTyp
             break;
     }
 
-    throw cerberusIllegalArgumentExc("Factory given ID does not exist or is not yet implemented");
+    throw cerberusIllegalArgumentExc("Factory given ID does not exist or is not implemented yet");
 }
 //=============================================================================
 std::string Cerberus::strPrint(const char* format, ...)
@@ -227,52 +235,85 @@ std::string Cerberus::strPrint(const char* format, ...)
     return ret;
 }
 //=============================================================================
+CerberusInitParms Cerberus::cerberusDefaultParms()
+{
+    CerberusInitParms toReturn = {};
+    toReturn.terminalFormattingDisabled = false;
+    toReturn.terminal.infoRole.backgroundColor = TERMINAL_BACKGROUND_BLACK;
+    toReturn.terminal.warningRole.backgroundColor = TERMINAL_BACKGROUND_BLACK;
+    toReturn.terminal.errorRole.backgroundColor = TERMINAL_BACKGROUND_BLACK;
+    toReturn.terminal.debugRole.backgroundColor = TERMINAL_BACKGROUND_BLACK;
+    toReturn.terminal.infoRole.foregroundColor = TERMINAL_FOREGROUND_GREEN;
+    toReturn.terminal.warningRole.foregroundColor = TERMINAL_FOREGROUND_YELLOW;
+    toReturn.terminal.errorRole.foregroundColor = TERMINAL_FOREGROUND_RED;
+    toReturn.terminal.debugRole.foregroundColor = TERMINAL_FOREGROUND_MAGENTA;
+    return toReturn;
+}
+//=============================================================================
 void Cerberus::log(const std::string& str, LogLevel logLevel)
 {
     static mutex::Mutex mutex;
     mutex::MutexLocker locker(&mutex);
+    static Cerberus* cerberus = Cerberus::provider();
+    //time
+    auto now = std::chrono::system_clock::now();
+    auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
+    auto milli = std::chrono::duration_cast<std::chrono::milliseconds>(now - seconds);
+    time_t coarseTime = std::chrono::system_clock::to_time_t(now);
+    tm* local = std::localtime(&coarseTime);
+    uint32_t fineTime = milli.count();
+    std::string timestamp = strPrint("%.4u.%.2u.%.2u-%.2u:%.2u:%.2u.%.3u", local->tm_year + 1900, local->tm_mon + 1, local->tm_mday, local->tm_hour, local->tm_min, local->tm_sec, fineTime);
 
+    //
     switch(logLevel)
     {
         case LL_Info:       //writes on stdout
+            if(cerberus->m_useFormattedTerminal)
+            {
+                std::cout << strPrint("%s [%sINFO%s] %s", timestamp.c_str(), cerberus->m_infoLogTerminalFormatting.c_str(), EndOfFormatting, str.c_str()) << std::endl;
+            }
+            else
+            {
+                std::cout << strPrint("%s [INFO] %s", timestamp.c_str(), str.c_str()) << std::endl;
+            }
+
             break;
 
         case LL_Warning:    //writes on stdout
+            if(cerberus->m_useFormattedTerminal)
+            {
+                std::cout << strPrint("%s [%sWARNING%s] %s", timestamp.c_str(), cerberus->m_warningLogTerminalFormatting.c_str(), EndOfFormatting, str.c_str()) << std::endl;
+            }
+            else
+            {
+                std::cout << strPrint("%s [WARNING] %s", timestamp.c_str(), str.c_str()) << std::endl;
+            }
+
             break;
 
         case LL_Error:      //writes on stderr
+            if(cerberus->m_useFormattedTerminal)
+            {
+                std::cerr << strPrint("%s [%sERROR%s] %s", timestamp.c_str(), cerberus->m_errorLogTerminalFormatting.c_str(), EndOfFormatting, str.c_str()) << std::endl;
+            }
+            else
+            {
+                std::cerr << strPrint("%s [ERROR] %s", timestamp.c_str(), str.c_str()) << std::endl;
+            }
+
             break;
 
         case LL_Debug:      //writes on stdout
+            if(cerberus->m_useFormattedTerminal)
+            {
+                std::cout << strPrint("%s [%sDEBUG%s] %s", timestamp.c_str(), cerberus->m_debugLogTerminalFormatting.c_str(), EndOfFormatting, str.c_str()) << std::endl;
+            }
+            else
+            {
+                std::cout << strPrint("%s [DEBUG] %s", timestamp.c_str(), str.c_str()) << std::endl;
+            }
+
             break;
-    }
-}
-//=============================================================================
-void Cerberus::stdoutPrint(const std::string& str)
-{
-    static Cerberus* cerberus = Cerberus::provider();
-
-    if(cerberus->m_useColorInTerminal)
-    {
-        std::cout << Cerberus::strPrint("%s%s\033[0m", cerberus->m_stdout_terminalFormatting.c_str(), str.c_str()) << std::endl;
-    }
-    else
-    {
-        std::cout << str.c_str() << std::endl;
-    }
-}
-//=============================================================================
-void Cerberus::stderrPrint(const std::string& str)
-{
-    static Cerberus* cerberus = Cerberus::provider();
-
-    if(cerberus->m_useColorInTerminal)
-    {
-        std::cerr << Cerberus::strPrint("%s%s\033[0m", cerberus->m_stderr_terminalFormatting.c_str(), str.c_str()) << std::endl;
-    }
-    else
-    {
-        std::cerr << str.c_str() << std::endl;
     }
 }
 //=============================================================================

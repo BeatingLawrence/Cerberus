@@ -6,12 +6,7 @@ TEST(cerberusTest, init)
 {
     cerberus::Cerberus* provider = cerberus::Cerberus::provider();
     ASSERT_NE(provider, nullptr);
-    cerberus::Cerberus::CerberusInitParms parms = {};
-    parms.terminalFormattingDisabled = false;
-    parms.stdout_formatting.foregroundColor = TERMINAL_FOREGROUND_GREEN;
-    parms.stdout_formatting.backgroundColor = TERMINAL_BACKGROUND_WHITE;
-    parms.stderr_formatting.foregroundColor = TERMINAL_FOREGROUND_WHITE;
-    parms.stderr_formatting.backgroundColor = TERMINAL_BACKGROUND_RED;
+    cerberus::CerberusInitParms parms = cerberus::Cerberus::cerberusDefaultParms();
     provider->init(parms);
 }
 
@@ -20,12 +15,10 @@ TEST(cerberusTest, strPrint)
     EXPECT_STREQ(cerberus::Cerberus::strPrint("%s %u", "test", 20u).c_str(), "test 20");
 }
 
-TEST(cerberusTest, stdoutPrint)
+TEST(cerberusTest, logTest)
 {
-    cerberus::Cerberus::stdoutPrint("This is a STDOUT print");
-}
-
-TEST(cerberusTest, stderrPrint)
-{
-    cerberus::Cerberus::stderrPrint("This is a STDERR print");
+    cerberus::Cerberus::log("Info log");
+    cerberus::Cerberus::log("Warning log", cerberus::Cerberus::LL_Warning);
+    cerberus::Cerberus::log("Error log", cerberus::Cerberus::LL_Error);
+    cerberus::Cerberus::log("Debug log", cerberus::Cerberus::LL_Debug);
 }
