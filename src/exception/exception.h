@@ -15,11 +15,20 @@ namespace cerberus
                 std::string m_error;
 
             public:
+                enum ExceptionType
+                {
+                    ET_Unknown,
+                    ET_IllegalArgument,
+                    ET_IllegalState,
+                    ET_System,
+                    ET_MissingImplementation,
+                };
+
                 Exception() noexcept;
 
                 Exception(const Exception& other) noexcept;
 
-                Exception(const char* text, uint32_t line, const char* fileName, const char* type = nullptr) noexcept;
+                Exception(const char* text, uint32_t line, const char* fileName, ExceptionType type = ET_Unknown) noexcept;
 
                 Exception& operator= (const Exception& other) noexcept;
 

@@ -1,18 +1,19 @@
 #include "register.h"
 #include "./exception/exceptioncatalog.h"
 #include "./mutex/mutexlocker.h"
+#include "./cerberus.h"
 
 using namespace cerberus;
 
 //=============================================================================
-uint32_t Register::_findAvailableId_messageTemplates()  // TODO to optimize
+uint32_t Register::_findAvailableTypeID_messageTemplates()  // TODO to optimize
 {
     if(m_messageTemplates.empty())
     {
         return 1;
     }
 
-    uint32_t id = m_messageTemplates.front().first;
+    uint32_t id = m_messageTemplates.front().typeID;
 
     while(true)
     {
@@ -20,7 +21,37 @@ uint32_t Register::_findAvailableId_messageTemplates()  // TODO to optimize
 
         for(auto& el : m_messageTemplates)
         {
-            if(el.first == id)
+            if(el.typeID == id)
+            {
+                id++;
+                finalIteration = false;
+                break;
+            }
+        }
+
+        if(finalIteration)
+        {
+            return id;
+        }
+    }
+}
+//=============================================================================
+uint32_t Register::_findAvailableID_threads()   // TODO to optimize
+{
+    if(m_threads.empty())
+    {
+        return 1;
+    }
+
+    uint32_t id = m_threads.front().threadID;
+
+    while(true)
+    {
+        bool finalIteration = true;
+
+        for(auto& el : m_threads)
+        {
+            if(el.threadID == id)
             {
                 id++;
                 finalIteration = false;
@@ -42,55 +73,55 @@ Register::Register()
 uint32_t Register::addMessageTemplate(const message::MessageTemplate& toAdd)
 {
     mutex::MutexLocker locker(&m_messageTemplateMutex);
-    std::pair<uint32_t, message::MessageTemplate> pair(_findAvailableId_messageTemplates(), toAdd);
-    m_messageTemplates.push_back(pair);
-    return pair.first;
+    MessageTemplateEntry entry = {_findAvailableTypeID_messageTemplates(), toAdd};
+    m_messageTemplates.push_back(entry);
+    return entry.typeID;
 }
 //=============================================================================
-void Register::removeMessageTemplate(uint32_t idToRemove)
+void Register::removeMessageTemplate(uint32_t id)
 {
     mutex::MutexLocker locker(&m_messageTemplateMutex);
 
     for(auto it = m_messageTemplates.begin(); it != m_messageTemplates.end(); it++)
     {
-        if((*it).first == idToRemove)
+        if((*it).typeID == id)
         {
             m_messageTemplates.erase(it);
             return;
         }
     }
 
-    throw cerberusIllegalArgumentExc("Given ID does not exist");
+    throw cerberusIllegalArgumentExc("Given Message template ID does not exist");
 }
 //=============================================================================
-uint32_t Register::messageIdByName(const std::string& name) const
+uint32_t Register::messageTypeIdByName(const std::string& name) const
 {
     mutex::MutexLocker locker(&m_messageTemplateMutex);
 
     for(auto& el : m_messageTemplates)
     {
-        if(el.second.name().compare(name) == 0)
+        if(el.tmplate.name().compare(name) == 0)
         {
-            return el.first;
+            return el.typeID;
         }
     }
 
-    return Invalid_ID;
+    return Cerberus::Invalid_ID;
 }
 //=============================================================================
-message::MessageTemplate Register::messageTemplateById(uint32_t id) const
+message::MessageTemplate Register::messageTemplateByTypeId(uint32_t id) const
 {
     mutex::MutexLocker locker(&m_messageTemplateMutex);
 
     for(auto& el : m_messageTemplates)
     {
-        if(el.first == id)
+        if(el.typeID == id)
         {
-            return el.second;
+            return el.tmplate;
         }
     }
 
-    throw cerberusIllegalArgumentExc("Given ID does not exist");
+    throw cerberusIllegalArgumentExc("Given Message template ID does not exist");
 }
 //=============================================================================
 bool Register::messageTemplateNameAlreadyExists(const std::string& name) const
@@ -99,7 +130,78 @@ bool Register::messageTemplateNameAlreadyExists(const std::string& name) const
 
     for(auto& el : m_messageTemplates)
     {
-        if(el.second.name().compare(name) == 0)
+        if(el.tmplate.name().compare(name) == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+//=============================================================================
+uint32_t Register::addThread(thread::Thread* thread, const std::string& name)
+{
+    mutex::MutexLocker locker(&m_threadMutex);
+    ThreadEntry entry = {_findAvailableID_threads(), name, thread};
+    m_threads.push_back(entry);
+    logInfo(Cerberus::strPrint("Registered Thread '%s' with ID: %u", name.c_str(), entry.threadID));
+    return entry.threadID;
+}
+//=============================================================================
+void Register::removeThread(uint32_t id)
+{
+    mutex::MutexLocker locker(&m_threadMutex);
+
+    for(auto it = m_threads.begin(); it != m_threads.end(); it++)
+    {
+        if((*it).threadID == id)
+        {
+            logInfo(Cerberus::strPrint("Removed Thread '%s' with ID: %u", (*it).name.c_str(), (*it).threadID));
+            m_threads.erase(it);
+            return;
+        }
+    }
+
+    throw cerberusIllegalArgumentExc("Given Thread ID does not exist");
+}
+//=============================================================================
+uint32_t Register::threadIdByName(const std::string& name) const
+{
+    mutex::MutexLocker locker(&m_threadMutex);
+
+    for(auto& el : m_threads)
+    {
+        if(el.name.compare(name) == 0)
+        {
+            return el.threadID;
+        }
+    }
+
+    return Cerberus::Invalid_ID;
+}
+//=============================================================================
+thread::Thread* Register::threadById(uint32_t id) const
+{
+    mutex::MutexLocker locker(&m_threadMutex);
+
+    for(auto& el : m_threads)
+    {
+        if(el.threadID == id)
+        {
+            return el.thread;
+        }
+    }
+
+    throw cerberusIllegalArgumentExc("Given Thread ID does not exist");
+}
+//=============================================================================
+bool Register::threadNameAlreadyExists(const std::string& name) const
+{
+    mutex::MutexLocker locker(&m_threadMutex);
+
+    for(auto& el : m_threads)
+    {
+        if(el.name.compare(name) == 0)
         {
             return true;
         }

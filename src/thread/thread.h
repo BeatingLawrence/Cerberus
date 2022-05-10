@@ -68,6 +68,8 @@ namespace cerberus
 
                 int m_retValue;
 
+                uint32_t m_id;
+
             protected:
                 virtual int tick();
 
@@ -79,7 +81,7 @@ namespace cerberus
 
             public:
                 //Constructs a non-periodic thread by default. If periodicity is TP_Periodic a valid time must be specified.
-                Thread(ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& period = time::Time());
+                Thread(ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& period = time::Time(), const std::string& name = std::string());
 
                 Thread(const Thread& other) = delete;
 

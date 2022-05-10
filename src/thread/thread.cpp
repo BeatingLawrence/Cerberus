@@ -4,6 +4,7 @@
 
 #include "../mutex/mutexlocker.h"
 #include "../exception/exceptioncatalog.h"
+#include "../cerberus.h"
 
 //=============================================================================
 void cerberus::thread::Thread::_staticThread(Thread* context)
@@ -77,35 +78,32 @@ void cerberus::thread::Thread::sleep(const time::Time& time)
     std::this_thread::sleep_for(std::chrono::microseconds(time.getMicroseconds()));
 }
 //=============================================================================
-cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const time::Time& time) :
+cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const time::Time& time, const std::string& name) :
     ThreadBase(),
     m_thread(_staticThread, this),
     m_periodicity(periodicity),
-    m_retValue(0)
+    m_retValue(0),
+    m_id(0)
 {
+    if(periodicity == ThreadPeriodicity::TP_Periodic && !time.isValid())
+    {
+        throw cerberusIllegalArgumentExc("cannot construct a periodic thread using an invalid time");
+    }
+
+    m_id = Cerberus::provider()->_registerThread(this, name);
+
     if(periodicity == ThreadPeriodicity::TP_NonPeriodic)
     {
-        //log non periodic thread creation
+        logInfo(Cerberus::strPrint("Creation of non-periodic Thread '%s' with ID: %u", name.c_str(), m_id));
     }
     else if(periodicity == ThreadPeriodicity::TP_Periodic)
     {
-        //log periodic thread creation
-        if(time.isValid())
-        {
-            m_period = std::chrono::microseconds(time.getMicroseconds());
-        }
-        else
-        {
-            throw cerberusIllegalArgumentExc("cannot construct a periodic thread using an invalid time");
-        }
+        m_period = std::chrono::microseconds(time.getMicroseconds());
+        logInfo(Cerberus::strPrint("Creation of periodic Thread '%s' with ID: %u, period: %u ms", name.c_str(), m_id, time.getMilliseconds()));
     }
     else if(periodicity == ThreadPeriodicity::TP_OneShot)
     {
-        //log oneshot thread creation
-    }
-    else
-    {
-        throw cerberusIllegalArgumentExc("invalid periodicity specifier");
+        logInfo(Cerberus::strPrint("Creation of one-shot Thread '%s' with ID: %u", name.c_str(), m_id));
     }
 }
 //=============================================================================

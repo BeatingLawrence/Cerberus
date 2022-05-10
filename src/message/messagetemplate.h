@@ -2,7 +2,7 @@
 #define CERBERUS_MESSAGE_MESSAGETEMPLATE_H
 
 /*  This class represents a template of a message.
- *  It holds the message name, id and the set of its slot types.
+ *  It holds the message name and the set of its slot types.
  *  This class is used by the Messages factory to produce standardized and registered messages.
  */
 
@@ -28,7 +28,7 @@ namespace cerberus
 
                 MessageTemplate(const MessageTemplate& other) = default;
 
-                //Constructs an empty template with a name and an ID
+                //Constructs an empty template with a name
                 MessageTemplate(const std::string& name);
 
                 //Constructs a template taking data from a message
@@ -44,7 +44,7 @@ namespace cerberus
                 std::string name() const;
 
                 //Returns the number of slots contained in this template
-                uint32_t count() const;
+                size_t count() const;
         };
     }
 }

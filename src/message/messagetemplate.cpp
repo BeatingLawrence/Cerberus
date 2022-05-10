@@ -31,7 +31,7 @@ std::string MessageTemplate::name() const
     return m_name;
 }
 //=============================================================================
-uint32_t MessageTemplate::count() const
+size_t MessageTemplate::count() const
 {
     return m_types.size();
 }

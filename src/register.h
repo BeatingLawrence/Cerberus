@@ -16,6 +16,7 @@
 #include "./Cerberus_global.h"
 #include "./message/messagetemplate.h"
 #include "./mutex/mutex.h"
+#include "./thread/thread.h"
 #include <list>
 
 namespace cerberus
@@ -23,9 +24,26 @@ namespace cerberus
     class CERBERUS_EXPORT Register
     {
         private:
-            std::list<std::pair<uint32_t, message::MessageTemplate>> m_messageTemplates;
+            struct MessageTemplateEntry
+            {
+                uint32_t typeID;
+                message::MessageTemplate tmplate;
+            };
 
-            uint32_t _findAvailableId_messageTemplates();
+            struct ThreadEntry
+            {
+                uint32_t threadID;
+                std::string name;
+                cerberus::thread::Thread* thread;
+            };
+
+            std::list<MessageTemplateEntry> m_messageTemplates;
+
+            std::list<ThreadEntry> m_threads;
+
+            uint32_t _findAvailableTypeID_messageTemplates();
+
+            uint32_t _findAvailableID_threads();
 
             mutable mutex::Mutex m_messageTemplateMutex;
 
@@ -34,32 +52,45 @@ namespace cerberus
             mutable mutex::Mutex m_socketMutex;
 
         public:
-            static constexpr uint32_t Invalid_ID = 0;
-
             Register();
 
             Register(const Register& other) = delete;
 
             //Message template section (m_messageTemplateMutex):    ===================================================
 
-            //Adds a new message template to the structure and returns the chosen ID.
+            //Adds a new message template to the structure and returns the chosen typeID.
+            //Returns an invalid typeID if name is already registered.
             uint32_t addMessageTemplate(const message::MessageTemplate& toAdd);
 
-            //Removes message template with given id. Will throw an exception if id does not exist
-            void removeMessageTemplate(uint32_t idToRemove);
+            //Removes message template with given typeID. Will throw an exception if typeID does not exist
+            void removeMessageTemplate(uint32_t typeID);
 
-            //Finds a message ID by its name. Returns an invalid ID if search fails
-            uint32_t messageIdByName(const std::string& name) const;
+            //Finds a message typeID by its name. Returns an invalid typeID if search fails
+            uint32_t messageTypeIdByName(const std::string& name) const;
 
             //Returns message template with given id. Will throw an exception if id does not exist
-            message::MessageTemplate messageTemplateById(uint32_t id) const;
+            message::MessageTemplate messageTemplateByTypeId(uint32_t typeID) const;
 
             //Checks if a template with given name already exists in the structure. Returns true if it does
             bool messageTemplateNameAlreadyExists(const std::string& name) const;
 
             //Threads section (m_threadMutex):                      ===================================================
 
-            //...
+            //Adds a new thread to the structure and returns the chosen ID.
+            //Returns an invalid ID if name is already registered.
+            uint32_t addThread(cerberus::thread::Thread* thread, const std::string& name);
+
+            //Removes thread with given ID. Will throw an exception if ID does not exist
+            void removeThread(uint32_t id);
+
+            //Finds thread ID by its name. Returns an invalid ID if search fails
+            uint32_t threadIdByName(const std::string& name) const;
+
+            //Returns a pointer of the Thread with given id. Will throw an exception if id does not exist
+            cerberus::thread::Thread* threadById(uint32_t id) const;
+
+            //Checks if a Thread with given name already exists in the structure. Returns true if it does
+            bool threadNameAlreadyExists(const std::string& name) const;
 
             //Sockets section (m_socketMutex):                      ===================================================
 

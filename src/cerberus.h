@@ -6,6 +6,11 @@
 #include "./register.h"
 #include "./mutex/mutex.h"
 
+#define logInfo(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Info)
+#define logWarning(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Warning)
+#define logError(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Error)
+#define debug(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Debug)
+
 namespace cerberus
 {
     struct CERBERUS_EXPORT CerberusCustomizedLogRole
@@ -31,7 +36,10 @@ namespace cerberus
 
     class CERBERUS_EXPORT Cerberus
     {
+            friend class cerberus::thread::Thread;
+
         public:
+            static const uint32_t Invalid_ID = 0;
 
             enum LogLevel
             {
@@ -63,6 +71,10 @@ namespace cerberus
 
             static message::slot::cerberus_slot _newSlot(message::slot::BaseSlot::SlotType type);
 
+            //Thread registering section (for friends)
+
+            uint32_t _registerThread(cerberus::thread::Thread* thread, const std::string& name = std::string());
+
         public:
             static Cerberus* provider();
 
@@ -72,6 +84,7 @@ namespace cerberus
 
             //Logging section:                                      ===================================================
 
+            //Logs the given string to stdout/stderr according to the specified logLevel
             static void log(const std::string& str, LogLevel logLevel = LL_Info);
 
             //Performs the init sequence of the Cerberus framework. This operation must precede any others
@@ -79,18 +92,18 @@ namespace cerberus
 
             //Message factory section:                              ===================================================
 
-            //Adds a template of the given message to the register, returning the chosen ID
+            //Adds a template of the given message to the register, returning the chosen typeID
             uint32_t registerMessage(const message::Message& message, const std::string& name = std::string());
 
             //Removes a message template with given ID from the register
-            void forgetMessage(uint32_t id);
+            void forgetMessage(uint32_t typeID);
 
             //Returns a registered message ID searched by its name
-            uint32_t messageIdByName(const std::string& name) const;
+            uint32_t messageTypeIdByName(const std::string& name) const;
 
             //Factory of messages. A call to this method will return an empty but structured message.
-            //Will throw an exception if ID was not found.
-            message::cerberus_message messageConstruct(uint32_t id) const;
+            //Will throw an exception if typeID was not found.
+            message::cerberus_message messageConstruct(uint32_t typeID) const;
 
     };
 }

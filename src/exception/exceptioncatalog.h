@@ -3,9 +3,9 @@
 
 #include "./exception.h"
 
-#define cerberusIllegalArgumentExc(text) cerberus::exception::Exception((text), __LINE__, __FILE__, "Illegal argument")
-#define cerberusIllegalStateExc(text) cerberus::exception::Exception((text), __LINE__, __FILE__, "Illegal state")
-#define cerberusSystemExc(text) cerberus::exception::Exception((text), __LINE__, __FILE__, "System")
-#define cerberusImplementationMissExc(text) cerberus::exception::Exception((text), __LINE__, __FILE__, "Missing implementation")
+#define cerberusIllegalArgumentExc(text) cerberus::exception::Exception((text), __LINE__, __FILE__, cerberus::exception::Exception::ET_IllegalArgument)
+#define cerberusIllegalStateExc(text) cerberus::exception::Exception((text), __LINE__, __FILE__, cerberus::exception::Exception::ET_IllegalState)
+#define cerberusSystemExc(text) cerberus::exception::Exception((text), __LINE__, __FILE__, cerberus::exception::Exception::ET_System)
+#define cerberusImplementationMissExc(text) cerberus::exception::Exception((text), __LINE__, __FILE__, cerberus::exception::Exception::ET_MissingImplementation)
 
 #endif // EXCEPTIONCATALOG_H

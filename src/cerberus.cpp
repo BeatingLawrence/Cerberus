@@ -74,7 +74,7 @@ uint32_t Cerberus::registerMessage(const message::Message& message, const std::s
 
     if(m_register.messageTemplateNameAlreadyExists(name))
     {
-        throw cerberusIllegalArgumentExc("Given message name is already registered");
+        throw cerberusIllegalArgumentExc("Given Message name is already registered");
     }
 
     message::MessageTemplate tmplt(message, name);
@@ -86,16 +86,16 @@ void Cerberus::forgetMessage(uint32_t id)
     m_register.removeMessageTemplate(id);
 }
 //=============================================================================
-uint32_t Cerberus::messageIdByName(const std::string& name) const
+uint32_t Cerberus::messageTypeIdByName(const std::string& name) const
 {
-    return m_register.messageIdByName(name);
+    return m_register.messageTypeIdByName(name);
 }
 //=============================================================================
-message::cerberus_message Cerberus::messageConstruct(uint32_t id) const
+message::cerberus_message Cerberus::messageConstruct(uint32_t typeID) const
 {
-    message::MessageTemplate found = m_register.messageTemplateById(id);
+    message::MessageTemplate found = m_register.messageTemplateByTypeId(typeID);
     message::cerberus_message message = message::Message::create();
-    message->setId(id);
+    message->setId(typeID);
 
     for(size_t i = 0; i < found.count(); i++)
     {
@@ -203,7 +203,22 @@ message::slot::cerberus_slot Cerberus::_newSlot(message::slot::BaseSlot::SlotTyp
             break;
     }
 
-    throw cerberusIllegalArgumentExc("Factory given ID does not exist or is not implemented yet");
+    throw cerberusIllegalArgumentExc("Factory given type does not exist or is not implemented yet");
+}
+//=============================================================================
+uint32_t Cerberus::_registerThread(thread::Thread* thread, const std::string& name)
+{
+    if(thread == nullptr)
+    {
+        throw cerberusIllegalArgumentExc("Cannot register a null Thread");
+    }
+
+    if(m_register.threadNameAlreadyExists(name))
+    {
+        throw cerberusIllegalArgumentExc("Given Thread name is already registered");
+    }
+
+    return m_register.addThread(thread, name);
 }
 //=============================================================================
 std::string Cerberus::strPrint(const char* format, ...)

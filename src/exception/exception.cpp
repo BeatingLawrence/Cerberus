@@ -14,7 +14,7 @@ Exception::Exception(const Exception& other) noexcept : m_error(other.m_error)
     // noop
 }
 //=============================================================================
-Exception::Exception(const char* text, uint32_t line, const char* fileName, const char* type) noexcept
+Exception::Exception(const char* text, uint32_t line, const char* fileName, ExceptionType type) noexcept
 {
     std::string file(fileName);
     size_t slashPos = file.find_last_of("/\\");
@@ -26,13 +26,27 @@ Exception::Exception(const char* text, uint32_t line, const char* fileName, cons
 
     file = file.substr(slashPos);
 
-    if(type == nullptr)
+    switch(type)
     {
-        m_error = cerberus::Cerberus::strPrint("Unspecified exception in %s line %u: %s", file.c_str(), line, text);
-    }
-    else
-    {
-        m_error = cerberus::Cerberus::strPrint("%s exception in %s line %u: %s", type, file.c_str(), line, text);
+        case ET_Unknown:
+            m_error = cerberus::Cerberus::strPrint("Unknown exception in %s:%u, %s", file.c_str(), line, text);
+            break;
+
+        case ET_IllegalArgument:
+            m_error = cerberus::Cerberus::strPrint("Illegal argument exception in %s:%u, %s", file.c_str(), line, text);
+            break;
+
+        case ET_IllegalState:
+            m_error = cerberus::Cerberus::strPrint("Illegal state exception in %s:%u, %s", file.c_str(), line, text);
+            break;
+
+        case ET_System:
+            m_error = cerberus::Cerberus::strPrint("System exception in %s:%u, %s", file.c_str(), line, text);
+            break;
+
+        case ET_MissingImplementation:
+            m_error = cerberus::Cerberus::strPrint("Missing implementation exception in %s:%u, %s", file.c_str(), line, text);
+            break;
     }
 }
 //=============================================================================
