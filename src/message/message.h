@@ -40,6 +40,8 @@ namespace cerberus
                 void setId(uint32_t id);
 
                 uint32_t id() const;
+
+                bool isValid() const;
         };
     }
 }

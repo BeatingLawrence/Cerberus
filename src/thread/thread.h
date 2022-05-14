@@ -6,9 +6,13 @@
  *  To run code using this Thread class, the developer has to write a derived class which extends this one
  *  and overrides the tick() method [protected virtual] (and eventually warmUp() and coolDown()).
  *
+ *  Alternatively, the developer can use the provideTickCallback(), provideWarmUpCallback() and provideCoolDownCallback() to pass some code
+ *  to the Thread, without the need to write a derived class. In this case, a message will be always passed to the tick callback
+ *  and it will be invalid if no message is present in the queue.
+ *
  *  The Thread may be of three different types:
  *
- *      - Non-Periodic: The Thread will constntly wake up as long as messages are present in the queue.
+ *      - Non-Periodic: The Thread will constantly wake up as long as messages are present in the queue.
  *                      The start() method will enable the thread and make it consuming all the queue constantly with no delay between cycles.
  *                      The stop() method will disable it. Be careful of this, the message queue could grew up hugely.
  *
@@ -21,7 +25,7 @@
  *                      The stop() method does nothing.
  *                      The terminate() method does nothing.
  *
- *  join() can be used in any case to wait for the thread to terminate and to retrieve the return value.
+ *  join() can be used for any Thread type to wait for the Thread to terminate and to retrieve the return value.
  *
  *  When a periodic Thread is paused or when a Non-Periodic Thread is waiting for messages, the system scheduler is informed
  *  and the Thread will not consume many machine cycles.
@@ -31,12 +35,12 @@
  *  User can access the queue at any time inside the tick() using the nextMessage() nextMessageKeep() or isQueueEmpty() methods
  *
  *  warmUp() will be called on the first start, before the first tick() execution.
- *  coolDown() will be called after the last run of tick(), after terminate() is called. When its execution finishes, the join() releases.
+ *  coolDown() will be called after the last run of tick(), after terminate() is called. When coolDown() execution finishes, the join() releases.
  */
 
 #include <thread>
 #include <chrono>
-#include "../Cerberus_global.h"
+#include "../cerberus.h"
 #include "../mutex/mutex.h"
 #include "../time/time.h"
 #include "./threadbase.h"
@@ -70,6 +74,24 @@ namespace cerberus
 
                 uint32_t m_id;
 
+                std::string m_name;
+
+                typedef int (*customTickCallback)(message::cerberus_message);
+
+                typedef void (*customCallback)();
+
+                customTickCallback m_tickCallback;
+
+                customCallback m_warmUpCallback;
+
+                customCallback m_coolDownCallback;
+
+                static int defaultTickCallback(message::cerberus_message msg);
+
+                static void defaultWarmUpCallback();
+
+                static void defaultCoolDownCallback();
+
             protected:
                 virtual int tick();
 
@@ -100,8 +122,23 @@ namespace cerberus
                 //If stop is true (default), the Thread is also terminated.
                 int join(bool stop = true);
 
-                //Terminates the Thread
+                //Terminates the Thread. This operation is irreversible
                 void terminate();
+
+                //Returns the ID of the thread
+                uint32_t id() const;
+
+                //Returns the name of the thread
+                std::string name() const;
+
+                //Sets a custom callback to be executed as tick()
+                void provideTickCallback(customTickCallback callback);
+
+                //Sets a custom callback to be executed as warmUp()
+                void provideWarmUpCallback(customCallback callback);
+
+                //Sets a custom callback to be executed as coolDown()
+                void provideCoolDownCallback(customCallback callback);
         };
     }
 }

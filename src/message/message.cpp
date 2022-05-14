@@ -1,5 +1,6 @@
 #include "message.h"
 #include "../exception/exceptioncatalog.h"
+#include "../cerberus.h"
 
 using namespace cerberus::message;
 
@@ -14,7 +15,7 @@ cerberus_message Message::createFrom(const Message& other)
     return cerberus_message(new Message(other));
 }
 //=============================================================================
-Message::Message() : m_slots(), m_id()
+Message::Message() : m_slots(), m_id(cerberus::Cerberus::Invalid_ID)
 {
     // noop
 }
@@ -65,5 +66,10 @@ void Message::setId(uint32_t id)
 uint32_t Message::id() const
 {
     return m_id;
+}
+//=============================================================================
+bool Message::isValid() const
+{
+    return (m_id != cerberus::Cerberus::Invalid_ID);
 }
 //=============================================================================

@@ -11,7 +11,7 @@ class TestThread : public cerberus::thread::Thread
         virtual void coolDown() override;
 
     public:
-        TestThread();
+        TestThread(const char* name);
 
 };
 

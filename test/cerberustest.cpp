@@ -2,14 +2,6 @@
 #include <cerberus/cerberus.h>
 #include <cerberus/define.h>
 
-TEST(cerberusTest, init)
-{
-    cerberus::Cerberus* provider = cerberus::Cerberus::provider();
-    ASSERT_NE(provider, nullptr);
-    cerberus::CerberusInitParms parms = cerberus::Cerberus::cerberusDefaultParms();
-    provider->init(parms);
-}
-
 TEST(cerberusTest, strPrint)
 {
     EXPECT_STREQ(cerberus::Cerberus::strPrint("%s %u", "test", 20u).c_str(), "test 20");

@@ -144,7 +144,6 @@ uint32_t Register::addThread(thread::Thread* thread, const std::string& name)
     mutex::MutexLocker locker(&m_threadMutex);
     ThreadEntry entry = {_findAvailableID_threads(), name, thread};
     m_threads.push_back(entry);
-    logInfo(Cerberus::strPrint("Registered Thread '%s' with ID: %u", name.c_str(), entry.threadID));
     return entry.threadID;
 }
 //=============================================================================

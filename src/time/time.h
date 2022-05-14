@@ -41,19 +41,19 @@ namespace cerberus
                 bool isValid() const;
 
                 //Returns the integer microseconds value
-                uint64_t getMicroseconds() const;
+                uint64_t microseconds() const;
 
                 //Returns the integer milliseonds value
-                uint64_t getMilliseconds() const;
+                uint64_t milliseconds() const;
 
                 //Returns the integer seconds value
-                uint64_t getSeconds() const;
+                uint64_t seconds() const;
 
                 //Returns the integer minutes value
-                uint64_t getMinutes() const;
+                uint64_t minutes() const;
 
                 //Returns the integer hours value
-                uint64_t getHours() const;
+                uint64_t hours() const;
         };
     }
 }

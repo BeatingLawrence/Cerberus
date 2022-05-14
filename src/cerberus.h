@@ -6,10 +6,17 @@
 #include "./register.h"
 #include "./mutex/mutex.h"
 
+
 #define logInfo(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Info)
 #define logWarning(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Warning)
 #define logError(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Error)
 #define debug(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Debug)
+
+#define thrLogInfo(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Info, this->name())
+#define thrLogWarning(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Warning, this->name())
+#define thrLogError(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Error, this->name())
+#define thrDebug(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Debug, this->name())
+
 
 namespace cerberus
 {
@@ -36,19 +43,6 @@ namespace cerberus
 
     class CERBERUS_EXPORT Cerberus
     {
-            friend class cerberus::thread::Thread;
-
-        public:
-            static const uint32_t Invalid_ID = 0;
-
-            enum LogLevel
-            {
-                LL_Info,
-                LL_Warning,
-                LL_Error,
-                LL_Debug,
-            };
-
         private:
             Cerberus();
 
@@ -69,14 +63,39 @@ namespace cerberus
 
             Register m_register;
 
+            thread::Thread* m_coreThread;   //has
+
             static message::slot::cerberus_slot _newSlot(message::slot::BaseSlot::SlotType type);
 
-            //Thread registering section (for friends)
+            static void coreWarmUp();
+
+            static void coreCoolDown();
+
+            static int coreTick(message::cerberus_message message);
+
+            //Thread registering section (for friend classes)
 
             uint32_t _registerThread(cerberus::thread::Thread* thread, const std::string& name = std::string());
 
         public:
+            friend class cerberus::thread::Thread;
+
+            static const uint32_t Invalid_ID = 0;
+
+            enum LogLevel
+            {
+                LL_Info,
+                LL_Warning,
+                LL_Error,
+                LL_Debug,
+            };
+
             static Cerberus* provider();
+
+            ~Cerberus();
+
+            //Performs the init sequence of the Cerberus framework. This operation must precede any others
+            void init(const CerberusInitParms& parms);
 
             static std::string strPrint(const char* format, ...);
 
@@ -85,10 +104,7 @@ namespace cerberus
             //Logging section:                                      ===================================================
 
             //Logs the given string to stdout/stderr according to the specified logLevel
-            static void log(const std::string& str, LogLevel logLevel = LL_Info);
-
-            //Performs the init sequence of the Cerberus framework. This operation must precede any others
-            void init(const CerberusInitParms& parms);
+            static void log(const std::string& str, LogLevel logLevel = LL_Info, const std::string& author = std::string());
 
             //Message factory section:                              ===================================================
 

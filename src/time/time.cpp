@@ -40,27 +40,27 @@ bool Time::isValid() const
     return (m_period_uS != 0);
 }
 //=============================================================================
-uint64_t Time::getMicroseconds() const
+uint64_t Time::microseconds() const
 {
     return m_period_uS;
 }
 //=============================================================================
-uint64_t Time::getMilliseconds() const
+uint64_t Time::milliseconds() const
 {
     return m_period_uS / 1000u;
 }
 //=============================================================================
-uint64_t Time::getSeconds() const
+uint64_t Time::seconds() const
 {
     return m_period_uS / (uint64_t)(1000u * 1000u);
 }
 //=============================================================================
-uint64_t Time::getMinutes() const
+uint64_t Time::minutes() const
 {
     return m_period_uS / (uint64_t)(1000u * 1000u * 60u);
 }
 //=============================================================================
-uint64_t Time::getHours() const
+uint64_t Time::hours() const
 {
     return m_period_uS / (uint64_t)(1000u * 1000u * 60u * 60u);
 }

@@ -16,11 +16,15 @@
 #include "./Cerberus_global.h"
 #include "./message/messagetemplate.h"
 #include "./mutex/mutex.h"
-#include "./thread/thread.h"
 #include <list>
 
 namespace cerberus
 {
+    namespace thread
+    {
+        class Thread;
+    }
+
     class CERBERUS_EXPORT Register
     {
         private:
