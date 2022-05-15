@@ -6,7 +6,6 @@
 #include "./register.h"
 #include "./mutex/mutex.h"
 
-
 #define logInfo(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Info)
 #define logWarning(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Warning)
 #define logError(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Error)
@@ -16,7 +15,6 @@
 #define thrLogWarning(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Warning, this->name())
 #define thrLogError(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Error, this->name())
 #define thrDebug(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Debug, this->name())
-
 
 namespace cerberus
 {
@@ -77,10 +75,10 @@ namespace cerberus
 
             uint32_t _registerThread(cerberus::thread::Thread* thread, const std::string& name = std::string());
 
-        public:
-            friend class cerberus::thread::Thread;
+            uint32_t _registerCerberusObject(CerberusObject* object);
 
-            static const uint32_t Invalid_ID = 0;
+        public:
+            friend class ::cerberus::CerberusObject;
 
             enum LogLevel
             {
@@ -120,6 +118,7 @@ namespace cerberus
             //Factory of messages. A call to this method will return an empty but structured message.
             //Will throw an exception if typeID was not found.
             message::cerberus_message messageConstruct(uint32_t typeID) const;
+
 
     };
 }

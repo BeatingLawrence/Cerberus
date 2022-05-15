@@ -7,15 +7,17 @@
  */
 
 #include "./slot/baseslot.h"
-#include "./message.h"
 #include <vector>
 #include <string>
 #include "../Cerberus_global.h"
+#include "./message.h"
 
 namespace cerberus
 {
     namespace message
     {
+        class Message;
+
         class CERBERUS_EXPORT MessageTemplate
         {
             private:

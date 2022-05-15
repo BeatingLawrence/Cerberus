@@ -39,7 +39,7 @@ namespace cerberus
             public:
                 void addMessage(message::cerberus_message message);
 
-                size_t messageCount();
+                size_t messageCount() const;
         };
     }
 }

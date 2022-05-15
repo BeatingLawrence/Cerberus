@@ -1,5 +1,5 @@
 #include "messagetemplate.h"
-
+#include "./message.h"
 using namespace cerberus::message;
 
 //=============================================================================

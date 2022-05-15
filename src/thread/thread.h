@@ -44,12 +44,13 @@
 #include "../mutex/mutex.h"
 #include "../time/time.h"
 #include "./threadbase.h"
+#include "../cerberusobject.h"
 
 namespace cerberus
 {
     namespace thread
     {
-        class CERBERUS_EXPORT Thread : public cerberus::thread::ThreadBase
+        class CERBERUS_EXPORT Thread : public cerberus::thread::ThreadBase, public CerberusObject
         {
             public:
                 enum ThreadPeriodicity
@@ -71,8 +72,6 @@ namespace cerberus
                 ThreadPeriodicity m_periodicity;
 
                 int m_retValue;
-
-                uint32_t m_id;
 
                 std::string m_name;
 
@@ -124,9 +123,6 @@ namespace cerberus
 
                 //Terminates the Thread. This operation is irreversible
                 void terminate();
-
-                //Returns the ID of the thread
-                uint32_t id() const;
 
                 //Returns the name of the thread
                 std::string name() const;

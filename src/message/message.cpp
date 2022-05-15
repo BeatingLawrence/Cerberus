@@ -1,11 +1,10 @@
 #include "message.h"
 #include "../exception/exceptioncatalog.h"
-#include "../cerberus.h"
 
 using namespace cerberus::message;
 
 //=============================================================================
-cerberus_message Message::create()
+cerberus_message Message::create(uint32_t typeID)
 {
     return cerberus_message(new Message());
 }
@@ -15,12 +14,12 @@ cerberus_message Message::createFrom(const Message& other)
     return cerberus_message(new Message(other));
 }
 //=============================================================================
-Message::Message() : m_slots(), m_id(cerberus::Cerberus::Invalid_ID)
+Message::Message() : m_slots(), m_typeID(CERBERUS_INVALID_ID)
 {
     // noop
 }
 //=============================================================================
-Message::Message(const Message& other) : m_slots(other.m_slots), m_id(other.m_id)
+Message::Message(const Message& other) : m_slots(other.m_slots), m_typeID(other.m_typeID)
 {
     // noop
 }
@@ -58,18 +57,18 @@ slot::cerberus_slot Message::getSlotById(uint32_t id) const
     return slot::cerberus_slot();
 }
 //=============================================================================
-void Message::setId(uint32_t id)
-{
-    m_id = id;
-}
+//void Message::setTypeID(uint32_t id)
+//{
+//    m_typeID = id;
+//}
 //=============================================================================
-uint32_t Message::id() const
+uint32_t Message::typeID() const
 {
-    return m_id;
+    return m_typeID;
 }
 //=============================================================================
 bool Message::isValid() const
 {
-    return (m_id != cerberus::Cerberus::Invalid_ID);
+    return (m_typeID != CERBERUS_INVALID_ID);
 }
 //=============================================================================

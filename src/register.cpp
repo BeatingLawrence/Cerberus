@@ -66,6 +66,36 @@ uint32_t Register::_findAvailableID_threads()   // TODO to optimize
     }
 }
 //=============================================================================
+uint32_t Register::_findAvailableID_objects()
+{
+    if(m_objects.empty())
+    {
+        return 1;
+    }
+
+    uint32_t id = m_objects.front()->id();
+
+    while(true)
+    {
+        bool finalIteration = true;
+
+        for(auto& el : m_objects)
+        {
+            if(el->id() == id)
+            {
+                id++;
+                finalIteration = false;
+                break;
+            }
+        }
+
+        if(finalIteration)
+        {
+            return id;
+        }
+    }
+}
+//=============================================================================
 Register::Register()
 {
 }
@@ -106,7 +136,7 @@ uint32_t Register::messageTypeIdByName(const std::string& name) const
         }
     }
 
-    return Cerberus::Invalid_ID;
+    return CERBERUS_INVALID_ID;
 }
 //=============================================================================
 message::MessageTemplate Register::messageTemplateByTypeId(uint32_t id) const
@@ -176,7 +206,7 @@ uint32_t Register::threadIdByName(const std::string& name) const
         }
     }
 
-    return Cerberus::Invalid_ID;
+    return CERBERUS_INVALID_ID;
 }
 //=============================================================================
 thread::Thread* Register::threadById(uint32_t id) const
@@ -207,5 +237,37 @@ bool Register::threadNameAlreadyExists(const std::string& name) const
     }
 
     return false;
+}
+//=============================================================================
+uint32_t Register::registerCerberusObject(CerberusObject* object)
+{
+    mutex::MutexLocker locker(&m_objectMutex);
+
+    for(auto& el : m_objects)
+    {
+        if(el->name().compare(object->name()) == 0)
+        {
+            throw cerberusIllegalArgumentExc("Cannot register a duplicate name");
+        }
+    }
+
+    cerberus_object newObject(object);
+    m_objects.push_back(newObject);
+    return _findAvailableID_objects();
+}
+//=============================================================================
+uint32_t Register::cerberusObjectByName(const std::string& name) const
+{
+    mutex::MutexLocker locker(&m_objectMutex);
+
+    for(auto& el : m_objects)
+    {
+        if(el->name().compare(name) == 0)
+        {
+            return el->id();
+        }
+    }
+
+    return CERBERUS_INVALID_ID;
 }
 //=============================================================================

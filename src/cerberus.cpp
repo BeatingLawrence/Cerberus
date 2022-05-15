@@ -106,8 +106,8 @@ uint32_t Cerberus::messageTypeIdByName(const std::string& name) const
 message::cerberus_message Cerberus::messageConstruct(uint32_t typeID) const
 {
     message::MessageTemplate found = m_register.messageTemplateByTypeId(typeID);
-    message::cerberus_message message = message::Message::create();
-    message->setId(typeID);
+    message::cerberus_message message = message::Message::create(typeID);
+    //message->setTypeID(typeID);
 
     for(size_t i = 0; i < found.count(); i++)
     {
@@ -115,6 +115,11 @@ message::cerberus_message Cerberus::messageConstruct(uint32_t typeID) const
     }
 
     return message;
+}
+//=============================================================================
+uint32_t Cerberus::_registerCerberusObject(CerberusObject* object)
+{
+    return m_register.registerCerberusObject(object);
 }
 //=============================================================================
 bool Cerberus::_isColorSupported()

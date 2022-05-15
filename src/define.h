@@ -28,4 +28,11 @@
 #define TERMINAL_UNDERLINE          4
 #define TERMINAL_INVERSE            7
 
+//Cerberus constants definitions
+
+#define CERBERUS_INVALID_ID         0u
+#define CERBERUS_OBJECT_THREAD      1u
+#define CERBERUS_OBJECT_MESSAGE     2u
+#define CERBERUS_OBJECT_SOCKET      3u
+
 #endif // CERBERUS_DEFINE_H

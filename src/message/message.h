@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 #include "./slot/baseslot.h"
-#include "../Cerberus_global.h"
+#include "../define.h"
 
 namespace cerberus
 {
@@ -18,10 +18,10 @@ namespace cerberus
             private:
                 std::vector<slot::cerberus_slot> m_slots;
 
-                uint32_t m_id;
+                uint32_t m_typeID;
 
             public:
-                static cerberus_message create();
+                static cerberus_message create(uint32_t typeID = CERBERUS_INVALID_ID);
 
                 static cerberus_message createFrom(const Message& other);
 
@@ -37,9 +37,9 @@ namespace cerberus
 
                 slot::cerberus_slot getSlotById(uint32_t id) const;
 
-                void setId(uint32_t id);
+                //void setTypeID(uint32_t id);
 
-                uint32_t id() const;
+                uint32_t typeID() const;
 
                 bool isValid() const;
         };

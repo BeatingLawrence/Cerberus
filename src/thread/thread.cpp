@@ -94,34 +94,34 @@ void cerberus::thread::Thread::sleep(const time::Time& time)
 //=============================================================================
 cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const time::Time& time, const std::string& name) :
     ThreadBase(),
+    CerberusObject(CERBERUS_OBJECT_THREAD, name),
     m_thread(_staticThread, this),
     m_periodicity(periodicity),
     m_retValue(0),
-    m_id(0),
     m_name(name),
     m_tickCallback(&defaultTickCallback),
     m_warmUpCallback(&defaultWarmUpCallback),
     m_coolDownCallback(&defaultCoolDownCallback)
 {
-    if(periodicity == ThreadPeriodicity::TP_Periodic && !time.isValid())
-    {
-        throw cerberusIllegalArgumentExc("cannot construct a periodic thread using an invalid time");
-    }
-
-    m_id = Cerberus::provider()->_registerThread(this, name);
-
     if(periodicity == ThreadPeriodicity::TP_NonPeriodic)
     {
-        logInfo(Cerberus::strPrint("New non-periodic Thread '%s' with ID: %u", name.c_str(), m_id));
+        logInfo(Cerberus::strPrint("New non-periodic Thread '%s' with ID: %u", name.c_str(), id()));
     }
     else if(periodicity == ThreadPeriodicity::TP_Periodic)
     {
-        m_period = std::chrono::microseconds(time.microseconds());
-        logInfo(Cerberus::strPrint("New periodic Thread '%s' with ID: %u, period: %u ms", name.c_str(), m_id, time.milliseconds()));
+        if(time.isValid())
+        {
+            m_period = std::chrono::microseconds(time.microseconds());
+            logInfo(Cerberus::strPrint("New periodic Thread '%s' with ID: %u, period: %u ms", name.c_str(), id(), time.milliseconds()));
+        }
+        else
+        {
+            throw cerberusIllegalArgumentExc("cannot construct a periodic thread using an invalid time");
+        }
     }
     else if(periodicity == ThreadPeriodicity::TP_OneShot)
     {
-        logInfo(Cerberus::strPrint("New one-shot Thread '%s' with ID: %u", name.c_str(), m_id));
+        logInfo(Cerberus::strPrint("New one-shot Thread '%s' with ID: %u", name.c_str(), id()));
     }
 }
 //=============================================================================
@@ -158,11 +158,6 @@ int cerberus::thread::Thread::join(bool stop)
 void cerberus::thread::Thread::terminate()
 {
     setTerminateFlag(true);
-}
-//=============================================================================
-uint32_t cerberus::thread::Thread::id() const
-{
-    return m_id;
 }
 //=============================================================================
 std::string cerberus::thread::Thread::name() const

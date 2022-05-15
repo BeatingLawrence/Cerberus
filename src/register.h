@@ -13,10 +13,11 @@
  *  will be created and managed by the Cerberus provider
  */
 
+#include <list>
 #include "./Cerberus_global.h"
 #include "./message/messagetemplate.h"
 #include "./mutex/mutex.h"
-#include <list>
+#include "./cerberusobject.h"
 
 namespace cerberus
 {
@@ -45,15 +46,21 @@ namespace cerberus
 
             std::list<ThreadEntry> m_threads;
 
+            std::list<cerberus_object> m_objects;
+
             uint32_t _findAvailableTypeID_messageTemplates();
 
             uint32_t _findAvailableID_threads();
+
+            uint32_t _findAvailableID_objects();
 
             mutable mutex::Mutex m_messageTemplateMutex;
 
             mutable mutex::Mutex m_threadMutex;
 
             mutable mutex::Mutex m_socketMutex;
+
+            mutable mutex::Mutex m_objectMutex;
 
         public:
             Register();
@@ -99,6 +106,10 @@ namespace cerberus
             //Sockets section (m_socketMutex):                      ===================================================
 
             //...
+
+            uint32_t registerCerberusObject(CerberusObject* object);
+
+            uint32_t cerberusObjectByName(const std::string& name) const;
     };
 
 } // namespace cerberus

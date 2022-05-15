@@ -75,7 +75,7 @@ void ThreadBase::addMessage(message::cerberus_message message)
     m_queue.add(message);
 }
 //=============================================================================
-size_t ThreadBase::messageCount()
+size_t ThreadBase::messageCount() const
 {
     MutexLocker locker(&m_mutex);
     return m_queue.size();
