@@ -1,5 +1,6 @@
 #include "charslot.h"
 #include "../../define.h"
+#include "../message.h"
 
 using namespace cerberus::message::slot;
 
@@ -14,7 +15,7 @@ cerberus_slot CharSlot::createFrom(const CharSlot& other)
     return cerberus_slot(new CharSlot(other));
 }
 //=============================================================================
-CharSlot::CharSlot(char value) : BaseSlot(BaseSlot::ST_CHAR), m_value(value)
+CharSlot::CharSlot(char value) : BaseSlot(ST_CHAR), m_value(value)
 {
     // noop
 }

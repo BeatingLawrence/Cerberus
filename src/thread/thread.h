@@ -12,18 +12,23 @@
  *
  *  The Thread may be of three different types:
  *
- *      - Non-Periodic: The Thread will constantly wake up as long as messages are present in the queue.
- *                      The start() method will enable the thread and make it consuming all the queue constantly with no delay between cycles.
- *                      The stop() method will disable it. Be careful of this, the message queue could grew up hugely.
+ *      - Non-Periodic:  The Thread will constantly wake up as long as messages are present in the queue.
+ *                       The start() method will enable the thread and make it consuming all the queue constantly with no delay between cycles.
+ *                       The stop() method will disable it. Be careful of this, the message queue could grew up hugely.
  *
- *      - Periodic:     The Thread will wake up from sleep state every time a period of time passes.
- *                      The start() method will resume the cycle.
- *                      The stop() method will pause the cycle.
+ *      - Periodic:      The Thread will wake up from sleep state every time a period of time passes.
+ *                       The start() method will resume the cycle.
+ *                       The stop() method will pause the cycle.
  *
- *      - One-Shot:     The Thread will run only once.
- *                      The start() method will begin the execution.
- *                      The stop() method does nothing.
- *                      The terminate() method does nothing.
+ *      - PeriodicQueue: The Thread will wake up from sleep state every time a period of time passes.
+ *                       If messages are present in the queue, the Thread will temporary act as a Non-Periodic Thread.
+ *                       The start() method will resume the cycle.
+ *                       The stop() method will pause the cycle.
+ *
+ *      - One-Shot:      The Thread will run only once.
+ *                       The start() method will begin the execution.
+ *                       The stop() method does nothing.
+ *                       The terminate() method does nothing.
  *
  *  join() can be used for any Thread type to wait for the Thread to terminate and to retrieve the return value.
  *
@@ -57,6 +62,7 @@ namespace cerberus
                 {
                     TP_NonPeriodic,
                     TP_Periodic,
+                    TP_PeriodicQueue,
                     TP_OneShot,
                 };
 
@@ -73,9 +79,7 @@ namespace cerberus
 
                 int m_retValue;
 
-                std::string m_name;
-
-                typedef int (*customTickCallback)(message::cerberus_message);
+                typedef int (*customTickCallback)(message::cerberus_message, Thread*);
 
                 typedef void (*customCallback)();
 
@@ -85,7 +89,7 @@ namespace cerberus
 
                 customCallback m_coolDownCallback;
 
-                static int defaultTickCallback(message::cerberus_message msg);
+                static int defaultTickCallback(message::cerberus_message msg, Thread* thread);
 
                 static void defaultWarmUpCallback();
 
@@ -102,7 +106,7 @@ namespace cerberus
 
             public:
                 //Constructs a non-periodic thread by default. If periodicity is TP_Periodic a valid time must be specified.
-                Thread(ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& period = time::Time(), const std::string& name = std::string());
+                Thread(const std::string& name, ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& time = time::Time());
 
                 Thread(const Thread& other) = delete;
 
@@ -123,9 +127,6 @@ namespace cerberus
 
                 //Terminates the Thread. This operation is irreversible
                 void terminate();
-
-                //Returns the name of the thread
-                std::string name() const;
 
                 //Sets a custom callback to be executed as tick()
                 void provideTickCallback(customTickCallback callback);

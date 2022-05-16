@@ -5,10 +5,10 @@
 #include "./exception/exceptioncatalog.h"
 #include "./mutex/mutexlocker.h"
 #include "./thread/thread.h"
+#include "./message/messagetemplate.h"
+#include "./message/slot/charslot.h"
 #include <chrono>
 #include <ctime>
-
-#include "./message/slot/charslot.h"
 
 #ifdef WINDOWS_SYSTEM
     // TBD
@@ -28,7 +28,7 @@ Cerberus::Cerberus() :
     // noop
 }
 //=============================================================================
-Cerberus* Cerberus::provider()
+Cerberus* Cerberus::_provider()
 {
     static Cerberus cerberus;
     return &cerberus;
@@ -36,13 +36,16 @@ Cerberus* Cerberus::provider()
 //=============================================================================
 Cerberus::~Cerberus()
 {
-    logInfo("De-initting Cerberus");
     m_coreThread->join();
+    delete m_coreThread;
+    logInfo("Cerberus Memory Released");
 }
 //=============================================================================
 void Cerberus::init(const CerberusInitParms& parms)
 {
-    if(m_initFlag)
+    Cerberus* cerberus = _provider();
+
+    if(cerberus->m_initFlag)
     {
         log("Cerberus already initted, skipping init() call..");
         return;
@@ -52,74 +55,114 @@ void Cerberus::init(const CerberusInitParms& parms)
 
     if(parms.terminalFormattingDisabled)
     {
-        m_useFormattedTerminal = false;
+        cerberus->m_useFormattedTerminal = false;
     }
     else
     {
-        m_useFormattedTerminal = _isColorSupported();
+        cerberus->m_useFormattedTerminal = cerberus->_isColorSupported();
     }
 
-    if(m_useFormattedTerminal)
+    if(cerberus->m_useFormattedTerminal)
     {
-        m_infoLogTerminalFormatting = _parseFormattingData(parms.terminal.infoRole);
-        m_warningLogTerminalFormatting = _parseFormattingData(parms.terminal.warningRole);
-        m_errorLogTerminalFormatting = _parseFormattingData(parms.terminal.errorRole);
-        m_debugLogTerminalFormatting = _parseFormattingData(parms.terminal.debugRole);
+        cerberus->m_infoLogTerminalFormatting = cerberus->_parseFormattingData(parms.terminal.infoRole);
+        cerberus->m_warningLogTerminalFormatting = cerberus->_parseFormattingData(parms.terminal.warningRole);
+        cerberus->m_errorLogTerminalFormatting = cerberus->_parseFormattingData(parms.terminal.errorRole);
+        cerberus->m_debugLogTerminalFormatting = cerberus->_parseFormattingData(parms.terminal.debugRole);
     }
 
-    m_coreThread = new thread::Thread(thread::Thread::TP_Periodic, 10, "Core Thread");
-    m_coreThread->provideWarmUpCallback(&coreWarmUp);
-    m_coreThread->provideCoolDownCallback(&coreCoolDown);
-    m_coreThread->provideTickCallback(&coreTick);
-    m_coreThread->start();
+    cerberus->m_coreThread = new thread::Thread("Core Thread");
+    cerberus->m_coreThread->provideWarmUpCallback(&coreWarmUp);
+    cerberus->m_coreThread->provideCoolDownCallback(&coreCoolDown);
+    cerberus->m_coreThread->provideTickCallback(&coreTick);
+    cerberus->m_coreThread->start();
     //Do other stuff..
-    m_initFlag = true;
+    cerberus->m_initFlag = true;
     logInfo("Cerberus init completed");
 }
 //=============================================================================
-uint32_t Cerberus::registerMessage(const message::Message& message, const std::string& name)
+uint32_t Cerberus::messageTypeIdByName(const std::string& name)
 {
-    if(message.count() == 0)
+    Cerberus* cerberus = _provider();
+    CerberusObject* found = cerberus->m_register.cerberusObjectByName(name);
+
+    if(found == nullptr)
     {
-        throw cerberusIllegalArgumentExc("Cannot register an empty message");
+        return CERBERUS_INVALID_ID;
+    }
+    else
+    {
+        if(found->type() == CERBERUS_OBJECT_MESSAGETMPLT)
+        {
+            return found->id();
+        }
+        else
+        {
+            return CERBERUS_INVALID_ID;
+        }
+    }
+}
+//=============================================================================
+message::cerberus_message Cerberus::messageConstruct(uint32_t typeID)
+{
+    Cerberus* cerberus = _provider();
+    CerberusObject* found = cerberus->m_register.cerberusObjectByID(typeID);
+
+    if(found == nullptr)
+    {
+        throw cerberusIllegalArgumentExc("Factory given ID does not exist");
     }
 
-    if(m_register.messageTemplateNameAlreadyExists(name))
+    if(found->type() != CERBERUS_OBJECT_MESSAGETMPLT)
     {
-        throw cerberusIllegalArgumentExc("Given Message name is already registered");
+        throw cerberusIllegalArgumentExc("Factory given ID is not a message ID");
     }
 
-    message::MessageTemplate tmplt(message, name);
-    return m_register.addMessageTemplate(tmplt);
-}
-//=============================================================================
-void Cerberus::forgetMessage(uint32_t id)
-{
-    m_register.removeMessageTemplate(id);
-}
-//=============================================================================
-uint32_t Cerberus::messageTypeIdByName(const std::string& name) const
-{
-    return m_register.messageTypeIdByName(name);
-}
-//=============================================================================
-message::cerberus_message Cerberus::messageConstruct(uint32_t typeID) const
-{
-    message::MessageTemplate found = m_register.messageTemplateByTypeId(typeID);
-    message::cerberus_message message = message::Message::create(typeID);
-    //message->setTypeID(typeID);
+    message::MessageTemplate* tmplt = found->to<message::MessageTemplate>();
+    message::cerberus_message message = message::Message::create(found->id());
 
-    for(size_t i = 0; i < found.count(); i++)
+    for(size_t i = 0; i < tmplt->count(); i++)
     {
-        message->addSlot(_newSlot(found.getSlotTypeAt(i)));
+        message->addSlot(_slotFactory(tmplt->getSlotTypeAt(i)));
     }
 
     return message;
 }
 //=============================================================================
+void Cerberus::send(message::cerberus_message message)
+{
+    _provider()->m_coreThread->addMessage(message);
+}
+//=============================================================================
+uint32_t Cerberus::threadIdByName(const std::string& name)
+{
+    Cerberus* cerberus = _provider();
+    CerberusObject* found = cerberus->m_register.cerberusObjectByName(name);
+
+    if(found == nullptr)
+    {
+        return CERBERUS_INVALID_ID;
+    }
+    else
+    {
+        if(found->type() == CERBERUS_OBJECT_THREAD)
+        {
+            return found->id();
+        }
+        else
+        {
+            return CERBERUS_INVALID_ID;
+        }
+    }
+}
+//=============================================================================
 uint32_t Cerberus::_registerCerberusObject(CerberusObject* object)
 {
     return m_register.registerCerberusObject(object);
+}
+//=============================================================================
+void Cerberus::_unregisterCerberusObject(uint32_t id)
+{
+    m_register.unregisterCerberusObject(id);
 }
 //=============================================================================
 bool Cerberus::_isColorSupported()
@@ -170,92 +213,118 @@ std::string Cerberus::_parseFormattingData(const CerberusCustomizedLogRole& data
     return toReturn;
 }
 //=============================================================================
-message::slot::cerberus_slot Cerberus::_newSlot(message::slot::BaseSlot::SlotType type)
+message::slot::cerberus_slot Cerberus::_slotFactory(message::slot::SlotType type)
 {
     switch(type)
     {
-        case message::slot::BaseSlot::ST_UCHAR:
+        case message::slot::ST_UCHAR:
+            // TODO to implement
+            break;
+
+        case message::slot::ST_CHAR:
             return message::slot::CharSlot::create();
             break;
 
-        case message::slot::BaseSlot::ST_CHAR:
+        case message::slot::ST_USHORT:
             // TODO to implement
             break;
 
-        case message::slot::BaseSlot::ST_USHORT:
+        case message::slot::ST_SHORT:
             // TODO to implement
             break;
 
-        case message::slot::BaseSlot::ST_SHORT:
+        case message::slot::ST_ULONG:
             // TODO to implement
             break;
 
-        case message::slot::BaseSlot::ST_ULONG:
+        case message::slot::ST_LONG:
             // TODO to implement
             break;
 
-        case message::slot::BaseSlot::ST_LONG:
+        case message::slot::ST_ULONGLONG:
             // TODO to implement
             break;
 
-        case message::slot::BaseSlot::ST_ULONGLONG:
+        case message::slot::ST_LONGLONG:
             // TODO to implement
             break;
 
-        case message::slot::BaseSlot::ST_LONGLONG:
+        case message::slot::ST_FLOAT:
             // TODO to implement
             break;
 
-        case message::slot::BaseSlot::ST_FLOAT:
+        case message::slot::ST_DOUBLE:
             // TODO to implement
             break;
 
-        case message::slot::BaseSlot::ST_DOUBLE:
-            // TODO to implement
-            break;
-
-        case message::slot::BaseSlot::ST_BOOL:
+        case message::slot::ST_BOOL:
             // TODO to implement
             break;
     }
 
-    throw cerberusIllegalArgumentExc("Factory given type does not exist or is not implemented yet");
+    throw cerberusIllegalArgumentExc("SlotFactory: Given slot type does not exist");
 }
 //=============================================================================
 void Cerberus::coreWarmUp()
 {
-    logInfo("Preparing Cerberus Core..");
+    logInfo("Starting Core Thread..");
+    //Register message specializations
+    message::Message shutdownMessage;
+    registerMessage(shutdownMessage, "ShutdownMessage");
 }
 //=============================================================================
 void Cerberus::coreCoolDown()
 {
     logInfo("Stopping Cerberus Core..");
+    Cerberus* cerberus = _provider();
+
+    if(!(cerberus->m_register.isEmpty()))
+    {
+        logWarning("Trying to free register memory");
+        cerberus->m_register.freeMemory();
+    }
 }
 //=============================================================================
-int Cerberus::coreTick(message::cerberus_message message)
+int Cerberus::coreTick(message::cerberus_message message, thread::Thread* thread)
 {
     if(message->isValid())
     {
         //Process message queue..
+        uint32_t destination = message->destinationID();
+
+        if(destination == CERBERUS_INVALID_ID)
+        {
+            logInfo("Destination of message is invalid, dropping..");
+        }
+        else
+        {
+            Cerberus* cerberus = _provider();
+            CerberusObject* found =  cerberus->m_register.cerberusObjectByID(destination);
+
+            if(found == nullptr)
+            {
+                logInfo("Destination of message is unknown, dropping..");
+            }
+            else
+            {
+                if(found->type() == CERBERUS_OBJECT_THREAD)
+                {
+                    thread::Thread* thread = found->to<thread::Thread>();
+                    thread->addMessage(message);    //ownership transferred
+                }
+                else
+                {
+                    logInfo("Destination of message cannot accept messages, dropping..");
+                }
+
+                //ADD other messages receivers here..
+            }
+        }
     }
 
     //Do other stuff..
+    //TODO: Log on file
     return 0;
-}
-//=============================================================================
-uint32_t Cerberus::_registerThread(thread::Thread* thread, const std::string& name)
-{
-    if(thread == nullptr)
-    {
-        throw cerberusIllegalArgumentExc("Cannot register a null Thread");
-    }
-
-    if(m_register.threadNameAlreadyExists(name))
-    {
-        throw cerberusIllegalArgumentExc("Given Thread name is already registered");
-    }
-
-    return m_register.addThread(thread, name);
 }
 //=============================================================================
 std::string Cerberus::strPrint(const char* format, ...)
@@ -306,7 +375,7 @@ void Cerberus::log(const std::string& str, LogLevel logLevel, const std::string&
 {
     static mutex::Mutex mutex;
     mutex::MutexLocker locker(&mutex);
-    Cerberus* cerberus = Cerberus::provider();
+    Cerberus* cerberus = Cerberus::_provider();
     //time
     auto now = std::chrono::system_clock::now();
     auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
@@ -399,5 +468,10 @@ void Cerberus::log(const std::string& str, LogLevel logLevel, const std::string&
 
             break;
     }
+}
+//=============================================================================
+uint32_t Cerberus::registerMessage(const message::Message& message, const std::string& name)
+{
+    return (new cerberus::message::MessageTemplate(message, name))->id();
 }
 //=============================================================================

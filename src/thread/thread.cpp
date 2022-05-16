@@ -50,13 +50,22 @@ void cerberus::thread::Thread::_thread()
                 m_retValue = tick();
                 std::this_thread::sleep_for(m_period);
             }
+            else if(m_periodicity == TP_PeriodicQueue)
+            {
+                m_retValue = tick();
+
+                if(isQueueEmpty())
+                {
+                    std::this_thread::sleep_for(m_period);
+                }
+            }
         }
     }
 
     coolDown();
 }
 //=============================================================================
-int cerberus::thread::Thread::defaultTickCallback(message::cerberus_message msg)
+int cerberus::thread::Thread::defaultTickCallback(message::cerberus_message msg, Thread* thread)
 {
     std::this_thread::yield();
     return 0;
@@ -74,7 +83,7 @@ void cerberus::thread::Thread::defaultCoolDownCallback()
 //=============================================================================
 int cerberus::thread::Thread::tick()
 {
-    return m_tickCallback(nextMessage());
+    return m_tickCallback(nextMessage(), this);
 }
 //=============================================================================
 void cerberus::thread::Thread::warmUp()
@@ -92,13 +101,12 @@ void cerberus::thread::Thread::sleep(const time::Time& time)
     std::this_thread::sleep_for(std::chrono::microseconds(time.microseconds()));
 }
 //=============================================================================
-cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const time::Time& time, const std::string& name) :
+cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity periodicity, const time::Time& time) :
     ThreadBase(),
     CerberusObject(CERBERUS_OBJECT_THREAD, name),
     m_thread(_staticThread, this),
     m_periodicity(periodicity),
     m_retValue(0),
-    m_name(name),
     m_tickCallback(&defaultTickCallback),
     m_warmUpCallback(&defaultWarmUpCallback),
     m_coolDownCallback(&defaultCoolDownCallback)
@@ -107,7 +115,7 @@ cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const time::Time
     {
         logInfo(Cerberus::strPrint("New non-periodic Thread '%s' with ID: %u", name.c_str(), id()));
     }
-    else if(periodicity == ThreadPeriodicity::TP_Periodic)
+    else if(periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicQueue)
     {
         if(time.isValid())
         {
@@ -158,11 +166,6 @@ int cerberus::thread::Thread::join(bool stop)
 void cerberus::thread::Thread::terminate()
 {
     setTerminateFlag(true);
-}
-//=============================================================================
-std::string cerberus::thread::Thread::name() const
-{
-    return m_name;
 }
 //=============================================================================
 void cerberus::thread::Thread::provideTickCallback(customTickCallback callback)

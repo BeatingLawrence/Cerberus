@@ -4,11 +4,11 @@
 #include <cstdint>
 #include <string>
 #include <memory>
+#include "exception/exceptioncatalog.h"
+#include "./cerberus.h"
 
 namespace cerberus
 {
-    typedef std::shared_ptr<class CerberusObject> cerberus_object;
-
     class CerberusObject
     {
         private:
@@ -22,6 +22,8 @@ namespace cerberus
             CerberusObject(uint32_t type, const std::string& name);
 
         public:
+            virtual ~CerberusObject();
+
             //Returns the object ID
             uint32_t id() const;
 
@@ -32,7 +34,17 @@ namespace cerberus
             std::string name() const;
 
             //Performs a dynamic cast of this object into T. An exception will be thrown if cast is invalid.
-            template<class T> T* to();
+            template<class T> T* to()
+            {
+                T* casted = dynamic_cast<T*>(this);
+
+                if(casted == nullptr)
+                {
+                    throw cerberusIllegalArgumentExc(Cerberus::strPrint("Unable co cast to %s", typeid(T).name()).c_str());
+                }
+
+                return casted;
+            }
     };
 }
 

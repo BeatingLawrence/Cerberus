@@ -10,7 +10,7 @@
 #include <vector>
 #include <string>
 #include "../Cerberus_global.h"
-#include "./message.h"
+#include "../cerberusobject.h"
 
 namespace cerberus
 {
@@ -18,12 +18,10 @@ namespace cerberus
     {
         class Message;
 
-        class CERBERUS_EXPORT MessageTemplate
+        class CERBERUS_EXPORT MessageTemplate : public CerberusObject
         {
             private:
-                std::vector<slot::BaseSlot::SlotType> m_types;
-
-                std::string m_name;
+                std::vector<slot::SlotType> m_types;
 
             public:
                 MessageTemplate() = delete;
@@ -36,14 +34,13 @@ namespace cerberus
                 //Constructs a template taking data from a message
                 MessageTemplate(const Message& message, const std::string& name);
 
+                virtual ~MessageTemplate();
+
                 //Adds a single slot type at the end of the vector
-                void addSlotType(slot::BaseSlot::SlotType type);
+                void addSlotType(slot::SlotType type);
 
                 //Returns the slot type at the index position
-                slot::BaseSlot::SlotType getSlotTypeAt(size_t index) const;
-
-                //Returns the template name
-                std::string name() const;
+                slot::SlotType getSlotTypeAt(size_t index) const;
 
                 //Returns the number of slots contained in this template
                 size_t count() const;

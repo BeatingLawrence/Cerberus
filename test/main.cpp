@@ -1,10 +1,18 @@
 #include <gtest/gtest.h>
 #include <cerberus/cerberus.h>
 #include <iostream>
+#include <cerberus/message/slot/charslot.h>
 
 int main(int argc, char* argv[])
 {
-    cerberus::Cerberus::provider()->cerberus::Cerberus::init(cerberus::Cerberus::cerberusDefaultParms());
+    cerberus::Cerberus::init(cerberus::Cerberus::cerberusDefaultParms());
+    //register a generic message to test Thread messages exchange
+    cerberus::message::Message msg;
+    msg.addSlot(cerberus::message::slot::CharSlot::create());
+    msg.addSlot(cerberus::message::slot::CharSlot::create());
+    msg.addSlot(cerberus::message::slot::CharSlot::create());
+    cerberus::Cerberus::registerMessage(msg, "PingPongMessage");
+    //start testing
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

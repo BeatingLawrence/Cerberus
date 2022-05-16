@@ -24,7 +24,7 @@ Exception::Exception(const char* text, uint32_t line, const char* fileName, Exce
         slashPos = 0;
     }
 
-    file = file.substr(slashPos);
+    file = file.substr(++slashPos);
 
     switch(type)
     {

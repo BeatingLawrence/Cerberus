@@ -3,18 +3,19 @@
 
 #include <string>
 #include "Cerberus_global.h"
-#include "./register.h"
 #include "./mutex/mutex.h"
+#include "./register.h"
+#include "./message/message.h"
 
-#define logInfo(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Info)
-#define logWarning(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Warning)
-#define logError(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Error)
-#define debug(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Debug)
+#define logInfo(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Info)
+#define logWarning(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Warning)
+#define logError(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Error)
+#define debug(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Debug)
 
-#define thrLogInfo(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Info, this->name())
-#define thrLogWarning(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Warning, this->name())
-#define thrLogError(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Error, this->name())
-#define thrDebug(text) cerberus::Cerberus::provider()->log(text, cerberus::Cerberus::LogLevel::LL_Debug, this->name())
+#define thrLogInfo(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Info, this->name())
+#define thrLogWarning(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Warning, this->name())
+#define thrLogError(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Error, this->name())
+#define thrDebug(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Debug, this->name())
 
 namespace cerberus
 {
@@ -39,10 +40,18 @@ namespace cerberus
         CerberusCustomizedTerminal terminal;
     };
 
+    namespace thread
+    {
+        class Thread;
+    }
+
+
     class CERBERUS_EXPORT Cerberus
     {
         private:
             Cerberus();
+
+            static Cerberus* _provider();
 
             bool _isColorSupported();
 
@@ -61,21 +70,19 @@ namespace cerberus
 
             Register m_register;
 
-            thread::Thread* m_coreThread;   //has
+            thread::Thread* m_coreThread;   //has-a
 
-            static message::slot::cerberus_slot _newSlot(message::slot::BaseSlot::SlotType type);
+            static message::slot::cerberus_slot _slotFactory(message::slot::SlotType type);
 
             static void coreWarmUp();
 
             static void coreCoolDown();
 
-            static int coreTick(message::cerberus_message message);
-
-            //Thread registering section (for friend classes)
-
-            uint32_t _registerThread(cerberus::thread::Thread* thread, const std::string& name = std::string());
+            static int coreTick(message::cerberus_message message, thread::Thread* thread);
 
             uint32_t _registerCerberusObject(CerberusObject* object);
+
+            void _unregisterCerberusObject(uint32_t id);
 
         public:
             friend class ::cerberus::CerberusObject;
@@ -88,38 +95,35 @@ namespace cerberus
                 LL_Debug,
             };
 
-            static Cerberus* provider();
-
             ~Cerberus();
 
             //Performs the init sequence of the Cerberus framework. This operation must precede any others
-            void init(const CerberusInitParms& parms);
+            static void init(const CerberusInitParms& parms);
 
+            //Prints formatted content on a std::string which is returned
             static std::string strPrint(const char* format, ...);
 
+            //Returns a working set of default parameters that can be a start point for customization
             static CerberusInitParms cerberusDefaultParms();
-
-            //Logging section:                                      ===================================================
 
             //Logs the given string to stdout/stderr according to the specified logLevel
             static void log(const std::string& str, LogLevel logLevel = LL_Info, const std::string& author = std::string());
 
-            //Message factory section:                              ===================================================
-
             //Adds a template of the given message to the register, returning the chosen typeID
-            uint32_t registerMessage(const message::Message& message, const std::string& name = std::string());
-
-            //Removes a message template with given ID from the register
-            void forgetMessage(uint32_t typeID);
+            static uint32_t registerMessage(const message::Message& message, const std::string& name = std::string());
 
             //Returns a registered message ID searched by its name
-            uint32_t messageTypeIdByName(const std::string& name) const;
+            static uint32_t messageTypeIdByName(const std::string& name);
 
             //Factory of messages. A call to this method will return an empty but structured message.
-            //Will throw an exception if typeID was not found.
-            message::cerberus_message messageConstruct(uint32_t typeID) const;
+            //Will throw an exception if typeID was not found, or if it's not a Message typeID.
+            static message::cerberus_message messageConstruct(uint32_t typeID);
 
+            //Sends a message
+            static void send(message::cerberus_message message);
 
+            //Retrieves a Thread ID by its name
+            static uint32_t threadIdByName(const std::string& name);
     };
 }
 

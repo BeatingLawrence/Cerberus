@@ -12,6 +12,8 @@
 #include <memory>
 #include "../../define.h"
 #include "../../Cerberus_global.h"
+#include "../../cerberus.h"
+#include "../../exception/exceptioncatalog.h"
 
 namespace cerberus
 {
@@ -19,26 +21,8 @@ namespace cerberus
     {
         namespace slot
         {
-            typedef std::shared_ptr<class BaseSlot> cerberus_slot;
-
             class CERBERUS_EXPORT BaseSlot
             {
-                public:
-                    enum SlotType
-                    {
-                        ST_UCHAR,       //1 byte
-                        ST_CHAR,        //1 byte
-                        ST_USHORT,      //2 byte
-                        ST_SHORT,       //2 byte
-                        ST_ULONG,       //4 byte
-                        ST_LONG,        //4 byte
-                        ST_ULONGLONG,   //8 byte
-                        ST_LONGLONG,    //8 byte
-                        ST_FLOAT,       //4 byte
-                        ST_DOUBLE,      //8 byte
-                        ST_BOOL,        //1 byte
-                    };
-
                 private:
                     SlotType m_dataType;
 
@@ -54,6 +38,8 @@ namespace cerberus
                 public:
                     BaseSlot() = delete;
 
+                    virtual ~BaseSlot();
+
                     //Gets the type
                     SlotType type() const;
 
@@ -64,11 +50,31 @@ namespace cerberus
                     void setId(uint32_t id);
 
                     //Performs a dynamic cast of this object into T. An exception will be thrown if cast is invalid.
-                    template<class T> T* to();
+                    template<class T> T* to()
+                    {
+                        T* casted = dynamic_cast<T*>(this);
+
+                        if(casted == nullptr)
+                        {
+                            throw cerberusIllegalArgumentExc(cerberus::Cerberus::strPrint("Unable co cast to %s", typeid(T).name()).c_str());
+                        }
+
+                        return casted;
+                    }
 
                     //Performs a dynamic cast of from into a shared_ptr of type T, caring for the instance counter.
                     //An exception will be thrown if cast is invalid.
-                    template<class T> static std::shared_ptr<T> toShared(const cerberus_slot& from);
+                    template<class T> static std::shared_ptr<T> toShared(const cerberus_slot& from)
+                    {
+                        std::shared_ptr<T> casted = std::dynamic_pointer_cast<T, BaseSlot>(from);
+
+                        if(*casted == nullptr)
+                        {
+                            throw cerberusIllegalArgumentExc(cerberus::Cerberus::strPrint("Unable co cast to shared_ptr of %s", typeid(T).name()).c_str());
+                        }
+
+                        return casted;
+                    }
             };
         }
     }
