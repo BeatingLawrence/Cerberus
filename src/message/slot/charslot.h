@@ -20,8 +20,6 @@ namespace cerberus
 
                     static cerberus_slot createFrom(const CharSlot& other);
 
-                    CharSlot() = delete;
-
                     CharSlot(char value = 0);
 
                     CharSlot(const CharSlot& other);

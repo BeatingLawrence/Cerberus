@@ -8,7 +8,7 @@ namespace cerberus
 {
     namespace thread
     {
-        class ThreadBase
+        class CERBERUS_EXPORT ThreadBase
         {
             private:
                 mutable mutex::Mutex m_mutex;
@@ -21,6 +21,8 @@ namespace cerberus
 
             protected:
                 ThreadBase();
+
+                virtual ~ThreadBase();
 
                 void setPausedFlag(bool state);
 

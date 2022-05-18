@@ -28,10 +28,22 @@ static int testCallback(cerberus::message::cerberus_message msg, cerberus::threa
     return 20;
 }
 
+static void testWarmUpCallback()
+{
+    logInfo("Warm-up Callback");
+}
+
+static void testCoolDownCallback()
+{
+    logInfo("Cool-down Callback");
+}
+
 TEST(threadTest, thread_callback)
 {
     cerberus::thread::Thread thread("test-Thread3", cerberus::thread::Thread::TP_Periodic, 100);
     thread.provideTickCallback(&testCallback);
+    thread.provideWarmUpCallback(&testWarmUpCallback);
+    thread.provideCoolDownCallback(&testCoolDownCallback);
     thread.start();
     std::this_thread::sleep_for(std::chrono::seconds(1));
     EXPECT_EQ(thread.join(), 20);

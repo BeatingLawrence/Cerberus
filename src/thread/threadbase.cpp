@@ -11,6 +11,11 @@ ThreadBase::ThreadBase() :
 {
 }
 //=============================================================================
+ThreadBase::~ThreadBase()
+{
+    // noop
+}
+//=============================================================================
 void ThreadBase::setPausedFlag(bool state)
 {
     MutexLocker locker(&m_mutex);

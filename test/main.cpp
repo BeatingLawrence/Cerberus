@@ -2,6 +2,7 @@
 #include <cerberus/cerberus.h>
 #include <iostream>
 #include <cerberus/message/slot/charslot.h>
+#include <thread>
 
 int main(int argc, char* argv[])
 {
@@ -14,5 +15,7 @@ int main(int argc, char* argv[])
     cerberus::Cerberus::registerMessage(msg, "PingPongMessage");
     //start testing
     ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    int ret = RUN_ALL_TESTS();
+    //cerberus::Cerberus::deinit();
+    return ret;
 }

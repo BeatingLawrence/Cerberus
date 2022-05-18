@@ -12,3 +12,14 @@ This is the Cerberus Framework
 5. Set "test" as single target for the test configuration
 
 Compile Debug, Release and test configuration (in this order) to check if setup works 
+
+##### MSVC Important Note:
+In MSVC configuration, the gtest and gmock testing libraries are not searched in the system path but in the workspace.
+
+Please copy a pre-compiled gtest version under "gtest" directory at the same level of "CMakeList.txt" file.
+
+inside the gtest directory, "lib" and "include" directories of gtest must be present.
+
+IMPORTANT: Gtest library must have been compiled with RunTime Library set to "SHARED".
+
+Please refer to https://github.com/google/googletest to get the sources of google test library.

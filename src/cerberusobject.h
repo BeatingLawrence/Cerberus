@@ -6,10 +6,11 @@
 #include <memory>
 #include "exception/exceptioncatalog.h"
 #include "./cerberus.h"
+#include "./Cerberus_global.h"
 
 namespace cerberus
 {
-    class CerberusObject
+    class CERBERUS_EXPORT CerberusObject
     {
         private:
             uint32_t m_id;

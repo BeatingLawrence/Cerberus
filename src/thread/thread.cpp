@@ -62,7 +62,9 @@ void cerberus::thread::Thread::_thread()
         }
     }
 
+    logInfo("Running cooldown");
     coolDown();
+    logInfo("cooled");
 }
 //=============================================================================
 int cerberus::thread::Thread::defaultTickCallback(message::cerberus_message msg, Thread* thread)
@@ -135,7 +137,7 @@ cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity peri
 //=============================================================================
 cerberus::thread::Thread::~Thread()
 {
-    join(!getTerminateFlag());
+    join(true);
 }
 //=============================================================================
 void cerberus::thread::Thread::start()
@@ -150,7 +152,7 @@ void cerberus::thread::Thread::stop()
 //=============================================================================
 int cerberus::thread::Thread::join(bool stop)
 {
-    if(stop && !getTerminateFlag())
+    if(stop)
     {
         terminate();
     }

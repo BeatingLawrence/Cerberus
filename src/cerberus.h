@@ -3,9 +3,9 @@
 
 #include <string>
 #include "Cerberus_global.h"
+#include "./message/message.h"
 #include "./mutex/mutex.h"
 #include "./register.h"
-#include "./message/message.h"
 
 #define logInfo(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Info)
 #define logWarning(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Warning)
@@ -45,11 +45,18 @@ namespace cerberus
         class Thread;
     }
 
+    typedef void* HANDLE;
 
     class CERBERUS_EXPORT Cerberus
     {
         private:
             Cerberus();
+
+            Cerberus(const Cerberus& other) = delete;
+
+            Cerberus(const Cerberus&& other) = delete;
+
+            void operator=(const Cerberus& other) = delete;
 
             static Cerberus* _provider();
 
@@ -57,14 +64,21 @@ namespace cerberus
 
             bool m_useFormattedTerminal;
 
-            std::string m_infoLogTerminalFormatting;
-            std::string m_warningLogTerminalFormatting;
-            std::string m_errorLogTerminalFormatting;
-            std::string m_debugLogTerminalFormatting;
+            std::string m_infoLogTerminalFormatting_Linux;                                  //used for Linux only
+            std::string m_warningLogTerminalFormatting_Linux;                               //used for Linux only
+            std::string m_errorLogTerminalFormatting_Linux;                                 //used for Linux only
+            std::string m_debugLogTerminalFormatting_Linux;                                 //used for Linux only
+            static const char* EndOfFormatting_Linux;                                       //used for Linux only
+            std::string _parseFormattingData_Linux(const CerberusCustomizedLogRole& data);  //used for Linux only
 
-            static const char* EndOfFormatting;
-
-            std::string _parseFormattingData(const CerberusCustomizedLogRole& data);
+            HANDLE m_stdoutHandle_Windows;                                                  //used for Windows only
+            HANDLE m_stderrHandle_Windows;                                                  //used for Windows only
+            uint8_t m_infoLogTerminalFormatting_Windows;                                    //used for Windows only
+            uint8_t m_warningLogTerminalFormatting_Windows;                                 //used for Windows only
+            uint8_t m_errorLogTerminalFormatting_Windows;                                   //used for Windows only
+            uint8_t m_debugLogTerminalFormatting_Windows;                                   //used for Windows only
+            uint8_t _parseFormattingData_Windows(const CerberusCustomizedLogRole& data);    //used for Windows only
+            static const uint8_t EndOfFormatting_Windows;                                   //used for Windows only
 
             bool m_initFlag;
 
@@ -84,6 +98,7 @@ namespace cerberus
 
             void _unregisterCerberusObject(uint32_t id);
 
+            ~Cerberus();
         public:
             friend class ::cerberus::CerberusObject;
 
@@ -95,10 +110,10 @@ namespace cerberus
                 LL_Debug,
             };
 
-            ~Cerberus();
-
             //Performs the init sequence of the Cerberus framework. This operation must precede any others
             static void init(const CerberusInitParms& parms);
+
+            static void deinit();
 
             //Prints formatted content on a std::string which is returned
             static std::string strPrint(const char* format, ...);
