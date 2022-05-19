@@ -30,6 +30,8 @@ namespace cerberus
                 ST_FLOAT,       //4 byte
                 ST_DOUBLE,      //8 byte
                 ST_BOOL,        //1 byte
+                ST_VOIDP,       //pointer
+                ST_STDSTRINGP,  //pointer
             };
         }
 
@@ -38,16 +40,16 @@ namespace cerberus
             private:
                 std::vector<slot::cerberus_slot> m_slots;
 
-                uint32_t m_typeID;
+                uint32_t m_id;
 
-                uint32_t m_destinationID;
+                uint32_t m_destinationId;
 
             public:
-                static cerberus_message create(uint32_t typeID = CERBERUS_INVALID_ID);
+                static cerberus_message create(uint32_t id = CERBERUS_INVALID_ID);
 
                 static cerberus_message createFrom(const Message& other);
 
-                Message(uint32_t typeID = CERBERUS_INVALID_ID);
+                Message(uint32_t id = CERBERUS_INVALID_ID);
 
                 Message(const Message& other);
 
@@ -59,11 +61,11 @@ namespace cerberus
 
                 slot::cerberus_slot getSlotById(uint32_t id) const;
 
-                uint32_t typeID() const;
+                uint32_t id() const;
 
-                uint32_t destinationID() const;
+                uint32_t destinationId() const;
 
-                void setDestinationID(uint32_t id);
+                void setDestinationId(uint32_t id);
 
                 bool isValid() const;
         };

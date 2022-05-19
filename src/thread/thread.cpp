@@ -62,9 +62,7 @@ void cerberus::thread::Thread::_thread()
         }
     }
 
-    logInfo("Running cooldown");
     coolDown();
-    logInfo("cooled");
 }
 //=============================================================================
 int cerberus::thread::Thread::defaultTickCallback(message::cerberus_message msg, Thread* thread)
@@ -105,7 +103,7 @@ void cerberus::thread::Thread::sleep(const time::Time& time)
 //=============================================================================
 cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity periodicity, const time::Time& time) :
     ThreadBase(),
-    CerberusObject(CERBERUS_OBJECT_THREAD, name),
+    CerberusObject(CerberusObject::ObjectType::OT_Thread, name),
     m_thread(_staticThread, this),
     m_periodicity(periodicity),
     m_retValue(0),

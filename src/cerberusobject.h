@@ -12,15 +12,23 @@ namespace cerberus
 {
     class CERBERUS_EXPORT CerberusObject
     {
+        public:
+            enum ObjectType : uint8_t
+            {
+                OT_Thread,
+                OT_MessageTemplate,
+                //add more types here..
+            };
+
         private:
             uint32_t m_id;
 
-            uint32_t m_type;
+            ObjectType m_type;
 
             std::string m_name;
 
         protected:
-            CerberusObject(uint32_t type, const std::string& name);
+            CerberusObject(ObjectType type, const std::string& name);
 
         public:
             virtual ~CerberusObject();
@@ -29,7 +37,7 @@ namespace cerberus
             uint32_t id() const;
 
             //Returns the object type
-            uint32_t type() const;
+            ObjectType type() const;
 
             //Returns the object name
             std::string name() const;

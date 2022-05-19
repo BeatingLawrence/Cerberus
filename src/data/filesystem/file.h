@@ -42,7 +42,9 @@ namespace cerberus
 
                     bool rename(const std::string& newName);
 
-                    void write(const ByteBuffer& bytes);
+                    bool write(const ByteBuffer& bytes);
+
+                    bool writeLine(const std::string& line);
 
                     void read(ByteBuffer& bytes, std::streampos start = 0);
 

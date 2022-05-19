@@ -11,7 +11,7 @@ uint32_t Register::_findAvailableID_objects()
 {
     if(m_objects.empty())
     {
-        return 1;
+        return CERBERUS_FACTORY_START_ID;
     }
 
     uint32_t id = m_objects.front()->id();
@@ -61,8 +61,9 @@ uint32_t Register::registerCerberusObject(CerberusObject* object)
         }
     }
 
+    uint32_t id = _findAvailableID_objects();
     m_objects.push_back(object);
-    return _findAvailableID_objects();
+    return id;
 }
 //=============================================================================
 void Register::unregisterCerberusObject(uint32_t id)
@@ -137,7 +138,7 @@ void Register::freeMemory()
     {
         if(*it != nullptr)
         {
-            if((*it)->type() != CERBERUS_OBJECT_THREAD)
+            if((*it)->type() != CerberusObject::ObjectType::OT_Thread)
             {
                 deleteList.push_back(*it);
             }

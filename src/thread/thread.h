@@ -14,7 +14,7 @@
  *
  *      - Non-Periodic:  The Thread will constantly wake up as long as messages are present in the queue.
  *                       The start() method will enable the thread and make it consuming all the queue constantly with no delay between cycles.
- *                       The stop() method will disable it. Be careful of this, the message queue could grew up hugely.
+ *                       The stop() method will disable it. Be careful with this, the message queue could grew up hugely.
  *
  *      - Periodic:      The Thread will wake up from sleep state every time a period of time passes.
  *                       The start() method will resume the cycle.
@@ -33,7 +33,7 @@
  *  join() can be used for any Thread type to wait for the Thread to terminate and to retrieve the return value.
  *
  *  When a periodic Thread is paused or when a Non-Periodic Thread is waiting for messages, the system scheduler is informed
- *  and the Thread will not consume many machine cycles.
+ *  and the Thread will be de-scheduled.
  *
  *  A terminated Thread cannot be resumed.
  *

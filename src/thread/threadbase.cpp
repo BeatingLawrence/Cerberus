@@ -6,6 +6,7 @@ using namespace cerberus::mutex;
 
 //=============================================================================
 ThreadBase::ThreadBase() :
+    m_mutex(),
     m_pausedFlag(true),
     m_terminateFlag(false)
 {

@@ -15,12 +15,12 @@ cerberus_message Message::createFrom(const Message& other)
     return cerberus_message(new Message(other));
 }
 //=============================================================================
-Message::Message(uint32_t typeID) : m_slots(), m_typeID(typeID), m_destinationID(CERBERUS_INVALID_ID)
+Message::Message(uint32_t typeID) : m_slots(), m_id(typeID), m_destinationId(CERBERUS_INVALID_ID)
 {
     // noop
 }
 //=============================================================================
-Message::Message(const Message& other) : m_slots(other.m_slots), m_typeID(other.m_typeID), m_destinationID(other.m_destinationID)
+Message::Message(const Message& other) : m_slots(other.m_slots), m_id(other.m_id), m_destinationId(other.m_destinationId)
 {
     // noop
 }
@@ -58,23 +58,23 @@ slot::cerberus_slot Message::getSlotById(uint32_t id) const
     return slot::cerberus_slot();
 }
 //=============================================================================
-uint32_t Message::typeID() const
+uint32_t Message::id() const
 {
-    return m_typeID;
+    return m_id;
 }
 //=============================================================================
-uint32_t Message::destinationID() const
+uint32_t Message::destinationId() const
 {
-    return m_destinationID;
+    return m_destinationId;
 }
 //=============================================================================
-void Message::setDestinationID(uint32_t id)
+void Message::setDestinationId(uint32_t id)
 {
-    m_destinationID = id;
+    m_destinationId = id;
 }
 //=============================================================================
 bool Message::isValid() const
 {
-    return (m_typeID != CERBERUS_INVALID_ID);
+    return (m_id != CERBERUS_INVALID_ID);
 }
 //=============================================================================

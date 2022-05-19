@@ -6,13 +6,13 @@ using namespace cerberus::message;
 
 //=============================================================================
 MessageTemplate::MessageTemplate(const std::string& name) :
-    CerberusObject(CERBERUS_OBJECT_MESSAGETMPLT, name)
+    CerberusObject(CerberusObject::OT_MessageTemplate, name)
 {
     logInfo(Cerberus::strPrint("New Message template '%s' with ID: %u", name.c_str(), id()));
 }
 //=============================================================================
 MessageTemplate::MessageTemplate(const Message& message, const std::string& name) :
-    CerberusObject(CERBERUS_OBJECT_MESSAGETMPLT, name)
+    CerberusObject(CerberusObject::OT_MessageTemplate, name)
 {
     logInfo(Cerberus::strPrint("New Message template '%s' with ID: %u", name.c_str(), id()));
 

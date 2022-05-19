@@ -14,16 +14,16 @@ TEST(messageFactoryTest, registering_message)
 
 TEST(messageFactoryTest, probing_message)
 {
-    uint32_t typeID = cerberus::Cerberus::messageTypeIdByName("UNKNOWN_MESSAGE");
+    uint32_t typeID = cerberus::Cerberus::messageIdByName("UNKNOWN_MESSAGE");
     EXPECT_EQ(typeID, CERBERUS_INVALID_ID);
-    typeID = cerberus::Cerberus::messageTypeIdByName("Test-Message");
+    typeID = cerberus::Cerberus::messageIdByName("Test-Message");
     EXPECT_NE(typeID, CERBERUS_INVALID_ID);
 }
 
 TEST(messageFactoryTest, constructing_message)
 {
     cerberus::message::cerberus_message msg =
-        cerberus::Cerberus::messageConstruct(cerberus::Cerberus::messageTypeIdByName("Test-Message"));
+        cerberus::Cerberus::messageConstruct(cerberus::Cerberus::messageIdByName("Test-Message"));
     EXPECT_NE(msg, nullptr);
     EXPECT_EQ(msg->count(), 3);
 }

@@ -13,7 +13,7 @@ namespace cerberus
                 std::vector<unsigned char>* m_bytes;
 
             public:
-                ByteBuffer(size_t size);
+                ByteBuffer(std::size_t size);
 
                 ByteBuffer();
 
@@ -30,11 +30,11 @@ namespace cerberus
 
                 const unsigned char* data() const;
 
-                unsigned char& operator [](size_t index);
+                unsigned char& operator [](std::size_t index);
 
-                const unsigned char& operator [](size_t index) const;
+                const unsigned char& operator [](std::size_t index) const;
 
-                ByteBuffer subBuffer(size_t pos, size_t len);
+                ByteBuffer subBuffer(std::size_t pos, std::size_t len);
 
                 bool operator ==(const ByteBuffer& other);
 
@@ -44,9 +44,9 @@ namespace cerberus
 
                 void appendString(const char* chars);
 
-                size_t size() const;
+                std::size_t size() const;
 
-                void resize(size_t size);
+                void resize(std::size_t size);
         };
     }
 }

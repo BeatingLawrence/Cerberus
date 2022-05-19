@@ -47,20 +47,19 @@
 #endif
 
 //Cerberus constants definitions
-//Objects:
+//Standard Messages (1~99 are reserved and not used by factory)
+#define CERBERUS_FACTORY_START_ID           100u
 
-#define CERBERUS_INVALID_ID             0u
-#define CERBERUS_OBJECT_THREAD          1u
-#define CERBERUS_OBJECT_MESSAGETMPLT    2u
-#define CERBERUS_OBJECT_SOCKET          3u
+#define CERBERUS_INVALID_ID                 0u
+#define CERBERUS_MESSAGE_SHUTDOWN_ID        1u
+#define CERBERUS_MESSAGE_LOG_ID             2u
 
 //Filesystem
 
-#define CERBERUS_FILE_WRITE     ((char)0b00000001)    //File handler open with writing capability
-#define CERBERUS_FILE_READ      ((char)0b00000010)    //File handler open with reading capability
-#define CERBERUS_FILE_BINARY    ((char)0b00000100)    //File handler operations in binary mode
-#define CERBERUS_FILE_EOF       ((char)0b00001000)    //File handler open with cursor setted to end of file
-#define CERBERUS_FILE_APPEND    ((char)0b00010000)    //File handler writing operations happen always at the end of file (log style)
-#define CERBERUS_FILE_TRUNCATE  ((char)0b00100000)    //File content cleared while the handler is open
+#define CERBERUS_FILE_WRITE     ((char)0b00000001)    //File handler with writing capability
+#define CERBERUS_FILE_BINARY    ((char)0b00000010)    //File handler operations in binary mode
+#define CERBERUS_FILE_EOF       ((char)0b00000100)    //File handler with cursor setted to end of file when open
+#define CERBERUS_FILE_APPEND    ((char)0b00001000)    //File handler write operations happen always at the end of file (log style)
+#define CERBERUS_FILE_TRUNCATE  ((char)0b00010000)    //File content cleared when open
 
 #endif // CERBERUS_DEFINE_H

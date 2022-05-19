@@ -25,6 +25,11 @@ CharSlot::CharSlot(const CharSlot& other) : BaseSlot(other.type()), m_value(othe
     // noop
 }
 //=============================================================================
+CharSlot::~CharSlot()
+{
+    // noop
+}
+//=============================================================================
 char CharSlot::value() const
 {
     return m_value;

@@ -24,6 +24,8 @@ namespace cerberus
 
                     CharSlot(const CharSlot& other);
 
+                    virtual ~CharSlot();
+
                     char value() const;
 
                     void setValue(char value);

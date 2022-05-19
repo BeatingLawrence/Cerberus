@@ -38,11 +38,19 @@ namespace cerberus
     {
         bool terminalFormattingDisabled;
         CerberusCustomizedTerminal terminal;
+        char* logFileName;
     };
 
     namespace thread
     {
         class Thread;
+    }
+    namespace data
+    {
+        namespace filesystem
+        {
+            class File;
+        }
     }
 
     typedef void* HANDLE;
@@ -84,19 +92,19 @@ namespace cerberus
 
             Register m_register;
 
+            mutex::Mutex m_mutex;
+
+            data::filesystem::File* m_logFile;
+
             thread::Thread* m_coreThread;   //has-a
-
-            static message::slot::cerberus_slot _slotFactory(message::slot::SlotType type);
-
             static void coreWarmUp();
-
             static void coreCoolDown();
-
             static int coreTick(message::cerberus_message message, thread::Thread* thread);
 
             uint32_t _registerCerberusObject(CerberusObject* object);
-
             void _unregisterCerberusObject(uint32_t id);
+
+            static message::slot::cerberus_slot _slotFactory(message::slot::SlotType type);
 
             ~Cerberus();
         public:
@@ -128,11 +136,11 @@ namespace cerberus
             static uint32_t registerMessage(const message::Message& message, const std::string& name = std::string());
 
             //Returns a registered message ID searched by its name
-            static uint32_t messageTypeIdByName(const std::string& name);
+            static uint32_t messageIdByName(const std::string& name);
 
             //Factory of messages. A call to this method will return an empty but structured message.
             //Will throw an exception if typeID was not found, or if it's not a Message typeID.
-            static message::cerberus_message messageConstruct(uint32_t typeID);
+            static message::cerberus_message messageConstruct(uint32_t id);
 
             //Sends a message
             static void send(message::cerberus_message message);

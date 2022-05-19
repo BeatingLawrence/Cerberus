@@ -22,7 +22,7 @@ namespace cerberus
                 std::mutex m_mutex;
 
             public:
-                Mutex() = default;
+                Mutex();
 
                 Mutex(const Mutex& other) = delete;
 

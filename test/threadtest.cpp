@@ -65,8 +65,8 @@ static int pingTestCallback(cerberus::message::cerberus_message msg, cerberus::t
     {
         if(a == 10)
         {
-            auto message = cerberus::Cerberus::messageConstruct(cerberus::Cerberus::messageTypeIdByName("ShutdownMessage"));
-            message->setDestinationID(cerberus::Cerberus::threadIdByName("pongThread"));
+            auto message = cerberus::Cerberus::messageConstruct(CERBERUS_MESSAGE_SHUTDOWN_ID);
+            message->setDestinationId(cerberus::Cerberus::threadIdByName("pongThread"));
             cerberus::Cerberus::send(message);
             thread->terminate();
             return 0;
@@ -74,11 +74,11 @@ static int pingTestCallback(cerberus::message::cerberus_message msg, cerberus::t
 
         logInfo("PING!");
         //Create message using factory
-        auto message = cerberus::Cerberus::messageConstruct(cerberus::Cerberus::messageTypeIdByName("PingPongMessage"));
+        auto message = cerberus::Cerberus::messageConstruct(cerberus::Cerberus::messageIdByName("PingPongMessage"));
         message->getSlotAt(0)->to<cerberus::message::slot::CharSlot>()->setValue(a++);
         message->getSlotAt(1)->to<cerberus::message::slot::CharSlot>()->setValue(b++);
         message->getSlotAt(2)->to<cerberus::message::slot::CharSlot>()->setValue(c++);
-        message->setDestinationID(cerberus::Cerberus::threadIdByName("pongThread"));
+        message->setDestinationId(cerberus::Cerberus::threadIdByName("pongThread"));
         //Send the message
         cerberus::Cerberus::send(message);
     }
@@ -88,7 +88,7 @@ static int pingTestCallback(cerberus::message::cerberus_message msg, cerberus::t
 
 static int pongTestCallback(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
 {
-    if(msg->typeID() == cerberus::Cerberus::messageTypeIdByName("ShutdownMessage"))
+    if(msg->id() == CERBERUS_MESSAGE_SHUTDOWN_ID)
     {
         thread->terminate();
         return 0;
@@ -96,7 +96,7 @@ static int pongTestCallback(cerberus::message::cerberus_message msg, cerberus::t
 
     logInfo("Sending Back..");
     //Change destination
-    msg->setDestinationID(cerberus::Cerberus::threadIdByName("pingThread"));
+    msg->setDestinationId(cerberus::Cerberus::threadIdByName("pingThread"));
     //Send the message
     cerberus::Cerberus::send(msg);
     return 0;
