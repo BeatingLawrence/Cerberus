@@ -1,18 +1,85 @@
 #include "cerberuslog.h"
-#include "../mutex/mutex.h"
+#include "../message/standardmessagefactory.h"
+#include "../message/slot/stringslot.h"
 #include "../mutex/mutexlocker.h"
 #include "./cerberusutils.h"
+#include "../cerberus.h"
 #include <iostream>
 
 using namespace cerberus::core;
 
-const char* Cerberus::EndOfFormatting_Linux = "\033[0m";
+const char* CerberusLog::EndOfFormatting_Linux = "\033[0m";
+const uint8_t CerberusLog::EndOfFormatting_Windows = TERMINAL_FOREGROUND_BLUE | TERMINAL_FOREGROUND_GREEN | TERMINAL_FOREGROUND_RED;
+
+#ifdef WINDOWS_SYSTEM
+    #include <windows.h>
+#else
+    #include <unistd.h>
+#endif
 
 //=============================================================================
-void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::string& author)
+CerberusLog::CerberusLog() :
+    m_useFormattedTerminal(false),
+    m_fileLogEnable(true),
+    m_infoLogTerminalFormatting_Linux(),
+    m_warningLogTerminalFormatting_Linux(),
+    m_errorLogTerminalFormatting_Linux(),
+    m_debugLogTerminalFormatting_Linux(),
+    m_stdoutHandle_Windows(nullptr),
+    m_stderrHandle_Windows(nullptr),
+    m_infoLogTerminalFormatting_Windows(0),
+    m_warningLogTerminalFormatting_Windows(0),
+    m_errorLogTerminalFormatting_Windows(0),
+    m_debugLogTerminalFormatting_Windows(0)
 {
-    static mutex::Mutex mutex;
-    mutex::MutexLocker locker(&mutex);
+    // noop
+}
+//=============================================================================
+CerberusLog::~CerberusLog()
+{
+    // noop
+}
+//=============================================================================
+std::string CerberusLog::_parseFormattingData_Linux(const CerberusLogRole& data)
+{
+    std::string toReturn;
+    toReturn = "\033[";
+
+    for(auto& el : data.textFormatting)
+    {
+        if(el != 0)
+        {
+            toReturn += CerberusUtils::strPrint("%u;", el);
+        }
+    }
+
+    if(data.foregroundColor != 0)
+    {
+        toReturn += CerberusUtils::strPrint("%u;", data.foregroundColor);
+    }
+
+    if(data.backgroundColor != 0)
+    {
+        toReturn += CerberusUtils::strPrint("%u;", data.backgroundColor);
+    }
+
+    if(toReturn.back() == ';')
+    {
+        toReturn.pop_back();
+    }
+
+    toReturn += 'm';
+    return toReturn;
+}
+//=============================================================================
+uint8_t CerberusLog::_parseFormattingData_Windows(const CerberusLogRole& data)
+{
+    return data.backgroundColor | data.foregroundColor | data.textFormatting[0] | data.textFormatting[1] | data.textFormatting[2];
+}
+//=============================================================================
+void CerberusLog::_log(const std::string& str, LogLevel logLevel, const std::string& author)
+{
+    mutex::MutexLocker locker(&m_mutex);
     //time
     auto now = std::chrono::system_clock::now();
     auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
@@ -28,6 +95,7 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
                             local->tm_min,
                             local->tm_sec,
                             fineTime);
+    //author
     std::string logAuthor;
 
     if(!author.empty())
@@ -37,7 +105,6 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
         logAuthor += "] ";
     }
 
-    //Log on file
     std::string rawLog;
 
     switch(logLevel)
@@ -59,11 +126,15 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
             break;
     }
 
-    message::cerberus_message logMessage = message::StandardMessageFactory::createStandardMessage(CERBERUS_MESSAGE_LOG_ID);
-    logMessage->getSlotAt(0)->to<message::slot::StringSlot>()->setValue(rawLog);
-    Cerberus::send(logMessage);
+    if(m_fileLogEnable)
+    {
+        //Log on file
+        message::cerberus_message logMessage = message::StandardMessageFactory::createStandardMessage(CERBERUS_MESSAGE_LOG_ID);
+        logMessage->getSlotAt(0)->to<message::slot::StringSlot>()->setValue(rawLog);
+        Cerberus::send(logMessage);
+    }
 
-    if(!(cerberus->m_useFormattedTerminal))
+    if(!m_useFormattedTerminal)
     {
         std::cout << rawLog.c_str() << std::endl;
         return;
@@ -74,43 +145,43 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
     switch(logLevel)
     {
         case LL_Info:       //writes on stdout
-            std::cout << strPrint("%s%s [%sINFO%s] %s%s",
-                                  EndOfFormatting_Linux,
-                                  timestamp.c_str(),
-                                  cerberus->m_infoLogTerminalFormatting_Linux.c_str(),
-                                  EndOfFormatting_Linux,
-                                  logAuthor.c_str(),
-                                  str.c_str()) << std::endl;
+            std::cout << CerberusUtils::strPrint("%s%s [%sINFO%s] %s%s",
+                                                 EndOfFormatting_Linux,
+                                                 timestamp.c_str(),
+                                                 m_infoLogTerminalFormatting_Linux.c_str(),
+                                                 EndOfFormatting_Linux,
+                                                 logAuthor.c_str(),
+                                                 str.c_str()) << std::endl;
             break;
 
         case LL_Warning:    //writes on stdout
-            std::cout << strPrint("%s%s [%sWARNING%s] %s%s",
-                                  EndOfFormatting_Linux,
-                                  timestamp.c_str(),
-                                  cerberus->m_warningLogTerminalFormatting_Linux.c_str(),
-                                  EndOfFormatting_Linux,
-                                  logAuthor.c_str(),
-                                  str.c_str()) << std::endl;
+            std::cout << CerberusUtils::strPrint("%s%s [%sWARNING%s] %s%s",
+                                                 EndOfFormatting_Linux,
+                                                 timestamp.c_str(),
+                                                 m_warningLogTerminalFormatting_Linux.c_str(),
+                                                 EndOfFormatting_Linux,
+                                                 logAuthor.c_str(),
+                                                 str.c_str()) << std::endl;
             break;
 
         case LL_Error:      //writes on stderr
-            std::cerr << strPrint("%s%s [%sERROR%s] %s%s",
-                                  EndOfFormatting_Linux,
-                                  timestamp.c_str(),
-                                  cerberus->m_errorLogTerminalFormatting_Linux.c_str(),
-                                  EndOfFormatting_Linux,
-                                  logAuthor.c_str(),
-                                  str.c_str()) << std::endl;
+            std::cerr << CerberusUtils::strPrint("%s%s [%sERROR%s] %s%s",
+                                                 EndOfFormatting_Linux,
+                                                 timestamp.c_str(),
+                                                 m_errorLogTerminalFormatting_Linux.c_str(),
+                                                 EndOfFormatting_Linux,
+                                                 logAuthor.c_str(),
+                                                 str.c_str()) << std::endl;
             break;
 
         case LL_Debug:      //writes on stdout
-            std::cout << strPrint("%s%s [%sDEBUG%s] %s%s",
-                                  EndOfFormatting_Linux,
-                                  timestamp.c_str(),
-                                  cerberus->m_debugLogTerminalFormatting_Linux.c_str(),
-                                  EndOfFormatting_Linux,
-                                  logAuthor.c_str(),
-                                  str.c_str()) << std::endl;
+            std::cout << CerberusUtils::strPrint("%s%s [%sDEBUG%s] %s%s",
+                                                 EndOfFormatting_Linux,
+                                                 timestamp.c_str(),
+                                                 m_debugLogTerminalFormatting_Linux.c_str(),
+                                                 EndOfFormatting_Linux,
+                                                 logAuthor.c_str(),
+                                                 str.c_str()) << std::endl;
             break;
     }
 
@@ -161,3 +232,54 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
 
 #endif
 }
+//=============================================================================
+void CerberusLog::setup(const CerberusLogSetup& setup)
+{
+    mutex::MutexLocker locker(&m_mutex);
+    m_stdoutHandle_Windows = nullptr;
+    m_stderrHandle_Windows = nullptr;
+    m_infoLogTerminalFormatting_Windows = 0;
+    m_warningLogTerminalFormatting_Windows = 0;
+    m_errorLogTerminalFormatting_Windows = 0;
+    m_debugLogTerminalFormatting_Windows = 0;
+    m_infoLogTerminalFormatting_Linux = std::string();
+    m_warningLogTerminalFormatting_Linux = std::string();
+    m_errorLogTerminalFormatting_Linux = std::string();
+    m_debugLogTerminalFormatting_Linux = std::string();
+
+    if(setup.disableFormatting)
+    {
+        m_useFormattedTerminal = false;
+    }
+    else
+    {
+#ifdef WINDOWS_SYSTEM
+        m_useFormattedTerminal = true;
+#else
+        m_useFormattedTerminal = (isatty(fileno(stdout)) == 1);
+#endif
+    }
+
+    if(m_useFormattedTerminal)
+    {
+#ifdef WINDOWS_SYSTEM
+        m_stdoutHandle_Windows = GetStdHandle(STD_OUTPUT_HANDLE);
+        m_stderrHandle_Windows = GetStdHandle(STD_ERROR_HANDLE);
+        m_infoLogTerminalFormatting_Windows = _parseFormattingData_Windows(parms.terminal.infoRole);
+        m_warningLogTerminalFormatting_Windows = _parseFormattingData_Windows(parms.terminal.warningRole);
+        m_errorLogTerminalFormatting_Windows = _parseFormattingData_Windows(parms.terminal.errorRole);
+        m_debugLogTerminalFormatting_Windows = _parseFormattingData_Windows(parms.terminal.debugRole);
+#else
+        m_infoLogTerminalFormatting_Linux = _parseFormattingData_Linux(setup.infoRole);
+        m_warningLogTerminalFormatting_Linux = _parseFormattingData_Linux(setup.warningRole);
+        m_errorLogTerminalFormatting_Linux = _parseFormattingData_Linux(setup.errorRole);
+        m_debugLogTerminalFormatting_Linux = _parseFormattingData_Linux(setup.debugRole);
+#endif
+    }
+}
+//=============================================================================
+void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::string& author)
+{
+    cerberus::Cerberus::_logInstance()->_log(str, logLevel, author);
+}
+//=============================================================================

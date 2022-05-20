@@ -1,4 +1,6 @@
 #include "cerberusobject.h"
+#include "./define.h"
+#include "./cerberus.h"
 
 using namespace cerberus;
 
@@ -6,12 +8,12 @@ using namespace cerberus;
 CerberusObject::CerberusObject(ObjectType type, const std::string& name) :
     m_id(CERBERUS_INVALID_ID), m_type(type), m_name(name)
 {
-    m_id = Cerberus::_provider()->_registerCerberusObject(this);
+    m_id = Cerberus::_registerCerberusObject(this);
 }
 //=============================================================================
 CerberusObject::~CerberusObject()
 {
-    Cerberus::_provider()->_unregisterCerberusObject(m_id);
+    Cerberus::_unregisterCerberusObject(m_id);
 }
 //=============================================================================
 uint32_t CerberusObject::id() const

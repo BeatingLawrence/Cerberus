@@ -5,12 +5,11 @@
 #include <string>
 #include <memory>
 #include "exception/exceptioncatalog.h"
-#include "./cerberus.h"
-#include "./Cerberus_global.h"
+#include "./core/cerberusutils.h"
 
 namespace cerberus
 {
-    class CERBERUS_EXPORT CerberusObject
+    class CerberusObject
     {
         public:
             enum ObjectType : uint8_t
@@ -49,7 +48,7 @@ namespace cerberus
 
                 if(casted == nullptr)
                 {
-                    throw cerberusIllegalArgumentExc(Cerberus::strPrint("Unable co cast to %s", typeid(T).name()).c_str());
+                    throw cerberusIllegalArgumentExc(core::CerberusUtils::strPrint("Unable co cast to %s", typeid(T).name()).c_str());
                 }
 
                 return casted;

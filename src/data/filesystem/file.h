@@ -26,11 +26,15 @@ namespace cerberus
                 public:
                     static bool exist(const std::string& fileName);
 
-                    File() = delete;
+                    File(uint8_t openMode = 0); //Default: read-only
 
                     File(const std::string& fileName, uint8_t openMode);
 
                     ~File();
+
+                    void setFileName(const std::string& fileName);
+
+                    void setOpenMode(uint8_t openMode);
 
                     bool isOpen() const;
 

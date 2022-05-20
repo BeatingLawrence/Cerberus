@@ -29,6 +29,39 @@ bool cerberus::data::filesystem::File::exist(const std::string& fileName)
     return exists;
 }
 //=============================================================================
+cerberus::data::filesystem::File::File(uint8_t openMode) :
+    m_fileName(),
+    m_stream(),
+    m_openMode(std::ios_base::in)
+{
+    if(openMode & CERBERUS_FILE_WRITE)
+    {
+        m_openMode |= std::ios_base::out;
+    }
+
+    if(openMode & CERBERUS_FILE_BINARY)
+    {
+        m_openMode |= std::ios_base::binary;
+    }
+
+    if(openMode & CERBERUS_FILE_EOF)
+    {
+        m_openMode |= std::ios_base::ate;
+    }
+
+    if(openMode & CERBERUS_FILE_APPEND)
+    {
+        m_openMode |= std::ios_base::app;
+    }
+
+    if(openMode & CERBERUS_FILE_TRUNCATE)
+    {
+        m_openMode |= std::ios_base::trunc;
+    }
+
+    m_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);    //will throw exception if fail or bad
+}
+//=============================================================================
 cerberus::data::filesystem::File::File(const std::string& fileName, uint8_t openMode) :
     m_fileName(fileName),
     m_stream(),
@@ -72,6 +105,56 @@ cerberus::data::filesystem::File::~File()
     if(m_stream.is_open())
     {
         m_stream.close();
+    }
+}
+//=============================================================================
+void cerberus::data::filesystem::File::setFileName(const std::string& fileName)
+{
+    if(m_stream.is_open())
+    {
+        throw cerberusIllegalStateExc("Cannot change a name of an open file");
+    }
+
+    if(fileName.empty())
+    {
+        throw cerberusIllegalArgumentExc("Filename is empty");
+    }
+
+    m_fileName = fileName;
+}
+//=============================================================================
+void cerberus::data::filesystem::File::setOpenMode(uint8_t openMode)
+{
+    if(m_stream.is_open())
+    {
+        throw cerberusIllegalStateExc("Cannot change a name of an open file");
+    }
+
+    m_openMode = std::ios_base::in;
+
+    if(openMode & CERBERUS_FILE_WRITE)
+    {
+        m_openMode |= std::ios_base::out;
+    }
+
+    if(openMode & CERBERUS_FILE_BINARY)
+    {
+        m_openMode |= std::ios_base::binary;
+    }
+
+    if(openMode & CERBERUS_FILE_EOF)
+    {
+        m_openMode |= std::ios_base::ate;
+    }
+
+    if(openMode & CERBERUS_FILE_APPEND)
+    {
+        m_openMode |= std::ios_base::app;
+    }
+
+    if(openMode & CERBERUS_FILE_TRUNCATE)
+    {
+        m_openMode |= std::ios_base::trunc;
     }
 }
 //=============================================================================
@@ -152,7 +235,7 @@ bool cerberus::data::filesystem::File::writeLine(const std::string& line)
         throw cerberusIllegalStateExc("File is not open");
     }
 
-    m_stream.write(cerberus::Cerberus::strPrint("%s\n", line.c_str()).c_str(), line.length() + 1);
+    m_stream.write(core::CerberusUtils::strPrint("%s\n", line.c_str()).c_str(), line.length() + 1);
     return !(m_stream.fail() || m_stream.bad());
 }
 //=============================================================================

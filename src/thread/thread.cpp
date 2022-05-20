@@ -4,6 +4,7 @@
 
 #include "../mutex/mutexlocker.h"
 #include "../exception/exceptioncatalog.h"
+#include "../core/cerberuslog.h"
 
 //=============================================================================
 void cerberus::thread::Thread::_staticThread(Thread* context)
@@ -113,14 +114,14 @@ cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity peri
 {
     if(periodicity == ThreadPeriodicity::TP_NonPeriodic)
     {
-        logInfo(Cerberus::strPrint("New non-periodic Thread '%s' with ID: %u", name.c_str(), id()));
+        logInfo(core::CerberusUtils::strPrint("New non-periodic Thread '%s' with ID: %u", name.c_str(), id()));
     }
     else if(periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicQueue)
     {
         if(time.isValid())
         {
             m_period = std::chrono::microseconds(time.microseconds());
-            logInfo(Cerberus::strPrint("New periodic Thread '%s' with ID: %u, period: %u ms", name.c_str(), id(), time.milliseconds()));
+            logInfo(core::CerberusUtils::strPrint("New periodic Thread '%s' with ID: %u, period: %u ms", name.c_str(), id(), time.milliseconds()));
         }
         else
         {
@@ -129,7 +130,7 @@ cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity peri
     }
     else if(periodicity == ThreadPeriodicity::TP_OneShot)
     {
-        logInfo(Cerberus::strPrint("New one-shot Thread '%s' with ID: %u", name.c_str(), id()));
+        logInfo(core::CerberusUtils::strPrint("New one-shot Thread '%s' with ID: %u", name.c_str(), id()));
     }
 }
 //=============================================================================

@@ -1,5 +1,6 @@
 #include "cerberusutils.h"
 #include <cstring>
+#include <cstdarg>
 
 using namespace cerberus::core;
 
@@ -32,3 +33,4 @@ std::string CerberusUtils::strPrint(const char* format, ...)
 
     return ret;
 }
+//=============================================================================

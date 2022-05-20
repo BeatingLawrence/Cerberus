@@ -3,134 +3,55 @@
 
 #include <string>
 #include "Cerberus_global.h"
-#include "./message/message.h"
-#include "./mutex/mutex.h"
-#include "./register.h"
-
-#define logInfo(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Info)
-#define logWarning(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Warning)
-#define logError(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Error)
-#define debug(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Debug)
-
-#define thrLogInfo(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Info, this->name())
-#define thrLogWarning(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Warning, this->name())
-#define thrLogError(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Error, this->name())
-#define thrDebug(text) cerberus::Cerberus::log(text, cerberus::Cerberus::LogLevel::LL_Debug, this->name())
+#include "./core/cerberuscore.h"
+#include "./core/cerberuslog.h"
+#include "./core/messagefactory.h"
 
 namespace cerberus
 {
-    struct CERBERUS_EXPORT CerberusCustomizedLogRole
+    class CERBERUS_EXPORT Cerberus : public core::CerberusCore
     {
-        uint8_t textFormatting[3];  //up to 3 formatting specifiers, 0 will be ignored, see define.h
-        uint8_t foregroundColor;    //color specifier
-        uint8_t backgroundColor;    //color specifier
-    };
+            friend class ::cerberus::CerberusObject;
+            friend class ::cerberus::core::CerberusLog;
 
-    struct CERBERUS_EXPORT CerberusCustomizedTerminal
-    {
-        CerberusCustomizedLogRole infoRole;
-        CerberusCustomizedLogRole warningRole;
-        CerberusCustomizedLogRole errorRole;
-        CerberusCustomizedLogRole debugRole;
-    };
-
-    struct CERBERUS_EXPORT CerberusInitParms
-    {
-        bool terminalFormattingDisabled;
-        CerberusCustomizedTerminal terminal;
-        char* logFileName;
-    };
-
-    namespace thread
-    {
-        class Thread;
-    }
-    namespace data
-    {
-        namespace filesystem
-        {
-            class File;
-        }
-    }
-
-    typedef void* HANDLE;
-
-    class CERBERUS_EXPORT Cerberus
-    {
         private:
             Cerberus();
 
             Cerberus(const Cerberus& other) = delete;
-
             Cerberus(const Cerberus&& other) = delete;
-
             void operator=(const Cerberus& other) = delete;
 
-            static Cerberus* _provider();
-
-            bool _isColorSupported();
-
-            bool m_useFormattedTerminal;
-
-            std::string m_infoLogTerminalFormatting_Linux;                                  //used for Linux only
-            std::string m_warningLogTerminalFormatting_Linux;                               //used for Linux only
-            std::string m_errorLogTerminalFormatting_Linux;                                 //used for Linux only
-            std::string m_debugLogTerminalFormatting_Linux;                                 //used for Linux only
-            static const char* EndOfFormatting_Linux;                                       //used for Linux only
-            std::string _parseFormattingData_Linux(const CerberusCustomizedLogRole& data);  //used for Linux only
-
-            HANDLE m_stdoutHandle_Windows;                                                  //used for Windows only
-            HANDLE m_stderrHandle_Windows;                                                  //used for Windows only
-            uint8_t m_infoLogTerminalFormatting_Windows;                                    //used for Windows only
-            uint8_t m_warningLogTerminalFormatting_Windows;                                 //used for Windows only
-            uint8_t m_errorLogTerminalFormatting_Windows;                                   //used for Windows only
-            uint8_t m_debugLogTerminalFormatting_Windows;                                   //used for Windows only
-            uint8_t _parseFormattingData_Windows(const CerberusCustomizedLogRole& data);    //used for Windows only
-            static const uint8_t EndOfFormatting_Windows;                                   //used for Windows only
+            static Cerberus* _instance();
 
             bool m_initFlag;
 
-            Register m_register;
+            core::MessageFactory m_factory;
+
+            core::CerberusLog m_log;
 
             mutex::Mutex m_mutex;
 
-            data::filesystem::File* m_logFile;
-
-            thread::Thread* m_coreThread;   //has-a
-            static void coreWarmUp();
-            static void coreCoolDown();
-            static int coreTick(message::cerberus_message message, thread::Thread* thread);
-
-            uint32_t _registerCerberusObject(CerberusObject* object);
-            void _unregisterCerberusObject(uint32_t id);
-
-            static message::slot::cerberus_slot _slotFactory(message::slot::SlotType type);
-
             ~Cerberus();
+
+            CerberusObject* cerberusObjectById(uint32_t id) override;
+
+            void freeRegisterMemory() override;
+
+            static uint32_t _registerCerberusObject(CerberusObject* object);
+
+            static void _unregisterCerberusObject(uint32_t id);
+
+            static core::CerberusLog* _logInstance();
+
         public:
-            friend class ::cerberus::CerberusObject;
+            //Performs the init sequence of the Cerberus framework. This operation must precede any others [TRANSFERS]
+            static void init(const CerberusInitParms* parms);
 
-            enum LogLevel
-            {
-                LL_Info,
-                LL_Warning,
-                LL_Error,
-                LL_Debug,
-            };
-
-            //Performs the init sequence of the Cerberus framework. This operation must precede any others
-            static void init(const CerberusInitParms& parms);
-
+            //Performs the de-init sequence of the Cerberus framework. (TBC)
             static void deinit();
 
-            //Prints formatted content on a std::string which is returned
-            static std::string strPrint(const char* format, ...);
-
-            //Returns a working set of default parameters that can be a start point for customization
-            static CerberusInitParms cerberusDefaultParms();
-
-            //Logs the given string to stdout/stderr according to the specified logLevel
-            static void log(const std::string& str, LogLevel logLevel = LL_Info, const std::string& author = std::string());
+            //Returns a working set of default parameters that can be a start point for customization [TRANSFERS]
+            static CerberusInitParms* cerberusDefaultParms();
 
             //Adds a template of the given message to the register, returning the chosen typeID
             static uint32_t registerMessage(const message::Message& message, const std::string& name = std::string());

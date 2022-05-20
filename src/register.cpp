@@ -3,6 +3,7 @@
 #include "./mutex/mutexlocker.h"
 #include "./cerberusobject.h"
 #include "./cerberus.h"
+#include "./core/cerberusutils.h"
 
 using namespace cerberus;
 
@@ -81,7 +82,7 @@ void Register::unregisterCerberusObject(uint32_t id)
         {
             if((*it)->id() == id)
             {
-                logInfo(cerberus::Cerberus::strPrint("Unregistering object with ID: %u", id));
+                logInfo(core::CerberusUtils::strPrint("Unregistering object with ID: %u", id));
                 m_objects.erase(it);
                 return;
             }
@@ -125,13 +126,14 @@ CerberusObject* Register::cerberusObjectByID(uint32_t id) const
     return nullptr;
 }
 //=============================================================================
-bool Register::isEmpty() const
-{
-    return m_objects.empty();
-}
-//=============================================================================
 void Register::freeMemory()
 {
+    if(m_objects.empty())
+    {
+        return;
+    }
+
+    logInfo("Trying to free Register memory..");
     std::list<CerberusObject*> deleteList;
 
     for(auto it = m_objects.begin(); it != m_objects.end(); it++)
@@ -147,7 +149,7 @@ void Register::freeMemory()
 
     for(auto& el : deleteList)
     {
-        logInfo(cerberus::Cerberus::strPrint("Deleting ID: %u", el->id()));
+        logInfo(core::CerberusUtils::strPrint("Deleting ID: %u", el->id()));
         delete el;
     }
 }

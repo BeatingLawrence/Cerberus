@@ -10,12 +10,13 @@
  */
 
 #include <string>
+#include "../Cerberus_global.h"
 
 namespace cerberus
 {
     namespace core
     {
-        class CerberusUtils
+        class CERBERUS_EXPORT CerberusUtils
         {
             public:
                 CerberusUtils() = delete;

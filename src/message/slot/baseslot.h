@@ -14,6 +14,7 @@
 #include "../../Cerberus_global.h"
 #include "../../cerberus.h"
 #include "../../exception/exceptioncatalog.h"
+#include "../../core/cerberusutils.h"
 
 namespace cerberus
 {
@@ -56,7 +57,7 @@ namespace cerberus
 
                         if(casted == nullptr)
                         {
-                            throw cerberusIllegalArgumentExc(cerberus::Cerberus::strPrint("Unable co cast to %s", typeid(T).name()).c_str());
+                            throw cerberusIllegalArgumentExc(core::CerberusUtils::strPrint("Unable co cast to %s", typeid(T).name()).c_str());
                         }
 
                         return casted;
@@ -70,7 +71,7 @@ namespace cerberus
 
                         if(*casted == nullptr)
                         {
-                            throw cerberusIllegalArgumentExc(cerberus::Cerberus::strPrint("Unable co cast to shared_ptr of %s", typeid(T).name()).c_str());
+                            throw cerberusIllegalArgumentExc(core::CerberusUtils::strPrint("Unable co cast to shared_ptr of %s", typeid(T).name()).c_str());
                         }
 
                         return casted;

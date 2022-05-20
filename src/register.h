@@ -43,8 +43,6 @@ namespace cerberus
 
             CerberusObject* cerberusObjectByID(uint32_t id) const;
 
-            bool isEmpty() const;
-
             void freeMemory();
     };
 

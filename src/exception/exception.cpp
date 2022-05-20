@@ -1,5 +1,5 @@
 #include "exception.h"
-#include "../cerberus.h"
+#include "../core/cerberusutils.h"
 
 using namespace cerberus::exception;
 
@@ -29,23 +29,23 @@ Exception::Exception(const char* text, uint32_t line, const char* fileName, Exce
     switch(type)
     {
         case ET_Unknown:
-            m_error = cerberus::Cerberus::strPrint("Unknown exception in %s:%u, %s", file.c_str(), line, text);
+            m_error = core::CerberusUtils::strPrint("Unknown exception in %s:%u, %s", file.c_str(), line, text);
             break;
 
         case ET_IllegalArgument:
-            m_error = cerberus::Cerberus::strPrint("Illegal argument exception in %s:%u, %s", file.c_str(), line, text);
+            m_error = core::CerberusUtils::strPrint("Illegal argument exception in %s:%u, %s", file.c_str(), line, text);
             break;
 
         case ET_IllegalState:
-            m_error = cerberus::Cerberus::strPrint("Illegal state exception in %s:%u, %s", file.c_str(), line, text);
+            m_error = core::CerberusUtils::strPrint("Illegal state exception in %s:%u, %s", file.c_str(), line, text);
             break;
 
         case ET_System:
-            m_error = cerberus::Cerberus::strPrint("System exception in %s:%u, %s", file.c_str(), line, text);
+            m_error = core::CerberusUtils::strPrint("System exception in %s:%u, %s", file.c_str(), line, text);
             break;
 
         case ET_MissingImplementation:
-            m_error = cerberus::Cerberus::strPrint("Missing implementation exception in %s:%u, %s", file.c_str(), line, text);
+            m_error = core::CerberusUtils::strPrint("Missing implementation exception in %s:%u, %s", file.c_str(), line, text);
             break;
     }
 }

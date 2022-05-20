@@ -8,7 +8,7 @@ namespace cerberus
 {
     namespace thread
     {
-        class CERBERUS_EXPORT ThreadBase
+        class ThreadBase
         {
             private:
                 mutable mutex::Mutex m_mutex;

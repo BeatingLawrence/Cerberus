@@ -5,6 +5,8 @@
 #include <thread>
 #include <chrono>
 
+using namespace cerberus;
+
 TEST(threadTest, simple_thread_creation_destruction)
 {
     cerberus::thread::Thread* thread = new cerberus::thread::Thread("Simple-Thread");
@@ -57,9 +59,9 @@ static int pingTestCallback(cerberus::message::cerberus_message msg, cerberus::t
 
     if(msg->isValid())
     {
-        logInfo(cerberus::Cerberus::strPrint("PONG! %u %u %u", msg->getSlotAt(0)->to<cerberus::message::slot::CharSlot>()->value(),
-                                             msg->getSlotAt(1)->to<cerberus::message::slot::CharSlot>()->value(),
-                                             msg->getSlotAt(2)->to<cerberus::message::slot::CharSlot>()->value()));
+        logInfo(core::CerberusUtils::strPrint("PONG! %u %u %u", msg->getSlotAt(0)->to<cerberus::message::slot::CharSlot>()->value(),
+                                              msg->getSlotAt(1)->to<cerberus::message::slot::CharSlot>()->value(),
+                                              msg->getSlotAt(2)->to<cerberus::message::slot::CharSlot>()->value()));
     }
     else
     {
