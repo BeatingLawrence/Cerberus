@@ -2,7 +2,7 @@
 #include <cstdio>
 #include "../../exception/exceptioncatalog.h"
 #include "../bytebuffer.h"
-#include "../../cerberus.h"
+#include "../../core/cerberusutils.h"
 
 #ifdef WINDOWS_SYSTEM
     #include <windows.h>

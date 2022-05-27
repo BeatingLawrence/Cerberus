@@ -2,6 +2,9 @@
 #include "../mutex/mutexlocker.h"
 #include "../message/slot/stringslot.h"
 #include "./cerberuslog.h"
+#include "src/cerberusobject.h"
+#include "./cerberusfactory.h"
+#include "../thread/thread.h"
 
 using namespace cerberus::core;
 
@@ -17,8 +20,7 @@ int CerberusCore::tick()
 
     if(message->id() == CERBERUS_MESSAGE_LOG_ID)
     {
-        mutex::MutexLocker locker(&m_fileMutex);
-        m_logFile.writeLine(message->getSlotAt(0)->to<message::slot::StringSlot>()->value());
+        _writeLineOnFile(message->getSlotAt(0)->to<message::slot::StringSlot>()->value());
         return 0;
     }
 
@@ -31,7 +33,7 @@ int CerberusCore::tick()
     }
     else
     {
-        CerberusObject* found =  cerberusObjectById(destination);
+        CerberusObject* found = core::CerberusFactory::_cerberusObjectById(destination);
 
         if(found == nullptr)
         {
@@ -61,7 +63,7 @@ void CerberusCore::warmUp()
 {
     logInfo("Starting Core Thread..");
 
-    if(m_logFile.open())
+    if(!m_logFile.open())
     {
         logWarning("LogFile open failed");
     }
@@ -70,11 +72,19 @@ void CerberusCore::warmUp()
 void CerberusCore::coolDown()
 {
     logInfo("Stopping Cerberus Core..");
-    freeRegisterMemory();
+    _writeLineOnFile("---LOG-END---");
+    core::CerberusFactory::_freeMemory();
+    logInfo("Closing log file..");
     m_logFile.close();
 }
 //=============================================================================
-CerberusCore::CerberusCore() : cerberus::thread::Thread("Core"), m_logFile(CERBERUS_FILE_WRITE | CERBERUS_FILE_TRUNCATE)
+void CerberusCore::_writeLineOnFile(const std::string& line)
+{
+    mutex::MutexLocker locker(&m_fileMutex);
+    m_logFile.writeLine(line);
+}
+//=============================================================================
+CerberusCore::CerberusCore() : cerberus::core::CoreThread(), m_logFile(CERBERUS_FILE_WRITE | CERBERUS_FILE_TRUNCATE)
 {
 }
 //=============================================================================

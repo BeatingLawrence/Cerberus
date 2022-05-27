@@ -2,7 +2,7 @@
 #include <cerberus/cerberus.h>
 #include <iostream>
 #include <cerberus/message/slot/charslot.h>
-#include <thread>
+#include <cerberus/core/cerberusfactory.h>
 
 int main(int argc, char* argv[])
 {
@@ -12,10 +12,10 @@ int main(int argc, char* argv[])
     msg.addSlot(cerberus::message::slot::CharSlot::create());
     msg.addSlot(cerberus::message::slot::CharSlot::create());
     msg.addSlot(cerberus::message::slot::CharSlot::create());
-    cerberus::Cerberus::registerMessage(msg, "PingPongMessage");
+    cerberus::core::CerberusFactory::registerMessage(msg, "PingPongMessage");
     //start testing
     ::testing::InitGoogleTest(&argc, argv);
     int ret = RUN_ALL_TESTS();
-    //cerberus::Cerberus::deinit();
+    cerberus::Cerberus::deinit();
     return ret;
 }

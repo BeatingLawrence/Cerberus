@@ -17,10 +17,14 @@
 
 namespace cerberus
 {
+    class Cerberus;
+
     namespace core
     {
         class CerberusLog
         {
+                friend class cerberus::Cerberus;
+
             public:
                 typedef void* HANDLE;
 
@@ -56,15 +60,16 @@ namespace cerberus
 
                 cerberus::mutex::Mutex m_mutex;
 
-                void _log(const std::string& str, LogLevel logLevel = LL_Info, const std::string& author = std::string());
+                static CerberusLog* _instance();
 
-            public:
                 CerberusLog();
 
                 ~CerberusLog();
 
-                void setup(const CerberusLogSetup& setup);
+                //Setups the logging singleton using given structure
+                static void _setup(const CerberusLogSetup& setup);
 
+            public:
                 //Logs the given string to stdout/stderr according to the specified logLevel
                 static void log(const std::string& str, LogLevel logLevel = LL_Info, const std::string& author = std::string());
 

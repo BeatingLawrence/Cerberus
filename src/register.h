@@ -10,7 +10,7 @@
  *      ...
  *
  *  This class is not supposed to be used directly. An instance of this class
- *  will be created and managed by the Cerberus provider
+ *  will be created and managed by the CerberusFactory
  */
 
 #include <list>
@@ -21,7 +21,7 @@ namespace cerberus
 {
     class CerberusObject;
 
-    class CERBERUS_EXPORT Register
+    class Register
     {
         private:
             std::list<CerberusObject*> m_objects;
@@ -33,6 +33,8 @@ namespace cerberus
         public:
             Register();
 
+            ~Register();
+
             Register(const Register& other) = delete;
 
             uint32_t registerCerberusObject(CerberusObject* object);
@@ -43,7 +45,7 @@ namespace cerberus
 
             CerberusObject* cerberusObjectByID(uint32_t id) const;
 
-            void freeMemory();
+            void freeMemory();  //Not protected by mutex!
     };
 
 } // namespace cerberus

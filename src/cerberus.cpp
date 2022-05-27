@@ -33,31 +33,6 @@ Cerberus::~Cerberus()
     }
 }
 //=============================================================================
-CerberusObject* Cerberus::cerberusObjectById(uint32_t id)
-{
-    return m_factory.cerberusObjectById(id);
-}
-//=============================================================================
-void Cerberus::freeRegisterMemory()
-{
-    m_factory.freeMemory();
-}
-//=============================================================================
-uint32_t Cerberus::_registerCerberusObject(CerberusObject* object)
-{
-    return _instance()->m_factory.registerCerberusObject(object);
-}
-//=============================================================================
-void Cerberus::_unregisterCerberusObject(uint32_t id)
-{
-    _instance()->m_factory.unregisterCerberusObject(id);
-}
-//=============================================================================
-CerberusLog* Cerberus::_logInstance()
-{
-    return &(_instance()->m_log);
-}
-//=============================================================================
 void Cerberus::init(const CerberusInitParms* parms)
 {
     Cerberus* cerberus = _instance();
@@ -70,7 +45,7 @@ void Cerberus::init(const CerberusInitParms* parms)
     }
 
     // do the initialization:
-    cerberus->m_log.setup(parms->logSetup);
+    core::CerberusLog::_setup(parms->logSetup);
     cerberus->setLogFileName(parms->logSetup.logFileName);
     cerberus->start();
     //Do other stuff..
@@ -118,28 +93,8 @@ CerberusInitParms* Cerberus::cerberusDefaultParms()
     return toReturn;
 }
 //=============================================================================
-uint32_t Cerberus::registerMessage(const message::Message& message, const std::string& name)
-{
-    return _instance()->m_factory.registerMessage(message, name);
-}
-//=============================================================================
-uint32_t Cerberus::messageIdByName(const std::string& name)
-{
-    return _instance()->m_factory.messageIdByName(name);
-}
-//=============================================================================
-message::cerberus_message Cerberus::messageConstruct(uint32_t id)
-{
-    return _instance()->m_factory.messageConstruct(id);
-}
-//=============================================================================
 void Cerberus::send(message::cerberus_message message)
 {
     _instance()->addMessage(message);
-}
-//=============================================================================
-uint32_t Cerberus::threadIdByName(const std::string& name)
-{
-    return _instance()->threadIdByName(name);
 }
 //=============================================================================

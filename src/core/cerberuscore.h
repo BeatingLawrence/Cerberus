@@ -1,14 +1,16 @@
 #ifndef CERBERUS_CORE_CERBERUSCORE_H
 #define CERBERUS_CORE_CERBERUSCORE_H
 
-#include "../thread/thread.h"
+#include "./corethread.h"
 #include "../data/filesystem/file.h"
 
 namespace cerberus
 {
+    class CerberusObject;
+
     namespace core
     {
-        class CerberusCore : public cerberus::thread::Thread
+        class CerberusCore : public cerberus::core::CoreThread
         {
             private:
                 virtual int tick() override;
@@ -21,10 +23,7 @@ namespace cerberus
 
                 mutex::Mutex m_fileMutex;
 
-            protected:
-                virtual CerberusObject* cerberusObjectById(uint32_t id) = 0;
-
-                virtual void freeRegisterMemory() = 0;
+                void _writeLineOnFile(const std::string& line);
 
             public:
                 CerberusCore();

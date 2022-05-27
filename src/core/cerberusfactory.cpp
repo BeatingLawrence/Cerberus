@@ -1,4 +1,4 @@
-#include "messagefactory.h"
+#include "cerberusfactory.h"
 #include "../cerberusobject.h"
 #include "../message/slot/charslot.h"
 #include "../message/slot/stringslot.h"
@@ -8,11 +8,23 @@
 using namespace cerberus::core;
 
 //=============================================================================
-MessageFactory::MessageFactory()
+CerberusFactory::CerberusFactory()
 {
+    // noop
 }
 //=============================================================================
-cerberus::message::slot::cerberus_slot MessageFactory::slotFactory(message::slot::SlotType type)
+CerberusFactory::~CerberusFactory()
+{
+    // noop
+}
+//=============================================================================
+CerberusFactory* CerberusFactory::_instance()
+{
+    static CerberusFactory factory;
+    return &factory;
+}
+//=============================================================================
+cerberus::message::slot::cerberus_slot CerberusFactory::slotFactory(message::slot::SlotType type)
 {
     switch(type)
     {
@@ -72,14 +84,14 @@ cerberus::message::slot::cerberus_slot MessageFactory::slotFactory(message::slot
     throw cerberusIllegalArgumentExc("SlotFactory: Given slot type does not exist");
 }
 //=============================================================================
-uint32_t MessageFactory::registerMessage(const message::Message& message, const std::string& name)
+uint32_t CerberusFactory::registerMessage(const message::Message& message, const std::string& name)
 {
     return (new cerberus::message::MessageTemplate(message, name))->id();
 }
 //=============================================================================
-uint32_t MessageFactory::messageIdByName(const std::string& name)
+uint32_t CerberusFactory::messageIdByName(const std::string& name)
 {
-    CerberusObject* found = m_register.cerberusObjectByName(name);
+    CerberusObject* found = _instance()->m_register.cerberusObjectByName(name);
 
     if(found == nullptr)
     {
@@ -98,7 +110,7 @@ uint32_t MessageFactory::messageIdByName(const std::string& name)
     }
 }
 //=============================================================================
-cerberus::message::cerberus_message MessageFactory::messageConstruct(uint32_t id)
+cerberus::message::cerberus_message CerberusFactory::messageConstruct(uint32_t id)
 {
     if(id == CERBERUS_INVALID_ID)
     {
@@ -111,7 +123,7 @@ cerberus::message::cerberus_message MessageFactory::messageConstruct(uint32_t id
         return message::StandardMessageFactory::createStandardMessage(id);
     }
 
-    CerberusObject* found = m_register.cerberusObjectByID(id);
+    CerberusObject* found = _instance()->m_register.cerberusObjectByID(id);
 
     if(found == nullptr)
     {
@@ -134,9 +146,9 @@ cerberus::message::cerberus_message MessageFactory::messageConstruct(uint32_t id
     return message;
 }
 //=============================================================================
-uint32_t MessageFactory::threadIdByName(const std::string& name)
+uint32_t CerberusFactory::threadIdByName(const std::string& name)
 {
-    CerberusObject* found = m_register.cerberusObjectByName(name);
+    CerberusObject* found = _instance()->m_register.cerberusObjectByName(name);
 
     if(found == nullptr)
     {
@@ -155,23 +167,23 @@ uint32_t MessageFactory::threadIdByName(const std::string& name)
     }
 }
 //=============================================================================
-cerberus::CerberusObject* MessageFactory::cerberusObjectById(uint32_t id) const
+cerberus::CerberusObject* CerberusFactory::_cerberusObjectById(uint32_t id)
 {
-    return m_register.cerberusObjectByID(id);
+    return _instance()->m_register.cerberusObjectByID(id);
 }
 //=============================================================================
-void MessageFactory::freeMemory()
+void CerberusFactory::_freeMemory()
 {
-    m_register.freeMemory();
+    _instance()->m_register.freeMemory();
 }
 //=============================================================================
-uint32_t MessageFactory::registerCerberusObject(CerberusObject* object)
+uint32_t CerberusFactory::_registerCerberusObject(CerberusObject* object)
 {
-    return m_register.registerCerberusObject(object);
+    return _instance()->m_register.registerCerberusObject(object);
 }
 //=============================================================================
-void MessageFactory::unregisterCerberusObject(uint32_t id)
+void CerberusFactory::_unregisterCerberusObject(uint32_t id)
 {
-    m_register.unregisterCerberusObject(id);
+    _instance()->m_register.unregisterCerberusObject(id);
 }
 //=============================================================================

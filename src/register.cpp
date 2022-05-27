@@ -42,6 +42,11 @@ Register::Register()
 {
 }
 //=============================================================================
+Register::~Register()
+{
+    mutex::MutexLocker locker(&m_objectMutex);
+}
+//=============================================================================
 uint32_t Register::registerCerberusObject(CerberusObject* object)
 {
     mutex::MutexLocker locker(&m_objectMutex);
@@ -136,20 +141,20 @@ void Register::freeMemory()
     logInfo("Trying to free Register memory..");
     std::list<CerberusObject*> deleteList;
 
-    for(auto it = m_objects.begin(); it != m_objects.end(); it++)
+    for(auto const& i : m_objects)
     {
-        if(*it != nullptr)
+        if(i != nullptr)
         {
-            if((*it)->type() != CerberusObject::ObjectType::OT_Thread)
+            if(i->type() != CerberusObject::ObjectType::OT_Thread)
             {
-                deleteList.push_back(*it);
+                deleteList.push_back(i);
             }
         }
     }
 
     for(auto& el : deleteList)
     {
-        logInfo(core::CerberusUtils::strPrint("Deleting ID: %u", el->id()));
+        logInfo(core::CerberusUtils::strPrint("Deleting ID: %u of name: %s", el->id(), el->name().c_str()));
         delete el;
     }
 }
