@@ -27,7 +27,7 @@ add_executable(test EXCLUDE_FROM_ALL
 
 set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
 
-target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY)
+target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY PRIVATE _CRT_SECURE_NO_WARNINGS)
 
 install(TARGETS Cerberus DESTINATION lib)
 install(DIRECTORY src/. DESTINATION include/cerberus)

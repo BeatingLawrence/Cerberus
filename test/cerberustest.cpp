@@ -16,3 +16,8 @@ TEST(cerberusTest, logTest)
     logError("Error Log");
     debug("Debug Log");
 }
+
+TEST(cerberusTest, environmentVariable)
+{
+    logInfo(core::CerberusUtils::environmentVariable("APPDATA"));   //works only on windows
+}

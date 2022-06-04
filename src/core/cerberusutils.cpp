@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstring>
 #include <cstdarg>
+#include <cstdlib>
 
 using namespace cerberus::core;
 
@@ -76,5 +77,17 @@ void CerberusUtils::removeBlank(std::string& str)
 {
     str = removeBlankBefore(str);
     str = removeBlankAfter(str);
+}
+//=============================================================================
+std::string CerberusUtils::environmentVariable(const std::string& variableName)
+{
+    char* val = getenv(variableName.c_str());
+
+    if(val == nullptr)
+    {
+        return std::string();
+    }
+
+    return std::string(val);
 }
 //=============================================================================

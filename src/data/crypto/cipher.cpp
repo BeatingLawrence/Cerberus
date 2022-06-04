@@ -1,5 +1,6 @@
 #include "cipher.h"
 #include <openssl/evp.h>
+#include <openssl/ssl3.h>
 #include "../bytebuffer.h"
 
 using namespace cerberus::data::crypto;

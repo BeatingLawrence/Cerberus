@@ -40,6 +40,9 @@ namespace cerberus
                 //Removes spaces before and after str. Spaces between characters will remain
                 static std::string removeBlank_copy(const std::string& str);
                 static void removeBlank(std::string& str);
+
+                //Retrieves the value of specified environment variable
+                static std::string environmentVariable(const std::string& variableName);
         };
     }
 }
