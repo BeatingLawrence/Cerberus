@@ -2,12 +2,13 @@
 #define CERBERUS_DATA_BYTEBUFFER_H
 
 #include <vector>
+#include "../Cerberus_global.h"
 
 namespace cerberus
 {
     namespace data
     {
-        class ByteBuffer
+        class CERBERUS_EXPORT ByteBuffer
         {
             private:
                 std::vector<unsigned char>* m_bytes;

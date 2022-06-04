@@ -85,9 +85,24 @@ IniDataFile::IniDataFile(const std::string& fileName) :
     // noop
 }
 //=============================================================================
+IniDataFile::IniDataFile() :
+    m_file(),
+    m_isValidRegex("[a-z][^=]*[=]{1} *[^=]+", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase),
+    m_isIntegerRegex("[a-z][^=]*[=]{1} *\\-?[0-9]+", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase),
+    m_isDoubleRegex("[a-z][^=]*[=]{1} *\\-?[0-9]+\\.{1}[0-9]+", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase),
+    m_isBoolRegex("[a-z][^=]*[=]{1} *(true|false)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase)
+{
+    // noop
+}
+//=============================================================================
 IniDataFile::~IniDataFile()
 {
     // noop
+}
+//=============================================================================
+void IniDataFile::setFileName(const std::string& fileName)
+{
+    m_file.setFileName(fileName);
 }
 //=============================================================================
 bool IniDataFile::load()

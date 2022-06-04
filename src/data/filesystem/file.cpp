@@ -59,7 +59,7 @@ cerberus::data::filesystem::File::File(uint8_t openMode) :
         m_openMode |= std::ios_base::trunc;
     }
 
-    m_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);    //will throw exception if fail or bad
+    m_stream.exceptions(std::ifstream::badbit);    //will throw exception if bad
 }
 //=============================================================================
 cerberus::data::filesystem::File::File(const std::string& fileName, uint8_t openMode) :
@@ -97,7 +97,7 @@ cerberus::data::filesystem::File::File(const std::string& fileName, uint8_t open
         m_openMode |= std::ios_base::trunc;
     }
 
-    m_stream.exceptions(std::ifstream::badbit);    //will throw exception if fail or bad
+    m_stream.exceptions(std::ifstream::badbit);    //will throw exception if bad
 }
 //=============================================================================
 cerberus::data::filesystem::File::~File()

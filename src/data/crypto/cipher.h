@@ -1,6 +1,8 @@
 #ifndef CERBERUS_DATA_CRYPTO_CIPHER_H
 #define CERBERUS_DATA_CRYPTO_CIPHER_H
 
+#include "../../Cerberus_global.h"
+
 typedef struct evp_md_ctx_st EVP_MD_CTX;
 typedef struct evp_cipher_ctx_st EVP_CIPHER_CTX;
 typedef struct evp_md_st EVP_MD;
@@ -14,7 +16,7 @@ namespace cerberus
 
         namespace crypto
         {
-            class Cipher
+            class CERBERUS_EXPORT Cipher
             {
                 private:
                     EVP_MD_CTX*         m_md_ctx;       //message-digest context

@@ -53,9 +53,13 @@ namespace cerberus
                 public:
                     //Creates an IniDataFile object
                     IniDataFile(const std::string& fileName);
+                    IniDataFile();
 
                     //Destroyes an IniDataFile object and closes the file
                     ~IniDataFile();
+
+                    //Sets a file name for the .ini file
+                    void setFileName(const std::string& fileName);
 
                     //Returns true if the file is a valid .ini file or if it is empty.
                     //When an invalid line is found, the method will still attempt to load the following valid ones.
