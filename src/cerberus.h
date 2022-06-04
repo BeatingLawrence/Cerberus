@@ -28,7 +28,7 @@ namespace cerberus
             ~Cerberus();
 
         public:
-            //Performs the init sequence of the Cerberus framework. This operation must precede any others [TRANSFERS]
+            //Performs the init sequence of the Cerberus framework. This operation must precede any others [TRANSFERS: NO]
             static void init(const CerberusInitParms* parms);
 
             //Performs the de-init sequence of the Cerberus framework. (TBC)
@@ -37,7 +37,7 @@ namespace cerberus
             //Sends a message
             static void send(message::cerberus_message message);
 
-            //Returns a working default set of init parameters
+            //Returns a working default set of init parameters [TRANSFERS: YES]
             static CerberusInitParms* cerberusDefaultParms();
     };
 }

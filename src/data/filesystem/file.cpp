@@ -97,7 +97,7 @@ cerberus::data::filesystem::File::File(const std::string& fileName, uint8_t open
         m_openMode |= std::ios_base::trunc;
     }
 
-    m_stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);    //will throw exception if fail or bad
+    m_stream.exceptions(std::ifstream::badbit);    //will throw exception if fail or bad
 }
 //=============================================================================
 cerberus::data::filesystem::File::~File()
@@ -283,6 +283,65 @@ void cerberus::data::filesystem::File::read(ByteBuffer& bytes, std::streampos st
     m_stream.seekg(start);
     bytes.resize(span);
     m_stream.read((char*)bytes.data(), span);
+}
+//=============================================================================
+bool cerberus::data::filesystem::File::readLine(std::string& line)
+{
+    if(!m_stream.is_open())
+    {
+        throw cerberusIllegalStateExc("File is not open");
+    }
+
+    std::getline(m_stream, line);
+
+    if(m_stream.eof())
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+//=============================================================================
+void cerberus::data::filesystem::File::resetReadCursor()
+{
+    m_stream.seekg(0);
+}
+//=============================================================================
+void cerberus::data::filesystem::File::resetWriteCursor()
+{
+    m_stream.seekp(0);
+}
+//=============================================================================
+std::streampos cerberus::data::filesystem::File::readCursor()
+{
+    return m_stream.tellg();
+}
+//=============================================================================
+std::streampos cerberus::data::filesystem::File::writeCursor()
+{
+    return m_stream.tellp();
+}
+//=============================================================================
+void cerberus::data::filesystem::File::setReadCursor(std::streampos pos)
+{
+    m_stream.seekg(pos);
+}
+//=============================================================================
+void cerberus::data::filesystem::File::setWriteCursor(std::streampos pos)
+{
+    m_stream.seekp(pos);
+}
+//=============================================================================
+void cerberus::data::filesystem::File::moveReadCursor(std::streamoff offset)
+{
+    m_stream.seekg(offset, std::ios_base::cur);
+}
+//=============================================================================
+void cerberus::data::filesystem::File::moveWriteCursor(std::streamoff offset)
+{
+    m_stream.seekp(offset, std::ios_base::cur);
 }
 //=============================================================================
 

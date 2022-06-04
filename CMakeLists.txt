@@ -21,14 +21,16 @@ add_library(Cerberus SHARED
   ${src_files}
 )
 
+add_executable(test EXCLUDE_FROM_ALL
+  ${test_files}
+)
+
+set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
+
 target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY)
 
 install(TARGETS Cerberus DESTINATION lib)
 install(DIRECTORY src/. DESTINATION include/cerberus)
-
-add_executable(test EXCLUDE_FROM_ALL
-  ${test_files}
-)
 
 target_include_directories(test PUBLIC
     "../Dist/include"
@@ -48,9 +50,8 @@ if(MSVC)
         "./gtest/include"
     )
 
-    if(EXISTS "../Dist/lib/Cerberus-d.lib")
-        message(STATUS "Cerberus debug library found!")
-        find_library(CERBERUS_LIBRARY NAMES Cerberus-d PATHS "../Dist/lib" PATH_SUFFIXES lib)
+    if(NOT EXISTS "../Dist/lib/libCerberus-d.lib")
+        message(STATUS "Cerberus debug library NOT found!")
     endif()
 
     find_library(GTEST_LIBRARY NAMES gtest PATHS "./gtest/lib" PATH_SUFFIXES lib)
@@ -60,6 +61,13 @@ if(MSVC)
         message(FATAL_ERROR "GTest library needed on Windows system! Please Read README.md")
     endif()
 
+    #OPEN-SSL
+
+    target_include_directories(Cerberus PUBLIC "C:/Qt/Tools/OpenSSL/Win_x64/include")
+    target_link_directories(Cerberus PUBLIC "C:/Qt/Tools/OpenSSL/Win_x64/lib")
+    target_link_libraries(Cerberus LINK_PUBLIC libssl)
+    target_link_libraries(Cerberus LINK_PUBLIC libcrypto)
+
 else()
 
     message(STATUS "On Linux system")
@@ -68,17 +76,22 @@ else()
         "/usr/include"
     )
 
-    if(EXISTS "../Dist/lib/libCerberus-d.so")
-        message(STATUS "Cerberus debug library found!")
-        find_library(CERBERUS_LIBRARY NAMES Cerberus-d PATHS "../Dist/lib" PATH_SUFFIXES lib)
+    if(NOT EXISTS "../Dist/lib/libCerberus-d.so")
+        message(STATUS "Cerberus debug library NOT found!")
     endif()
 
     find_library(GTEST_LIBRARY NAMES gtest PATHS "/usr/lib" PATH_SUFFIXES lib)
     find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "/usr/lib" PATH_SUFFIXES lib)
 
+    #OPEN-SSL
+
+    #TO-DO ADD
+
 endif(MSVC)
 
-target_link_libraries(test LINK_PUBLIC ${CERBERUS_LIBRARY})
+target_link_directories(test PUBLIC "../Dist/lib")
+
+target_link_libraries(test LINK_PUBLIC Cerberus)
 target_link_libraries(test LINK_PUBLIC ${GTEST_LIBRARY})
 target_link_libraries(test LINK_PUBLIC ${GTEST_MAIN_LIBRARY})
 

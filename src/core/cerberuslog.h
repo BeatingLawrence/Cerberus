@@ -3,6 +3,7 @@
 
 #include <string>
 #include "../mutex/mutex.h"
+#include "../Cerberus_global.h"
 #include "../types.h"
 
 #define logInfo(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Info)
@@ -21,7 +22,7 @@ namespace cerberus
 
     namespace core
     {
-        class CerberusLog
+        class CERBERUS_EXPORT CerberusLog
         {
                 friend class cerberus::Cerberus;
 

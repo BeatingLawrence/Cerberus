@@ -28,13 +28,13 @@ namespace cerberus
 
                     File(uint8_t openMode = 0); //Default: read-only
 
-                    File(const std::string& fileName, uint8_t openMode);
+                    File(const std::string& fileName, uint8_t openMode = 0);
 
                     ~File();
 
                     void setFileName(const std::string& fileName);
 
-                    void setOpenMode(uint8_t openMode);
+                    void setOpenMode(uint8_t openMode = 0);
 
                     bool isOpen() const;
 
@@ -53,6 +53,25 @@ namespace cerberus
                     void read(ByteBuffer& bytes, std::streampos start = 0);
 
                     void read(ByteBuffer& bytes, std::streampos start, std::streamsize span);
+
+                    //Returns false when EOF is reached and no more lines are available
+                    bool readLine(std::string& line);
+
+                    void resetReadCursor();
+
+                    void resetWriteCursor();
+
+                    std::streampos readCursor();
+
+                    std::streampos writeCursor();
+
+                    void setReadCursor(std::streampos pos);
+
+                    void setWriteCursor(std::streampos pos);
+
+                    void moveReadCursor(std::streamoff offset);
+
+                    void moveWriteCursor(std::streamoff offset);
             };
         }
     }

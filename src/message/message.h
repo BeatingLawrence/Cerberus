@@ -17,7 +17,7 @@ namespace cerberus
         {
             typedef std::shared_ptr<class BaseSlot> cerberus_slot;
 
-            enum CERBERUS_EXPORT SlotType
+            enum SlotType
             {
                 ST_UCHAR,       //1 byte
                 ST_CHAR,        //1 byte

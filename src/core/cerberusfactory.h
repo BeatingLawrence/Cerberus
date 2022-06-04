@@ -10,7 +10,7 @@ namespace cerberus
     {
         class CerberusCore;
 
-        class CerberusFactory
+        class CERBERUS_EXPORT CerberusFactory
         {
                 friend class ::cerberus::CerberusObject;
                 friend class ::cerberus::core::CerberusCore;

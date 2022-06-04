@@ -6,10 +6,11 @@
 #include <memory>
 #include "exception/exceptioncatalog.h"
 #include "./core/cerberusutils.h"
+#include "./Cerberus_global.h"
 
 namespace cerberus
 {
-    class CerberusObject
+    class CERBERUS_EXPORT CerberusObject
     {
         public:
             enum ObjectType : uint8_t

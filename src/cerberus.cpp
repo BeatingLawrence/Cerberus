@@ -76,10 +76,10 @@ CerberusInitParms* Cerberus::cerberusDefaultParms()
     toReturn->logSetup.logFileName = (char*)malloc(13);
     memcpy(toReturn->logSetup.logFileName, "./latest.log", 13);
 #ifdef WINDOWS_SYSTEM
-    toReturn->terminal.infoRole.foregroundColor = TERMINAL_FOREGROUND_GREEN;
-    toReturn->terminal.warningRole.foregroundColor = (TERMINAL_FOREGROUND_GREEN | TERMINAL_FOREGROUND_RED);
-    toReturn->terminal.errorRole.foregroundColor = TERMINAL_FOREGROUND_RED;
-    toReturn->terminal.debugRole.foregroundColor = (TERMINAL_FOREGROUND_RED | TERMINAL_FOREGROUND_BLUE);
+    toReturn->logSetup.infoRole.foregroundColor = TERMINAL_FOREGROUND_GREEN;
+    toReturn->logSetup.warningRole.foregroundColor = (TERMINAL_FOREGROUND_GREEN | TERMINAL_FOREGROUND_RED);
+    toReturn->logSetup.errorRole.foregroundColor = TERMINAL_FOREGROUND_RED;
+    toReturn->logSetup.debugRole.foregroundColor = (TERMINAL_FOREGROUND_RED | TERMINAL_FOREGROUND_BLUE);
 #else
     toReturn->logSetup.infoRole.backgroundColor = TERMINAL_BACKGROUND_BLACK;
     toReturn->logSetup.warningRole.backgroundColor = TERMINAL_BACKGROUND_BLACK;

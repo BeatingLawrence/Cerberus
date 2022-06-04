@@ -197,42 +197,42 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
     switch(logLevel)
     {
         case LL_Info:       //writes on stdout
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << strPrint("%s [", timestamp.c_str());
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, cerberus->m_infoLogTerminalFormatting_Windows);
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
+            std::cout << CerberusUtils::strPrint("%s [", timestamp.c_str());
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, instance->m_infoLogTerminalFormatting_Windows);
             std::cout << "INFO";
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << strPrint("] %s%s", logAuthor.c_str(), str.c_str());
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
+            std::cout << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), str.c_str());
             std::cout << std::endl;
             break;
 
         case LL_Warning:    //writes on stdout
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << strPrint("%s [", timestamp.c_str());
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, cerberus->m_warningLogTerminalFormatting_Windows);
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
+            std::cout << CerberusUtils::strPrint("%s [", timestamp.c_str());
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, instance->m_warningLogTerminalFormatting_Windows);
             std::cout << "WARNING";
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << strPrint("] %s%s", logAuthor.c_str(), str.c_str());
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
+            std::cout << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), str.c_str());
             std::cout << std::endl;
             break;
 
         case LL_Error:      //writes on stderr
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cerr << strPrint("%s [", timestamp.c_str());
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, cerberus->m_errorLogTerminalFormatting_Windows);
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
+            std::cerr << CerberusUtils::strPrint("%s [", timestamp.c_str());
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, instance->m_errorLogTerminalFormatting_Windows);
             std::cerr << "ERROR";
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cerr << strPrint("] %s%s", logAuthor.c_str(), str.c_str());
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
+            std::cerr << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), str.c_str());
             std::cerr << std::endl;
             break;
 
         case LL_Debug:      //writes on stdout
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << strPrint("%s [", timestamp.c_str());
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, cerberus->m_debugLogTerminalFormatting_Windows);
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
+            std::cout << CerberusUtils::strPrint("%s [", timestamp.c_str());
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, instance->m_debugLogTerminalFormatting_Windows);
             std::cout << "DEBUG";
-            SetConsoleTextAttribute(cerberus->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << strPrint("] %s%s", logAuthor.c_str(), str.c_str());
+            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
+            std::cout << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), str.c_str());
             std::cout << std::endl;
             break;
     }
@@ -262,7 +262,7 @@ void CerberusLog::_setup(const CerberusLogSetup& setup)
     else
     {
 #ifdef WINDOWS_SYSTEM
-        m_useFormattedTerminal = true;
+        instance->m_useFormattedTerminal = true;
 #else
         instance->m_useFormattedTerminal = (isatty(fileno(stdout)) == 1);
 #endif
@@ -271,12 +271,12 @@ void CerberusLog::_setup(const CerberusLogSetup& setup)
     if(instance->m_useFormattedTerminal)
     {
 #ifdef WINDOWS_SYSTEM
-        m_stdoutHandle_Windows = GetStdHandle(STD_OUTPUT_HANDLE);
-        m_stderrHandle_Windows = GetStdHandle(STD_ERROR_HANDLE);
-        m_infoLogTerminalFormatting_Windows = _parseFormattingData_Windows(parms.terminal.infoRole);
-        m_warningLogTerminalFormatting_Windows = _parseFormattingData_Windows(parms.terminal.warningRole);
-        m_errorLogTerminalFormatting_Windows = _parseFormattingData_Windows(parms.terminal.errorRole);
-        m_debugLogTerminalFormatting_Windows = _parseFormattingData_Windows(parms.terminal.debugRole);
+        instance->m_stdoutHandle_Windows = GetStdHandle(STD_OUTPUT_HANDLE);
+        instance->m_stderrHandle_Windows = GetStdHandle(STD_ERROR_HANDLE);
+        instance->m_infoLogTerminalFormatting_Windows = instance->_parseFormattingData_Windows(setup.infoRole);
+        instance->m_warningLogTerminalFormatting_Windows = instance->_parseFormattingData_Windows(setup.warningRole);
+        instance->m_errorLogTerminalFormatting_Windows = instance->_parseFormattingData_Windows(setup.errorRole);
+        instance->m_debugLogTerminalFormatting_Windows = instance->_parseFormattingData_Windows(setup.debugRole);
 #else
         instance->m_infoLogTerminalFormatting_Linux = instance->_parseFormattingData_Linux(setup.infoRole);
         instance->m_warningLogTerminalFormatting_Linux = instance->_parseFormattingData_Linux(setup.warningRole);
