@@ -46,6 +46,8 @@ namespace cerberus
 
                     bool rename(const std::string& newName);
 
+                    uint64_t size();
+
                     bool write(const ByteBuffer& bytes);
 
                     bool writeLine(const std::string& line);

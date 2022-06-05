@@ -224,6 +224,15 @@ bool cerberus::data::filesystem::File::rename(const std::string& newName)
     return (std::rename(m_fileName.c_str(), newName.c_str()) == 0);
 }
 //=============================================================================
+uint64_t cerberus::data::filesystem::File::size()
+{
+    std::streampos pos = m_stream.tellg();
+    m_stream.seekg(0, m_stream.end);
+    uint64_t ret = m_stream.tellg();
+    m_stream.seekg(pos);
+    return ret;
+}
+//=============================================================================
 bool cerberus::data::filesystem::File::write(const ByteBuffer& bytes)
 {
     if(!m_stream.is_open())
