@@ -1,6 +1,15 @@
 #include <gtest/gtest.h>
 #include <cerberus/data/filesystem/inidatafile.h>
+#include <cerberus/data/filesystem/file.h>
 #include <cerberus/cerberus.h>
+
+TEST(fileTest, creation)
+{
+    cerberus::data::filesystem::File file("testFile.txt", CERBERUS_FILE_WRITE);
+    file.open();
+    file.writeLine("this is a test");
+    file.close();
+}
 
 TEST(iniDataFileTest, read) //prepare a read.ini file containing the following data:
 {

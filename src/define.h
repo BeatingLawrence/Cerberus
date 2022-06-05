@@ -56,6 +56,8 @@
 
 //Filesystem
 
+//Note: cannot combine TRUNCATE and APPEND. cannot set TRUNCATE without WRITE
+
 #define CERBERUS_FILE_WRITE     ((char)0b00000001)    //File handler with writing capability
 #define CERBERUS_FILE_BINARY    ((char)0b00000010)    //File handler operations in binary mode
 #define CERBERUS_FILE_EOF       ((char)0b00000100)    //File handler with cursor setted to end of file when open

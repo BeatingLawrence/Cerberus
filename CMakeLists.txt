@@ -9,7 +9,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_DEBUG_POSTFIX -d)
 
 file(GLOB_RECURSE src_files CONFIGURE_DEPENDS
-    "src/*"
+    "src/*.cpp"
+)
+
+file(GLOB_RECURSE header_files CONFIGURE_DEPENDS
+    "src/*.h"
 )
 
 file(GLOB_RECURSE test_files CONFIGURE_DEPENDS
@@ -19,6 +23,7 @@ file(GLOB_RECURSE test_files CONFIGURE_DEPENDS
 add_library(Cerberus SHARED
   cpp.astylerc
   ${src_files}
+  ${header_files}
 )
 
 add_executable(test EXCLUDE_FROM_ALL
@@ -30,14 +35,14 @@ set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
 target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY PRIVATE _CRT_SECURE_NO_WARNINGS)
 
 install(TARGETS Cerberus DESTINATION lib)
-install(DIRECTORY src/. DESTINATION include/cerberus)
+install(DIRECTORY src/ DESTINATION include/cerberus FILES_MATCHING PATTERN "*.h")
 
 target_include_directories(test PUBLIC
     "../Dist/include"
 )
 
 set_target_properties(Cerberus test PROPERTIES
-MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL"
+    MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL"
 )
 
 if(MSVC)
@@ -84,6 +89,11 @@ else()
     find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "/usr/lib" PATH_SUFFIXES lib)
 
     #OPEN-SSL
+
+    target_link_libraries(Cerberus LINK_PUBLIC ssl)
+    target_link_libraries(Cerberus LINK_PUBLIC crypto)
+    target_link_libraries(test LINK_PUBLIC ssl)
+    target_link_libraries(test LINK_PUBLIC crypto)
 
     #TO-DO ADD
 

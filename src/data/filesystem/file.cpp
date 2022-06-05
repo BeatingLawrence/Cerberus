@@ -115,11 +115,6 @@ void cerberus::data::filesystem::File::setFileName(const std::string& fileName)
         throw cerberusIllegalStateExc("Cannot change a name of an open file");
     }
 
-    if(fileName.empty())
-    {
-        throw cerberusIllegalArgumentExc("Filename is empty");
-    }
-
     m_fileName = fileName;
 }
 //=============================================================================
@@ -127,7 +122,7 @@ void cerberus::data::filesystem::File::setOpenMode(uint8_t openMode)
 {
     if(m_stream.is_open())
     {
-        throw cerberusIllegalStateExc("Cannot change a name of an open file");
+        throw cerberusIllegalStateExc("Cannot change open mode of an open file");
     }
 
     m_openMode = std::ios_base::in;
@@ -170,7 +165,19 @@ bool cerberus::data::filesystem::File::open()
         throw cerberusIllegalStateExc("File already open");
     }
 
-    m_stream.open(m_fileName, m_openMode);
+    if(m_fileName.empty())
+    {
+        throw cerberusIllegalArgumentExc("Filename is empty");
+    }
+
+    if(!File::exist(m_fileName) && (m_openMode & std::ios_base::out))
+    {
+        m_stream.open(m_fileName, m_openMode | std::ios_base::trunc);
+    }
+    else
+    {
+        m_stream.open(m_fileName, m_openMode);
+    }
 
     if(m_stream.is_open())
     {
