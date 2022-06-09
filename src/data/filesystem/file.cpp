@@ -23,7 +23,6 @@ bool cerberus::data::filesystem::File::existsAsFile(const std::string& path)
         throw cerberusIllegalArgumentExc("Path is empty");
     }
 
-    bool exists = false;
 #ifdef WINDOWS_SYSTEM
 
     if(GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES) //TODO: true if is a file only
@@ -34,57 +33,69 @@ bool cerberus::data::filesystem::File::existsAsFile(const std::string& path)
 #else
     struct stat stat_struct;
     int ret = stat(path.c_str(), &stat_struct);
+    logInfo("%i", ret);
 
     if(ret == 0)
     {
         if(S_ISREG(stat_struct.st_mode))
         {
-            exists = true;
+            return true;
         }
+
+        return false;
     }
-    else if(ret == -1)
+    else
     {
-        throw cerberusSystemExc("stat error: %s", strerror(errno));
+        if(errno == ENOENT)
+        {
+            return false;
+        }
+        else
+        {
+            throw cerberusSystemExc("stat error: %s", strerror(errno));
+        }
     }
 
 #endif
-    return exists;
 }
 //=============================================================================
 bool cerberus::data::filesystem::File::existsAsDirectory(const std::string& path)
 {
-    if(path.empty())
-    {
-        throw cerberusIllegalArgumentExc("Path is empty");
-    }
-
-    bool exists = false;
 #ifdef WINDOWS_SYSTEM
     throw cerberusImplementationMissExc("DIRECTORY EXISTANCE CHECK NOT IMPLEMENTED YET");
 
     if(GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES) //TODO: true if is a directory only
     {
-        exists = true;
+        //
     }
 
 #else
     struct stat stat_struct;
     int ret = stat(path.c_str(), &stat_struct);
+    logInfo("%i", ret);
 
     if(ret == 0)
     {
         if(S_ISDIR(stat_struct.st_mode))
         {
-            exists = true;
+            return true;
         }
+
+        return false;
     }
-    else if(ret == -1)
+    else
     {
-        throw cerberusSystemExc("stat error: %s", strerror(errno));
+        if(errno == ENOENT)
+        {
+            return false;
+        }
+        else
+        {
+            throw cerberusSystemExc("stat error: %s", strerror(errno));
+        }
     }
 
 #endif
-    return exists;
 }
 //=============================================================================
 void cerberus::data::filesystem::File::createDirectory(const std::string& path)
