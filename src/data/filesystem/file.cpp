@@ -1,36 +1,164 @@
 #include "file.h"
-#include <cstdio>
 #include "../../exception/exceptioncatalog.h"
-#include "../bytebuffer.h"
 #include "../../core/cerberusutils.h"
+#include "../../core/cerberuslog.h"
+#include "../bytebuffer.h"
+#include <cstdio>
+#include <regex>
+#include <string.h>
 
 #ifdef WINDOWS_SYSTEM
     #include <windows.h>
 #else
     #include <unistd.h>
     #include <sys/stat.h>
+    #include <dirent.h>
 #endif
 
 //=============================================================================
-bool cerberus::data::filesystem::File::exist(const std::string& fileName)
+bool cerberus::data::filesystem::File::existsAsFile(const std::string& path)
 {
+    if(path.empty())
+    {
+        throw cerberusIllegalArgumentExc("Path is empty");
+    }
+
     bool exists = false;
 #ifdef WINDOWS_SYSTEM
 
-    if(GetFileAttributesA(fileName.c_str()) != INVALID_FILE_ATTRIBUTES)
+    if(GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES) //TODO: true if is a file only
     {
         exists = true;
     }
 
 #else
-    struct stat buffer;
-    return (stat(fileName.c_str(), &buffer) == 0);
+    struct stat stat_struct;
+    int ret = stat(path.c_str(), &stat_struct);
+
+    if(ret == 0)
+    {
+        if(S_ISREG(stat_struct.st_mode))
+        {
+            exists = true;
+        }
+    }
+    else if(ret == -1)
+    {
+        throw cerberusSystemExc("stat error: %s", strerror(errno));
+    }
+
 #endif
     return exists;
 }
 //=============================================================================
+bool cerberus::data::filesystem::File::existsAsDirectory(const std::string& path)
+{
+    if(path.empty())
+    {
+        throw cerberusIllegalArgumentExc("Path is empty");
+    }
+
+    bool exists = false;
+#ifdef WINDOWS_SYSTEM
+    throw cerberusImplementationMissExc("DIRECTORY EXISTANCE CHECK NOT IMPLEMENTED YET");
+
+    if(GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES) //TODO: true if is a directory only
+    {
+        exists = true;
+    }
+
+#else
+    struct stat stat_struct;
+    int ret = stat(path.c_str(), &stat_struct);
+
+    if(ret == 0)
+    {
+        if(S_ISDIR(stat_struct.st_mode))
+        {
+            exists = true;
+        }
+    }
+    else if(ret == -1)
+    {
+        throw cerberusSystemExc("stat error: %s", strerror(errno));
+    }
+
+#endif
+    return exists;
+}
+//=============================================================================
+void cerberus::data::filesystem::File::createDirectory(const std::string& path)
+{
+#ifdef WINDOWS_SYSTEM
+    throw cerberusImplementationMissExc("DIRECTORY CREATION NOT IMPLEMENTED YET");
+#else
+    int ret = mkdir(path.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+
+    if(ret == -1)
+    {
+        throw cerberusSystemExc("mkdir error: %s", strerror(errno));
+    }
+
+#endif
+}
+//=============================================================================
+void cerberus::data::filesystem::File::deleteDirectory(const std::string& path)
+{
+#ifdef WINDOWS_SYSTEM
+    throw cerberusImplementationMissExc("DIRECTORY DELETION NOT IMPLEMENTED YET");
+#else
+    int ret = rmdir(path.c_str());
+
+    if(ret == -1)
+    {
+        throw cerberusSystemExc("rmdir error: %s", strerror(errno));
+    }
+
+#endif
+}
+//=============================================================================
+bool cerberus::data::filesystem::File::isEmptyDirectory(const std::string& path)
+{
+#ifdef WINDOWS_SYSTEM
+    throw cerberusImplementationMissExc("DIRECTORY EMPTY CHECK NOT IMPLEMENTED YET");
+#else
+    int n = 0;
+    struct dirent* d;
+    DIR* dir = opendir(path.c_str());
+
+    if(dir == NULL)
+    {
+        throw cerberusIllegalArgumentExc("Given directory path is not a directory");
+    }
+
+    errno = 0;
+
+    while(readdir(dir) != NULL)
+    {
+        if(++n > 2)
+        {
+            break;
+        }
+    }
+
+    closedir(dir);
+
+    if(errno != 0)
+    {
+        throw cerberusIllegalStateExc("readdir error: %s", strerror(errno));
+    }
+
+    if(n <= 2)
+    {
+        return true;
+    }
+
+    return false;
+#endif
+}
+//=============================================================================
 cerberus::data::filesystem::File::File(uint8_t openMode) :
-    m_fileName(),
+    m_filePath(),
     m_stream(),
     m_openMode(std::ios_base::in)
 {
@@ -62,12 +190,12 @@ cerberus::data::filesystem::File::File(uint8_t openMode) :
     m_stream.exceptions(std::ifstream::badbit);    //will throw exception if bad
 }
 //=============================================================================
-cerberus::data::filesystem::File::File(const std::string& fileName, uint8_t openMode) :
-    m_fileName(fileName),
+cerberus::data::filesystem::File::File(const std::string& filePath, uint8_t openMode) :
+    m_filePath(filePath),
     m_stream(),
     m_openMode(std::ios_base::in)
 {
-    if(fileName.empty())
+    if(filePath.empty())
     {
         throw cerberusIllegalArgumentExc("Filename is empty");
     }
@@ -108,14 +236,14 @@ cerberus::data::filesystem::File::~File()
     }
 }
 //=============================================================================
-void cerberus::data::filesystem::File::setFileName(const std::string& fileName)
+void cerberus::data::filesystem::File::setFileName(const std::string& filePath)
 {
     if(m_stream.is_open())
     {
         throw cerberusIllegalStateExc("Cannot change a name of an open file");
     }
 
-    m_fileName = fileName;
+    m_filePath = filePath;
 }
 //=============================================================================
 void cerberus::data::filesystem::File::setOpenMode(uint8_t openMode)
@@ -165,18 +293,18 @@ bool cerberus::data::filesystem::File::open()
         throw cerberusIllegalStateExc("File already open");
     }
 
-    if(m_fileName.empty())
+    if(m_filePath.empty())
     {
         throw cerberusIllegalArgumentExc("Filename is empty");
     }
 
-    if(!File::exist(m_fileName) && (m_openMode & std::ios_base::out))
+    if(!File::existsAsFile(m_filePath) && (m_openMode & std::ios_base::out))
     {
-        m_stream.open(m_fileName, m_openMode | std::ios_base::trunc);
+        m_stream.open(m_filePath, m_openMode | std::ios_base::trunc);
     }
     else
     {
-        m_stream.open(m_fileName, m_openMode);
+        m_stream.open(m_filePath, m_openMode);
     }
 
     if(m_stream.is_open())
@@ -211,7 +339,7 @@ bool cerberus::data::filesystem::File::deleteFromDisk()
         throw cerberusIllegalStateExc("Cannot delete an open file");
     }
 
-    return (std::remove(m_fileName.c_str()) == 0);
+    return (std::remove(m_filePath.c_str()) == 0);
 }
 //=============================================================================
 bool cerberus::data::filesystem::File::rename(const std::string& newName)
@@ -221,11 +349,16 @@ bool cerberus::data::filesystem::File::rename(const std::string& newName)
         throw cerberusIllegalStateExc("Cannot rename an open file");
     }
 
-    return (std::rename(m_fileName.c_str(), newName.c_str()) == 0);
+    return (std::rename(m_filePath.c_str(), newName.c_str()) == 0);
 }
 //=============================================================================
 uint64_t cerberus::data::filesystem::File::size()
 {
+    if(!m_stream.is_open())
+    {
+        throw cerberusIllegalStateExc("File is not open");
+    }
+
     std::streampos pos = m_stream.tellg();
     m_stream.seekg(0, m_stream.end);
     uint64_t ret = m_stream.tellg();

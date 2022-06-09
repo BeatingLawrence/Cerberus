@@ -114,14 +114,14 @@ cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity peri
 {
     if(periodicity == ThreadPeriodicity::TP_NonPeriodic)
     {
-        logInfo(core::CerberusUtils::strPrint("New non-periodic Thread '%s' with ID: %u", name.c_str(), id()));
+        logInfo("New non-periodic Thread '%s' with ID: %u", name.c_str(), id());
     }
     else if(periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicQueue)
     {
         if(time.isValid())
         {
             m_period = std::chrono::microseconds(time.microseconds());
-            logInfo(core::CerberusUtils::strPrint("New periodic Thread '%s' with ID: %u, period: %u ms", name.c_str(), id(), time.milliseconds()));
+            logInfo("New periodic Thread '%s' with ID: %u, period: %u ms", name.c_str(), id(), time.milliseconds());
         }
         else
         {
@@ -130,7 +130,7 @@ cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity peri
     }
     else if(periodicity == ThreadPeriodicity::TP_OneShot)
     {
-        logInfo(core::CerberusUtils::strPrint("New one-shot Thread '%s' with ID: %u", name.c_str(), id()));
+        logInfo("New one-shot Thread '%s' with ID: %u", name.c_str(), id());
     }
 }
 //=============================================================================

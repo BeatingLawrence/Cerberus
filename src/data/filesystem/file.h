@@ -17,22 +17,40 @@ namespace cerberus
             class CERBERUS_EXPORT File
             {
                 private:
-                    std::string m_fileName;
+                    std::string m_filePath;
 
                     std::fstream m_stream;
 
                     std::ios_base::openmode m_openMode;
 
                 public:
-                    static bool exist(const std::string& fileName);
+                    //Checks wether a file exists on filesystem
+                    //Throws an exception if the operation was not completed successfully
+                    static bool existsAsFile(const std::string& path);
+
+                    //Checks wether a directory exists on filesystem
+                    //Throws an exception if the operation was not completed successfully
+                    static bool existsAsDirectory(const std::string& path);
+
+                    //Creates a directory
+                    //Throws an exception if the operation was not completed successfully
+                    static void createDirectory(const std::string& path);
+
+                    //Deletes a directory (must be empty)
+                    //Throws an exception if the operation was not completed successfully
+                    static void deleteDirectory(const std::string& path);
+
+                    //Checks if a given directory is empty
+                    //Throws an exception if the operation was not completed successfully
+                    static bool isEmptyDirectory(const std::string& path);
 
                     File(uint8_t openMode = 0); //Default: read-only
 
-                    File(const std::string& fileName, uint8_t openMode = 0);
+                    File(const std::string& filePath, uint8_t openMode = 0);
 
                     ~File();
 
-                    void setFileName(const std::string& fileName);
+                    void setFileName(const std::string& filePath);
 
                     void setOpenMode(uint8_t openMode = 0);
 

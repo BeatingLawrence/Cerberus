@@ -87,7 +87,7 @@ void Register::unregisterCerberusObject(uint32_t id)
         {
             if((*it)->id() == id)
             {
-                logInfo(core::CerberusUtils::strPrint("Unregistering object with ID: %u", id));
+                logInfo("Unregistering object with ID: %u", id);
                 m_objects.erase(it);
                 return;
             }
@@ -154,7 +154,7 @@ void Register::freeMemory()
 
     for(auto& el : deleteList)
     {
-        logInfo(core::CerberusUtils::strPrint("Deleting ID: %u of name: %s", el->id(), el->name().c_str()));
+        logInfo("Deleting ID: %u of name: %s", el->id(), el->name().c_str());
         delete el;
     }
 }

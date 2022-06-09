@@ -8,13 +8,13 @@ using namespace cerberus::message;
 MessageTemplate::MessageTemplate(const std::string& name) :
     CerberusObject(CerberusObject::OT_MessageTemplate, name)
 {
-    logInfo(core::CerberusUtils::strPrint("New Message template '%s' with ID: %u", name.c_str(), id()));
+    logInfo("New Message template '%s' with ID: %u", name.c_str(), id());
 }
 //=============================================================================
 MessageTemplate::MessageTemplate(const Message& message, const std::string& name) :
     CerberusObject(CerberusObject::OT_MessageTemplate, name)
 {
-    logInfo(core::CerberusUtils::strPrint("New Message template '%s' with ID: %u", name.c_str(), id()));
+    logInfo("New Message template '%s' with ID: %u", name.c_str(), id());
 
     for(size_t i = 0; i < message.count(); i++)
     {
