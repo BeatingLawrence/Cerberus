@@ -33,7 +33,6 @@ bool cerberus::data::filesystem::File::existsAsFile(const std::string& path)
 #else
     struct stat stat_struct;
     int ret = stat(path.c_str(), &stat_struct);
-    logInfo("%i", ret);
 
     if(ret == 0)
     {
@@ -72,7 +71,6 @@ bool cerberus::data::filesystem::File::existsAsDirectory(const std::string& path
 #else
     struct stat stat_struct;
     int ret = stat(path.c_str(), &stat_struct);
-    logInfo("%i", ret);
 
     if(ret == 0)
     {
