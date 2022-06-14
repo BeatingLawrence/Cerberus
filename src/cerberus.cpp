@@ -93,6 +93,11 @@ CerberusInitParms* Cerberus::cerberusDefaultParms()
     return toReturn;
 }
 //=============================================================================
+std::string Cerberus::cerberusVersion()
+{
+    return CERBERUS_VERSION;
+}
+//=============================================================================
 void Cerberus::send(message::cerberus_message message)
 {
     _instance()->addMessage(message);

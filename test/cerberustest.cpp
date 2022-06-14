@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include <cerberus/core/cerberuslog.h>
 #include <cerberus/core/cerberusutils.h>
+#include <cerberus/cerberus.h>
 
 using namespace cerberus;
 
@@ -19,5 +20,10 @@ TEST(cerberusTest, logTest)
 
 TEST(cerberusTest, environmentVariable)
 {
-    logInfo(core::CerberusUtils::environmentVariable("APPDATA"));   //works only on windows
+    logInfo(core::CerberusUtils::environmentVariable("APPDATA").c_str());   //works only on windows
+}
+
+TEST(cerberusTest, cerberusVersion)
+{
+    logInfo(Cerberus::cerberusVersion());
 }

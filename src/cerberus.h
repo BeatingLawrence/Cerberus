@@ -39,6 +39,9 @@ namespace cerberus
 
             //Returns a working default set of init parameters [TRANSFERS: YES]
             static CerberusInitParms* cerberusDefaultParms();
+
+            //Returns the version of the cerberus framework
+            static std::string cerberusVersion();
     };
 }
 

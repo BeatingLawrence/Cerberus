@@ -23,7 +23,7 @@ namespace cerberus
 
             public:
                 //Prints formatted content on a std::string which is returned
-                static std::string strPrint(const char* format, ...);
+                static std::string strPrint(std::string format, ...);
 
                 //Returns the lower case version of str
                 static std::string toLower(const std::string& str);

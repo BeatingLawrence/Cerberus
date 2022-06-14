@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(Cerberus LANGUAGES CXX)
+project(Cerberus LANGUAGES CXX VERSION 0.9.0)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 11)
@@ -11,7 +11,6 @@ set(CMAKE_DEBUG_POSTFIX -d)
 file(GLOB_RECURSE src_files CONFIGURE_DEPENDS
     "src/*.cpp"
 )
-
 file(GLOB_RECURSE header_files CONFIGURE_DEPENDS
     "src/*.h"
 )
@@ -32,7 +31,8 @@ add_executable(test EXCLUDE_FROM_ALL
 
 set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
 
-target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY PRIVATE _CRT_SECURE_NO_WARNINGS)
+target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY PRIVATE _CRT_SECURE_NO_WARNINGS PRIVATE CERBERUS_VERSION="${CMAKE_PROJECT_VERSION}")
+message(STATUS ${CMAKE_PROJECT_VERSION})
 
 install(TARGETS Cerberus DESTINATION lib)
 install(DIRECTORY src/ DESTINATION include/cerberus FILES_MATCHING PATTERN "*.h")
