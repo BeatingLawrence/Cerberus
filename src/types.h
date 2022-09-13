@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include <cstdint>
+#include <string>
 
 struct CerberusLogRole
 {
@@ -13,7 +14,7 @@ struct CerberusLogRole
 struct CerberusLogSetup
 {
     bool disableFormatting;
-    char* logFileName;
+    std::string logFileName;
     CerberusLogRole infoRole;
     CerberusLogRole warningRole;
     CerberusLogRole errorRole;

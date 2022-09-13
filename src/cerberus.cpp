@@ -7,6 +7,7 @@
     #include <windows.h>
 #else
     #include <unistd.h>
+    #include <signal.h>
 #endif
 
 using namespace cerberus;
@@ -33,24 +34,44 @@ Cerberus::~Cerberus()
     }
 }
 //=============================================================================
-void Cerberus::init(const CerberusInitParms* parms)
+void Cerberus::init(CerberusInitParms* parms)
 {
     Cerberus* cerberus = _instance();
     mutex::MutexLocker locker(&cerberus->m_mutex);
 
     if(cerberus->m_initFlag)
     {
-        logInfo("Cerberus already initted, skipping init() call..");
+        logInfo("Cerberus already initialized, skipping init() call..");
         return;
     }
 
+    const CerberusInitParms* p = parms;
+
+    if(p == nullptr)
+    {
+        p = cerberusDefaultParms();
+    }
+
     // do the initialization:
-    core::CerberusLog::_setup(parms->logSetup);
-    cerberus->setLogFileName(parms->logSetup.logFileName);
+    core::CerberusLog::_setup(p->logSetup);
+    cerberus->setLogFileName(p->logSetup.logFileName);
     cerberus->start();
     //Do other stuff..
     cerberus->m_initFlag = true;
     logInfo("Cerberus init completed");
+    delete parms;
+    //
+#ifndef WINDOWS_SYSTEM
+    //PostgreSQL SIGPIPE Ignoring:
+    struct sigaction action = {};
+    action.sa_handler = SIG_IGN;
+
+    if(sigaction(SIGPIPE, &action, nullptr) != 0)
+    {
+        logError("Unable to ignore SIGPIPE system signal, using SQL may terminate the process");
+    }
+
+#endif
 }
 //=============================================================================
 void Cerberus::deinit()
@@ -70,11 +91,9 @@ void Cerberus::deinit()
 //=============================================================================
 CerberusInitParms* Cerberus::cerberusDefaultParms()
 {
-    CerberusInitParms* toReturn = new CerberusInitParms;
-    memset(toReturn, 0, sizeof(CerberusInitParms));
+    CerberusInitParms* toReturn = new CerberusInitParms();
     toReturn->logSetup.disableFormatting = false;
-    toReturn->logSetup.logFileName = (char*)malloc(13);
-    memcpy(toReturn->logSetup.logFileName, "./latest.log", 13);
+    toReturn->logSetup.logFileName = "./latest.log";
 #ifdef WINDOWS_SYSTEM
     toReturn->logSetup.infoRole.foregroundColor = TERMINAL_FOREGROUND_GREEN;
     toReturn->logSetup.warningRole.foregroundColor = (TERMINAL_FOREGROUND_GREEN | TERMINAL_FOREGROUND_RED);
