@@ -1,21 +1,11 @@
 #include "sqlrow.h"
-#include <pqxx/row>
+#include <stdarg.h>
 
 using namespace cerberus::data::database;
 
 //=============================================================================
-SQLRow::SQLRow() : m_row(new pqxx::row) {}
-//=============================================================================
-SQLRow::SQLRow(const SQLRow& other) : m_row(new pqxx::row(*other.m_row)) {}
-//=============================================================================
-SQLRow::SQLRow(SQLRow&& other) : m_row(other.m_row)
-{
-    other.m_row = nullptr;
-}
-//=============================================================================
 SQLRow::~SQLRow()
 {
-    delete m_row;
 }
 //=============================================================================
 bool SQLRow::isFailed() const
@@ -30,23 +20,22 @@ std::string SQLRow::failureReason() const
 //=============================================================================
 SQLRow& SQLRow::operator=(const SQLRow& other)
 {
-    if(other.m_row != m_row)
-    {
-        delete m_row;
-        m_row = new pqxx::row(*other.m_row);
-    }
-
+    m_values = other.m_values;
     return *this;
+}
+//=============================================================================
+void SQLRow::append(const std::string& value)
+{
+    m_values.push_back(value);
 }
 //=============================================================================
 size_t SQLRow::size() const
 {
-    return m_row->size();
+    return m_values.size();
 }
 //=============================================================================
-template<typename... TYPE>
-std::tuple<TYPE...> SQLRow::to() const
+std::string SQLRow::operator [](size_t pos) const
 {
-    return m_row->as<TYPE...>();
+    return m_values[pos];
 }
 //=============================================================================

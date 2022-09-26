@@ -1,8 +1,10 @@
 #include "sqldatabase.h"
 #include <pqxx/connection>
+#include <pqxx/result_iterator.hxx>
 #include <pqxx/transaction>
 #include "sqlresult.h"
 #include "sqlrow.h"
+#include "../../cerberus.h"
 
 using namespace cerberus::data::database;
 
@@ -16,7 +18,7 @@ SQLDatabase::SQLDatabase(const std::string& parameters) noexcept :
     {
         m_connection = new pqxx::connection(parameters.c_str());
     }
-    catch(std::exception e)
+    catch(pqxx::failure e)
     {
         m_failed = true;
         m_failureReason = e.what();
@@ -44,7 +46,6 @@ std::string SQLDatabase::failureReason() const
 SQLResult SQLDatabase::query(const std::string& query)
 {
     SQLResult result;
-    delete result.m_result;
 
     if(m_failed)    //return a failed result if connection is in a failed state
     {
@@ -56,15 +57,30 @@ SQLResult SQLDatabase::query(const std::string& query)
     try
     {
         pqxx::work w(*m_connection);
-        result.m_result = new pqxx::result(w.exec(query));
+        pqxx::result res = w.exec(query);
+
+        for(auto&& row : res)
+        {
+            SQLRow r;
+
+            for(auto&& val : row)
+            {
+                r.append(val.c_str());
+            }
+
+            result.append(r);
+        }
+
         w.commit();
     }
     catch(pqxx::sql_error e)
     {
+        logError(e.what());
+        logError(e.sqlstate());
         result.m_failed = true; //return a failed result if query failed
         result.m_failureReason = e.what();
     }
-    catch(std::exception e)
+    catch(pqxx::failure e)
     {
         result.m_failed = true; //return a failed result if connection failed
         result.m_failureReason = "Connection error: " + std::string(e.what());
@@ -78,9 +94,8 @@ SQLResult SQLDatabase::query(const std::string& query)
 SQLRow SQLDatabase::querySingleRow(const std::string& query)
 {
     SQLRow row;
-    delete row.m_row;
 
-    if(m_failed)    //return a failed result if connection is in a failed state
+    if(m_failed)    //return a failed row if connection is in a failed state
     {
         row.m_failed = true;
         row.m_failureReason = "Connection error: " + m_failureReason;
@@ -90,15 +105,23 @@ SQLRow SQLDatabase::querySingleRow(const std::string& query)
     try
     {
         pqxx::work w(*m_connection);
-        row.m_row = new pqxx::row(w.exec1(query));
+        pqxx::row r = w.exec1(query);
+
+        for(auto&& val : r)
+        {
+            row.append(val.c_str());
+        }
+
         w.commit();
     }
     catch(pqxx::sql_error e)
     {
+        logError(e.what());
+        logError(e.sqlstate());
         row.m_failed = true; //return a failed result if query failed
         row.m_failureReason = e.what();
     }
-    catch(std::exception e)
+    catch(pqxx::failure e)
     {
         row.m_failed = true; //return a failed result if connection failed
         row.m_failureReason = "Connection error: " + std::string(e.what());
@@ -124,9 +147,11 @@ bool SQLDatabase::command(const std::string& query)
     }
     catch(pqxx::sql_error e)
     {
+        logError(e.what());
+        logError(e.sqlstate());
         return false;
     }
-    catch(std::exception e)
+    catch(pqxx::failure e)
     {
         m_failed = true;
         m_failureReason = e.what();

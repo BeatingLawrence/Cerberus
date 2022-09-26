@@ -1,14 +1,9 @@
 #ifndef CERBERUS_DATA_DATABASE_SQLRESULT_H
 #define CERBERUS_DATA_DATABASE_SQLRESULT_H
 
-#include "sqlrow.h"
 #include <cstddef>
 #include <string>
-
-namespace pqxx
-{
-    class result;
-}
+#include <vector>
 
 namespace cerberus
 {
@@ -16,39 +11,45 @@ namespace cerberus
     {
         namespace database
         {
+            class SQLRow;
+
             class SQLDatabase;
 
             class SQLResult
             {
-                    friend cerberus::data::database::SQLDatabase;
+                    friend class cerberus::data::database::SQLDatabase;
 
                 private:
-                    pqxx::result* m_result;
-
                     bool m_failed;
 
                     std::string m_failureReason;
 
-                public:
-                    SQLResult();
+                    std::vector<SQLRow> m_rows;
 
-                    SQLResult(const SQLResult& other);
+                    size_t m_columns;
+
+                public:
+                    SQLResult() = default;
+
+                    SQLResult(const SQLResult& other) = default;
 
                     ~SQLResult();
-
-                    SQLResult& operator= (const SQLResult& other);
-
-                    bool operator== (const SQLResult& other)const;
-
-                    bool operator!= (const SQLResult& other)const;
-
-                    SQLRow operator[](size_t pos) const;
-
-                    size_t size() const;
 
                     bool isFailed() const;
 
                     std::string failureReason() const;
+
+                    SQLResult& operator= (const SQLResult& other);
+
+                    void append(const SQLRow& row);
+
+                    size_t size() const;
+
+                    SQLRow operator[](size_t pos) const;
+
+                    bool operator== (const SQLResult& other)const;
+
+                    bool operator!= (const SQLResult& other)const;
             };
         }
     }

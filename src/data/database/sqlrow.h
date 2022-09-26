@@ -1,14 +1,8 @@
 #ifndef CERBERUS_DATA_DATABASE_SQLROW_H
 #define CERBERUS_DATA_DATABASE_SQLROW_H
 
-#include <cstddef>
 #include <string>
-#include <tuple>
-
-namespace pqxx
-{
-    class row;
-}
+#include <vector>
 
 namespace cerberus
 {
@@ -21,22 +15,20 @@ namespace cerberus
 
             class SQLRow
             {
-                    friend cerberus::data::database::SQLResult;
-                    friend cerberus::data::database::SQLDatabase;
+                    friend class cerberus::data::database::SQLResult;
+                    friend class cerberus::data::database::SQLDatabase;
 
                 private:
-                    pqxx::row* m_row;
-
                     bool m_failed;
 
                     std::string m_failureReason;
 
+                    std::vector<std::string> m_values;
+
                 public:
-                    SQLRow();
+                    SQLRow() = default;
 
-                    SQLRow(const SQLRow& other);
-
-                    SQLRow(SQLRow&& other);
+                    SQLRow(const SQLRow& other) = default;
 
                     ~SQLRow();
 
@@ -44,12 +36,13 @@ namespace cerberus
 
                     std::string failureReason() const;
 
-                    SQLRow& operator=(const SQLRow& other);
+                    SQLRow& operator= (const SQLRow& other);
 
-                    size_t size()const;
+                    void append(const std::string& value);
 
-                    template<typename... TYPE>
-                    std::tuple<TYPE...> to() const;
+                    size_t size() const;
+
+                    std::string operator [](size_t pos) const;
             };
         }
     }
