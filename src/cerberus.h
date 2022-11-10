@@ -28,8 +28,9 @@ namespace cerberus
             ~Cerberus();
 
         public:
-            //Performs the init sequence of the Cerberus framework. This operation must precede any others [TRANSFERS: NO]
-            static void init(const CerberusInitParms* parms);
+            //Performs the init sequence of the Cerberus framework. This operation must precede any others [TRANSFERS: YES]
+            //Specify nullptr as parameter to use default settings
+            static void init(CerberusInitParms* parms);
 
             //Performs the de-init sequence of the Cerberus framework. (TBC)
             static void deinit();

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 project(Cerberus LANGUAGES CXX VERSION 0.9.0)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_DEBUG_POSTFIX -d)
@@ -41,6 +41,10 @@ target_include_directories(test PUBLIC
     "../Dist/include"
 )
 
+target_include_directories(Cerberus PUBLIC
+    "/usr/include"
+)
+
 set_target_properties(Cerberus test PROPERTIES
     MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL"
 )
@@ -74,6 +78,10 @@ if(MSVC)
     target_link_libraries(Cerberus LINK_PUBLIC libcrypto)
     target_link_libraries(Cerberus LINK_PUBLIC Shlwapi)
 
+    #POSTGRES
+
+        # TO-DO: add postgres support for Windows
+
 else()
 
     message(STATUS "On Linux system")
@@ -96,7 +104,10 @@ else()
     target_link_libraries(test LINK_PUBLIC ssl)
     target_link_libraries(test LINK_PUBLIC crypto)
 
-    #TO-DO ADD
+    #POSTGRES
+
+    target_link_libraries(Cerberus LINK_PUBLIC pqxx)
+    target_link_libraries(Cerberus LINK_PUBLIC pq)
 
 endif(MSVC)
 
@@ -105,4 +116,3 @@ target_link_directories(test PUBLIC "../Dist/lib")
 target_link_libraries(test LINK_PUBLIC Cerberus)
 target_link_libraries(test LINK_PUBLIC ${GTEST_LIBRARY})
 target_link_libraries(test LINK_PUBLIC ${GTEST_MAIN_LIBRARY})
-

@@ -1,0 +1,7 @@
+TODO list for Cerberus:
+
+-Implement a way to convert strings from SQL calls (results and rows) to actual values (bool, float, int..)
+-Implement a system to convert results into queries to add data to a table
+-LogError and Debug must log on stderr(unbuffered)
+-Implement sockets (UDP, TCP, HTTP, HTTPS, FTP, ICMP)
+-Test sockets

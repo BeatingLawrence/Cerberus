@@ -28,7 +28,7 @@ namespace cerberus
             public:
                 CerberusCore();
 
-                ~CerberusCore();
+                virtual ~CerberusCore();
 
                 void setLogFileName(const std::string& filename);
         };
