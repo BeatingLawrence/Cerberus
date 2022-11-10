@@ -5,3 +5,5 @@ TODO list for Cerberus:
 -LogError and Debug must log on stderr(unbuffered)
 -Implement sockets (UDP, TCP, HTTP, HTTPS, FTP, ICMP)
 -Test sockets
+-Implement a plugin loader and test it
+-Implement a thread pool
