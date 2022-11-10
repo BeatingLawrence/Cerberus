@@ -9,6 +9,7 @@
 
 #ifdef WINDOWS_SYSTEM
     #include <windows.h>
+    #include <shlwapi.h>
 #else
     #include <unistd.h>
     #include <sys/stat.h>
@@ -24,12 +25,17 @@ bool cerberus::data::filesystem::File::existsAsFile(const std::string& path)
     }
 
 #ifdef WINDOWS_SYSTEM
+    DWORD attr = GetFileAttributesA(path.c_str());
 
-    if(GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES) //TODO: true if is a file only
+    if(attr != INVALID_FILE_ATTRIBUTES)
     {
-        exists = true;
+        if(!(attr & FILE_ATTRIBUTE_DIRECTORY))
+        {
+            return true;
+        }
     }
 
+    return false;
 #else
     struct stat stat_struct;
     int ret = stat(path.c_str(), &stat_struct);
@@ -61,13 +67,17 @@ bool cerberus::data::filesystem::File::existsAsFile(const std::string& path)
 bool cerberus::data::filesystem::File::existsAsDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
-    throw cerberusImplementationMissExc("DIRECTORY EXISTANCE CHECK NOT IMPLEMENTED YET");
+    DWORD attr = GetFileAttributesA(path.c_str());
 
-    if(GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES) //TODO: true if is a directory only
+    if(attr != INVALID_FILE_ATTRIBUTES)
     {
-        //
+        if((attr & FILE_ATTRIBUTE_DIRECTORY))
+        {
+            return true;
+        }
     }
 
+    return false;
 #else
     struct stat stat_struct;
     int ret = stat(path.c_str(), &stat_struct);
@@ -99,7 +109,12 @@ bool cerberus::data::filesystem::File::existsAsDirectory(const std::string& path
 void cerberus::data::filesystem::File::createDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
-    throw cerberusImplementationMissExc("DIRECTORY CREATION NOT IMPLEMENTED YET");
+
+    if(CreateDirectoryA(path.c_str(), NULL) == 0)
+    {
+        throw cerberusSystemExc("CreateDirectoryA error: %i", GetLastError());
+    }
+
 #else
     int ret = mkdir(path.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 
@@ -114,7 +129,12 @@ void cerberus::data::filesystem::File::createDirectory(const std::string& path)
 void cerberus::data::filesystem::File::deleteDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
-    throw cerberusImplementationMissExc("DIRECTORY DELETION NOT IMPLEMENTED YET");
+
+    if(RemoveDirectoryA(path.c_str()) == 0)
+    {
+        throw cerberusSystemExc("RemoveDirectoryA error: %i", GetLastError());
+    }
+
 #else
     int ret = rmdir(path.c_str());
 
@@ -129,7 +149,16 @@ void cerberus::data::filesystem::File::deleteDirectory(const std::string& path)
 bool cerberus::data::filesystem::File::isEmptyDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
-    throw cerberusImplementationMissExc("DIRECTORY EMPTY CHECK NOT IMPLEMENTED YET");
+
+    if(PathIsDirectoryEmptyA(path.c_str()) == TRUE)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+
 #else
     int n = 0;
     struct dirent* d;

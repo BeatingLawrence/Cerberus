@@ -72,6 +72,7 @@ if(MSVC)
     target_link_directories(Cerberus PUBLIC "C:/Qt/Tools/OpenSSL/Win_x64/lib")
     target_link_libraries(Cerberus LINK_PUBLIC libssl)
     target_link_libraries(Cerberus LINK_PUBLIC libcrypto)
+    target_link_libraries(Cerberus LINK_PUBLIC Shlwapi)
 
 else()
 

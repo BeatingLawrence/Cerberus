@@ -11,10 +11,18 @@ TEST(fileTest, creation)
     file.close();
 }
 
+TEST(fileTest, existanceCheck)
+{
+    EXPECT_TRUE(cerberus::data::filesystem::File::existsAsFile("testFile.txt"));
+}
+
 TEST(iniDataFileTest, read) //prepare a read.ini file containing the following data:
 {
     cerberus::data::filesystem::IniDataFile file("read.ini");
     file.load();
+    ASSERT_TRUE(file.exists("string_value"));
+    ASSERT_TRUE(file.exists("bool_value"));
+    ASSERT_TRUE(file.exists("integer_value"));
     EXPECT_STREQ(file.read_string("string_value").c_str(), "this is a string");
     EXPECT_TRUE(file.read_bool("bool_value"));
     EXPECT_EQ(file.read_integer("integer_value"), (uint64_t)1010);
