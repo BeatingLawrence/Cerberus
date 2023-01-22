@@ -71,6 +71,16 @@ void CerberusUtils::removeBlank(std::string& str)
     str = removeBlankAfter(str);
 }
 //=============================================================================
+bool CerberusUtils::contains(const std::string& str1, const std::string& str2)
+{
+    if(str1.find(str2) == std::string::npos)
+    {
+        return false;
+    }
+
+    return true;
+}
+//=============================================================================
 std::string CerberusUtils::environmentVariable(const std::string& variableName)
 {
     char* val = getenv(variableName.c_str());
@@ -81,5 +91,18 @@ std::string CerberusUtils::environmentVariable(const std::string& variableName)
     }
 
     return std::string(val);
+}
+//=============================================================================
+int CerberusUtils::stringToInt(const std::string& str)
+{
+    int ret = 0;
+
+    try
+    {
+        ret = std::stoi(str);
+    }
+    catch(...) {}
+
+    return ret;
 }
 //=============================================================================

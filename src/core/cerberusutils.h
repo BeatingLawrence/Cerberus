@@ -41,8 +41,14 @@ namespace cerberus
                 static std::string removeBlank_copy(const std::string& str);
                 static void removeBlank(std::string& str);
 
+                //Checks if str1 contains str2 and returns true if it does
+                static bool contains(const std::string& str1, const std::string& str2);
+
                 //Retrieves the value of specified environment variable
                 static std::string environmentVariable(const std::string& variableName);
+
+                //Converts a given string to an int
+                static int stringToInt(const std::string& str);
         };
     }
 }

@@ -45,25 +45,48 @@ TEST_F(DatabaseTest, createTable)
         ASSERT_FALSE(true);
     }
 
-    EXPECT_TRUE(db->command("CREATE TABLE test ( ID int, name varchar(255), country varchar(255) );"));
+    SQLTablePrototype prototype("test");
+    prototype.add("ID", SQLTablePrototype::SQLDataType::SDT_BigInt)
+    .add("name", SQLTablePrototype::SQLDataType::SDT_VarChar, 255)
+    .add("country", SQLTablePrototype::SQLDataType::SDT_VarChar, 255);
+    ASSERT_EQ(db->createTable(prototype), SQLDatabase::OperationResult::OR_OK);
+}
 
+TEST_F(DatabaseTest, insertInto)
+{
     if(db->isFailed())
     {
         logInfo(db->failureReason());
         ASSERT_FALSE(true);
     }
 
-    EXPECT_TRUE(db->command("INSERT INTO test VALUES (1, 'first', 'USA');"));
-
-    if(db->isFailed())
-    {
-        logInfo(db->failureReason());
-        ASSERT_FALSE(true);
-    }
-
-    EXPECT_TRUE(db->command("INSERT INTO test VALUES (2, 'second', 'Italy');"));
-    EXPECT_TRUE(db->command("INSERT INTO test VALUES (3, 'third', 'UK');"));
-    EXPECT_TRUE(db->command("INSERT INTO test VALUES (4, 'fourth', 'Russia');"));
+    SQLTablePrototype prototype("test");
+    prototype.add("ID", SQLTablePrototype::SQLDataType::SDT_BigInt)
+    .add("name", SQLTablePrototype::SQLDataType::SDT_VarChar, 255)
+    .add("country", SQLTablePrototype::SQLDataType::SDT_VarChar, 255);
+    ASSERT_EQ(db->queryPrototype(prototype), SQLDatabase::OperationResult::OR_OK);
+    SQLBlock block;
+    SQLRow row;
+    row.append("1");
+    row.append("first");
+    row.append("USA");
+    block.append(row);
+    row.clear();
+    row.append("2");
+    row.append("second");
+    row.append("Italy");
+    block.append(row);
+    row.clear();
+    row.append("3");
+    row.append("third");
+    row.append("UK");
+    block.append(row);
+    row.clear();
+    row.append("4");
+    row.append("fourth");
+    row.append("Russia");
+    block.append(row);
+    ASSERT_EQ(db->insertBlock(prototype, block), SQLDatabase::OperationResult::OR_OK);
 }
 
 TEST_F(DatabaseTest, queryResult)
@@ -74,66 +97,19 @@ TEST_F(DatabaseTest, queryResult)
         ASSERT_FALSE(true);
     }
 
-    SQLResult result = db->query("SELECT * FROM test;");
+    SQLBlock block;
+    ASSERT_EQ(db->queryBlock("SELECT * FROM test;", block), SQLDatabase::OperationResult::OR_OK);
 
-    if(result.isFailed())
-    {
-        if(db->isFailed())
-        {
-            logInfo("database failure: %s", db->failureReason().c_str());
-        }
-        else
-        {
-            logInfo("result failure: %s", result.failureReason().c_str());
-        }
-
-        ASSERT_FALSE(true);
-    }
-
-    ASSERT_NE(result.size(), 0);
-
-    for(size_t i = 0; i < result.size(); i++)
+    for(size_t i = 0; i < block.size(); i++)
     {
         logInfo("ROW %u:", i);
 
-        for(size_t j = 0; j < result[i].size(); j++)
+        for(size_t j = 0; j < block[i].size(); j++)
         {
-            logInfo("Value %u: %s", j, result[i][j].c_str());
+            logInfo("Value %u: %s", j, block[i][j].c_str());
         }
 
         logInfo("=========");
-    }
-}
-
-TEST_F(DatabaseTest, querySingleRow)
-{
-    if(db->isFailed())
-    {
-        logInfo("test started with a failed database: ", db->failureReason().c_str());
-        ASSERT_FALSE(true);
-    }
-
-    SQLRow row = db->querySingleRow("SELECT * FROM test WHERE ID = '2';");
-
-    if(row.isFailed())
-    {
-        if(db->isFailed())
-        {
-            logInfo("database failure: %s", db->failureReason().c_str());
-        }
-        else
-        {
-            logInfo("row failure: %s", row.failureReason().c_str());
-        }
-
-        ASSERT_FALSE(true);
-    }
-
-    ASSERT_NE(row.size(), 0);
-
-    for(size_t i = 0; i < row.size(); i++)
-    {
-        logInfo("Value %u: %s", i, row[i].c_str());
     }
 }
 
@@ -145,5 +121,5 @@ TEST_F(DatabaseTest, dropTable)
         ASSERT_FALSE(true);
     }
 
-    EXPECT_TRUE(db->command("DROP TABLE test;"));
+    EXPECT_EQ(db->command("DROP TABLE test;"), SQLDatabase::OperationResult::OR_OK);
 }

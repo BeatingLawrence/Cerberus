@@ -181,8 +181,8 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
                                                  str.c_str()) << std::endl;
             break;
 
-        case LL_Debug:      //writes on stdout
-            std::cout << CerberusUtils::strPrint("%s%s [%sDEBUG%s] %s%s",
+        case LL_Debug:      //writes on stderr
+            std::cerr << CerberusUtils::strPrint("%s%s [%sDEBUG%s] %s%s",
                                                  EndOfFormatting_Linux,
                                                  timestamp.c_str(),
                                                  instance->m_debugLogTerminalFormatting_Linux.c_str(),
@@ -226,14 +226,14 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
             std::cerr << std::endl;
             break;
 
-        case LL_Debug:      //writes on stdout
+        case LL_Debug:      //writes on stderr
             SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << CerberusUtils::strPrint("%s [", timestamp.c_str());
+            std::cerr << CerberusUtils::strPrint("%s [", timestamp.c_str());
             SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, instance->m_debugLogTerminalFormatting_Windows);
-            std::cout << "DEBUG";
+            std::cerr << "DEBUG";
             SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), str.c_str());
-            std::cout << std::endl;
+            std::cerr << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), str.c_str());
+            std::cerr << std::endl;
             break;
     }
 

@@ -1,4 +1,4 @@
-#include "sqlresult.h"
+#include "sqlblock.h"
 #include "./sqlrow.h"
 #include <pqxx/result>
 #include "../../core/cerberuslog.h"
@@ -6,25 +6,30 @@
 using namespace cerberus::data::database;
 
 //=============================================================================
-SQLResult::~SQLResult() {}
+SQLBlock::SQLBlock(const SQLRow& row)
+{
+    append(row);
+}
 //=============================================================================
-bool SQLResult::isFailed() const
+SQLBlock::~SQLBlock() {}
+//=============================================================================
+bool SQLBlock::isFailed() const
 {
     return m_failed;
 }
 //=============================================================================
-std::string SQLResult::failureReason() const
+std::string SQLBlock::failureReason() const
 {
     return m_failureReason;
 }
 //=============================================================================
-SQLResult& SQLResult::operator=(const SQLResult& other)
+SQLBlock& SQLBlock::operator=(const SQLBlock& other)
 {
     m_rows = other.m_rows;
     return *this;
 }
 //=============================================================================
-void SQLResult::append(const SQLRow& row)
+void SQLBlock::append(const SQLRow& row)
 {
     if(m_rows.empty())
     {
@@ -33,24 +38,37 @@ void SQLResult::append(const SQLRow& row)
 
     if(row.size() != m_columns)
     {
-        logError("Refusing to append a row to a result of different size");
+        logError("Refusing to append a row to a block of different size");
         return;
     }
 
     m_rows.push_back(row);
 }
 //=============================================================================
-size_t SQLResult::size() const
+size_t SQLBlock::size() const
 {
     return m_rows.size();
 }
 //=============================================================================
-SQLRow SQLResult::operator[](size_t pos) const
+bool SQLBlock::empty() const
+{
+    return size() == 0;
+}
+//=============================================================================
+void SQLBlock::clear()
+{
+    m_rows.clear();
+    m_columns = 0;
+    m_failureReason = "";
+    m_failed = false;
+}
+//=============================================================================
+SQLRow SQLBlock::operator[](size_t pos) const
 {
     return m_rows[pos];
 }
 //=============================================================================
-bool SQLResult::operator==(const SQLResult& other) const
+bool SQLBlock::operator==(const SQLBlock& other) const
 {
     if(size() != other.size() || m_columns != other.m_columns)  //be sure rows and columns numbers are equal
     {
@@ -71,7 +89,7 @@ bool SQLResult::operator==(const SQLResult& other) const
     return true;
 }
 //=============================================================================
-bool SQLResult::operator!=(const SQLResult& other) const
+bool SQLBlock::operator!=(const SQLBlock& other) const
 {
     return !((*this) == other);
 }

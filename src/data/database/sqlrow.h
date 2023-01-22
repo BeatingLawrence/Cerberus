@@ -10,12 +10,12 @@ namespace cerberus
     {
         namespace database
         {
-            class SQLResult;
+            class SQLBlock;
             class SQLDatabase;
 
             class SQLRow
             {
-                    friend class cerberus::data::database::SQLResult;
+                    friend class cerberus::data::database::SQLBlock;
                     friend class cerberus::data::database::SQLDatabase;
 
                 private:
@@ -41,6 +41,8 @@ namespace cerberus
                     void append(const std::string& value);
 
                     size_t size() const;
+
+                    void clear();
 
                     std::string operator [](size_t pos) const;
             };

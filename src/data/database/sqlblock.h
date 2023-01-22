@@ -1,5 +1,11 @@
-#ifndef CERBERUS_DATA_DATABASE_SQLRESULT_H
-#define CERBERUS_DATA_DATABASE_SQLRESULT_H
+#ifndef CERBERUS_DATA_DATABASE_SQLBLOCK_H
+#define CERBERUS_DATA_DATABASE_SQLBLOCK_H
+
+/*  This data class represents a group of rows, aka "block" of rows.
+ *
+ *  It is used to obtain a result from a query or to insert data to a table
+ *
+ */
 
 #include <cstddef>
 #include <string>
@@ -15,7 +21,7 @@ namespace cerberus
 
             class SQLDatabase;
 
-            class SQLResult
+            class SQLBlock
             {
                     friend class cerberus::data::database::SQLDatabase;
 
@@ -29,30 +35,36 @@ namespace cerberus
                     size_t m_columns;
 
                 public:
-                    SQLResult() = default;
+                    SQLBlock() = default;
 
-                    SQLResult(const SQLResult& other) = default;
+                    SQLBlock(const SQLBlock& other) = default;
 
-                    ~SQLResult();
+                    SQLBlock(const SQLRow& row);
+
+                    ~SQLBlock();
 
                     bool isFailed() const;
 
                     std::string failureReason() const;
 
-                    SQLResult& operator= (const SQLResult& other);
+                    SQLBlock& operator= (const SQLBlock& other);
 
                     void append(const SQLRow& row);
 
                     size_t size() const;
 
+                    bool empty() const;
+
+                    void clear();
+
                     SQLRow operator[](size_t pos) const;
 
-                    bool operator== (const SQLResult& other)const;
+                    bool operator== (const SQLBlock& other)const;
 
-                    bool operator!= (const SQLResult& other)const;
+                    bool operator!= (const SQLBlock& other)const;
             };
         }
     }
 }
 
-#endif // CERBERUS_DATA_DATABASE_SQLRESULT_H
+#endif // CERBERUS_DATA_DATABASE_SQLBLOCK_H

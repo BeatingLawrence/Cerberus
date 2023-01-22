@@ -34,6 +34,11 @@ size_t SQLRow::size() const
     return m_values.size();
 }
 //=============================================================================
+void SQLRow::clear()
+{
+    m_values.clear();
+}
+//=============================================================================
 std::string SQLRow::operator [](size_t pos) const
 {
     return m_values[pos];
