@@ -27,7 +27,6 @@
  */
 
 #include <string>
-#include <vector>
 
 namespace pqxx
 {
@@ -42,44 +41,7 @@ namespace cerberus
         {
             class SQLBlock;
 
-            class SQLRow;
-
-            class SQLTablePrototype
-            {
-                public:
-                    enum SQLDataType
-                    {
-                        SDT_Undefined = 0,
-                        SDT_BigInt,     //8 byte signed integer
-                        SDT_SmallInt,   //2 byte signed integer
-                        SDT_Real,       //4 byte signed float
-                        SDT_Double,     //8 byte signed float
-                        SDT_Boolean,    //bool
-                        SDT_Bit,        //fixed length bit array
-                        SDT_VarBit,     //variable length bit array
-                        SDT_Char,       //fixed length char array
-                        SDT_VarChar,    //variable length char array
-                        SDT_Money,      //fixed fractional precision (2 digits typically)
-                    };
-
-                    std::string m_failureReason;
-
-                    std::string m_name; //the table name
-
-                    std::vector<std::tuple<std::string, SQLDataType, int>> m_types;
-
-                    SQLTablePrototype() = delete;
-
-                    SQLTablePrototype(const std::string& name);
-
-                    SQLTablePrototype& add(const std::string& name, SQLDataType type, int mod = -1);
-
-                    void clear();
-
-                    static SQLDataType toSQLDataType(const std::string& type);
-
-                    static std::string fromSQLDataType(SQLDataType type);
-            };
+            class SQLTablePrototype;
 
             class SQLDatabase
             {
@@ -98,6 +60,7 @@ namespace cerberus
                         OR_DB_FAILURE,
                         OR_NOT_FOUND,
                         OR_TABLE_ALREADY_PRESENT,
+                        // add more here
                     };
 
                     SQLDatabase() = delete;
@@ -117,6 +80,8 @@ namespace cerberus
                      *      > OR_DB_FAIL if the database encounters a problem and the query failed.
                      *        The failure information are obtainable through failureReason()
                      *      > OR_NOT_FOUND if the query was successfully completed but gave no information (0 results found)
+                     *
+                     *  The given block is an unstructured block
                      */
                     OperationResult queryBlock(const std::string& query, SQLBlock& output);
 
@@ -151,7 +116,7 @@ namespace cerberus
                     OperationResult createTable(SQLTablePrototype& prototype);
 
                     /*  This method inserts a block of rows in the table specified by prototype.
-                     *  Please note that all the information present in the prototype must be correct, even the data types.
+                     *  Please note that all the information present in the prototype of the block must be correct, even the data types.
                      *  This method will not do any error-check of such parameters
                      *  The result can be:
                      *      > OR_OK if the insertion is successfully executed
@@ -159,7 +124,7 @@ namespace cerberus
                      *      > OR_DB_FAIL if the database encounters a problem and the command failed.
                      *        The failure information are obtainable through failureReason()
                      */
-                    OperationResult insertBlock(const SQLTablePrototype& prototype, const SQLBlock& block);
+                    OperationResult insertBlock(const SQLBlock& block);
             };
         }
     }

@@ -2,8 +2,7 @@
 #include <pqxx/connection>
 #include <pqxx/result_iterator.hxx>
 #include <pqxx/transaction>
-#include "sqlblock.h"
-#include "sqlrow.h"
+#include "sqldata.h"
 #include "../../cerberus.h"
 
 using namespace cerberus::data::database;
@@ -105,7 +104,7 @@ SQLDatabase::OperationResult SQLDatabase::queryPrototype(SQLTablePrototype& prot
         return OperationResult::OR_QUERY_FAILURE;
     }
 
-    SQLBlock block;
+    SQLBlock block(prototype.m_name);
     auto res = queryBlock(core::CerberusUtils::strPrint("SELECT a.attname as \"Column\", pg_catalog.format_type(a.atttypid, a.atttypmod) as \"Datatype\", a.atttypmod as \"Mod\" "
                           "FROM pg_catalog.pg_attribute a "
                           "WHERE a.attnum > 0 "
@@ -125,9 +124,9 @@ SQLDatabase::OperationResult SQLDatabase::queryPrototype(SQLTablePrototype& prot
         for(int i = 0; i < block.size(); i++)
         {
             prototype.add(
-                block[i][0],
-                SQLTablePrototype::toSQLDataType(block[i][1]),
-                cerberus::core::CerberusUtils::stringToInt(block[i][2]));
+                block[i][0].raw(),
+                SQLTablePrototype::toSQLDataType(block[i][1].raw()),
+                block[i][2].toInt());
         }
     }
 
@@ -183,15 +182,8 @@ SQLDatabase::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototy
             logError("Asked to create an existing table");
             return OperationResult::OR_TABLE_ALREADY_PRESENT;
         }
-        else if(res == OperationResult::OR_QUERY_FAILURE)
-        {
-            prototype.m_failureReason = p.m_failureReason;
-            return res;
-        }
-        else
-        {
-            return res;
-        }
+
+        return res;
     }
 
     std::string cmd("CREATE TABLE ");
@@ -226,16 +218,16 @@ SQLDatabase::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototy
     return command(cmd);
 }
 //=============================================================================
-SQLDatabase::OperationResult SQLDatabase::insertBlock(const SQLTablePrototype& prototype, const SQLBlock& block)
+SQLDatabase::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
 {
-    if(prototype.m_name.empty())
+    if(block.m_prototype.m_name.empty())
     {
         logError("Asked to insert into an empty-named table");
         return OperationResult::OR_QUERY_FAILURE;
     }
 
     std::string cmd("INSERT INTO ");
-    cmd += prototype.m_name;
+    cmd += block.m_prototype.m_name;
     cmd += " VALUES ";
 
     for(auto&& row : block.m_rows)
@@ -244,17 +236,17 @@ SQLDatabase::OperationResult SQLDatabase::insertBlock(const SQLTablePrototype& p
 
         for(int i = 0; i < row.size(); i++)
         {
-            SQLTablePrototype::SQLDataType type = std::get<1>(prototype.m_types[i]);
+            SQLTablePrototype::SQLDataType type = std::get<1>(block.m_prototype.m_types[i]);
 
             if(type == SQLTablePrototype::SDT_Char || type == SQLTablePrototype::SDT_VarChar)  //check if value is a number or a string
             {
                 cmd += '\'';
-                cmd += row[i];
+                cmd += row[i].raw();
                 cmd += '\'';
             }
             else
             {
-                cmd += row[i];
+                cmd += row[i].raw();
             }
 
             cmd += ", ";
@@ -269,125 +261,5 @@ SQLDatabase::OperationResult SQLDatabase::insertBlock(const SQLTablePrototype& p
     cmd.pop_back();
     cmd += ";";
     return command(cmd);
-}
-//=============================================================================
-SQLTablePrototype::SQLTablePrototype(const std::string& name) : m_name(name)
-{
-    // noop
-}
-//=============================================================================
-SQLTablePrototype& SQLTablePrototype::add(const std::string& name, SQLDataType type, int mod)
-{
-    m_types.push_back(std::tuple<std::string, SQLDataType, int>(name, type, mod));
-    return *this;
-}
-//=============================================================================
-void SQLTablePrototype::clear()
-{
-    m_types.clear();
-}
-//=============================================================================
-SQLTablePrototype::SQLDataType SQLTablePrototype::toSQLDataType(const std::string& type)
-{
-    if(type.compare("bigint") == 0)
-    {
-        return SQLDataType::SDT_BigInt;
-    }
-    else if(type.compare("smallint") == 0)
-    {
-        return SQLDataType::SDT_SmallInt;
-    }
-    else if(type.compare("real") == 0)
-    {
-        return SQLDataType::SDT_SmallInt;
-    }
-    else if(type.compare("double precision") == 0)
-    {
-        return SQLDataType::SDT_SmallInt;
-    }
-    else if(type.compare("boolean") == 0)
-    {
-        return SQLDataType::SDT_SmallInt;
-    }
-    else if(type.compare("money") == 0)
-    {
-        return SQLDataType::SDT_Money;
-    }
-    else if(core::CerberusUtils::contains(type, "character"))
-    {
-        if(core::CerberusUtils::contains(type, "varying"))
-        {
-            return SQLDataType::SDT_VarChar;
-        }
-        else
-        {
-            return SQLDataType::SDT_Char;
-        }
-    }
-    else if(core::CerberusUtils::contains(type, "bit"))
-    {
-        if(core::CerberusUtils::contains(type, "varying"))
-        {
-            return SQLDataType::SDT_VarBit;
-        }
-        else
-        {
-            return SQLDataType::SDT_Bit;
-        }
-    }
-
-    return SQLDataType::SDT_Undefined;
-}
-//=============================================================================
-std::string SQLTablePrototype::fromSQLDataType(SQLDataType type)
-{
-    switch(type)
-    {
-        case cerberus::data::database::SQLTablePrototype::SDT_Undefined:
-            return "";
-            break;
-
-        case cerberus::data::database::SQLTablePrototype::SDT_SmallInt:
-            return "smallint";
-            break;
-
-        case cerberus::data::database::SQLTablePrototype::SDT_Real:
-            return "real";
-            break;
-
-        case cerberus::data::database::SQLTablePrototype::SDT_Double:
-            return "double precision";
-            break;
-
-        case cerberus::data::database::SQLTablePrototype::SDT_Boolean:
-            return "boolean";
-            break;
-
-        case cerberus::data::database::SQLTablePrototype::SDT_Bit:
-            return "bit";
-            break;
-
-        case cerberus::data::database::SQLTablePrototype::SDT_VarBit:
-            return "bit varying";
-            break;
-
-        case cerberus::data::database::SQLTablePrototype::SDT_Char:
-            return "char";
-            break;
-
-        case cerberus::data::database::SQLTablePrototype::SDT_VarChar:
-            return "char varying";
-            break;
-
-        case cerberus::data::database::SQLTablePrototype::SDT_Money:
-            return "money";
-            break;
-
-        case SQLDataType::SDT_BigInt:
-            return "bigint";
-            break;
-    }
-
-    return "";
 }
 //=============================================================================

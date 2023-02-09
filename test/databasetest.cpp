@@ -1,7 +1,6 @@
 #include <gtest/gtest.h>
+#include "src/data/database/sqldata.h"
 #include <cerberus/data/database/sqldatabase.h>
-#include <cerberus/data/database/sqlresult.h>
-#include <cerberus/data/database/sqlrow.h>
 #include <cerberus/cerberus.h>
 
 using namespace cerberus::data::database;
@@ -61,11 +60,9 @@ TEST_F(DatabaseTest, insertInto)
     }
 
     SQLTablePrototype prototype("test");
-    prototype.add("ID", SQLTablePrototype::SQLDataType::SDT_BigInt)
-    .add("name", SQLTablePrototype::SQLDataType::SDT_VarChar, 255)
-    .add("country", SQLTablePrototype::SQLDataType::SDT_VarChar, 255);
     ASSERT_EQ(db->queryPrototype(prototype), SQLDatabase::OperationResult::OR_OK);
-    SQLBlock block;
+    SQLBlock block("test");
+    block.setPrototype(prototype);
     SQLRow row;
     row.append("1");
     row.append("first");
@@ -86,7 +83,7 @@ TEST_F(DatabaseTest, insertInto)
     row.append("fourth");
     row.append("Russia");
     block.append(row);
-    ASSERT_EQ(db->insertBlock(prototype, block), SQLDatabase::OperationResult::OR_OK);
+    ASSERT_EQ(db->insertBlock(block), SQLDatabase::OperationResult::OR_OK);
 }
 
 TEST_F(DatabaseTest, queryResult)
@@ -106,7 +103,7 @@ TEST_F(DatabaseTest, queryResult)
 
         for(size_t j = 0; j < block[i].size(); j++)
         {
-            logInfo("Value %u: %s", j, block[i][j].c_str());
+            logInfo("Value %u: %s", j, block[i][j].raw().c_str());
         }
 
         logInfo("=========");
