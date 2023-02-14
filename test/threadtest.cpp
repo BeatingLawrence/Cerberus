@@ -107,6 +107,13 @@ static int pongTestCallback(cerberus::message::cerberus_message msg, cerberus::t
 
 TEST(threadTest, thread_ping_pong)
 {
+    //register a generic message to test Thread messages exchange
+    cerberus::message::Message msg;
+    msg.addSlot(cerberus::message::slot::CharSlot::create());
+    msg.addSlot(cerberus::message::slot::CharSlot::create());
+    msg.addSlot(cerberus::message::slot::CharSlot::create());
+    cerberus::core::CerberusFactory::registerMessage(msg, "PingPongMessage");
+    //start the test
     cerberus::thread::Thread ping("pingThread", cerberus::thread::Thread::TP_PeriodicQueue, 200);
     cerberus::thread::Thread pong("pongThread");    //Non-Periodic (receiver)
     ping.provideTickCallback(&pingTestCallback);

@@ -98,13 +98,13 @@ SQLDatabase::OperationResult SQLDatabase::queryBlock(const std::string& query, S
 //=============================================================================
 SQLDatabase::OperationResult SQLDatabase::queryPrototype(SQLTablePrototype& prototype)
 {
-    if(prototype.m_name.empty())
+    if(prototype.name().empty())
     {
         logError("Queried the prototype of an empty-named table");
         return OperationResult::OR_QUERY_FAILURE;
     }
 
-    SQLBlock block(prototype.m_name);
+    SQLBlock block(prototype.name());
     auto res = queryBlock(core::CerberusUtils::strPrint("SELECT a.attname as \"Column\", pg_catalog.format_type(a.atttypid, a.atttypmod) as \"Datatype\", a.atttypmod as \"Mod\" "
                           "FROM pg_catalog.pg_attribute a "
                           "WHERE a.attnum > 0 "
@@ -114,7 +114,7 @@ SQLDatabase::OperationResult SQLDatabase::queryPrototype(SQLTablePrototype& prot
                           "FROM pg_catalog.pg_class c "
                           "LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace "
                           "WHERE c.relname = '%s' "
-                          "AND pg_catalog.pg_table_is_visible(c.oid));", prototype.m_name.c_str())
+                          "AND pg_catalog.pg_table_is_visible(c.oid));", prototype.name().c_str())
                           , block);
 
     if(res == OperationResult::OR_OK)
@@ -166,13 +166,13 @@ SQLDatabase::OperationResult SQLDatabase::command(const std::string& query)
 //=============================================================================
 SQLDatabase::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototype)
 {
-    if(prototype.m_name.empty())
+    if(prototype.name().empty())
     {
         logError("Asked to create an empty-named table");
         return OperationResult::OR_QUERY_FAILURE;
     }
 
-    SQLTablePrototype p(prototype.m_name);
+    SQLTablePrototype p(prototype.name());
     auto res = queryPrototype(p);
 
     if(res != OperationResult::OR_NOT_FOUND)
@@ -187,12 +187,12 @@ SQLDatabase::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototy
     }
 
     std::string cmd("CREATE TABLE ");
-    cmd += prototype.m_name;
+    cmd += prototype.name();
     cmd += " ( ";
 
-    for(auto&& el : prototype.m_types)
+    for(auto&& el : prototype)
     {
-        SQLTablePrototype::SQLDataType type = std::get<1>(el);
+        auto type = el.type();
 
         if(type == SQLTablePrototype::SDT_Bit
                 || type == SQLTablePrototype::SDT_VarBit
@@ -200,15 +200,15 @@ SQLDatabase::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototy
                 || type == SQLTablePrototype::SDT_VarChar)  //check if the mod parameter should be printed
         {
             cmd += core::CerberusUtils::strPrint("%s %s(%i), ",
-                                                 std::get<0>(el).c_str(),
-                                                 SQLTablePrototype::fromSQLDataType(type).c_str(),
-                                                 std::get<2>(el));
+                                                 el.name().c_str(),
+                                                 el.typeString().c_str(),
+                                                 el.mod());
         }
         else
         {
             cmd += core::CerberusUtils::strPrint("%s %s, ",
-                                                 std::get<0>(el).c_str(),
-                                                 SQLTablePrototype::fromSQLDataType(type).c_str());
+                                                 el.name().c_str(),
+                                                 el.typeString().c_str());
         }
     }
 
@@ -220,14 +220,14 @@ SQLDatabase::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototy
 //=============================================================================
 SQLDatabase::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
 {
-    if(block.m_prototype.m_name.empty())
+    if(block.m_prototype.name().empty())
     {
         logError("Asked to insert into an empty-named table");
         return OperationResult::OR_QUERY_FAILURE;
     }
 
     std::string cmd("INSERT INTO ");
-    cmd += block.m_prototype.m_name;
+    cmd += block.m_prototype.name();
     cmd += " VALUES ";
 
     for(auto&& row : block.m_rows)
@@ -236,7 +236,7 @@ SQLDatabase::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
 
         for(int i = 0; i < row.size(); i++)
         {
-            SQLTablePrototype::SQLDataType type = std::get<1>(block.m_prototype.m_types[i]);
+            auto type = block.prototype()[i].type();
 
             if(type == SQLTablePrototype::SDT_Char || type == SQLTablePrototype::SDT_VarChar)  //check if value is a number or a string
             {
@@ -261,5 +261,58 @@ SQLDatabase::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
     cmd.pop_back();
     cmd += ";";
     return command(cmd);
+}
+//=============================================================================
+SQLDatabase::OperationResult SQLDatabase::dropTable(const std::string& table)
+{
+    return command(cerberus::core::CerberusUtils::strPrint("DROP TABLE %s;", table.c_str()));
+}
+//=============================================================================
+SQLDatabase::OperationResult SQLDatabase::querytable(const std::string& tableName, SQLBlock& output)
+{
+    SQLTablePrototype prototype(tableName);
+
+    switch(queryPrototype(prototype))
+    {
+        case cerberus::data::database::SQLDatabase::OR_QUERY_FAILURE:
+            return SQLDatabase::OR_QUERY_FAILURE;
+            break;
+
+        case cerberus::data::database::SQLDatabase::OR_DB_FAILURE:
+            return SQLDatabase::OR_DB_FAILURE;
+            break;
+
+        case cerberus::data::database::SQLDatabase::OR_NOT_FOUND:
+            return SQLDatabase::OR_NOT_FOUND;
+            break;
+
+        default:
+            break;
+    }
+
+    output.clear();
+    output.m_prototype = prototype; //now it's structured
+    SQLBlock block;
+
+    switch(queryBlock(cerberus::core::CerberusUtils::strPrint("SELECT * FROM %s;", tableName.c_str()), block))
+    {
+        case cerberus::data::database::SQLDatabase::OR_QUERY_FAILURE:
+            return SQLDatabase::OR_QUERY_FAILURE;
+            break;
+
+        case cerberus::data::database::SQLDatabase::OR_DB_FAILURE:
+            return SQLDatabase::OR_DB_FAILURE;
+            break;
+
+        case cerberus::data::database::SQLDatabase::OR_NOT_FOUND:
+            return SQLDatabase::OR_NOT_FOUND;
+            break;
+
+        default:
+            break;
+    }
+
+    output.m_rows = block.m_rows;
+    return SQLDatabase::OR_OK;
 }
 //=============================================================================

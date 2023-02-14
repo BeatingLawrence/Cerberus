@@ -33,7 +33,15 @@ namespace cerberus
                 public:
                     SQLCell() = default;
 
+                    SQLCell(double value);
+                    SQLCell(float value);
+                    SQLCell(bool value);
+                    SQLCell(const std::vector<bool>& value);
+                    SQLCell(int64_t value);
+                    SQLCell(int value);
+                    SQLCell(unsigned int value);
                     SQLCell(const std::string& raw);
+                    SQLCell(const char* value);
 
                     void set(const std::string& value);
                     void set(int64_t value);
@@ -63,6 +71,55 @@ namespace cerberus
                     std::vector<SQLCell> m_values;
 
                 public:
+                    struct RowIterator
+                    {
+                            using iterator_category = std::forward_iterator_tag;
+                            using difference_type   = std::ptrdiff_t;
+                            using value_type        = SQLCell;
+                            using pointer           = value_type*;
+                            using reference         = value_type&;
+
+                            RowIterator(pointer ptr) : m_ptr(ptr) {}
+
+                            reference operator*() const
+                            {
+                                return *m_ptr;
+                            }
+                            pointer operator->()
+                            {
+                                return m_ptr;
+                            }
+
+                            // Prefix increment
+                            RowIterator& operator++()
+                            {
+                                m_ptr++;
+                                return *this;
+                            }
+
+                            // Postfix increment
+                            RowIterator operator++(int)
+                            {
+                                RowIterator tmp = *this;
+                                ++(*this);
+                                return tmp;
+                            }
+
+                            friend bool operator== (const RowIterator& a, const RowIterator& b)
+                            {
+                                return a.m_ptr == b.m_ptr;
+                            };
+                            friend bool operator!= (const RowIterator& a, const RowIterator& b)
+                            {
+                                return a.m_ptr != b.m_ptr;
+                            };
+
+
+                        private:
+
+                            pointer m_ptr;
+                    };
+
                     SQLRow() = default;
 
                     SQLRow(const SQLRow& other) = default;
@@ -71,13 +128,17 @@ namespace cerberus
 
                     SQLRow& operator= (const SQLRow& other);
 
-                    void append(const std::string& value);
+                    void append(const SQLCell& value);
 
                     size_t size() const;
 
                     void clear();
 
                     SQLCell operator [](size_t pos) const;
+
+                    RowIterator begin();
+
+                    RowIterator end();
             };
 
             class SQLTablePrototype
@@ -99,9 +160,96 @@ namespace cerberus
                         SDT_Money,      //fixed fractional precision (2 digits typically)
                     };
 
+                    static SQLDataType toSQLDataType(const std::string& type);
+
+                    static std::string fromSQLDataType(SQLDataType type);
+
+                    struct SQLColumn
+                    {
+                        public:
+                            SQLColumn() = delete;
+                            SQLColumn(const std::string& name, SQLDataType type, int mod = -1): m_columnName(name), m_type(type), m_mod(mod) {};
+
+                            std::string name()
+                            {
+                                return m_columnName;
+                            };
+
+                            SQLDataType type()
+                            {
+                                return m_type;
+                            };
+
+                            int mod()
+                            {
+                                return m_mod;
+                            };
+
+                            std::string typeString()
+                            {
+                                return fromSQLDataType(m_type);
+                            };
+
+                        private:
+                            std::string m_columnName;
+                            SQLDataType m_type;
+                            int m_mod;
+                    };
+
+                private:
                     std::string m_name; //the table name
 
-                    std::vector<std::tuple<std::string, SQLDataType, int>> m_types;
+                    std::vector<SQLColumn> m_types;
+
+                public:
+                    struct PrototypeIterator
+                    {
+                            using iterator_category = std::forward_iterator_tag;
+                            using difference_type   = std::ptrdiff_t;
+                            using value_type        = SQLColumn;
+                            using pointer           = value_type*;
+                            using reference         = value_type&;
+
+                            PrototypeIterator(pointer ptr) : m_ptr(ptr) {}
+
+                            reference operator*() const
+                            {
+                                return *m_ptr;
+                            }
+                            pointer operator->()
+                            {
+                                return m_ptr;
+                            }
+
+                            // Prefix increment
+                            PrototypeIterator& operator++()
+                            {
+                                m_ptr++;
+                                return *this;
+                            }
+
+                            // Postfix increment
+                            PrototypeIterator operator++(int)
+                            {
+                                PrototypeIterator tmp = *this;
+                                ++(*this);
+                                return tmp;
+                            }
+
+                            friend bool operator== (const PrototypeIterator& a, const PrototypeIterator& b)
+                            {
+                                return a.m_ptr == b.m_ptr;
+                            };
+                            friend bool operator!= (const PrototypeIterator& a, const PrototypeIterator& b)
+                            {
+                                return a.m_ptr != b.m_ptr;
+                            };
+
+
+                        private:
+
+                            pointer m_ptr;
+                    };
 
                     SQLTablePrototype() = delete;
 
@@ -109,11 +257,17 @@ namespace cerberus
 
                     SQLTablePrototype& add(const std::string& name, SQLDataType type, int mod = -1);
 
+                    SQLColumn operator[](int index) const;
+
                     void clear();
 
-                    static SQLDataType toSQLDataType(const std::string& type);
+                    size_t size() const;
 
-                    static std::string fromSQLDataType(SQLDataType type);
+                    std::string name() const;
+
+                    PrototypeIterator begin();
+
+                    PrototypeIterator end();
             };
 
             class SQLBlock
@@ -130,7 +284,6 @@ namespace cerberus
                     SQLTablePrototype m_prototype;
 
                 public:
-
                     struct BlockIterator
                     {
                             using iterator_category = std::forward_iterator_tag;
@@ -207,6 +360,8 @@ namespace cerberus
                     void clearRows();
 
                     void setPrototype(const SQLTablePrototype& prototype);
+
+                    SQLTablePrototype prototype() const;
 
                     SQLBlock& addColumn(const std::string& name, SQLTablePrototype::SQLDataType type, int mod = -1);
 

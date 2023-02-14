@@ -47,7 +47,9 @@ TEST_F(DatabaseTest, createTable)
     SQLTablePrototype prototype("test");
     prototype.add("ID", SQLTablePrototype::SQLDataType::SDT_BigInt)
     .add("name", SQLTablePrototype::SQLDataType::SDT_VarChar, 255)
-    .add("country", SQLTablePrototype::SQLDataType::SDT_VarChar, 255);
+    .add("country", SQLTablePrototype::SQLDataType::SDT_VarChar, 255)
+    .add("heigth", SQLTablePrototype::SQLDataType::SDT_Double)
+    .add("drivingLicense", SQLTablePrototype::SQLDataType::SDT_Boolean);
     ASSERT_EQ(db->createTable(prototype), SQLDatabase::OperationResult::OR_OK);
 }
 
@@ -64,24 +66,32 @@ TEST_F(DatabaseTest, insertInto)
     SQLBlock block("test");
     block.setPrototype(prototype);
     SQLRow row;
-    row.append("1");
-    row.append("first");
+    row.append(1);
+    row.append("Josh");
     row.append("USA");
+    row.append(1.6f);
+    row.append(true);
     block.append(row);
     row.clear();
-    row.append("2");
-    row.append("second");
+    row.append(2);
+    row.append("Jason");
     row.append("Italy");
+    row.append(1.9f);
+    row.append(true);
     block.append(row);
     row.clear();
-    row.append("3");
-    row.append("third");
+    row.append(3);
+    row.append("Joshua");
     row.append("UK");
+    row.append(1.75f);
+    row.append(false);
     block.append(row);
     row.clear();
-    row.append("4");
-    row.append("fourth");
+    row.append(4);
+    row.append("Jerry");
     row.append("Russia");
+    row.append(1.88f);
+    row.append(true);
     block.append(row);
     ASSERT_EQ(db->insertBlock(block), SQLDatabase::OperationResult::OR_OK);
 }
@@ -95,19 +105,33 @@ TEST_F(DatabaseTest, queryResult)
     }
 
     SQLBlock block;
-    ASSERT_EQ(db->queryBlock("SELECT * FROM test;", block), SQLDatabase::OperationResult::OR_OK);
+    ASSERT_EQ(db->querytable("test", block), SQLDatabase::OperationResult::OR_OK);
+    EXPECT_TRUE(block.structured());
 
-    for(size_t i = 0; i < block.size(); i++)
+    for(auto&& type : block.prototype())
     {
-        logInfo("ROW %u:", i);
+        logInfo("col type %s", type.typeString().c_str());
+    }
 
-        for(size_t j = 0; j < block[i].size(); j++)
+    for(auto&& row : block)
+    {
+        for(auto&& cell : row)
         {
-            logInfo("Value %u: %s", j, block[i][j].raw().c_str());
+            logInfo("%s", cell.raw().c_str());
         }
 
         logInfo("=========");
     }
+
+    EXPECT_EQ(block[0][0].toInt(), 1);  //check columns
+    EXPECT_EQ(block[1][0].toInt(), 2);
+    EXPECT_EQ(block[2][0].toInt(), 3);
+    EXPECT_EQ(block[3][0].toInt(), 4);
+    //
+    EXPECT_EQ(block[0][4].toBool(), true);  //check columns
+    EXPECT_EQ(block[1][4].toBool(), true);
+    EXPECT_EQ(block[2][4].toBool(), false);
+    EXPECT_EQ(block[3][4].toBool(), true);
 }
 
 TEST_F(DatabaseTest, dropTable)
@@ -118,5 +142,5 @@ TEST_F(DatabaseTest, dropTable)
         ASSERT_FALSE(true);
     }
 
-    EXPECT_EQ(db->command("DROP TABLE test;"), SQLDatabase::OperationResult::OR_OK);
+    EXPECT_EQ(db->dropTable("test"), SQLDatabase::OperationResult::OR_OK);
 }

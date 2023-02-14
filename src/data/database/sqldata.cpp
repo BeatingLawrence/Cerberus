@@ -18,7 +18,7 @@ SQLRow& SQLRow::operator=(const SQLRow& other)
     return *this;
 }
 //=============================================================================
-void SQLRow::append(const ::std::string& value)
+void SQLRow::append(const SQLCell& value)
 {
     m_values.push_back(value);
 }
@@ -38,6 +38,16 @@ SQLCell SQLRow::operator [](size_t pos) const
     return m_values[pos];
 }
 //=============================================================================
+SQLRow::RowIterator SQLRow::begin()
+{
+    return &(*m_values.begin());
+}
+//=============================================================================
+SQLRow::RowIterator SQLRow::end()
+{
+    return &(*m_values.end());
+}
+//=============================================================================
 SQLTablePrototype::SQLTablePrototype(const std::string& name) : m_name(name)
 {
     // noop
@@ -45,13 +55,38 @@ SQLTablePrototype::SQLTablePrototype(const std::string& name) : m_name(name)
 //=============================================================================
 SQLTablePrototype& SQLTablePrototype::add(const std::string& name, SQLDataType type, int mod)
 {
-    m_types.push_back(std::tuple<std::string, SQLDataType, int>(name, type, mod));
+    m_types.push_back({name, type, mod});
     return *this;
+}
+//=============================================================================
+SQLTablePrototype::SQLColumn SQLTablePrototype::operator[](int index) const
+{
+    return m_types[index];
 }
 //=============================================================================
 void SQLTablePrototype::clear()
 {
     m_types.clear();
+}
+//=============================================================================
+size_t SQLTablePrototype::size() const
+{
+    return m_types.size();
+}
+//=============================================================================
+std::string SQLTablePrototype::name() const
+{
+    return m_name;
+}
+//=============================================================================
+SQLTablePrototype::PrototypeIterator SQLTablePrototype::begin()
+{
+    return &(*m_types.begin());
+}
+//=============================================================================
+SQLTablePrototype::PrototypeIterator SQLTablePrototype::end()
+{
+    return &(*m_types.end());
 }
 //=============================================================================
 SQLTablePrototype::SQLDataType SQLTablePrototype::toSQLDataType(const std::string& type)
@@ -185,7 +220,7 @@ std::string SQLBlock::failureReason() const
 bool SQLBlock::append(const SQLRow& row)
 {
     if(structured())
-        if(row.size() != m_prototype.m_types.size())
+        if(row.size() != m_prototype.size())
         {
             logError("Refusing to append a row to a block of different structure");
             return false;
@@ -215,12 +250,12 @@ void SQLBlock::clear()
 //=============================================================================
 bool SQLBlock::structured()
 {
-    return (m_prototype.m_types.size() != 0);
+    return (m_prototype.size() != 0);
 }
 //=============================================================================
 void SQLBlock::clearStructure()
 {
-    m_prototype.m_types.clear();
+    m_prototype.clear();
 }
 //=============================================================================
 void SQLBlock::clearRows()
@@ -231,6 +266,11 @@ void SQLBlock::clearRows()
 void SQLBlock::setPrototype(const SQLTablePrototype& prototype)
 {
     m_prototype = prototype;
+}
+//=============================================================================
+SQLTablePrototype SQLBlock::prototype() const
+{
+    return m_prototype;
 }
 //=============================================================================
 SQLBlock& SQLBlock::addColumn(const ::std::string& name, SQLTablePrototype::SQLDataType type, int mod)
@@ -256,14 +296,14 @@ SQLBlock::BlockIterator SQLBlock::end()
 //=============================================================================
 bool SQLBlock::operator==(const SQLBlock& other) const
 {
-    if(size() != other.size() || m_prototype.m_types.size() != other.m_prototype.m_types.size())  //be sure rows and columns numbers are equal
+    if(size() != other.size() || m_prototype.size() != other.m_prototype.size())  //be sure rows and columns numbers are equal
     {
         return false;
     }
 
     for(size_t i = 0; i < size(); i++)
     {
-        for(size_t j = 0; j < m_prototype.m_types.size(); j++)
+        for(size_t j = 0; j < m_prototype.size(); j++)
         {
             if(m_rows[i][j].isEqual(other.m_rows[i][j]) != 0)
             {
@@ -280,8 +320,43 @@ bool SQLBlock::operator!=(const SQLBlock& other) const
     return !((*this) == other);
 }
 //=============================================================================
-SQLCell::SQLCell(const std::string& raw) : m_value(raw)
+SQLCell::SQLCell(const std::string& raw): m_value(raw) {}
+//=============================================================================
+SQLCell::SQLCell(const char* value) : m_value(value) {}
+//=============================================================================
+SQLCell::SQLCell(int64_t value)
 {
+    set(value);
+}
+//=============================================================================
+SQLCell::SQLCell(int value)
+{
+    set(int64_t(value));
+}
+//=============================================================================
+SQLCell::SQLCell(unsigned int value)
+{
+    set(int64_t(value));
+}
+//=============================================================================
+SQLCell::SQLCell(double value)
+{
+    set(value);
+}
+//=============================================================================
+SQLCell::SQLCell(float value)
+{
+    set((double)value);
+}
+//=============================================================================
+SQLCell::SQLCell(bool value)
+{
+    set(value);
+}
+//=============================================================================
+SQLCell::SQLCell(const std::vector<bool>& value)
+{
+    set(value);
 }
 //=============================================================================
 void SQLCell::set(const std::string& value)
@@ -363,16 +438,16 @@ bool SQLCell::toBool()
 {
     auto str = cerberus::core::CerberusUtils::toLower(m_value);
 
-    if(cerberus::core::CerberusUtils::contains(str, "true"))
+    if(str.compare("t") == 0 || str.compare("true") == 0)
     {
         return true;
     }
-    else if(cerberus::core::CerberusUtils::contains(str, "false"))
+    else if(str.compare("f") == 0 || str.compare("false") == 0)
     {
         return false;
     }
 
-    logError("called toBool() on a non-boolean SQLCell");
+    logError("called toBool() on a non-boolean SQLCell, value %s not recognized", m_value.c_str());
     return false;
 }
 //=============================================================================

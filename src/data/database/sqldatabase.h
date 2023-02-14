@@ -125,6 +125,28 @@ namespace cerberus
                      *        The failure information are obtainable through failureReason()
                      */
                     OperationResult insertBlock(const SQLBlock& block);
+
+                    /*  This method drops a table.
+                     *  The result can be:
+                     *      > OR_OK if the drop is successfully executed
+                     *      > OR_QUERY_FAIL if the query has a problem during execution.
+                     *      > OR_DB_FAIL if the database encounters a problem and the command failed.
+                     *        The failure information are obtainable through failureReason()
+                     */
+                    OperationResult dropTable(const std::string& table);
+
+                    /*  This method performs a query and returns an entire table.
+                     *  Be careful with this method, because if the requested table is huge, an insane amount of memory will be allocated
+                     *  The result can be:
+                     *      > OR_OK if the query is successfully completed. The queried information are inside output parameter
+                     *      > OR_QUERY_FAIL if the query has a problem during execution. The failure information are inside output parameter
+                     *      > OR_DB_FAIL if the database encounters a problem and the query failed.
+                     *        The failure information are obtainable through failureReason()
+                     *      > OR_NOT_FOUND if the query was successfully completed but gave no information (0 results found)
+                     *
+                     *  The given block is a structured block
+                     */
+                    OperationResult querytable(const std::string& tableName, SQLBlock& output);
             };
         }
     }
