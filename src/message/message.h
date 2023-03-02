@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include "../define.h"
+#include "./slot/baseslot.h"
 #include "../Cerberus_global.h"
 
 namespace cerberus
@@ -12,28 +13,6 @@ namespace cerberus
     {
         typedef std::shared_ptr<class Message> cerberus_message;
         typedef std::shared_ptr<const class Message> cerberus_const_message;
-
-        namespace slot
-        {
-            typedef std::shared_ptr<class BaseSlot> cerberus_slot;
-
-            enum SlotType
-            {
-                ST_UCHAR,       //1 byte
-                ST_CHAR,        //1 byte
-                ST_USHORT,      //2 byte
-                ST_SHORT,       //2 byte
-                ST_ULONG,       //4 byte
-                ST_LONG,        //4 byte
-                ST_ULONGLONG,   //8 byte
-                ST_LONGLONG,    //8 byte
-                ST_FLOAT,       //4 byte
-                ST_DOUBLE,      //8 byte
-                ST_BOOL,        //1 byte
-                ST_VOIDP,       //pointer
-                ST_STDSTRINGP,  //pointer
-            };
-        }
 
         class CERBERUS_EXPORT Message
         {

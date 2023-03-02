@@ -12,9 +12,9 @@
 #include <memory>
 #include "../../define.h"
 #include "../../Cerberus_global.h"
-#include "../../cerberus.h"
 #include "../../exception/exceptioncatalog.h"
 #include "../../core/cerberusutils.h"
+#include "../../types.h"
 
 namespace cerberus
 {
@@ -22,6 +22,8 @@ namespace cerberus
     {
         namespace slot
         {
+            typedef std::shared_ptr<class BaseSlot> cerberus_slot;
+
             class CERBERUS_EXPORT BaseSlot
             {
                 private:

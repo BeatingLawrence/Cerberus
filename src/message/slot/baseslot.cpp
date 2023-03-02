@@ -20,7 +20,7 @@ BaseSlot::BaseSlot(const BaseSlot& other) : m_dataType(other.m_dataType), m_id(o
     // noop
 }
 //=============================================================================
-SlotType BaseSlot::type() const
+cerberus::SlotType BaseSlot::type() const
 {
     return m_dataType;
 }

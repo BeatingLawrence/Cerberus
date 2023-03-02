@@ -2,6 +2,7 @@
 #include "../../define.h"
 #include "../../core/cerberusutils.h"
 #include "../../exception/exceptioncatalog.h"
+#include "../../types.h"
 
 using namespace cerberus::data::filesystem;
 

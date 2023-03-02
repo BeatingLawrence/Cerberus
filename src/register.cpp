@@ -87,7 +87,7 @@ void Register::unregisterCerberusObject(uint32_t id)
         {
             if((*it)->id() == id)
             {
-                logInfo("Unregistering object with ID: %u", id);
+                debug("Unregistering object with ID: %u", id);
                 m_objects.erase(it);
                 return;
             }
@@ -138,7 +138,7 @@ void Register::freeMemory()
         return;
     }
 
-    logInfo("Trying to free Register memory..");
+    debug("Freeing up register memory..");
     std::list<CerberusObject*> deleteList;
 
     for(auto const& i : m_objects)
@@ -154,7 +154,7 @@ void Register::freeMemory()
 
     for(auto& el : deleteList)
     {
-        logInfo("Deleting ID: %u of name: %s", el->id(), el->name().c_str());
+        debug("Deleting ID: %u of name: %s", el->id(), el->name().c_str());
         delete el;
     }
 }

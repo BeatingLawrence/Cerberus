@@ -1,6 +1,7 @@
 #include "messagetemplate.h"
 #include "./message.h"
 #include "../core/cerberusutils.h"
+#include "src/core/cerberuslog.h"
 
 using namespace cerberus::message;
 
@@ -8,13 +9,13 @@ using namespace cerberus::message;
 MessageTemplate::MessageTemplate(const std::string& name) :
     CerberusObject(CerberusObject::OT_MessageTemplate, name)
 {
-    logInfo("New Message template '%s' with ID: %u", name.c_str(), id());
+    debug("New Message template '%s' with ID: %u", name.c_str(), id());
 }
 //=============================================================================
 MessageTemplate::MessageTemplate(const Message& message, const std::string& name) :
     CerberusObject(CerberusObject::OT_MessageTemplate, name)
 {
-    logInfo("New Message template '%s' with ID: %u", name.c_str(), id());
+    debug("New Message template '%s' with ID: %u", name.c_str(), id());
 
     for(size_t i = 0; i < message.count(); i++)
     {
@@ -27,12 +28,12 @@ MessageTemplate::~MessageTemplate()
     // noop
 }
 //=============================================================================
-void MessageTemplate::addSlotType(slot::SlotType type)
+void MessageTemplate::addSlotType(SlotType type)
 {
     m_types.push_back(type);
 }
 //=============================================================================
-slot::SlotType MessageTemplate::getSlotTypeAt(size_t index) const
+cerberus::SlotType MessageTemplate::getSlotTypeAt(size_t index) const
 {
     return m_types[index];
 }

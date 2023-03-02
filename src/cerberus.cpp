@@ -41,7 +41,7 @@ void Cerberus::init(CerberusInitParms* parms)
 
     if(cerberus->m_initFlag)
     {
-        logInfo("Cerberus already initialized, skipping init() call..");
+        debug("Cerberus already initialized, skipping init() call..");
         return;
     }
 
@@ -58,7 +58,7 @@ void Cerberus::init(CerberusInitParms* parms)
     cerberus->start();
     //Do other stuff..
     cerberus->m_initFlag = true;
-    logInfo("Cerberus init completed");
+    debug("Cerberus init completed");
     delete parms;
     //
 #ifndef WINDOWS_SYSTEM
@@ -93,7 +93,8 @@ CerberusInitParms* Cerberus::cerberusDefaultParms()
 {
     CerberusInitParms* toReturn = new CerberusInitParms();
     toReturn->logSetup.disableFormatting = false;
-    toReturn->logSetup.logFileName = "./latest.log";
+    toReturn->logSetup.logFileName = "./last.log";
+    toReturn->logSetup.logLevel = LL_Error;
 #ifdef WINDOWS_SYSTEM
     toReturn->logSetup.infoRole.foregroundColor = TERMINAL_FOREGROUND_GREEN;
     toReturn->logSetup.warningRole.foregroundColor = (TERMINAL_FOREGROUND_GREEN | TERMINAL_FOREGROUND_RED);

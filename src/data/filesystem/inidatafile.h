@@ -4,7 +4,6 @@
 #include <list>
 #include <regex>
 #include "./file.h"
-#include "../../types.h"
 
 namespace cerberus
 {

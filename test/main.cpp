@@ -6,7 +6,9 @@
 
 int main(int argc, char* argv[])
 {
-    cerberus::Cerberus::init(cerberus::Cerberus::cerberusDefaultParms());
+    auto parms = cerberus::Cerberus::cerberusDefaultParms();
+    parms->logSetup.logLevel = cerberus::LL_Debug;
+    cerberus::Cerberus::init(parms);
     //start testing
     ::testing::InitGoogleTest(&argc, argv);
     int ret = RUN_ALL_TESTS();

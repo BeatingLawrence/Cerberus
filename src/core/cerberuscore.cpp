@@ -29,7 +29,7 @@ int CerberusCore::tick()
 
     if(destination == CERBERUS_INVALID_ID)
     {
-        logInfo("Destination of message is invalid, dropping..");
+        debug("Destination of message is invalid, dropping..");
     }
     else
     {
@@ -37,7 +37,7 @@ int CerberusCore::tick()
 
         if(found == nullptr)
         {
-            logInfo("Destination of message is unknown, dropping..");
+            debug("Destination of message is unknown, dropping..");
         }
         else
         {
@@ -48,7 +48,7 @@ int CerberusCore::tick()
             }
             else
             {
-                logInfo("Destination of message cannot accept messages, dropping..");
+                debug("Destination of message cannot accept messages, dropping..");
             }
 
             //ADD other messages receivers here..
@@ -61,27 +61,31 @@ int CerberusCore::tick()
 //=============================================================================
 void CerberusCore::warmUp()
 {
-    logInfo("Starting Core Thread..");
+    debug("Starting Core Thread..");
 
-    if(!m_logFile.open())
+    if(!m_logFile.open() && !m_logFile.fileName().empty())
     {
-        logWarning("LogFile open failed");
+        debug("LogFile open failed");
     }
 }
 //=============================================================================
 void CerberusCore::coolDown()
 {
-    logInfo("Stopping Cerberus Core..");
+    debug("Stopping Cerberus Core..");
     _writeLineOnFile("---LOG-END---");
     core::CerberusFactory::_freeMemory();
-    logInfo("Closing log file..");
+    debug("Closing log file..");
     m_logFile.close();
 }
 //=============================================================================
 void CerberusCore::_writeLineOnFile(const std::string& line)
 {
     mutex::MutexLocker locker(&m_fileMutex);
-    m_logFile.writeLine(line);
+
+    if(m_logFile.isOpen())
+    {
+        m_logFile.writeLine(line);
+    }
 }
 //=============================================================================
 CerberusCore::CerberusCore() : cerberus::core::CoreThread(), m_logFile(CERBERUS_FILE_WRITE | CERBERUS_FILE_TRUNCATE)
@@ -100,7 +104,11 @@ void CerberusCore::setLogFileName(const std::string& filename)
     {
         m_logFile.close();  //Could block
         m_logFile.setFileName(filename);
-        m_logFile.open();
+
+        if(!filename.empty())
+        {
+            m_logFile.open();
+        }
     }
     else
     {

@@ -41,8 +41,15 @@ namespace cerberus
                 static CerberusFactory* _instance();
 
             public:
+                enum StandardMessage
+                {
+                    SM_LogMessage,
+                    SM_ShutdownMessage,
+                    // add more custom messages here
+                };
+
                 //Constructs a slot with the correct constructor according to the given type
-                static message::slot::cerberus_slot slotFactory(message::slot::SlotType type);
+                static message::slot::cerberus_slot slotFactory(SlotType type);
 
                 //Adds a template of the given message to the register, returning the chosen typeID
                 static uint32_t registerMessage(const message::Message& message, const std::string& name = std::string());
@@ -56,6 +63,8 @@ namespace cerberus
 
                 //Retrieves a Thread ID by its name
                 static uint32_t threadIdByName(const std::string& name);
+
+                static message::cerberus_message createStandardMessage(StandardMessage type);
 
         };
     }

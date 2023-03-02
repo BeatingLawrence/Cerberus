@@ -6,7 +6,6 @@ TODO list for Cerberus:
 
 
 [Database]
--TEST the convertion system
 -Implement a custom thread that takes ownership of an sql database and processes a queue of transactions from other threads on the same db 
 
 

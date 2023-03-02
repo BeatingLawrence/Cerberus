@@ -48,7 +48,7 @@ TEST(threadTest, thread_callback)
     thread.provideWarmUpCallback(&testWarmUpCallback);
     thread.provideCoolDownCallback(&testCoolDownCallback);
     thread.start();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     EXPECT_EQ(thread.join(), 20);
 }
 
@@ -68,7 +68,7 @@ static int pingTestCallback(cerberus::message::cerberus_message msg, cerberus::t
     {
         if(a == 10)
         {
-            auto message = cerberus::core::CerberusFactory::messageConstruct(CERBERUS_MESSAGE_SHUTDOWN_ID);
+            auto message = cerberus::core::CerberusFactory::createStandardMessage(cerberus::core::CerberusFactory::SM_ShutdownMessage);
             message->setDestinationId(cerberus::core::CerberusFactory::threadIdByName("pongThread"));
             cerberus::Cerberus::send(message);
             thread->terminate();
@@ -114,7 +114,7 @@ TEST(threadTest, thread_ping_pong)
     msg.addSlot(cerberus::message::slot::CharSlot::create());
     cerberus::core::CerberusFactory::registerMessage(msg, "PingPongMessage");
     //start the test
-    cerberus::thread::Thread ping("pingThread", cerberus::thread::Thread::TP_PeriodicQueue, 200);
+    cerberus::thread::Thread ping("pingThread", cerberus::thread::Thread::TP_PeriodicQueue, 100);
     cerberus::thread::Thread pong("pongThread");    //Non-Periodic (receiver)
     ping.provideTickCallback(&pingTestCallback);
     pong.provideTickCallback(&pongTestCallback);

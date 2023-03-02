@@ -3,7 +3,7 @@
 #include "../message/slot/charslot.h"
 #include "../message/slot/stringslot.h"
 #include "../message/messagetemplate.h"
-#include "../message/standardmessagefactory.h"
+#include "src/core/cerberuslog.h"
 
 using namespace cerberus::core;
 
@@ -24,59 +24,59 @@ CerberusFactory* CerberusFactory::_instance()
     return &factory;
 }
 //=============================================================================
-cerberus::message::slot::cerberus_slot CerberusFactory::slotFactory(message::slot::SlotType type)
+cerberus::message::slot::cerberus_slot CerberusFactory::slotFactory(SlotType type)
 {
     switch(type)
     {
-        case message::slot::ST_UCHAR:
+        case ST_UCHAR:
             // TODO to implement
             break;
 
-        case message::slot::ST_CHAR:
+        case ST_CHAR:
             return message::slot::CharSlot::create();
             break;
 
-        case message::slot::ST_USHORT:
+        case ST_USHORT:
             // TODO to implement
             break;
 
-        case message::slot::ST_SHORT:
+        case ST_SHORT:
             // TODO to implement
             break;
 
-        case message::slot::ST_ULONG:
+        case ST_ULONG:
             // TODO to implement
             break;
 
-        case message::slot::ST_LONG:
+        case ST_LONG:
             // TODO to implement
             break;
 
-        case message::slot::ST_ULONGLONG:
+        case ST_ULONGLONG:
             // TODO to implement
             break;
 
-        case message::slot::ST_LONGLONG:
+        case ST_LONGLONG:
             // TODO to implement
             break;
 
-        case message::slot::ST_FLOAT:
+        case ST_FLOAT:
             // TODO to implement
             break;
 
-        case message::slot::ST_DOUBLE:
+        case ST_DOUBLE:
             // TODO to implement
             break;
 
-        case message::slot::ST_BOOL:
+        case ST_BOOL:
             // TODO to implement
             break;
 
-        case message::slot::ST_VOIDP:
+        case ST_VOIDP:
             // TODO to implement
             break;
 
-        case message::slot::ST_STDSTRINGP:
+        case ST_STDSTRINGP:
             return message::slot::StringSlot::create();
             break;
     }
@@ -120,7 +120,7 @@ cerberus::message::cerberus_message CerberusFactory::messageConstruct(uint32_t i
     if(id < CERBERUS_FACTORY_START_ID)
     {
         //reserved range
-        return message::StandardMessageFactory::createStandardMessage(id);
+        debug("Attempt to construct a default message with the factory. Use the StandardMessageFactory instead");
     }
 
     CerberusObject* found = _instance()->m_register.cerberusObjectByID(id);
@@ -165,6 +165,32 @@ uint32_t CerberusFactory::threadIdByName(const std::string& name)
             return CERBERUS_INVALID_ID;
         }
     }
+}
+//=============================================================================
+cerberus::message::cerberus_message CerberusFactory::createStandardMessage(StandardMessage type)
+{
+    message::cerberus_message msg;
+
+    switch(type)
+    {
+        case cerberus::core::CerberusFactory::SM_LogMessage:
+            msg = message::Message::create(CERBERUS_MESSAGE_LOG_ID);
+            msg->addSlot(message::slot::StringSlot::create());
+            break;
+
+        case cerberus::core::CerberusFactory::SM_ShutdownMessage:
+            msg = message::Message::create(CERBERUS_MESSAGE_SHUTDOWN_ID);
+            break;
+
+        //add here more message specializations..
+
+        default:
+            debug("Default message factory given type was not implemented");
+            msg = message::Message::create(CERBERUS_INVALID_ID);
+            break;
+    }
+
+    return msg;
 }
 //=============================================================================
 cerberus::CerberusObject* CerberusFactory::_cerberusObjectById(uint32_t id)

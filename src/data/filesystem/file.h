@@ -52,6 +52,8 @@ namespace cerberus
 
                     void setFileName(const std::string& filePath);
 
+                    std::string fileName() const;
+
                     void setOpenMode(uint8_t openMode = 0);
 
                     bool isOpen() const;

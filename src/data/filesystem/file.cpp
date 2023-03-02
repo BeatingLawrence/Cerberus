@@ -255,6 +255,11 @@ void cerberus::data::filesystem::File::setFileName(const std::string& filePath)
     m_filePath = filePath;
 }
 //=============================================================================
+std::string cerberus::data::filesystem::File::fileName() const
+{
+    return m_filePath;
+}
+//=============================================================================
 void cerberus::data::filesystem::File::setOpenMode(uint8_t openMode)
 {
     if(m_stream.is_open())
@@ -304,7 +309,7 @@ bool cerberus::data::filesystem::File::open()
 
     if(m_filePath.empty())
     {
-        throw cerberusIllegalArgumentExc("Filename is empty");
+        return false;
     }
 
     if(!File::existsAsFile(m_filePath) && (m_openMode & std::ios_base::out))

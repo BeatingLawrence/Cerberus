@@ -1,9 +1,10 @@
 #include "cerberuslog.h"
-#include "../message/standardmessagefactory.h"
+#include "./cerberusfactory.h"
 #include "../message/slot/stringslot.h"
 #include "../mutex/mutexlocker.h"
 #include "./cerberusutils.h"
 #include "../cerberus.h"
+#include "src/types.h"
 #include <iostream>
 
 using namespace cerberus::core;
@@ -21,6 +22,7 @@ const uint8_t CerberusLog::EndOfFormatting_Windows = TERMINAL_FOREGROUND_BLUE | 
 CerberusLog::CerberusLog() :
     m_useFormattedTerminal(false),
     m_fileLogEnable(true),
+    m_logLevel(LL_Error),
     m_infoLogTerminalFormatting_Linux(),
     m_warningLogTerminalFormatting_Linux(),
     m_errorLogTerminalFormatting_Linux(),
@@ -87,6 +89,13 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
 {
     CerberusLog* instance = _instance();
     mutex::MutexLocker locker(&(instance->m_mutex));
+    //loglevel check
+
+    if(logLevel > instance->m_logLevel)
+    {
+        return;
+    }
+
     //time
     auto now = std::chrono::system_clock::now();
     auto seconds = std::chrono::time_point_cast<std::chrono::seconds>(now);
@@ -136,7 +145,7 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
     if(instance->m_fileLogEnable)
     {
         //Log on file
-        message::cerberus_message logMessage = message::StandardMessageFactory::createStandardMessage(CERBERUS_MESSAGE_LOG_ID);
+        message::cerberus_message logMessage = core::CerberusFactory::createStandardMessage(CerberusFactory::SM_LogMessage);
         logMessage->getSlotAt(0)->to<message::slot::StringSlot>()->setValue(rawLog);
         Cerberus::send(logMessage);
     }
@@ -254,6 +263,7 @@ void CerberusLog::_setup(const CerberusLogSetup& setup)
     instance->m_warningLogTerminalFormatting_Linux = std::string();
     instance->m_errorLogTerminalFormatting_Linux = std::string();
     instance->m_debugLogTerminalFormatting_Linux = std::string();
+    instance->m_logLevel = setup.logLevel;
 
     if(setup.disableFormatting)
     {

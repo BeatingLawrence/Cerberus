@@ -31,7 +31,7 @@ TEST_F(DatabaseTest, connection)
 {
     if(db->isFailed())
     {
-        logInfo(db->failureReason());
+        //logInfo(db->failureReason());
         ASSERT_FALSE(true);
     }
 }
@@ -40,7 +40,7 @@ TEST_F(DatabaseTest, createTable)
 {
     if(db->isFailed())
     {
-        logInfo(db->failureReason());
+        //logInfo(db->failureReason());
         ASSERT_FALSE(true);
     }
 
@@ -57,7 +57,7 @@ TEST_F(DatabaseTest, insertInto)
 {
     if(db->isFailed())
     {
-        logInfo(db->failureReason());
+        //logInfo(db->failureReason());
         ASSERT_FALSE(true);
     }
 
@@ -100,7 +100,7 @@ TEST_F(DatabaseTest, queryResult)
 {
     if(db->isFailed())
     {
-        logInfo("test started with a failed database: ", db->failureReason().c_str());
+        //logInfo("test started with a failed database: ", db->failureReason().c_str());
         ASSERT_FALSE(true);
     }
 
@@ -138,7 +138,7 @@ TEST_F(DatabaseTest, dropTable)
 {
     if(db->isFailed())
     {
-        logInfo(db->failureReason());
+        //logInfo(db->failureReason());
         ASSERT_FALSE(true);
     }
 

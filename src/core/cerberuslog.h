@@ -4,27 +4,31 @@
 #include <string>
 #include "../mutex/mutex.h"
 #include "../Cerberus_global.h"
-#include "../types.h"
 #include "./cerberusutils.h"
+#include "../types.h"
 
 //#define logInfo(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Info)
 //#define logWarning(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Warning)
 //#define logError(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Error)
 //#define debug(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Debug)
 
-#define logInfo(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::core::CerberusLog::LogLevel::LL_Info)
-#define logWarning(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::core::CerberusLog::LogLevel::LL_Warning)
-#define logError(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::core::CerberusLog::LogLevel::LL_Error)
-#define debug(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::core::CerberusLog::LogLevel::LL_Debug)
+#define logInfo(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Info)
+#define logWarning(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Warning)
+#define logError(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Error)
+#define debug(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Debug)
 
-#define thrLogInfo(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Info, this->name())
-#define thrLogWarning(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Warning, this->name())
-#define thrLogError(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Error, this->name())
-#define thrDebug(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Debug, this->name())
+#define thrLogInfo(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_Info, this->name())
+#define thrLogWarning(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_Warning, this->name())
+#define thrLogError(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_Error, this->name())
+#define thrDebug(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_Debug, this->name())
 
 namespace cerberus
 {
     class Cerberus;
+
+    struct CerberusLogRole;
+
+    struct CerberusLogSetup;
 
     namespace core
     {
@@ -35,19 +39,12 @@ namespace cerberus
             public:
                 typedef void* HANDLE;
 
-                enum LogLevel
-                {
-                    LL_Info,
-                    LL_Warning,
-                    LL_Error,
-                    LL_Debug,
-                };
-
             private:
                 CerberusLog(const CerberusLog& other) = delete;
 
                 bool m_useFormattedTerminal;
                 bool m_fileLogEnable;
+                LogLevel m_logLevel;
 
                 std::string m_infoLogTerminalFormatting_Linux;                                  //used for Linux only
                 std::string m_warningLogTerminalFormatting_Linux;                               //used for Linux only

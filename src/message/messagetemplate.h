@@ -21,7 +21,7 @@ namespace cerberus
         class CERBERUS_EXPORT MessageTemplate : public CerberusObject
         {
             private:
-                std::vector<slot::SlotType> m_types;
+                std::vector<SlotType> m_types;
 
             public:
                 MessageTemplate() = delete;
@@ -37,10 +37,10 @@ namespace cerberus
                 virtual ~MessageTemplate();
 
                 //Adds a single slot type at the end of the vector
-                void addSlotType(slot::SlotType type);
+                void addSlotType(SlotType type);
 
                 //Returns the slot type at the index position
-                slot::SlotType getSlotTypeAt(size_t index) const;
+                SlotType getSlotTypeAt(size_t index) const;
 
                 //Returns the number of slots contained in this template
                 size_t count() const;
