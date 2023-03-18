@@ -1,8 +1,15 @@
 TODO list for Cerberus:
 
 [Network]
--Implement sockets (UDP, TCP, HTTP/HTTPS(websockets), FTP, ICMP)
--Test sockets
+-Finish implementing UDP socket
+-Implement TCP socket
+-Implement HTTP socket
+-Implement HTTPS socket
+-Implement WebSocket
+-Implement FTP socket
+-Implement ICMP socket (or a ping functionality)
+-Implement IPC socket
+-Write a test suite for every socket type
 
 
 [Database]

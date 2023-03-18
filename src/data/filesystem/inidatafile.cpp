@@ -142,24 +142,25 @@ bool IniDataFile::load()
             Entry entry;
             entry.key = _getKey(line);
             entry.stringValue = _getValue(line);
-            entry.type = DataType::DT_String;
+            entry.type = IniDataType::
+                         IDT_String;
 
             if(_isInteger(line))
             {
                 entry.integerValue = std::stoll(entry.stringValue);
-                entry.type |= DataType::DT_Integer;
+                entry.type |= IniDataType::IDT_Integer;
             }
 
             if(_isDouble(line))
             {
                 entry.doubleValue = std::stod(entry.stringValue);
-                entry.type |= DataType::DT_Double;
+                entry.type |= IniDataType::IDT_Double;
             }
 
             if(_isBool(line))
             {
                 std::string boolean = core::CerberusUtils::toLower(entry.stringValue);
-                entry.type |= DataType::DT_Bool;
+                entry.type |= IniDataType::IDT_Bool;
 
                 if(boolean.compare("true") == 0)
                 {
@@ -203,7 +204,7 @@ uint8_t IniDataFile::type(const std::string& key)
 
     if(found == nullptr)
     {
-        return DataType::DT_NotAType;
+        return IniDataType::IDT_NotAType;
     }
 
     return found->type;
@@ -227,12 +228,12 @@ void IniDataFile::write_string(const std::string& key, const std::string& value)
         Entry newEntry;
         newEntry.key = k;
         newEntry.stringValue = v;
-        newEntry.type = DataType::DT_String;
+        newEntry.type = IniDataType::IDT_String;
         m_entries.push_back(newEntry);
     }
     else
     {
-        if(found->type & DataType::DT_String)
+        if(found->type & IniDataType::IDT_String)
         {
             found->stringValue = v;
         }
@@ -269,12 +270,12 @@ void IniDataFile::write_integer(const std::string& key, int64_t value)
         newEntry.key = k;
         newEntry.stringValue = strValue;
         newEntry.integerValue = value;
-        newEntry.type = DataType::DT_String | DataType::DT_Integer;
+        newEntry.type = IniDataType::IDT_String | IniDataType::IDT_Integer;
         m_entries.push_back(newEntry);
     }
     else
     {
-        if(found->type & DataType::DT_Integer)
+        if(found->type & IniDataType::IDT_Integer)
         {
             found->stringValue = strValue;
             found->integerValue = value;
@@ -312,12 +313,12 @@ void IniDataFile::write_double(const std::string& key, double value)
         newEntry.key = k;
         newEntry.stringValue = strValue;
         newEntry.doubleValue = value;
-        newEntry.type = DataType::DT_String | DataType::DT_Double;
+        newEntry.type = IniDataType::IDT_String | IniDataType::IDT_Double;
         m_entries.push_back(newEntry);
     }
     else
     {
-        if(found->type & DataType::DT_Double)
+        if(found->type & IniDataType::IDT_Double)
         {
             found->stringValue = strValue;
             found->doubleValue = value;
@@ -355,12 +356,12 @@ void IniDataFile::write_bool(const std::string& key, bool value)
         newEntry.key = k;
         newEntry.stringValue = strValue;
         newEntry.boolValue = value;
-        newEntry.type = DataType::DT_String | DataType::DT_Bool;
+        newEntry.type = IniDataType::IDT_String | IniDataType::IDT_Bool;
         m_entries.push_back(newEntry);
     }
     else
     {
-        if(found->type & DataType::DT_Bool)
+        if(found->type & IniDataType::IDT_Bool)
         {
             found->stringValue = strValue;
             found->boolValue = value;
@@ -383,7 +384,7 @@ std::string IniDataFile::read_string(const std::string& key)
         throw cerberusIllegalArgumentExc("Provided key does not exist");
     }
 
-    if(!(found->type & DataType::DT_String))
+    if(!(found->type & IniDataType::IDT_String))
     {
         throw cerberusIllegalArgumentExc("Value of provided key does not match data type");
     }
@@ -400,7 +401,7 @@ int64_t IniDataFile::read_integer(const std::string& key)
         throw cerberusIllegalArgumentExc("Provided key does not exist");
     }
 
-    if(!(found->type & DataType::DT_Integer))
+    if(!(found->type & IniDataType::IDT_Integer))
     {
         throw cerberusIllegalArgumentExc("Value of provided key does not match data type");
     }
@@ -417,7 +418,7 @@ double IniDataFile::read_double(const std::string& key)
         throw cerberusIllegalArgumentExc("Provided key does not exist");
     }
 
-    if(!(found->type & DataType::DT_Double))
+    if(!(found->type & IniDataType::IDT_Double))
     {
         throw cerberusIllegalArgumentExc("Value of provided key does not match data type");
     }
@@ -434,7 +435,7 @@ bool IniDataFile::read_bool(const std::string& key)
         throw cerberusIllegalArgumentExc("Provided key does not exist");
     }
 
-    if(!(found->type & DataType::DT_Bool))
+    if(!(found->type & IniDataType::IDT_Bool))
     {
         throw cerberusIllegalArgumentExc("Value of provided key does not match data type");
     }
