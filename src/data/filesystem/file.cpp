@@ -1,8 +1,8 @@
 #include "file.h"
 #include "../../exception/exceptioncatalog.h"
 #include "../../core/cerberusutils.h"
-#include "../../core/cerberuslog.h"
 #include "../bytebuffer.h"
+#include "src/define.h"
 #include <cstdio>
 #include <regex>
 #include <string.h>

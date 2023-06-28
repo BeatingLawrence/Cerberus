@@ -1,8 +1,8 @@
 #ifndef CERBERUS_SOCKET_SOCKETBASE_H
 #define CERBERUS_SOCKET_SOCKETBASE_H
 
+#include "../data/bytebuffer.h"
 #include "../types.h"
-#include "../Cerberus_global.h"
 
 namespace cerberus
 {
@@ -13,42 +13,43 @@ namespace cerberus
 
     namespace socket
     {
-        class CERBERUS_EXPORT SocketBase
+        class SocketBase
         {
-            private:
-                SocketType m_type;
+           private:
+            SocketType m_type;
 
-            protected:
-                int m_fd;
+           protected:
+            SocketBase(SocketType type);
 
-            public:
-                SocketBase() = delete;
-                SocketBase(const SocketBase& other) = delete;
-                SocketBase(SocketType type);
+            int m_fd;
 
-                virtual ~SocketBase();
+            data::ByteBuffer m_recvBuffer;
 
-                inline SocketType socketType()
-                {
-                    return m_type;
-                }
+           public:
+            SocketBase() = delete;
+            SocketBase(const SocketBase& other) = delete;
 
-                bool isFailed() const;
+            virtual ~SocketBase();
 
-                SocketOperation resolve(Host& ip);
+            inline SocketType socketType() { return m_type; }
 
-                SocketOperation bind(Host& interface);
+            bool isFailed() const;
 
-                SocketOperation connect(Host& destination);
+            void setRecvBufferSize(size_t size);
 
-                SocketOperation close();
+            SocketOperation resolve(Host& ip);
 
-                SocketOperation send(const data::ByteBuffer& buffer, bool donotblock = false);
+            SocketOperation bind(Host& interface);
 
-                SocketOperation recv(data::ByteBuffer& buffer, bool donotblock = false);
+            SocketOperation connect(Host& destination);
+
+            SocketOperation close();
+
+            SocketOperation send(const data::ByteBuffer& buffer, bool donotblock = false);
+
+            SocketOperation recv(data::ByteBuffer& buffer, bool donotblock = false);
         };
-    }
-}
+    }  // namespace socket
+}  // namespace cerberus
 
-#endif // CERBERUS_SOCKET_SOCKETBASE_H
-
+#endif  // CERBERUS_SOCKET_SOCKETBASE_H

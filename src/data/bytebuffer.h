@@ -2,6 +2,7 @@
 #define CERBERUS_DATA_BYTEBUFFER_H
 
 #include <vector>
+
 #include "../Cerberus_global.h"
 
 namespace cerberus
@@ -10,46 +11,54 @@ namespace cerberus
     {
         class CERBERUS_EXPORT ByteBuffer
         {
-            private:
-                std::vector<unsigned char>* m_bytes;
+           private:
+            std::vector<unsigned char>* m_bytes;
 
-            public:
-                ByteBuffer(std::size_t size);
+           public:
+            ByteBuffer(std::size_t size);
 
-                ByteBuffer();
+            ByteBuffer();
 
-                ByteBuffer(const ByteBuffer& other);
+            ByteBuffer(const ByteBuffer& other);
 
-                ByteBuffer(ByteBuffer&& other);
+            ByteBuffer(ByteBuffer&& other);
 
-                //Does not take the \0
-                ByteBuffer(const char* chars);
+            // Does not take the \0
+            ByteBuffer(const char* chars);
 
-                virtual ~ByteBuffer();
+            virtual ~ByteBuffer();
 
-                unsigned char* data();
+            unsigned char* data();
 
-                const unsigned char* data() const;
+            const unsigned char* data() const;
 
-                unsigned char& operator [](std::size_t index);
+            unsigned char& operator[](std::size_t index);
 
-                const unsigned char& operator [](std::size_t index) const;
+            const unsigned char& operator[](std::size_t index) const;
 
-                ByteBuffer subBuffer(std::size_t pos, std::size_t len);
+            ByteBuffer subBuffer(std::size_t pos, std::size_t len);
 
-                bool operator ==(const ByteBuffer& other);
+            bool operator==(const ByteBuffer& other);
 
-                void operator +=(const ByteBuffer& other);
+            void operator+=(const ByteBuffer& other);
 
-                void operator +=(unsigned char c);
+            void operator+=(unsigned char c);
 
-                void appendString(const char* chars);
+            ByteBuffer& operator=(const ByteBuffer& other);
 
-                std::size_t size() const;
+            ByteBuffer& operator=(const char* chars);
 
-                void resize(std::size_t size);
+            void appendString(const char* chars);
+
+            std::size_t size() const;
+
+            void resize(std::size_t size);
+
+            void assign(const ByteBuffer& buffer);
+
+            void assign(const char* chars);
         };
-    }
-}
+    }  // namespace data
+}  // namespace cerberus
 
-#endif // CERBERUS_DATA_BYTEBUFFER_H
+#endif  // CERBERUS_DATA_BYTEBUFFER_H

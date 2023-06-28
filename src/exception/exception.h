@@ -1,6 +1,7 @@
 #ifndef CERBERUS_EXCEPTION_EXCEPTION_H
 #define CERBERUS_EXCEPTION_EXCEPTION_H
 
+#include <cstdint>
 #include <exception>
 #include <string>
 #include "../Cerberus_global.h"

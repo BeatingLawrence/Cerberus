@@ -1,10 +1,10 @@
 #ifndef CERBERUS_DATA_FILESYSTEM_FILE_H
 #define CERBERUS_DATA_FILESYSTEM_FILE_H
 
+#include <cstdint>
 #include <string>
 #include <fstream>
 #include "../../Cerberus_global.h"
-#include "../../define.h"
 
 namespace cerberus
 {

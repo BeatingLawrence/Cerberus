@@ -5,35 +5,19 @@
 using namespace cerberus::data;
 
 //=============================================================================
-ByteBuffer::ByteBuffer(size_t size):
-    m_bytes(new std::vector<unsigned char>(size, 0x00))
-{
-    // noop
-}
+ByteBuffer::ByteBuffer(size_t size) : m_bytes(new std::vector<unsigned char>(size, 0x00)) {}
 //=============================================================================
-ByteBuffer::ByteBuffer():
-    m_bytes(new std::vector<unsigned char>())
-{
-}
+ByteBuffer::ByteBuffer() : m_bytes(new std::vector<unsigned char>()) {}
 //=============================================================================
-ByteBuffer::ByteBuffer(const ByteBuffer& other):
-    m_bytes(new std::vector<unsigned char>(*(other.m_bytes)))
-{
-    // noop
-}
+ByteBuffer::ByteBuffer(const ByteBuffer& other) : m_bytes(new std::vector<unsigned char>(*(other.m_bytes))) {}
 //=============================================================================
-ByteBuffer::ByteBuffer(ByteBuffer&& other):
-    m_bytes(other.m_bytes)
-{
-    other.m_bytes = nullptr;
-}
+ByteBuffer::ByteBuffer(ByteBuffer&& other) : m_bytes(other.m_bytes) { other.m_bytes->clear(); }
 //=============================================================================
-ByteBuffer::ByteBuffer(const char* chars):
-    m_bytes(new std::vector<unsigned char>(1, 0x00))
+ByteBuffer::ByteBuffer(const char* chars) : m_bytes(new std::vector<unsigned char>(1, 0x00))
 {
     unsigned int counter = 0;
 
-    while(*chars != '\0')
+    while (*chars != '\0')
     {
         chars++;
         counter++;
@@ -42,7 +26,7 @@ ByteBuffer::ByteBuffer(const char* chars):
     chars--;
     m_bytes->resize(counter);
 
-    while(counter != 0)
+    while (counter != 0)
     {
         m_bytes->at(counter - 1) = *chars;
         chars--;
@@ -52,32 +36,23 @@ ByteBuffer::ByteBuffer(const char* chars):
 //=============================================================================
 ByteBuffer::~ByteBuffer()
 {
-    if(m_bytes != nullptr)
+    if (m_bytes != nullptr)
     {
         delete m_bytes;
     }
 }
 //=============================================================================
-unsigned char* ByteBuffer::data()
-{
-    return m_bytes->data();
-}
+unsigned char* ByteBuffer::data() { return m_bytes->data(); }
 //=============================================================================
-const unsigned char* ByteBuffer::data() const
-{
-    return m_bytes->data();
-}
+const unsigned char* ByteBuffer::data() const { return m_bytes->data(); }
 //=============================================================================
-unsigned char& ByteBuffer::operator [](size_t index)
-{
-    return m_bytes->at(index);
-}
+unsigned char& ByteBuffer::operator[](size_t index) { return m_bytes->at(index); }
 //=============================================================================
 ByteBuffer ByteBuffer::subBuffer(size_t pos, size_t len)
 {
     ByteBuffer toReturn(len);
 
-    for(size_t i = 0; i < len; i++)
+    for (size_t i = 0; i < len; i++)
     {
         toReturn[i] = m_bytes->at(pos + i);
     }
@@ -85,18 +60,18 @@ ByteBuffer ByteBuffer::subBuffer(size_t pos, size_t len)
     return toReturn;
 }
 //=============================================================================
-bool ByteBuffer::operator ==(const ByteBuffer& other)
+bool ByteBuffer::operator==(const ByteBuffer& other)
 {
-    if(m_bytes->size() != other.m_bytes->size())
+    if (m_bytes->size() != other.m_bytes->size())
     {
         return false;
     }
 
     size_t c = 0;
 
-    for(size_t i = 0; i < m_bytes->size(); i++)
+    for (size_t i = 0; i < m_bytes->size(); i++)
     {
-        if(m_bytes->at(i) != other[c++])
+        if (m_bytes->at(i) != other[c++])
         {
             return false;
         }
@@ -105,15 +80,27 @@ bool ByteBuffer::operator ==(const ByteBuffer& other)
     return true;
 }
 //=============================================================================
-void ByteBuffer::operator +=(const ByteBuffer& other)
+void ByteBuffer::operator+=(const ByteBuffer& other)
 {
     size_t next = m_bytes->size();
     m_bytes->resize(m_bytes->size() + other.size());
 
-    for(auto& el : * (other.m_bytes))
+    for (auto& el : *(other.m_bytes))
     {
         m_bytes->at(next++) = el;
     }
+}
+//=============================================================================
+ByteBuffer& ByteBuffer::operator=(const ByteBuffer& other)
+{
+    assign(other);
+    return *this;
+}
+//=============================================================================
+ByteBuffer& ByteBuffer::operator=(const char* chars)
+{
+    assign(chars);
+    return *this;
 }
 //=============================================================================
 void ByteBuffer::appendString(const char* chars)
@@ -122,30 +109,43 @@ void ByteBuffer::appendString(const char* chars)
     size_t next = m_bytes->size();
     m_bytes->resize(m_bytes->size() + str.length());
 
-    for(auto& el : str)
+    for (auto& el : str)
     {
         m_bytes->at(next++) = el;
     }
 }
 //=============================================================================
-void ByteBuffer::operator +=(unsigned char c)
+void ByteBuffer::operator+=(unsigned char c)
 {
     m_bytes->resize(m_bytes->size() + 1);
     m_bytes->at(m_bytes->size() - 1) = c;
 }
 //=============================================================================
-const unsigned char& ByteBuffer::operator [](size_t index) const
+const unsigned char& ByteBuffer::operator[](size_t index) const { return m_bytes->at(index); }
+//=============================================================================
+size_t ByteBuffer::size() const { return m_bytes->size(); }
+//=============================================================================
+void ByteBuffer::resize(size_t size) { m_bytes->resize(size); }
+//=============================================================================
+void ByteBuffer::assign(const ByteBuffer& buffer)
 {
-    return m_bytes->at(index);
+    m_bytes->clear();
+    m_bytes->assign(buffer.m_bytes->begin(), buffer.m_bytes->end());
 }
 //=============================================================================
-size_t ByteBuffer::size() const
+void ByteBuffer::assign(const char* chars)
 {
-    return m_bytes->size();
-}
-//=============================================================================
-void ByteBuffer::resize(size_t size)
-{
-    m_bytes->resize(size);
+    m_bytes->clear();
+
+    while (true)
+    {
+        if ((*chars) == 0)
+        {
+            return;
+        }
+
+        m_bytes->push_back(*chars);
+        chars++;
+    }
 }
 //=============================================================================

@@ -19,8 +19,7 @@ file(GLOB_RECURSE test_files CONFIGURE_DEPENDS
     "test/*"
 )
 
-add_library(Cerberus SHARED
-  cpp.astylerc
+add_library(Cerberus SHARED  
   ${src_files}
   ${header_files}
 )
