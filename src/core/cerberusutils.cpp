@@ -1,8 +1,9 @@
 #include "cerberusutils.h"
+
 #include <algorithm>
-#include <cstring>
 #include <cstdarg>
 #include <cstdlib>
+#include <cstring>
 
 using namespace cerberus::core;
 
@@ -17,7 +18,7 @@ std::string CerberusUtils::strPrint(std::string format, ...)
     char garbage;
     int required = vsnprintf(&garbage, 0, format.c_str(), testList);
 
-    if(required > 0)
+    if (required > 0)
     {
         ret.resize(required);
         vsnprintf(&ret[0], required + 1, format.c_str(), list);
@@ -31,20 +32,14 @@ std::string CerberusUtils::strPrint(std::string format, ...)
 std::string CerberusUtils::toLower(const std::string& str)
 {
     std::string data(str);
-    std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c)
-    {
-        return std::tolower(c);
-    });
+    std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); });
     return data;
 }
 //=============================================================================
 std::string CerberusUtils::toUpper(const std::string& str)
 {
     std::string data(str);
-    std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c)
-    {
-        return std::toupper(c);
-    });
+    std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::toupper(c); });
     return data;
 }
 //=============================================================================
@@ -60,10 +55,7 @@ std::string CerberusUtils::removeBlankAfter(const std::string& str)
     return (end == std::string::npos) ? "" : str.substr(0, end + 1);
 }
 //=============================================================================
-std::string CerberusUtils::removeBlank_copy(const std::string& str)
-{
-    return removeBlankAfter(removeBlankBefore(str));
-}
+std::string CerberusUtils::removeBlank_copy(const std::string& str) { return removeBlankAfter(removeBlankBefore(str)); }
 //=============================================================================
 void CerberusUtils::removeBlank(std::string& str)
 {
@@ -73,7 +65,7 @@ void CerberusUtils::removeBlank(std::string& str)
 //=============================================================================
 bool CerberusUtils::contains(const std::string& str1, const std::string& str2)
 {
-    if(str1.find(str2) == std::string::npos)
+    if (str1.find(str2) == std::string::npos)
     {
         return false;
     }
@@ -85,7 +77,7 @@ std::string CerberusUtils::environmentVariable(const std::string& variableName)
 {
     char* val = getenv(variableName.c_str());
 
-    if(val == nullptr)
+    if (val == nullptr)
     {
         return std::string();
     }
@@ -101,8 +93,23 @@ int CerberusUtils::stringToInt(const std::string& str)
     {
         ret = std::stoi(str);
     }
-    catch(...) {}
+    catch (...)
+    {
+    }
 
     return ret;
+}
+//=============================================================================
+bool CerberusUtils::isAlpha(const std::string& str)
+{
+    for (auto&& ch : str)
+    {
+        if ((ch >= 65 && ch <= 90) || (ch >= 97 && ch <= 122))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 //=============================================================================

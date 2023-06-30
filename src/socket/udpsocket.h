@@ -9,14 +9,14 @@ namespace cerberus
     {
         class UdpSocket : public cerberus::socket::SocketBase
         {
-            public:
-                UdpSocket();
+           public:
+            UdpSocket();
 
-                virtual ~UdpSocket();
+            virtual ~UdpSocket();
 
-                SocketOperation sendTo(const data::ByteBuffer& buffer, const Host& dest);
+            SocketOperation sendTo(const data::ByteBuffer& buffer, const Host& dest, bool donotblock = false);
         };
-    }
-}
+    }  // namespace socket
+}  // namespace cerberus
 
-#endif // CERBERUS_SOCKET_UDPSOCKET_H
+#endif  // CERBERUS_SOCKET_UDPSOCKET_H

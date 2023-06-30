@@ -43,12 +43,12 @@
  *  coolDown() will be called after the last run of tick(), after terminate() is called. When coolDown() execution finishes, the join() releases.
  */
 
-#include <thread>
 #include <chrono>
-#include "../mutex/mutex.h"
+#include <thread>
+
+#include "../cerberusobject.h"
 #include "../time/time.h"
 #include "./threadbase.h"
-#include "../cerberusobject.h"
 
 namespace cerberus
 {
@@ -56,87 +56,88 @@ namespace cerberus
     {
         class CERBERUS_EXPORT Thread : public cerberus::thread::ThreadBase, public CerberusObject
         {
-            public:
-                enum ThreadPeriodicity
-                {
-                    TP_NonPeriodic,
-                    TP_Periodic,
-                    TP_PeriodicQueue,
-                    TP_OneShot,
-                };
+           public:
+            enum ThreadPeriodicity
+            {
+                TP_NonPeriodic,
+                TP_Periodic,
+                TP_PeriodicQueue,
+                TP_OneShot,
+            };
 
-            private:
-                std::thread m_thread;
+           private:
+            std::thread m_thread;
 
-                std::chrono::microseconds m_period;
+            std::chrono::microseconds m_period;
 
-                static void _staticThread(Thread* context);
+            static void _staticThread(Thread* context);
 
-                void _thread();
+            void _thread();
 
-                ThreadPeriodicity m_periodicity;
+            ThreadPeriodicity m_periodicity;
 
-                int m_retValue;
+            int m_retValue;
 
-                typedef int (*customTickCallback)(message::cerberus_message, Thread*);
+            typedef int (*customTickCallback)(message::cerberus_message, Thread*);
 
-                typedef void (*customCallback)();
+            typedef void (*customCallback)();
 
-                customTickCallback m_tickCallback;
+            customTickCallback m_tickCallback;
 
-                customCallback m_warmUpCallback;
+            customCallback m_warmUpCallback;
 
-                customCallback m_coolDownCallback;
+            customCallback m_coolDownCallback;
 
-                static int defaultTickCallback(message::cerberus_message msg, Thread* thread);
+            static int defaultTickCallback(message::cerberus_message msg, Thread* thread);
 
-                static void defaultWarmUpCallback();
+            static void defaultWarmUpCallback();
 
-                static void defaultCoolDownCallback();
+            static void defaultCoolDownCallback();
 
-            protected:
-                virtual int tick();
+           protected:
+            virtual int tick();
 
-                virtual void warmUp();
+            virtual void warmUp();
 
-                virtual void coolDown();
+            virtual void coolDown();
 
-                void sleep(const time::Time& time);
+           public:
+            // Constructs a non-periodic thread by default. If periodicity is TP_Periodic a valid time must be specified.
+            Thread(const std::string& name, ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& time = time::Time());
 
-            public:
-                //Constructs a non-periodic thread by default. If periodicity is TP_Periodic a valid time must be specified.
-                Thread(const std::string& name, ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& time = time::Time());
+            Thread(const Thread& other) = delete;
 
-                Thread(const Thread& other) = delete;
+            Thread(Thread&& other) = delete;
 
-                Thread(Thread&& other) = delete;
+            // Terminates the Thread if not already terminated, before destructing it. Could block (join)
+            virtual ~Thread();
 
-                //Terminates the Thread if not already terminated, before destructing it. Could block (join)
-                virtual ~Thread();
+            // Puts the calling thread in sleep state for a given time
+            static void sleep(const time::Time& time);
 
-                //Starts the thread execution
-                void start();
+            // Starts the thread execution
+            void start();
 
-                //Stops the thread execution
-                void stop();
+            // Stops the thread execution
+            void stop();
 
-                //Blocks until thread terminates and returns the last tick() exit value.
-                //If stop is true (default), the Thread is also terminated.
-                int join(bool stop = true);
+            // Blocks until thread terminates and returns the last tick() exit value.
+            // If stop is true (default), the Thread is also terminated.
+            int join(bool stop = true);
 
-                //Terminates the Thread. This operation is irreversible
-                void terminate();
+            // Terminates the Thread. This operation is irreversible
+            void terminate();
 
-                //Sets a custom callback to be executed as tick()
-                void provideTickCallback(customTickCallback callback);
+            // Sets a custom callback to be executed as tick()
+            void provideTickCallback(customTickCallback callback);
 
-                //Sets a custom callback to be executed as warmUp()
-                void provideWarmUpCallback(customCallback callback);
+            // Sets a custom callback to be executed as warmUp()
+            void provideWarmUpCallback(customCallback callback);
 
-                //Sets a custom callback to be executed as coolDown()
-                void provideCoolDownCallback(customCallback callback);
+            // Sets a custom callback to be executed as coolDown()
+            void provideCoolDownCallback(customCallback callback);
         };
-    }
-}
+    }  // namespace thread
+}  // namespace cerberus
 
-#endif // THREAD_THREAD_H
+#endif  // THREAD_THREAD_H

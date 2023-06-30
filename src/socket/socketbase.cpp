@@ -12,6 +12,8 @@
 //=============================================================================
 cerberus::socket::SocketBase::SocketBase(SocketType type) : m_type(type), m_fd(-1), m_recvBuffer(DEFAULT_RECV_BUFFER_SIZE) {}
 //=============================================================================
+cerberus::socket::SocketBase::SocketBase(SocketType type, int fd) : m_type(type), m_fd(fd), m_recvBuffer(DEFAULT_RECV_BUFFER_SIZE) {}
+//=============================================================================
 cerberus::socket::SocketBase::~SocketBase() { close(); }
 //=============================================================================
 bool cerberus::socket::SocketBase::isFailed() const { return (m_fd == -1); }
@@ -72,7 +74,7 @@ cerberus::SocketOperation cerberus::socket::SocketBase::resolve(Host &ip)
     }
 }
 //=============================================================================
-cerberus::SocketOperation cerberus::socket::SocketBase::bind(Host &interface)
+cerberus::SocketOperation cerberus::socket::SocketBase::bind(const Host &interface)
 {
     if (isFailed())
     {
@@ -95,23 +97,25 @@ cerberus::SocketOperation cerberus::socket::SocketBase::bind(Host &interface)
     return SO_OK;
 }
 //=============================================================================
-cerberus::SocketOperation cerberus::socket::SocketBase::connect(Host &dest)
+cerberus::SocketOperation cerberus::socket::SocketBase::connect(const Host &dest)
 {
     if (isFailed())
     {
         return SocketOperation::SO_FailedSocket;
     }
 
+    Host h = dest;
+
     sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(dest.port);
+    addr.sin_port = htons(h.port);
 
-    if (!dest.hostname.empty())
+    if (!h.hostname.empty())
     {
-        resolve(dest);
+        resolve(h);
     }
 
-    addr.sin_addr.s_addr = dest.octet_networkOrder;
+    addr.sin_addr.s_addr = h.octet_networkOrder;
     int ret = ::connect(m_fd, (sockaddr *)&addr, sizeof(sockaddr_in));
 
     if (ret == -1)
@@ -127,6 +131,10 @@ cerberus::SocketOperation cerberus::socket::SocketBase::close()
 {
     if (::close(m_fd) == -1)
     {
+        if (errno == EBADF)  // already close
+        {
+            return SO_OK;
+        }
         debug("socket close error, %s", strerror(errno));
         return SO_Failure;
     }

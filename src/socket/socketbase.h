@@ -21,6 +21,8 @@ namespace cerberus
            protected:
             SocketBase(SocketType type);
 
+            SocketBase(SocketType type, int fd);
+
             int m_fd;
 
             data::ByteBuffer m_recvBuffer;
@@ -39,9 +41,9 @@ namespace cerberus
 
             SocketOperation resolve(Host& ip);
 
-            SocketOperation bind(Host& interface);
+            SocketOperation bind(const Host& interface);
 
-            SocketOperation connect(Host& destination);
+            SocketOperation connect(const Host& destination);
 
             SocketOperation close();
 
