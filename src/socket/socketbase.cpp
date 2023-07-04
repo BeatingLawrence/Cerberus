@@ -38,6 +38,7 @@ cerberus::SocketOperation cerberus::socket::SocketBase::resolve(Host &ip)
     {
         sockaddr_in *addr = (sockaddr_in *)(res->ai_addr);
         ip.octet_networkOrder = addr->sin_addr.s_addr;
+        ip.resolved = true;
         freeaddrinfo(res);
         return SO_OK;
     }
@@ -110,12 +111,20 @@ cerberus::SocketOperation cerberus::socket::SocketBase::connect(const Host &dest
     addr.sin_family = AF_INET;
     addr.sin_port = htons(h.port);
 
-    if (!h.hostname.empty())
+    if (!h.hostname.empty() && !h.resolved)
     {
         resolve(h);
     }
 
-    addr.sin_addr.s_addr = h.octet_networkOrder;
+    if (h.octet_networkOrder == 0)
+    {
+        addr.sin_addr.s_addr = INADDR_ANY;
+    }
+    else
+    {
+        addr.sin_addr.s_addr = h.octet_networkOrder;
+    }
+
     int ret = ::connect(m_fd, (sockaddr *)&addr, sizeof(sockaddr_in));
 
     if (ret == -1)

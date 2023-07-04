@@ -1,16 +1,12 @@
 #include "threadbase.h"
+
 #include "../mutex/mutexlocker.h"
 
 using namespace cerberus::thread;
 using namespace cerberus::mutex;
 
 //=============================================================================
-ThreadBase::ThreadBase() :
-    m_mutex(),
-    m_pausedFlag(true),
-    m_terminateFlag(false)
-{
-}
+ThreadBase::ThreadBase() : m_mutex(), m_pausedFlag(true), m_terminateFlag(false) {}
 //=============================================================================
 ThreadBase::~ThreadBase()
 {
@@ -44,29 +40,13 @@ bool ThreadBase::getTerminateFlag() const
 cerberus::message::cerberus_message ThreadBase::nextMessage()
 {
     MutexLocker locker(&m_mutex);
-
-    try
-    {
-        return m_queue.next();
-    }
-    catch(...)
-    {
-        return message::Message::create();
-    }
+    return m_queue.next();
 }
 //=============================================================================
 cerberus::message::cerberus_message ThreadBase::nextMessageKeep() const
 {
     MutexLocker locker(&m_mutex);
-
-    try
-    {
-        return m_queue.nextKeep();
-    }
-    catch(...)
-    {
-        return message::Message::create();
-    }
+    return m_queue.nextKeep();
 }
 //=============================================================================
 bool ThreadBase::isQueueEmpty() const

@@ -1,5 +1,4 @@
 #include "messagequeue.h"
-#include "../exception/exceptioncatalog.h"
 
 using namespace cerberus::message;
 
@@ -9,16 +8,13 @@ MessageQueue::MessageQueue()
     // noop
 }
 //=============================================================================
-void MessageQueue::add(cerberus_message message)
-{
-    m_queue.push_back(message);
-}
+void MessageQueue::add(cerberus_message message) { m_queue.push_back(message); }
 //=============================================================================
 cerberus_message MessageQueue::next()
 {
-    if(m_queue.empty())
+    if (m_queue.empty())
     {
-        throw cerberusIllegalStateExc("Queue is empty");
+        return Message::create();
     }
 
     cerberus_message next = m_queue.front();
@@ -28,22 +24,16 @@ cerberus_message MessageQueue::next()
 //=============================================================================
 cerberus_message MessageQueue::nextKeep() const
 {
-    if(m_queue.empty())
+    if (m_queue.empty())
     {
-        throw cerberusIllegalStateExc("Queue is empty");
+        return Message::create();
     }
 
     cerberus_message next = m_queue.front();
     return next;
 }
 //=============================================================================
-size_t MessageQueue::size() const
-{
-    return m_queue.size();
-}
+size_t MessageQueue::size() const { return m_queue.size(); }
 //=============================================================================
-bool MessageQueue::isEmpty() const
-{
-    return m_queue.empty();
-}
+bool MessageQueue::isEmpty() const { return m_queue.empty(); }
 //=============================================================================

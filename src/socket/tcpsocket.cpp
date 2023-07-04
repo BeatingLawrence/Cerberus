@@ -9,7 +9,13 @@
 using namespace cerberus::socket;
 
 //=============================================================================
-TcpSocket::TcpSocket(int fd) : cerberus::socket::SocketBase(Socket_TCP, fd), m_maxConnections(0) {}
+TcpSocket::TcpSocket(int fd) : cerberus::socket::SocketBase(Socket_TCP, fd), m_maxConnections(0)
+{
+    if (m_fd == -1)
+    {
+        debug("error in socket creation: %s", strerror(errno));
+    }
+}
 //=============================================================================
 TcpSocket::TcpSocket() : cerberus::socket::SocketBase(Socket_TCP), m_maxConnections(0)
 {
@@ -25,8 +31,7 @@ void TcpSocket::setMaxConnections(size_t maxconn) { m_maxConnections = maxconn; 
 //=============================================================================
 cerberus::SocketOperation TcpSocket::listen(size_t maxconn)
 {
-    // if (::listen(m_fd, maxconn == 0 ? m_maxConnections : maxconn) == -1)
-    if (::listen(m_fd, 100) == -1)
+    if (::listen(m_fd, maxconn == 0 ? m_maxConnections : maxconn) == -1)
     {
         debug("error in socket listen: %s", strerror(errno));
         return SO_ListenFailure;
@@ -38,11 +43,9 @@ cerberus::SocketOperation TcpSocket::listen(size_t maxconn)
 TcpSocket TcpSocket::accept(Host &peer)
 {
     sockaddr_in addr;
-    socklen_t len = 0;
+    socklen_t len = sizeof(sockaddr_in);
 
     int ret = ::accept(m_fd, (sockaddr *)&addr, &len);
-
-    debug("%u : %u  %u", addr.sin_addr.s_addr, addr.sin_port, len);
 
     if (ret == -1)
     {

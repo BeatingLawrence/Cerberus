@@ -3,9 +3,9 @@
 #include "./core/cerberusutils.h"
 
 //=============================================================================
-cerberus::Host::Host() : octet_networkOrder(0), port(0) {}
+cerberus::Host::Host() : octet_networkOrder(0), port(0), resolved(false) {}
 //=============================================================================
-cerberus::Host::Host(const std::string &str) : octet_networkOrder(0), port(0)
+cerberus::Host::Host(const std::string &str) : octet_networkOrder(0), port(0), resolved(false)
 {
     if (core::CerberusUtils::isAlpha(str))
     {

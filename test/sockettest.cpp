@@ -43,6 +43,8 @@ static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::t
     }
     s.recv(buf);
 
+    debug("received");
+
     if (buf == exp)
     {
         return 101010;
@@ -60,16 +62,15 @@ TEST(socketTest, TCP)
     receiver.provideTickCallback(&testCallback_TCP);
     receiver.start();
     debug("receiver thread started");
-    cerberus::thread::Thread::sleep(100);  // sleep THIS thread
+    cerberus::thread::Thread::sleep(10);  // sleep THIS thread
     //
     cerberus::socket::TcpSocket socket;
-    ASSERT_EQ(socket.bind(cerberus::Host("127.0.0.1:22222")), cerberus::SocketOperation::SO_OK);
-    debug("transmitter bound");
     ASSERT_EQ(socket.connect(cerberus::Host("127.0.0.1:33333")), cerberus::SocketOperation::SO_OK);
     debug("transmitter connected");
     cerberus::data::ByteBuffer buf("Hello, World!");
     ASSERT_EQ(socket.send(buf), cerberus::SocketOperation::SO_OK);
     debug("transmitter buffer sent");
+    socket.close();
     EXPECT_EQ(receiver.join(), 101010);
 }
 
@@ -79,12 +80,10 @@ TEST(socketTest, UDP)
     cerberus::thread::Thread receiver("receiverTestThread", cerberus::thread::Thread::TP_OneShot);
     receiver.provideTickCallback(&testCallback_UDP);
     receiver.start();
-    cerberus::thread::Thread::sleep(100);  // sleep THIS thread
+    cerberus::thread::Thread::sleep(10);  // sleep THIS thread
     //
     cerberus::socket::UdpSocket socket;
-    cerberus::Host host("127.0.0.1:22011");
-    socket.bind(host);
-    host.port = 22012;
+    cerberus::Host host("127.0.0.1:22012");
     socket.connect(host);
     cerberus::data::ByteBuffer buf("Hello, World!");
     socket.send(buf);

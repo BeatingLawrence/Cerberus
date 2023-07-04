@@ -42,12 +42,19 @@ cerberus::SocketOperation UdpSocket::sendTo(const data::ByteBuffer& buffer, cons
     addr.sin_family = AF_INET;
     addr.sin_port = htons(h.port);
 
-    if (!h.hostname.empty())
+    if (!h.hostname.empty() && !h.resolved)
     {
         resolve(h);
     }
 
-    addr.sin_addr.s_addr = h.octet_networkOrder;
+    if (h.octet_networkOrder == 0)
+    {
+        addr.sin_addr.s_addr = INADDR_ANY;
+    }
+    else
+    {
+        addr.sin_addr.s_addr = h.octet_networkOrder;
+    }
 
     auto ret = ::sendto(m_fd, buffer.data(), buffer.size(), flags, (sockaddr*)&addr, sizeof(sockaddr_in));
 

@@ -123,7 +123,7 @@ namespace cerberus
 
             // Blocks until thread terminates and returns the last tick() exit value.
             // If stop is true (default), the Thread is also terminated.
-            int join(bool stop = true);
+            int join(bool stop = false);
 
             // Terminates the Thread. This operation is irreversible
             void terminate();

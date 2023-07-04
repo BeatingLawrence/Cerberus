@@ -111,6 +111,8 @@ namespace cerberus
         uint16_t port;
         std::string hostname;
 
+        bool resolved;
+
         // This method takes an ip address in the form of x.x.x.x or x.x.x.x:yyyyy
         // and converts the string filling port and octet[] members
         // It returns true if the conversion performed successfully
