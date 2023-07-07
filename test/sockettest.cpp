@@ -1,4 +1,5 @@
 #include <cerberus/cerberus.h>
+#include <cerberus/socket/tcpp2psocket.h>
 #include <cerberus/socket/tcpsocket.h>
 #include <cerberus/socket/udpsocket.h>
 #include <gtest/gtest.h>
@@ -36,10 +37,12 @@ static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::t
     cerberus::data::ByteBuffer exp("Hello, World!");
     cerberus::Host h;
     auto s = socket.accept(h);
-    debug("accepted, %s", h.toString().c_str());
+    s.setRecvBufferSize(exp.size());
+    debug("accepted from, %s", h.toString().c_str());
     if (s.isFailed())
     {
         debug("accept error");
+        return 1;
     }
     s.recv(buf);
 
@@ -55,23 +58,35 @@ static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::t
     }
 }
 
-TEST(socketTest, TCP)
+static int testCallback_TCP_P2P(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
 {
-    // creating receiver thread
-    cerberus::thread::Thread receiver("receiverTestThread", cerberus::thread::Thread::TP_OneShot);
-    receiver.provideTickCallback(&testCallback_TCP);
-    receiver.start();
-    debug("receiver thread started");
-    cerberus::thread::Thread::sleep(10);  // sleep THIS thread
-    //
-    cerberus::socket::TcpSocket socket;
-    ASSERT_EQ(socket.connect(cerberus::Host("127.0.0.1:33333")), cerberus::SocketOperation::SO_OK);
-    debug("transmitter connected");
-    cerberus::data::ByteBuffer buf("Hello, World!");
-    ASSERT_EQ(socket.send(buf), cerberus::SocketOperation::SO_OK);
-    debug("transmitter buffer sent");
-    socket.close();
-    EXPECT_EQ(receiver.join(), 101010);
+    debug("receiver thread routine entered");
+    cerberus::socket::TcpP2PSocket socket;
+    socket.bind(cerberus::Host("127.0.0.1:44444"));
+
+    if (socket.connect(cerberus::Host("127.0.0.1:55555"), 2000) != cerberus::SO_OK)
+    {
+        debug("connect error");
+        return 1;
+    }
+
+    cerberus::data::ByteBuffer buf;
+    cerberus::data::ByteBuffer exp("Hello, World!");
+    socket.setRecvBufferSize(exp.size());
+
+    if (socket.recv(buf) == cerberus::SO_OK)
+    {
+        debug("received");
+    }
+
+    if (buf == exp)
+    {
+        return 101010;
+    }
+    else
+    {
+        return 1;
+    }
 }
 
 TEST(socketTest, UDP)
@@ -83,9 +98,39 @@ TEST(socketTest, UDP)
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
     //
     cerberus::socket::UdpSocket socket;
-    cerberus::Host host("127.0.0.1:22012");
-    socket.connect(host);
     cerberus::data::ByteBuffer buf("Hello, World!");
-    socket.send(buf);
+    cerberus::Host host("127.0.0.1:22012");
+    socket.sendTo(buf, host);
+    EXPECT_EQ(receiver.join(), 101010);
+}
+
+TEST(socketTest, TCP)
+{
+    // creating receiver thread
+    cerberus::thread::Thread receiver("receiverTestThread", cerberus::thread::Thread::TP_OneShot);
+    receiver.provideTickCallback(&testCallback_TCP);
+    receiver.start();
+    cerberus::thread::Thread::sleep(10);  // sleep THIS thread
+    //
+    cerberus::socket::TcpSocket socket;
+    ASSERT_EQ(socket.connect(cerberus::Host("127.0.0.1:33333")), cerberus::SocketOperation::SO_OK);
+    cerberus::data::ByteBuffer buf("Hello, World!");
+    ASSERT_EQ(socket.send(buf), cerberus::SocketOperation::SO_OK);
+    EXPECT_EQ(receiver.join(), 101010);
+}
+
+TEST(socketTest, TCP_P2P)
+{
+    // creating receiver thread
+    cerberus::thread::Thread receiver("receiverTestThread", cerberus::thread::Thread::TP_OneShot);
+    receiver.provideTickCallback(&testCallback_TCP_P2P);
+    receiver.start();
+    cerberus::thread::Thread::sleep(10);  // sleep THIS thread
+    //
+    cerberus::socket::TcpP2PSocket socket;
+    ASSERT_EQ(socket.bind(cerberus::Host("127.0.0.1:55555")), cerberus::SocketOperation::SO_OK);
+    ASSERT_EQ(socket.connect(cerberus::Host("127.0.0.1:44444"), 2000), cerberus::SO_OK);
+    cerberus::data::ByteBuffer buf("Hello, World!");
+    ASSERT_EQ(socket.send(buf), cerberus::SocketOperation::SO_OK);
     EXPECT_EQ(receiver.join(), 101010);
 }

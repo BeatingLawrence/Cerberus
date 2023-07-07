@@ -3,15 +3,15 @@
 using namespace cerberus::time;
 
 //=============================================================================
-Time::Time() :
-    m_period_uS(0)
+Time::Time()
+    : m_period_uS(0)
 {
     // noop
 }
 //=============================================================================
 Time::Time(uint64_t count, Unit unit)
 {
-    switch(unit)
+    switch (unit)
     {
         case U_MicroSecond:
             m_period_uS = count;
@@ -35,33 +35,26 @@ Time::Time(uint64_t count, Unit unit)
     }
 }
 //=============================================================================
-bool Time::isValid() const
-{
-    return (m_period_uS != 0);
-}
+bool Time::isValid() const { return (m_period_uS != 0); }
 //=============================================================================
-uint64_t Time::microseconds() const
-{
-    return m_period_uS;
-}
+uint64_t Time::microseconds() const { return m_period_uS; }
 //=============================================================================
-uint64_t Time::milliseconds() const
-{
-    return m_period_uS / 1000u;
-}
+uint64_t Time::milliseconds() const { return m_period_uS / 1000u; }
 //=============================================================================
-uint64_t Time::seconds() const
-{
-    return m_period_uS / (uint64_t)(1000u * 1000u);
-}
+uint64_t Time::seconds() const { return m_period_uS / (uint64_t)(1000u * 1000u); }
 //=============================================================================
-uint64_t Time::minutes() const
-{
-    return m_period_uS / (uint64_t)(1000u * 1000u * 60u);
-}
+uint64_t Time::minutes() const { return m_period_uS / (uint64_t)(1000u * 1000u * 60u); }
 //=============================================================================
-uint64_t Time::hours() const
+uint64_t Time::hours() const { return m_period_uS / (uint64_t)(1000u * 1000u * 60u * 60u); }
+//=============================================================================
+SplittedTime Time::splittedTime() const
 {
-    return m_period_uS / (uint64_t)(1000u * 1000u * 60u * 60u);
+    SplittedTime ret{};
+    ret.seconds = seconds();
+
+    uint64_t time = m_period_uS % (1000u * 1000u);
+    ret.nanoseconds = time * 1000u;
+
+    return ret;
 }
 //=============================================================================

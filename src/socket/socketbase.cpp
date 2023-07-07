@@ -75,7 +75,7 @@ cerberus::SocketOperation cerberus::socket::SocketBase::resolve(Host &ip)
     }
 }
 //=============================================================================
-cerberus::SocketOperation cerberus::socket::SocketBase::bind(const Host &interface)
+cerberus::SocketOperation cerberus::socket::SocketBase::bind(const Host &iface)
 {
     if (isFailed())
     {
@@ -84,9 +84,9 @@ cerberus::SocketOperation cerberus::socket::SocketBase::bind(const Host &interfa
 
     sockaddr_in addr;
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(interface.port);
+    addr.sin_port = htons(iface.port);
 
-    addr.sin_addr.s_addr = interface.octet_networkOrder;
+    addr.sin_addr.s_addr = iface.octet_networkOrder;
     int ret = ::bind(m_fd, (sockaddr *)&addr, sizeof(sockaddr_in));
 
     if (ret == -1)

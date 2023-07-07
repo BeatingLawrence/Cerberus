@@ -41,9 +41,9 @@ namespace cerberus
 
             SocketOperation resolve(Host& ip);
 
-            SocketOperation bind(const Host& interface);
+            SocketOperation bind(const Host& iface);
 
-            SocketOperation connect(const Host& destination);
+            SocketOperation connect(const Host& dest);
 
             SocketOperation close();
 

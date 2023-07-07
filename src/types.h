@@ -69,6 +69,7 @@ namespace cerberus
     {
         Socket_UDP,
         Socket_TCP,
+        Socket_TCPP2P,
         Socket_HTTP,
         Socket_HTTPS,
         Socket_WEB,
@@ -98,7 +99,7 @@ namespace cerberus
         // Construct an invalid Host (0.0.0.0:0)
         Host();
 
-        // Construct an Host with str as hostname if it contains letters,
+        // Construct an Host with str as hostname if it contains at least one letter,
         // otherwise str will be used to extract ip:port
         Host(const std::string& str);
 

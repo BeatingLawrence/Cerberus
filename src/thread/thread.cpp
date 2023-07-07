@@ -88,8 +88,14 @@ void cerberus::thread::Thread::coolDown() { m_coolDownCallback(); }
 void cerberus::thread::Thread::sleep(const time::Time& time) { std::this_thread::sleep_for(std::chrono::microseconds(time.microseconds())); }
 //=============================================================================
 cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity periodicity, const time::Time& time)
-    : ThreadBase(), CerberusObject(CerberusObject::ObjectType::OT_Thread, name), m_thread(_staticThread, this), m_periodicity(periodicity), m_retValue(0),
-      m_tickCallback(&defaultTickCallback), m_warmUpCallback(&defaultWarmUpCallback), m_coolDownCallback(&defaultCoolDownCallback)
+    : ThreadBase(),
+      CerberusObject(CerberusObject::ObjectType::OT_Thread, name),
+      m_thread(_staticThread, this),
+      m_periodicity(periodicity),
+      m_retValue(0),
+      m_tickCallback(&defaultTickCallback),
+      m_warmUpCallback(&defaultWarmUpCallback),
+      m_coolDownCallback(&defaultCoolDownCallback)
 {
     if (periodicity == ThreadPeriodicity::TP_NonPeriodic)
     {
