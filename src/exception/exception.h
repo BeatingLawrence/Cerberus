@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <exception>
 #include <string>
+
 #include "../Cerberus_global.h"
 
 namespace cerberus
@@ -12,31 +13,32 @@ namespace cerberus
     {
         class CERBERUS_EXPORT Exception : public std::exception
         {
-            private:
-                std::string m_error;
+           private:
+            std::string m_error;
 
-            public:
-                enum ExceptionType
-                {
-                    ET_Unknown,
-                    ET_IllegalArgument,
-                    ET_IllegalState,
-                    ET_System,
-                    ET_MissingImplementation,
-                };
+           public:
+            enum ExceptionType
+            {
+                ET_Unknown,
+                ET_IllegalArgument,
+                ET_IllegalState,
+                ET_System,
+                ET_MissingImplementation,
+                ET_InvalidCast,
+            };
 
-                Exception() noexcept;
+            Exception() noexcept;
 
-                Exception(const Exception& other) noexcept;
+            Exception(const Exception& other) noexcept;
 
-                Exception(const char* text, uint32_t line, const char* fileName, ExceptionType type = ET_Unknown) noexcept;
+            Exception(const char* text, uint32_t line, const char* fileName, ExceptionType type = ET_Unknown) noexcept;
 
-                Exception& operator= (const Exception& other) noexcept;
+            Exception& operator=(const Exception& other) noexcept;
 
-                virtual ~Exception();
+            virtual ~Exception();
 
-                virtual const char* what() const noexcept;
+            virtual const char* what() const noexcept;
         };
-    }
-}
-#endif // CERBERUS_EXCEPTION_EXCEPTION_H
+    }  // namespace exception
+}  // namespace cerberus
+#endif  // CERBERUS_EXCEPTION_EXCEPTION_H

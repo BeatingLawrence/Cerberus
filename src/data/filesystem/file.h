@@ -1,13 +1,18 @@
 #ifndef CERBERUS_DATA_FILESYSTEM_FILE_H
 #define CERBERUS_DATA_FILESYSTEM_FILE_H
 
-#include <cstdint>
-#include <string>
-#include <fstream>
+#include <stdio.h>
+
 #include "../../Cerberus_global.h"
+#include "src/types.h"
 
 namespace cerberus
 {
+    namespace socket
+    {
+        class Socket;
+    }
+
     namespace data
     {
         class ByteBuffer;
@@ -16,87 +21,97 @@ namespace cerberus
         {
             class CERBERUS_EXPORT File
             {
-                private:
-                    std::string m_filePath;
+                friend class ::cerberus::socket::Socket;
 
-                    std::fstream m_stream;
+               private:
+                std::string m_filePath;
 
-                    std::ios_base::openmode m_openMode;
+                bool m_binaryMode;
 
-                public:
-                    //Checks wether a file exists on filesystem
-                    //Throws an exception if the operation was not completed successfully
-                    static bool existsAsFile(const std::string& path);
+                FileOpenMode m_openMode;
 
-                    //Checks wether a directory exists on filesystem
-                    //Throws an exception if the operation was not completed successfully
-                    static bool existsAsDirectory(const std::string& path);
+                FILE* m_file;
 
-                    //Creates a directory
-                    //Throws an exception if the operation was not completed successfully
-                    static void createDirectory(const std::string& path);
+                int m_fd;  // automatically updated when open() is called
 
-                    //Deletes a directory (must be empty)
-                    //Throws an exception if the operation was not completed successfully
-                    static void deleteDirectory(const std::string& path);
+                std::string getOpenModeString();
 
-                    //Checks if a given directory is empty
-                    //Throws an exception if the operation was not completed successfully
-                    static bool isEmptyDirectory(const std::string& path);
+               public:
+                // Checks wether a file exists on filesystem
+                // Throws an exception if the operation was not completed successfully
+                static bool existsAsFile(const std::string& path);
 
-                    File(uint8_t openMode = 0); //Default: read-only
+                // Checks wether a directory exists on filesystem
+                // Throws an exception if the operation was not completed successfully
+                static bool existsAsDirectory(const std::string& path);
 
-                    File(const std::string& filePath, uint8_t openMode = 0);
+                // Creates a directory
+                // Throws an exception if the operation was not completed successfully
+                static void createDirectory(const std::string& path);
 
-                    ~File();
+                // Deletes a directory (must be empty)
+                // Throws an exception if the operation was not completed successfully
+                static void deleteDirectory(const std::string& path);
 
-                    void setFileName(const std::string& filePath);
+                // Checks if a given directory is empty
+                // Throws an exception if the operation was not completed successfully
+                static bool isEmptyDirectory(const std::string& path);
 
-                    std::string fileName() const;
+                // Create a File instance. The openMode parameter can be one of the FileOpenMode values
+                File(FileOpenMode openMode = FOM_Read, bool binaryMode = false);
 
-                    void setOpenMode(uint8_t openMode = 0);
+                File(const std::string& filePath, FileOpenMode openMode = FOM_Read, bool binaryMode = false);
 
-                    bool isOpen() const;
+                ~File();
 
-                    bool open();
+                bool setFileName(const std::string& filePath);
 
-                    bool close();
+                bool setOpenMode(FileOpenMode openMode, bool binaryMode = false);
 
-                    bool deleteFromDisk();
+                bool canWrite() const;
 
-                    bool rename(const std::string& newName);
+                std::string fileName() const;
 
-                    uint64_t size();
+                bool isOpen() const;
 
-                    bool write(const ByteBuffer& bytes);
+                bool open();
 
-                    bool writeLine(const std::string& line);
+                bool close();
 
-                    void read(ByteBuffer& bytes, std::streampos start = 0);
+                bool deleteFromDisk();
 
-                    void read(ByteBuffer& bytes, std::streampos start, std::streamsize span);
+                bool move(const std::string& newName);
 
-                    //Returns false when EOF is reached and no more lines are available
-                    bool readLine(std::string& line);
+                uint64_t size() const;
 
-                    void resetReadCursor();
+                bool write(const ByteBuffer& bytes);
 
-                    void resetWriteCursor();
+                bool writeLine(const std::string& line);
 
-                    std::streampos readCursor();
+                // Read the file starting from start pos till the end of file
+                bool read(ByteBuffer& bytes, uint64_t start = 0) const;
 
-                    std::streampos writeCursor();
+                // Read span bytes from file file starting from start pos
+                bool read(ByteBuffer& bytes, uint64_t start, uint64_t span) const;
 
-                    void setReadCursor(std::streampos pos);
+                bool readChunk(ByteBuffer& bytes, uint64_t chunksize) const;
 
-                    void setWriteCursor(std::streampos pos);
+                // Read a single line till \n
+                // Return false when EOF is reached and no more lines are available
+                bool readLine(std::string& line) const;
 
-                    void moveReadCursor(std::streamoff offset);
+                bool seek(uint64_t pos) const;
 
-                    void moveWriteCursor(std::streamoff offset);
+                bool seekOffset(int64_t pos) const;
+
+                void resetCursor() const;
+
+                uint64_t getCursor() const;
+
+                bool isEqual(File& other) const;
             };
-        }
-    }
-}
+        }  // namespace filesystem
+    }      // namespace data
+}  // namespace cerberus
 
-#endif // CERBERUS_DATA_FILESYSTEM_FILE_H
+#endif  // CERBERUS_DATA_FILESYSTEM_FILE_H

@@ -89,7 +89,7 @@ void cerberus::thread::Thread::sleep(const time::Time& time) { std::this_thread:
 //=============================================================================
 cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity periodicity, const time::Time& time)
     : ThreadBase(),
-      CerberusObject(CerberusObject::ObjectType::OT_Thread, name),
+      CerberusObject(CerberusObject::ObjectType::Thread, name),
       m_thread(_staticThread, this),
       m_periodicity(periodicity),
       m_retValue(0),
@@ -99,23 +99,23 @@ cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity peri
 {
     if (periodicity == ThreadPeriodicity::TP_NonPeriodic)
     {
-        debug("New non-periodic Thread '%s' with ID: %u", name.c_str(), id());
+        debug("New non-periodic %s", toObjStr().c_str());
     }
     else if (periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicQueue)
     {
         if (time.isValid())
         {
             m_period = std::chrono::microseconds(time.microseconds());
-            debug("New periodic Thread '%s' with ID: %u, period: %u ms", name.c_str(), id(), time.milliseconds());
+            debug("New periodic %s, PERIOD:%ums", toObjStr().c_str(), time.milliseconds());
         }
         else
         {
-            throw cerberusIllegalArgumentExc("cannot construct a periodic thread using an invalid time");
+            throw cerberusIllegalArgExc("Invalid time in Thread creation");
         }
     }
     else if (periodicity == ThreadPeriodicity::TP_OneShot)
     {
-        debug("New one-shot Thread '%s' with ID: %u", name.c_str(), id());
+        debug("New one-shot %s", toObjStr().c_str());
     }
 }
 //=============================================================================

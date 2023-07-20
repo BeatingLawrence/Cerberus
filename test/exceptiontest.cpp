@@ -5,5 +5,5 @@
 
 TEST(exceptionTest, illegalArgument)
 {
-    EXPECT_THROW(throw cerberusIllegalArgumentExc("OOPS"), cerberus::exception::Exception);
+    EXPECT_THROW(throw cerberusIllegalArgExc("OOPS"), cerberus::exception::Exception);
 }

@@ -1,18 +1,19 @@
 TODO list for Cerberus:
 
+[TO FIX - High priority]
+-Correct the IniDataFile behavior: expect comments and sections
+-Test the new ByteBuffer implementation completely
+
 [Network]
 -Implement HTTP socket
 -Implement HTTPS socket
 -Implement WebSocket
--Implement FTP socket
 -Implement ICMP socket (or a ping functionality)
 -Implement IPC socket
 -Write a test suite for every socket type
--Support ip address 'ANY' for socket bind
 
 [Database]
 -Implement a custom thread that takes ownership of an sql database and processes a queue of transactions from other threads on the same db 
-
 
 [Memory]
 -Implement a system to link external libraries at runtime (aka plugins)

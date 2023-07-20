@@ -46,9 +46,9 @@
 #include <chrono>
 #include <thread>
 
-#include "../cerberusobject.h"
 #include "../time/time.h"
 #include "./threadbase.h"
+#include "src/core/cerberusobject.h"
 
 namespace cerberus
 {

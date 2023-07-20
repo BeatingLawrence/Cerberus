@@ -64,7 +64,7 @@ static int pingTestCallback(cerberus::message::cerberus_message msg, cerberus::t
     {
         if (a == 10)
         {
-            auto message = cerberus::core::CerberusFactory::createStandardMessage(cerberus::core::CerberusFactory::SM_ShutdownMessage);
+            auto message = cerberus::core::CerberusFactory::standardMessageConstruct(cerberus::core::CerberusFactory::SM_ShutdownMessage);
             message->setDestinationId(cerberus::core::CerberusFactory::threadIdByName("pongThread"));
             cerberus::Cerberus::send(message);
             thread->terminate();

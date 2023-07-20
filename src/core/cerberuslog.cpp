@@ -145,7 +145,7 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
     if(instance->m_fileLogEnable)
     {
         //Log on file
-        message::cerberus_message logMessage = core::CerberusFactory::createStandardMessage(CerberusFactory::SM_LogMessage);
+        message::cerberus_message logMessage = core::CerberusFactory::standardMessageConstruct(CerberusFactory::SM_LogMessage);
         logMessage->getSlotAt(0)->to<message::slot::StringSlot>()->setValue(rawLog);
         Cerberus::send(logMessage);
     }

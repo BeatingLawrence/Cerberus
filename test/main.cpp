@@ -1,15 +1,16 @@
-#include <gtest/gtest.h>
 #include <cerberus/cerberus.h>
-#include <iostream>
-#include <cerberus/message/slot/charslot.h>
 #include <cerberus/core/cerberusfactory.h>
+#include <cerberus/message/slot/charslot.h>
+#include <gtest/gtest.h>
+
+#include <iostream>
 
 int main(int argc, char* argv[])
 {
     auto parms = cerberus::Cerberus::cerberusDefaultParms();
-    parms->logSetup.logLevel = cerberus::LL_Debug;
+    parms.logSetup.logLevel = cerberus::LL_Debug;
     cerberus::Cerberus::init(parms);
-    //start testing
+    // start testing
     ::testing::InitGoogleTest(&argc, argv);
     int ret = RUN_ALL_TESTS();
     cerberus::Cerberus::deinit();

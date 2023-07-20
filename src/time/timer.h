@@ -38,6 +38,8 @@ namespace cerberus
 
             Timer(const Timer& other) = delete;
 
+            ~Timer();
+
             void setTime(const Time& time);
 
             void start();

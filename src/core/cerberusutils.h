@@ -45,6 +45,9 @@ namespace cerberus
             // Checks if str1 contains str2 and returns true if it does
             static bool contains(const std::string& str1, const std::string& str2);
 
+            // Returns true when given strings are equal (case sensitive)
+            static bool areEqual(const std::string& str1, const std::string& str2);
+
             // Retrieves the value of specified environment variable
             static std::string environmentVariable(const std::string& variableName);
 

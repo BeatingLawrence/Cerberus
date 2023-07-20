@@ -73,6 +73,16 @@ bool CerberusUtils::contains(const std::string& str1, const std::string& str2)
     return true;
 }
 //=============================================================================
+bool CerberusUtils::areEqual(const std::string& str1, const std::string& str2)
+{
+    if (str1.compare(str2) == 0)
+    {
+        return true;
+    }
+
+    return false;
+}
+//=============================================================================
 std::string CerberusUtils::environmentVariable(const std::string& variableName)
 {
     char* val = getenv(variableName.c_str());

@@ -40,6 +40,14 @@ Timer::Timer()
     }
 }
 //=============================================================================
+Timer::~Timer()
+{
+    if (timer_delete(m_timerId) == -1)
+    {
+        debug("error in timer_delete: %s", strerror(errno));
+    }
+}
+//=============================================================================
 Timer::Timer(const Time &time, bool periodic)
     : m_callback(&defaultTimeoutCallback),
       m_running(false),

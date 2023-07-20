@@ -6,13 +6,24 @@
 
 namespace cerberus
 {
+    typedef uint32_t SIZE;
+    typedef uint64_t LSIZE;
+
+    enum FileOpenMode
+    {
+        FOM_Read = 0,         // Open the file for reading only; the file must exist
+        FOM_ReadWrite,        // Open the file for reading and writing; the file must exist
+        FOM_ReadWriteTrunc,   // Open the file for reading and writing; if the file exist the content is discarded, otherwise, the file is created
+        FOM_ReadWriteAppend,  // Open the file for reading and writing; if the file does not esist, it is created.
+                              // All the write operations happen at the end of the file
+    };
 
     enum LogLevel
     {
-        LL_Info = 0,
+        LL_Info    = 0,
         LL_Warning = 1,
-        LL_Error = 2,
-        LL_Debug = 3,
+        LL_Error   = 2,
+        LL_Debug   = 3,
     };
 
     struct CerberusLogRole
@@ -59,49 +70,74 @@ namespace cerberus
     enum IniDataType : uint8_t
     {
         IDT_NotAType = 0,  // specified when a value has an unknown type
-        IDT_String = 1,    // specified when a value is considered a string
-        IDT_Integer = 2,   // false if key value contains a letter or a symbol
-        IDT_Double = 3,    // false if key value does not contain a '.' or if it contains a letter
-        IDT_Bool = 4,      // true only if key value equals "true" or "false" (case insensitive)
+        IDT_String   = 1,  // specified when a value is considered a string
+        IDT_Integer  = 2,  // false if key value contains a letter or a symbol
+        IDT_Double   = 3,  // false if key value does not contain a '.' or if it contains a letter
+        IDT_Bool     = 4,  // true only if key value equals "true" or "false" (case insensitive)
     };
 
-    enum SocketType : uint8_t
+    enum Result
     {
-        Socket_UDP,
-        Socket_TCP,
-        Socket_TCPP2P,
-        Socket_HTTP,
-        Socket_HTTPS,
-        Socket_WEB,
-        Socket_FTP,
-        Socket_ICMP,
-        Socket_IPC,
+        OR_Undefined,                 // [general] this result should never be given
+        OR_OK,                        // [general] no errors
+        OR_Failure,                   // [general] generic failure
+        OR_FailedInstance,            // [general] attempt to do something on a failed instance
+        OR_WouldBlock,                // [general] attempt to run a blocking operation on a non-blocking call
+        OR_TimedOut,                  // [general] operation timeout
+        OR_Unavailable,               // [general] the requested operation is not available for the object
+        OR_WrongArgument,             // [general] at least one argument wrong
+                                      //
+        OR_ResolveServerTempFailure,  // [socket DNS lookup] resolve method error
+        OR_ResolveServerFailure,      // [socket DNS lookup] resolve method error
+        OR_ResolveNoData,             // [socket DNS lookup] resolve method error
+        OR_ResolveNotFound,           // [socket DNS lookup] resolve method error
+        OR_ResolveSystemFailure,      // [socket DNS lookup] resolve method error
+        OR_ResolveFailure,            // [socket DNS lookup] resolve method error
+                                      //
+        OR_RecvZero,                  // [socket] a recv call returned zero
     };
 
-    enum SocketOperation : uint8_t
+    struct OperationResult
     {
-        SO_OK,
-        SO_Failure,
-        SO_FailedSocket,
-        SO_BindFailure,
-        SO_ConnectFailure,
-        SO_ResolveServerTempFailure,
-        SO_ResolveServerFailure,
-        SO_ResolveNoData,
-        SO_ResolveNotFound,
-        SO_ResolveSystemFailure,
-        SO_ResolveFailure,
-        SO_ListenFailure,
+        Result res;
+
+        union  // use one member per call
+        {
+            bool boolvalue;
+            int intvalue;
+            float floatvalue;
+        };
+
+        OperationResult();  // construct undefined result
+
+        OperationResult(Result r);  // construct defined result
+
+        OperationResult(bool b);
+
+        OperationResult(int i);
+
+        OperationResult(float f);
+
+        bool operator==(const OperationResult& other);
+
+        bool operator!=(const OperationResult& other);
     };
 
     struct Host
     {
+        static const uint32_t ADDR_ANY;
+        static const uint32_t ADDR_LOOPBACK;
+        static const uint32_t ADDR_BROADCAST;
+
         // Construct an invalid Host (0.0.0.0:0)
         Host();
 
         // Construct an Host with str as hostname if it contains at least one letter,
-        // otherwise str will be used to extract ip:port
+        // otherwise str will be used to extract ip:port as a fromString() call
         Host(const std::string& str);
+
+        // Same as above
+        Host(const char* str);
 
         union
         {
@@ -115,7 +151,10 @@ namespace cerberus
         bool resolved;
 
         // This method takes an ip address in the form of x.x.x.x or x.x.x.x:yyyyy
-        // and converts the string filling port and octet[] members
+        // and converts the string filling port and octet[] members.
+        // The port presence is not mandatory
+        // It is possible to use "any", "local" or "broadcast" (case insensitive) in place of
+        // ip address to specify 'any interface', 'localhost' and '255.255.255.255' respectively.
         // It returns true if the conversion performed successfully
         bool fromString(const std::string& str);
 
@@ -124,6 +163,9 @@ namespace cerberus
 
         // Tells if the Host is not valid, i.e. 0.0.0.0:0 and an empty hostname
         bool isValid();
+
+        // Resolve the given Host. The resulting numeric IP address is written in the ip parameter
+        OperationResult resolve();
     };
 }  // namespace cerberus
 

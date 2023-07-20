@@ -6,11 +6,11 @@
  *  This class is used by the Messages factory to produce standardized and registered messages.
  */
 
-#include "./slot/baseslot.h"
-#include <vector>
 #include <string>
+#include <vector>
+
 #include "../Cerberus_global.h"
-#include "../cerberusobject.h"
+#include "src/core/cerberusobject.h"
 
 namespace cerberus
 {
@@ -20,32 +20,32 @@ namespace cerberus
 
         class CERBERUS_EXPORT MessageTemplate : public CerberusObject
         {
-            private:
-                std::vector<SlotType> m_types;
+           private:
+            std::vector<SlotType> m_types;
 
-            public:
-                MessageTemplate() = delete;
+           public:
+            MessageTemplate() = delete;
 
-                MessageTemplate(const MessageTemplate& other) = default;
+            MessageTemplate(const MessageTemplate& other) = default;
 
-                //Constructs an empty template with a name
-                MessageTemplate(const std::string& name);
+            // Constructs an empty template with a name
+            MessageTemplate(const std::string& name);
 
-                //Constructs a template taking data from a message
-                MessageTemplate(const Message& message, const std::string& name);
+            // Constructs a template taking data from a message
+            MessageTemplate(const Message& message, const std::string& name);
 
-                virtual ~MessageTemplate();
+            virtual ~MessageTemplate();
 
-                //Adds a single slot type at the end of the vector
-                void addSlotType(SlotType type);
+            // Adds a single slot type at the end of the vector
+            void addSlotType(SlotType type);
 
-                //Returns the slot type at the index position
-                SlotType getSlotTypeAt(size_t index) const;
+            // Returns the slot type at the index position
+            SlotType getSlotTypeAt(size_t index) const;
 
-                //Returns the number of slots contained in this template
-                size_t count() const;
+            // Returns the number of slots contained in this template
+            size_t count() const;
         };
-    }
-}
+    }  // namespace message
+}  // namespace cerberus
 
-#endif // CERBERUS_MESSAGE_MESSAGETEMPLATE_H
+#endif  // CERBERUS_MESSAGE_MESSAGETEMPLATE_H

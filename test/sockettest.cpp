@@ -1,37 +1,39 @@
 #include <cerberus/cerberus.h>
-#include <cerberus/socket/tcpp2psocket.h>
-#include <cerberus/socket/tcpsocket.h>
-#include <cerberus/socket/udpsocket.h>
+#include <cerberus/socket/socket.h>
 #include <gtest/gtest.h>
 
 #include "cerberus/thread/thread.h"
 #include "src/data/bytebuffer.h"
 
+#define THREAD_ERROR 1
+#define THREAD_SUCCESS 304050
+
 static int testCallback_UDP(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
 {
     debug("receiver thread routine entered");
-    cerberus::socket::UdpSocket socket;
-    cerberus::Host host("127.0.0.1:22012");
+    auto socket = UDPSocket("UDP receiver");
+    cerberus::Host host("localhost:22012");
     socket.bind(host);
     cerberus::data::ByteBuffer buf;
     cerberus::data::ByteBuffer exp("Hello, World!");
+    debug("receiving");
     socket.recv(buf);
-
+    debug("received");
     if (buf == exp)
     {
-        return 101010;
+        return THREAD_SUCCESS;
     }
     else
     {
-        return 1;
+        return THREAD_ERROR;
     }
 }
 
 static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
 {
     debug("receiver thread routine entered");
-    cerberus::socket::TcpSocket socket;
-    socket.bind(cerberus::Host("127.0.0.1:33333"));
+    auto socket = TCPSocket("TCP receiver");
+    socket.bind(cerberus::Host("localhost:33333"));
     socket.listen(3);
     cerberus::data::ByteBuffer buf;
     cerberus::data::ByteBuffer exp("Hello, World!");
@@ -42,7 +44,7 @@ static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::t
     if (s.isFailed())
     {
         debug("accept error");
-        return 1;
+        return THREAD_ERROR;
     }
     s.recv(buf);
 
@@ -50,43 +52,78 @@ static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::t
 
     if (buf == exp)
     {
-        return 101010;
+        return THREAD_SUCCESS;
     }
     else
     {
-        return 1;
+        return THREAD_ERROR;
     }
 }
 
 static int testCallback_TCP_P2P(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
 {
     debug("receiver thread routine entered");
-    cerberus::socket::TcpP2PSocket socket;
-    socket.bind(cerberus::Host("127.0.0.1:44444"));
+    auto socket = TCPP2PSocket("TCPP2P receiver");
+    socket.bind(cerberus::Host("localhost:44444"));
 
-    if (socket.connect(cerberus::Host("127.0.0.1:55555"), 2000) != cerberus::SO_OK)
+    if (socket.connectP2P(cerberus::Host("localhost:55555"), 2000) != cerberus::OR_OK)
     {
         debug("connect error");
-        return 1;
+        return THREAD_ERROR;
     }
 
     cerberus::data::ByteBuffer buf;
     cerberus::data::ByteBuffer exp("Hello, World!");
     socket.setRecvBufferSize(exp.size());
 
-    if (socket.recv(buf) == cerberus::SO_OK)
+    if (socket.recv(buf) == cerberus::OR_OK)
     {
         debug("received");
     }
 
     if (buf == exp)
     {
-        return 101010;
+        return THREAD_SUCCESS;
     }
     else
     {
-        return 1;
+        return THREAD_ERROR;
     }
+}
+
+static int testCallback_FTP(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
+{
+    debug("receiver thread routine entered");
+    auto socket = FTPSocket("FTP receiver");
+    socket.bind("localhost:54321");
+    socket.listen(3);
+    cerberus::data::filesystem::File file("ftp_socket_test_file_received.file", cerberus::FOM_ReadWriteTrunc);
+    if (!file.open())
+    {
+        debug("file open error");
+        return THREAD_ERROR;
+    }
+    auto s = socket.accept();
+    s.setRecvBufferSize(10);
+    debug("accepted");
+    if (s.isFailed())
+    {
+        debug("accept error");
+        return THREAD_ERROR;
+    }
+    auto ret = s.recv(file, 500);  // 0.5 seconds timeout
+
+    if (ret != cerberus::OR_OK)
+    {
+        debug("receive error");
+        return THREAD_ERROR;
+    }
+
+    debug("received");
+
+    file.close();
+
+    return THREAD_SUCCESS;
 }
 
 TEST(socketTest, UDP)
@@ -97,11 +134,10 @@ TEST(socketTest, UDP)
     receiver.start();
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
     //
-    cerberus::socket::UdpSocket socket;
+    auto socket = UDPSocket("UDP transmitter");
     cerberus::data::ByteBuffer buf("Hello, World!");
-    cerberus::Host host("127.0.0.1:22012");
-    socket.sendTo(buf, host);
-    EXPECT_EQ(receiver.join(), 101010);
+    socket.sendTo(buf, "localhost:22012");
+    EXPECT_EQ(receiver.join(), THREAD_SUCCESS);
 }
 
 TEST(socketTest, TCP)
@@ -112,11 +148,14 @@ TEST(socketTest, TCP)
     receiver.start();
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
     //
-    cerberus::socket::TcpSocket socket;
-    ASSERT_EQ(socket.connect(cerberus::Host("127.0.0.1:33333")), cerberus::SocketOperation::SO_OK);
+    auto socket = TCPSocket("TCP transmitter");
+    debug("connecting..");
+    ASSERT_EQ(socket.connect(cerberus::Host("localhost:33333")).res, cerberus::OR_OK);
+    debug("connected");
     cerberus::data::ByteBuffer buf("Hello, World!");
-    ASSERT_EQ(socket.send(buf), cerberus::SocketOperation::SO_OK);
-    EXPECT_EQ(receiver.join(), 101010);
+    ASSERT_EQ(socket.send(buf).res, cerberus::OR_OK);
+    debug("sent");
+    EXPECT_EQ(receiver.join(), THREAD_SUCCESS);
 }
 
 TEST(socketTest, TCP_P2P)
@@ -127,10 +166,42 @@ TEST(socketTest, TCP_P2P)
     receiver.start();
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
     //
-    cerberus::socket::TcpP2PSocket socket;
-    ASSERT_EQ(socket.bind(cerberus::Host("127.0.0.1:55555")), cerberus::SocketOperation::SO_OK);
-    ASSERT_EQ(socket.connect(cerberus::Host("127.0.0.1:44444"), 2000), cerberus::SO_OK);
+    auto socket = TCPP2PSocket("TCPP2P transmitter");
+    ASSERT_EQ(socket.bind(cerberus::Host("localhost:55555")).res, cerberus::OR_OK);
+    ASSERT_EQ(socket.connectP2P(cerberus::Host("localhost:44444"), 2000).res, cerberus::OR_OK);
     cerberus::data::ByteBuffer buf("Hello, World!");
-    ASSERT_EQ(socket.send(buf), cerberus::SocketOperation::SO_OK);
-    EXPECT_EQ(receiver.join(), 101010);
+    ASSERT_EQ(socket.send(buf).res, cerberus::OR_OK);
+    EXPECT_EQ(receiver.join(), THREAD_SUCCESS);
+}
+
+TEST(socketTest, FTP)
+{
+    // creating receiver thread
+    cerberus::thread::Thread receiver("receiverTestThread", cerberus::thread::Thread::TP_OneShot);
+    receiver.provideTickCallback(&testCallback_FTP);
+    receiver.start();
+    cerberus::thread::Thread::sleep(10);  // sleep THIS thread
+    //
+    // file creation
+    cerberus::data::filesystem::File f("ftp_socket_test_file_sent.file", cerberus::FOM_ReadWriteTrunc);
+    ASSERT_TRUE(f.open());
+    for (int i = 0; i < 500; i++)
+    {
+        f.writeLine("Hello, World!");
+    }
+    //
+    auto socket = FTPSocket("FTP transmitter");
+    ASSERT_EQ(socket.bind("localhost").res, cerberus::OR_OK);
+    ASSERT_EQ(socket.connect("localhost:54321").res, cerberus::OR_OK);
+    f.resetCursor();
+    ASSERT_EQ(socket.send(f).res, cerberus::OR_OK);
+    debug("FILE SENT");
+    socket.close();
+    EXPECT_EQ(receiver.join(), THREAD_SUCCESS);
+    cerberus::data::filesystem::File rf("ftp_socket_test_file_received.file");
+    ASSERT_TRUE(rf.open());
+    EXPECT_TRUE(rf.isEqual(f));
+
+    rf.close();
+    f.close();
 }

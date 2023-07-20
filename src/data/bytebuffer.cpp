@@ -1,93 +1,281 @@
 #include "bytebuffer.h"
 
-#include <string>
+#include <cstring>
+
+#include "src/core/cerberuslog.h"
+#include "src/exception/exceptioncatalog.h"
+#include "src/mutex/mutex.h"
+#include "src/mutex/mutexlocker.h"
 
 using namespace cerberus::data;
 
 //=============================================================================
-ByteBuffer::ByteBuffer(size_t size) : m_bytes(new std::vector<unsigned char>(size, 0x00)) {}
-//=============================================================================
-ByteBuffer::ByteBuffer() : m_bytes(new std::vector<unsigned char>()) {}
-//=============================================================================
-ByteBuffer::ByteBuffer(const ByteBuffer& other) : m_bytes(new std::vector<unsigned char>(*(other.m_bytes))) {}
-//=============================================================================
-ByteBuffer::ByteBuffer(ByteBuffer&& other) : m_bytes(other.m_bytes) { other.m_bytes->clear(); }
-//=============================================================================
-ByteBuffer::ByteBuffer(const char* chars) : m_bytes(new std::vector<unsigned char>(1, 0x00))
+void ByteBuffer::becomeOwner(bool force) const
 {
-    unsigned int counter = 0;
+    if (m_owner) return;
 
-    while (*chars != '\0')
+    if (!(*m_hasOwner))
     {
-        chars++;
-        counter++;
+        *m_hasOwner = true;
+        m_owner     = true;
+        return;
     }
 
-    chars--;
-    m_bytes->resize(counter);
-
-    while (counter != 0)
+    if (!force)
     {
-        m_bytes->at(counter - 1) = *chars;
-        chars--;
-        counter--;
+        return;
+    }
+
+    uint8_t* oldBuffer = m_bytes;
+    SIZE oldSize       = *m_size;
+
+    m_bytes     = nullptr;           // null
+    m_instances = new uint32_t(0);   // zero
+    m_mutex     = new mutex::Mutex;  // new
+    m_size      = new SIZE(0);       // zero
+    m_hasOwner  = new bool(true);    // true
+
+    if (oldSize != 0)
+    {
+        m_bytes = (uint8_t*)malloc(oldSize);
+        if (m_bytes)
+        {
+            memmove(m_bytes, oldBuffer, oldSize);
+            (*m_size) = oldSize;
+            (*m_instances)++;
+        }
+    }
+}
+//=============================================================================
+void ByteBuffer::_resize(SIZE size)
+{
+    if (size == 0)
+    {
+        _clear();
+        return;
+    }
+
+    uint8_t* newbuf = (uint8_t*)realloc(m_bytes, size);
+
+    if (newbuf == nullptr)
+    {
+        throw cerberusSystemExc("could not reallocate ByteBuffer memory");
+    }
+
+    m_bytes   = newbuf;
+    (*m_size) = size;
+}
+//=============================================================================
+void ByteBuffer::_clear()
+{
+    free(m_bytes);
+    m_bytes   = nullptr;
+    (*m_size) = 0;
+}
+//=============================================================================
+ByteBuffer::ByteBuffer(SIZE size)
+    : m_bytes(nullptr),
+      m_instances(new uint32_t(0)),
+      m_mutex(new mutex::Mutex),
+      m_size(new SIZE(size)),
+      m_hasOwner(new bool(true)),
+      m_owner(true)
+{
+    if (size != 0)
+    {
+        m_bytes = (uint8_t*)malloc(size);
+
+        if (m_bytes)
+        {
+            (*m_instances) = 1;
+        }
+    }
+}
+//=============================================================================
+ByteBuffer::ByteBuffer(SIZE size, uint8_t val)
+    : m_bytes(nullptr),
+      m_instances(new uint32_t(0)),
+      m_mutex(new mutex::Mutex),
+      m_size(new SIZE(size)),
+      m_hasOwner(new bool(true)),
+      m_owner(true)
+{
+    if (size != 0)
+    {
+        m_bytes = (uint8_t*)malloc(size);
+        if (m_bytes)
+        {
+            memset(m_bytes, val, size);
+            (*m_instances) = 1;
+        }
+    }
+}
+//=============================================================================
+ByteBuffer::ByteBuffer()
+    : m_bytes(nullptr),
+      m_instances(new uint32_t(0)),
+      m_mutex(new mutex::Mutex),
+      m_size(new SIZE(0)),
+      m_hasOwner(new bool(true)),
+      m_owner(true)
+{
+}
+//=============================================================================
+ByteBuffer::ByteBuffer(const ByteBuffer& other)
+    : m_bytes(other.m_bytes),
+      m_instances(other.m_instances),
+      m_mutex(other.m_mutex),
+      m_size(other.m_size),
+      m_hasOwner(other.m_hasOwner),
+      m_owner(false)
+{
+    m_mutex->lock();
+    (*m_instances)++;
+    m_mutex->unlock();
+}
+//=============================================================================
+ByteBuffer::ByteBuffer(ByteBuffer&& other)
+    : m_bytes(other.m_bytes),
+      m_instances(other.m_instances),
+      m_mutex(other.m_mutex),
+      m_size(other.m_size),
+      m_hasOwner(other.m_hasOwner),
+      m_owner(true)
+{
+    other.m_bytes     = nullptr;
+    other.m_instances = nullptr;
+    other.m_mutex     = nullptr;
+    other.m_size      = nullptr;
+    other.m_hasOwner  = nullptr;
+
+    if ((*m_instances) != 1)
+    {
+        throw cerberusIllegalArgExc("move constructor call on a still sharing ByteBuffer");
+    }
+}
+//=============================================================================
+ByteBuffer::ByteBuffer(const char* str)
+    : m_bytes(nullptr),
+      m_instances(new uint32_t(0)),
+      m_mutex(new mutex::Mutex),
+      m_size(new SIZE(0)),
+      m_hasOwner(new bool(true)),
+      m_owner(true)
+{
+    const char* c = str;
+
+    while (*c)
+    {
+        c++;
+    }
+
+    SIZE s = c - str;
+
+    if (s != 0)
+    {
+        m_bytes = (uint8_t*)malloc(s);
+        if (m_bytes)
+        {
+            memmove(m_bytes, str, s);
+            (*m_instances) = 1;
+            (*m_size)      = s;
+        }
     }
 }
 //=============================================================================
 ByteBuffer::~ByteBuffer()
 {
-    if (m_bytes != nullptr)
+    if (!m_mutex) return;
+
+    m_mutex->lock();
+    if ((*m_instances) == 1)
     {
-        delete m_bytes;
+        delete m_mutex;
+        delete m_instances;
+        delete m_size;
+        free(m_bytes);
+    }
+    else if ((*m_instances) != 0)
+    {
+        (*m_instances)--;
+        if (m_owner)
+        {
+            (*m_hasOwner) = false;
+        }
+        m_mutex->unlock();
     }
 }
 //=============================================================================
-unsigned char* ByteBuffer::data() { return m_bytes->data(); }
-//=============================================================================
-const unsigned char* ByteBuffer::data() const { return m_bytes->data(); }
-//=============================================================================
-unsigned char& ByteBuffer::operator[](size_t index) { return m_bytes->at(index); }
-//=============================================================================
-ByteBuffer ByteBuffer::subBuffer(size_t pos, size_t len)
+unsigned char* ByteBuffer::data()
 {
-    ByteBuffer toReturn(len);
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner(true);
+    return m_bytes;
+}
+//=============================================================================
+const unsigned char* ByteBuffer::data() const
+{
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner();
+    return m_bytes;
+}
+//=============================================================================
+unsigned char& ByteBuffer::operator[](SIZE index)
+{
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner(true);
 
-    for (size_t i = 0; i < len; i++)
+    if (index >= *m_size)
     {
-        toReturn[i] = m_bytes->at(pos + i);
+        throw cerberusIllegalArgExc("index out of bound, %u/%u", index, *m_size);
     }
 
-    return toReturn;
+    return *((unsigned char*)(m_bytes + index));
 }
 //=============================================================================
 bool ByteBuffer::operator==(const ByteBuffer& other)
 {
-    if (m_bytes->size() != other.m_bytes->size())
+    mutex::MutexLocker ml1(m_mutex);
+    becomeOwner();
+    mutex::MutexLocker ml2(other.m_mutex);
+
+    if (m_bytes == nullptr || other.m_bytes == nullptr)
     {
         return false;
     }
 
-    size_t c = 0;
-
-    for (size_t i = 0; i < m_bytes->size(); i++)
+    if (m_bytes == other.m_bytes)
     {
-        if (m_bytes->at(i) != other[c++])
-        {
-            return false;
-        }
+        return true;
     }
 
-    return true;
+    if (*m_size != *other.m_size)
+    {
+        return false;
+    }
+
+    return (memcmp(m_bytes, other.m_bytes, *m_size) == 0);
 }
 //=============================================================================
-void ByteBuffer::operator+=(const ByteBuffer& other)
+bool ByteBuffer::operator!=(const ByteBuffer& other) { return !(*this == other); }
+//=============================================================================
+void ByteBuffer::operator+=(const ByteBuffer& other) { append(other); }
+//=============================================================================
+void ByteBuffer::operator+=(unsigned char c)
 {
-    size_t next = m_bytes->size();
-    m_bytes->resize(m_bytes->size() + other.size());
+    mutex::MutexLocker ml(m_mutex);
 
-    for (auto& el : *(other.m_bytes))
+    becomeOwner(true);
+
+    SIZE s = *m_size;
+
+    s++;
+
+    _resize(s);
+
+    if (m_bytes)
     {
-        m_bytes->at(next++) = el;
+        *(m_bytes + s - 1) = c;
     }
 }
 //=============================================================================
@@ -97,55 +285,167 @@ ByteBuffer& ByteBuffer::operator=(const ByteBuffer& other)
     return *this;
 }
 //=============================================================================
-ByteBuffer& ByteBuffer::operator=(const char* chars)
+ByteBuffer& ByteBuffer::operator=(const char* str)
 {
-    assign(chars);
+    assign(str);
     return *this;
 }
 //=============================================================================
-void ByteBuffer::appendString(const char* chars)
+ByteBuffer ByteBuffer::subBuffer(SIZE pos, SIZE len)
 {
-    std::string str(chars);
-    size_t next = m_bytes->size();
-    m_bytes->resize(m_bytes->size() + str.length());
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner();
 
-    for (auto& el : str)
+    ByteBuffer ret(len);
+    uint8_t* d = ret.data();
+    memmove(d, m_bytes + pos, len);
+
+    return ret;
+}
+//=============================================================================
+void ByteBuffer::appendString(const char* str)
+{
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner(true);
+
+    if (*str == 0)
     {
-        m_bytes->at(next++) = el;
+        return;
+    }
+
+    const char* c = str;
+
+    while (*c)
+    {
+        c++;
+    }
+
+    SIZE s = c - str;
+
+    SIZE oldSize = *m_size;
+
+    _resize(s + (*m_size));
+
+    if (m_bytes)
+    {
+        memmove(m_bytes + oldSize, str, s);
     }
 }
 //=============================================================================
-void ByteBuffer::operator+=(unsigned char c)
+cerberus::SIZE ByteBuffer::size() const
 {
-    m_bytes->resize(m_bytes->size() + 1);
-    m_bytes->at(m_bytes->size() - 1) = c;
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner();
+
+    return *m_size;
 }
 //=============================================================================
-const unsigned char& ByteBuffer::operator[](size_t index) const { return m_bytes->at(index); }
-//=============================================================================
-size_t ByteBuffer::size() const { return m_bytes->size(); }
-//=============================================================================
-void ByteBuffer::resize(size_t size) { m_bytes->resize(size); }
+void ByteBuffer::resize(SIZE size)
+{
+    if (size == 0)
+    {
+        clear();
+        return;
+    }
+
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner(true);
+    _resize(size);
+}
 //=============================================================================
 void ByteBuffer::assign(const ByteBuffer& buffer)
 {
-    m_bytes->clear();
-    m_bytes->assign(buffer.m_bytes->begin(), buffer.m_bytes->end());
+    mutex::MutexLocker ml2(buffer.m_mutex);
+
+    if (*buffer.m_size == 0)
+    {
+        clear();
+        return;
+    }
+
+    mutex::MutexLocker ml1(m_mutex);
+    becomeOwner(true);
+
+    SIZE s = *buffer.m_size;
+
+    _resize(s);
+
+    if (s)
+    {
+        memmove(m_bytes, buffer.m_bytes, s);
+    }
 }
 //=============================================================================
-void ByteBuffer::assign(const char* chars)
+void ByteBuffer::assign(const char* str)
 {
-    m_bytes->clear();
+    mutex::MutexLocker ml(m_mutex);
 
-    while (true)
+    becomeOwner(true);
+
+    _clear();
+
+    const char* c = str;
+
+    while (*c)
     {
-        if ((*chars) == 0)
-        {
-            return;
-        }
-
-        m_bytes->push_back(*chars);
-        chars++;
+        c++;
     }
+
+    SIZE s = c - str;
+
+    if (s != 0)
+    {
+        m_bytes = (uint8_t*)malloc(s);
+        if (m_bytes)
+        {
+            memmove(m_bytes, str, s);
+            (*m_size) = s;
+        }
+    }
+}
+//=============================================================================
+void ByteBuffer::append(const ByteBuffer& other)
+{
+    mutex::MutexLocker ml1(m_mutex);
+    mutex::MutexLocker ml2(other.m_mutex);
+
+    becomeOwner(true);
+
+    SIZE s = *other.m_size;
+
+    if (s == 0)
+    {
+        return;
+    }
+
+    SIZE oldSize = *m_size;
+    SIZE newSize = oldSize + s;
+
+    _resize(newSize);
+
+    if (m_bytes)
+    {
+        memmove(m_bytes + oldSize, other.m_bytes, s);
+    }
+}
+//=============================================================================
+void ByteBuffer::clear()
+{
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner(true);
+    _clear();
+}
+//=============================================================================
+bool ByteBuffer::isValid()
+{
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner();
+    return ((*m_size) != 0);
+}
+//=============================================================================
+void ByteBuffer::appropriate()
+{
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner(true);
 }
 //=============================================================================

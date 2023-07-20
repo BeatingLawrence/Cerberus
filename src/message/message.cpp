@@ -39,7 +39,7 @@ slot::cerberus_slot Message::getSlotAt(size_t index) const
 {
     if(index >= m_slots.size())
     {
-        throw cerberusIllegalArgumentExc("Index out of boundaries");
+        throw cerberusIllegalArgExc("Index out of boundaries");
     }
 
     return m_slots[index];
