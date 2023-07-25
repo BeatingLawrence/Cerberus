@@ -2,7 +2,9 @@ TODO list for Cerberus:
 
 [TO FIX - High priority]
 -Correct the IniDataFile behavior: expect comments and sections
--Test the new ByteBuffer implementation completely
+-Change ID print for new cerberus object to HEX print instead of DEC
+-Improve the Socket class so it returns OR_Unavailable when using methods of another socket type
+
 
 [Network]
 -Implement HTTP socket

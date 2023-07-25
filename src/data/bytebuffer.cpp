@@ -2,7 +2,6 @@
 
 #include <cstring>
 
-#include "src/core/cerberuslog.h"
 #include "src/exception/exceptioncatalog.h"
 #include "src/mutex/mutex.h"
 #include "src/mutex/mutexlocker.h"
@@ -28,6 +27,8 @@ void ByteBuffer::becomeOwner(bool force) const
 
     uint8_t* oldBuffer = m_bytes;
     SIZE oldSize       = *m_size;
+
+    (*m_instances)--;
 
     m_bytes     = nullptr;           // null
     m_instances = new uint32_t(0);   // zero
@@ -220,10 +221,10 @@ const unsigned char* ByteBuffer::data() const
     return m_bytes;
 }
 //=============================================================================
-unsigned char& ByteBuffer::operator[](SIZE index)
+unsigned char ByteBuffer::operator[](SIZE index)
 {
     mutex::MutexLocker ml(m_mutex);
-    becomeOwner(true);
+    becomeOwner();
 
     if (index >= *m_size)
     {
@@ -237,16 +238,17 @@ bool ByteBuffer::operator==(const ByteBuffer& other)
 {
     mutex::MutexLocker ml1(m_mutex);
     becomeOwner();
+
+    if (m_bytes == other.m_bytes)
+    {
+        return true;
+    }
+
     mutex::MutexLocker ml2(other.m_mutex);
 
     if (m_bytes == nullptr || other.m_bytes == nullptr)
     {
         return false;
-    }
-
-    if (m_bytes == other.m_bytes)
-    {
-        return true;
     }
 
     if (*m_size != *other.m_size)
@@ -447,5 +449,12 @@ void ByteBuffer::appropriate()
 {
     mutex::MutexLocker ml(m_mutex);
     becomeOwner(true);
+}
+//=============================================================================
+uint32_t ByteBuffer::instances()
+{
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner();
+    return (*m_instances);
 }
 //=============================================================================
