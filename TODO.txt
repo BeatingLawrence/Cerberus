@@ -2,9 +2,7 @@ TODO list for Cerberus:
 
 [TO FIX - High priority]
 -Correct the IniDataFile behavior: expect comments and sections
--Change ID print for new cerberus object to HEX print instead of DEC
--Improve the Socket class so it returns OR_Unavailable when using methods of another socket type
-
+-Remake Thread class to use the posix thread interface. Use condition variable to hold the thread in paused state instead of mutex and polling
 
 [Network]
 -Implement HTTP socket

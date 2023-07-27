@@ -23,10 +23,6 @@ cerberus::socket::Socket::Socket(SocketType type, int fd)
       m_fd(fd),
       m_recvBuffer(DEFAULT_RECV_BUFFER_SIZE)
 {
-    if (m_fd == -1)
-    {
-        debug("invalid file descriptor used for socket creation");
-    }
 }
 //=============================================================================
 int cerberus::socket::Socket::_accept(Host &peer)
@@ -59,33 +55,20 @@ cerberus::socket::Socket::Socket(SocketType type, const std::string &name)
       m_fd(-1),
       m_recvBuffer(DEFAULT_RECV_BUFFER_SIZE)
 {
-    switch (type)
+    switch (transportType())
     {
-        case CerberusObject::Socket_None:
-            throw cerberusIllegalArgExc("Refusing to create a socket of type \'none\'");
-        case CerberusObject::Socket_UDP:
+        case TCP:
+            createTcpSocket();
+            break;
+        case UDP:
             createUdpSocket();
             break;
-        case CerberusObject::Socket_TCP:
-            createTcpSocket();
-            break;
-        case CerberusObject::Socket_TCPP2P:
-            createTcpSocket();
-            break;
-        case CerberusObject::Socket_HTTP:
-            createTcpSocket();
-            break;
-        case CerberusObject::Socket_HTTPS:
-            throw cerberusImplMissExc("HTTPS sockets not implemented yet");
-        case CerberusObject::Socket_WEB:
-            throw cerberusImplMissExc("WEB sockets not implemented yet");
-        case CerberusObject::Socket_FTP:
-            createTcpSocket();
-            break;
-        case CerberusObject::Socket_ICMP:
+        case ICMP:
             throw cerberusImplMissExc("ICMP sockets not implemented yet");
-        case CerberusObject::Socket_IPC:
+            break;
+        case IPC:
             throw cerberusImplMissExc("IPC sockets not implemented yet");
+            break;
     }
 
     if (!isFailed()) debug("New %s", toObjStr().c_str());
@@ -111,9 +94,38 @@ void cerberus::socket::Socket::createTcpSocket()
     }
 }
 //=============================================================================
+cerberus::socket::Socket::TransportType cerberus::socket::Socket::transportType()
+{
+    switch (socketType())
+    {
+        case CerberusObject::Socket_None:
+            throw cerberusIllegalArgExc("None type cannot be used");
+        case CerberusObject::Socket_UDP:
+            return UDP;
+        case CerberusObject::Socket_TCP:
+            return TCP;
+        case CerberusObject::Socket_TCPP2P:
+            return TCP;
+        case CerberusObject::Socket_HTTP:
+            throw cerberusImplMissExc("HTTP sockets not implemented yet");
+        case CerberusObject::Socket_HTTPS:
+            return TCP;
+        case CerberusObject::Socket_WEB:
+            throw cerberusImplMissExc("WEB sockets not implemented yet");
+        case CerberusObject::Socket_FTP:
+            return TCP;
+        case CerberusObject::Socket_ICMP:
+            return ICMP;
+        case CerberusObject::Socket_IPC:
+            return IPC;
+    }
+
+    throw cerberusImplMissExc("requested socket has not been implemented yet");
+}
+//=============================================================================
 cerberus::socket::Socket::~Socket() { close(); }
 //=============================================================================
-bool cerberus::socket::Socket::isFailed() const { return (m_fd == -1); }
+bool cerberus::socket::Socket::isFailed() const { return (m_fd == -1) || (socketType() == Socket_None); }
 //=============================================================================
 void cerberus::socket::Socket::setRecvBufferSize(size_t size) { m_recvBuffer.resize(size); }
 //=============================================================================
@@ -121,7 +133,12 @@ void cerberus::socket::Socket::setMaxConnections(size_t maxconn) { m_maxConnecti
 //=============================================================================
 cerberus::OperationResult cerberus::socket::Socket::listen(size_t maxconn)
 {
-    if (m_extern)
+    if (isFailed())
+    {
+        return OR_FailedInstance;
+    }
+
+    if (m_extern || transportType() != TCP)
     {
         return OR_Unavailable;
     }
@@ -135,12 +152,25 @@ cerberus::OperationResult cerberus::socket::Socket::listen(size_t maxconn)
     return OR_OK;
 }
 //=============================================================================
-cerberus::socket::Socket cerberus::socket::Socket::accept(Host &peer) { return {socketType(), _accept(peer)}; }
+cerberus::socket::Socket cerberus::socket::Socket::accept(Host &peer)
+{
+    if (isFailed() || transportType() != TCP)
+    {
+        return {Socket_None, -1};
+    }
+
+    auto fd = _accept(peer);
+
+    if (fd == -1)
+        return {Socket_None, fd};
+    else
+        return {socketType(), fd};
+}
 //=============================================================================
 cerberus::socket::Socket cerberus::socket::Socket::accept()
 {
     Host peer;  // mock
-    return {socketType(), _accept(peer)};
+    return accept(peer);
 }
 //=============================================================================
 cerberus::OperationResult cerberus::socket::Socket::bind(const Host &iface)
@@ -229,6 +259,11 @@ cerberus::OperationResult cerberus::socket::Socket::sendTo(const data::ByteBuffe
     if (isFailed())
     {
         return OR_FailedInstance;
+    }
+
+    if (transportType() != UDP)
+    {
+        return OR_Unavailable;
     }
 
     int flags = 0;
@@ -402,6 +437,16 @@ cerberus::OperationResult cerberus::socket::Socket::recv(data::ByteBuffer &buffe
 //=============================================================================
 cerberus::OperationResult cerberus::socket::Socket::setCork(bool cork)
 {
+    if (isFailed())
+    {
+        return OR_FailedInstance;
+    }
+
+    if (transportType() != TCP)
+    {
+        return OR_Unavailable;
+    }
+
     int val = cork ? 1 : 0;
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_CORK, &val, sizeof(val)) == -1)
@@ -415,6 +460,16 @@ cerberus::OperationResult cerberus::socket::Socket::setCork(bool cork)
 //=============================================================================
 cerberus::OperationResult cerberus::socket::Socket::useNagle(bool use)
 {
+    if (isFailed())
+    {
+        return OR_FailedInstance;
+    }
+
+    if (transportType() != TCP)
+    {
+        return OR_Unavailable;
+    }
+
     int val = use ? 1 : 0;
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val)) == -1)
@@ -428,6 +483,16 @@ cerberus::OperationResult cerberus::socket::Socket::useNagle(bool use)
 //=============================================================================
 cerberus::OperationResult cerberus::socket::Socket::setTimeout(uint32_t timeout)
 {
+    if (isFailed())
+    {
+        return OR_FailedInstance;
+    }
+
+    if (transportType() != TCP)
+    {
+        return OR_Unavailable;
+    }
+
     unsigned int val = timeout;
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &val, sizeof(val)) == -1)
@@ -441,6 +506,16 @@ cerberus::OperationResult cerberus::socket::Socket::setTimeout(uint32_t timeout)
 //=============================================================================
 cerberus::OperationResult cerberus::socket::Socket::useKeepAlive(bool use, int maxprobes, int idleTime, int interval)
 {
+    if (isFailed())
+    {
+        return OR_FailedInstance;
+    }
+
+    if (transportType() != TCP)
+    {
+        return OR_Unavailable;
+    }
+
     auto ret = useKeepAlive(use);
 
     if (ret != OR_OK)
@@ -482,6 +557,16 @@ cerberus::OperationResult cerberus::socket::Socket::useKeepAlive(bool use, int m
 //=============================================================================
 cerberus::OperationResult cerberus::socket::Socket::useKeepAlive(bool use)
 {
+    if (isFailed())
+    {
+        return OR_FailedInstance;
+    }
+
+    if (transportType() != TCP)
+    {
+        return OR_Unavailable;
+    }
+
     int val = use ? 1 : 0;
 
     if (setsockopt(m_fd, SOL_SOCKET, SO_KEEPALIVE, &val, sizeof(val)) == -1)
@@ -495,6 +580,16 @@ cerberus::OperationResult cerberus::socket::Socket::useKeepAlive(bool use)
 //=============================================================================
 cerberus::OperationResult cerberus::socket::Socket::send(const data::filesystem::File &file)
 {
+    if (isFailed())
+    {
+        return OR_FailedInstance;
+    }
+
+    if (socketType() != Socket_FTP)
+    {
+        return OR_Unavailable;
+    }
+
     auto ret = sendfile(m_fd, file.m_fd, NULL, file.size());  // you may have to call it more times, FIX this
 
     if (ret == -1)
@@ -513,6 +608,16 @@ cerberus::OperationResult cerberus::socket::Socket::send(const data::filesystem:
 //=============================================================================
 cerberus::OperationResult cerberus::socket::Socket::recv(data::filesystem::File &file, const time::Time &timeout)
 {
+    if (isFailed())
+    {
+        return OR_FailedInstance;
+    }
+
+    if (socketType() != Socket_FTP)
+    {
+        return OR_Unavailable;
+    }
+
     data::ByteBuffer buffer;
     OperationResult ret;
 
@@ -550,6 +655,11 @@ cerberus::OperationResult cerberus::socket::Socket::connectP2P(const Host &dest,
     if (isFailed())
     {
         return OR_FailedInstance;
+    }
+
+    if (socketType() != Socket_TCPP2P)
+    {
+        return OR_Unavailable;
     }
 
     Host h = dest;

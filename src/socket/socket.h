@@ -42,6 +42,16 @@ namespace cerberus
             // Check is the socket isFailed() after this call
             void createTcpSocket();
 
+            enum TransportType
+            {
+                TCP,
+                UDP,
+                ICMP,
+                IPC,
+            };
+
+            TransportType transportType();
+
             int _accept(Host& peer);
 
             bool m_extern;  // used for acceptable sockets
@@ -63,19 +73,6 @@ namespace cerberus
 
             // GENERAL SECTION:
 
-            // Mark the socket as a listening socket, so it can accept() new connections.
-            // If the instance of the socket was returned by an accept, this method will return SO_Unavailable
-            OperationResult listen(size_t maxconn = 0);
-
-            // Block until a new connection is available and return the new socket.
-            // Return the requesting peer as an Host object
-            // If the instance of the socket was returned by an accept, this method will return SO_Unavailable
-            Socket accept(Host& peer);
-
-            // Block until a new connection is available and return the new socket
-            // If the instance of the socket was returned by an accept, this method will return SO_Unavailable
-            Socket accept();
-
             // Binds this socket to a given interface
             OperationResult bind(const Host& iface);
 
@@ -92,14 +89,17 @@ namespace cerberus
             // Try to receive a buffer for a timeout time. If timeout is an invalid time an error will be returned
             OperationResult recv(data::ByteBuffer& buffer, const time::Time& timeout);
 
+            // Set the maximum incoming connections number. If the queue is full, new peers
+            // will receive a connection refused error when they do a connect().
+            // This method is designed for TCP based sockets, however, calling this method on a non-TCP
+            // socket won't have any effect
+            void setMaxConnections(size_t maxconn);
+
+            // Check if the socket is a failed socket
             bool isFailed() const;
 
             // Set the buffer size used for recv calls, default is 512 bytes
             void setRecvBufferSize(size_t size);
-
-            // Sets the maximum incoming connections number. If the queue is full, new peers
-            // will receive a connection refused error when they do a connect()
-            void setMaxConnections(size_t maxconn);
 
             // Close the socket
             OperationResult close();
@@ -108,7 +108,23 @@ namespace cerberus
 
             OperationResult sendTo(const data::ByteBuffer& buffer, const Host& dest, bool donotblock = false);
 
-            // TCP SECTION:
+            // TCP (or derived) SECTION:
+
+            // Mark the socket as a listening socket, so it can accept() new connections.
+            // If the instance of the socket was returned by an accept or the socket transport is not TCP,
+            // this method will return SO_Unavailable
+            OperationResult listen(size_t maxconn = 0);
+
+            // Block until a new connection is available and return the new socket.
+            // Return the requesting peer as an Host object
+            // If the instance of the socket was returned by an accept or the socket transport is not TCP,
+            // this method will return an invalid socket
+            Socket accept(Host& peer);
+
+            // Block until a new connection is available and return the new socket
+            // If the instance of the socket was returned by an accept or the socket transport is not TCP,
+            // this method will return an invalid socket
+            Socket accept();
 
             // If cork == true then stop sending out frames with send()
             // If cork == false then send all the outgoing queue

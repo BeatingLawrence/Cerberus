@@ -39,8 +39,14 @@ static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::t
     cerberus::data::ByteBuffer exp("Hello, World!");
     cerberus::Host h;
     auto s = socket.accept(h);
-    s.setRecvBufferSize(exp.size());
+    if (s.isFailed())
+    {
+        debug("accept fail");
+        return THREAD_ERROR;
+    }
+
     debug("accepted from, %s", h.toString().c_str());
+    s.setRecvBufferSize(exp.size());
     if (s.isFailed())
     {
         debug("accept error");

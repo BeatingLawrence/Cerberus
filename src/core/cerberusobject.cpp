@@ -67,7 +67,7 @@ std::string CerberusObject::toStr(const CerberusObject& obj)
     }
     else
     {
-        ret.append(core::CerberusUtils::strPrint("%u", obj.m_id));
+        ret.append(core::CerberusUtils::strPrint("%lx", obj.m_id));
     }
 
     if (!obj.m_name.empty())
@@ -96,7 +96,7 @@ CerberusObject::CerberusObject(SocketType type, const std::string& name)
       m_name(name),
       m_socketType(type)
 {
-    m_id = core::CerberusFactory::_registerCerberusObject(this);
+    if (m_socketType != Socket_None) m_id = core::CerberusFactory::_registerCerberusObject(this);
 }
 //=============================================================================
 CerberusObject::~CerberusObject() { core::CerberusFactory::_unregisterCerberusObject(m_id); }
