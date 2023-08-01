@@ -2,7 +2,6 @@ TODO list for Cerberus:
 
 [TO FIX - High priority]
 -Correct the IniDataFile behavior: expect comments and sections
--Remake Thread class to use the posix thread interface. Use condition variable to hold the thread in paused state instead of mutex and polling
 
 [Network]
 -Implement HTTP socket
@@ -18,3 +17,5 @@ TODO list for Cerberus:
 [Memory]
 -Implement a system to link external libraries at runtime (aka plugins)
 
+[Threads]
+-Implement the ThreadPool class

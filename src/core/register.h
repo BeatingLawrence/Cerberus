@@ -7,6 +7,7 @@
  *  will be created and managed by the CerberusFactory
  */
 
+#include <cstdint>
 #include <list>
 #include <string>
 

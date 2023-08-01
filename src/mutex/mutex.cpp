@@ -1,28 +1,81 @@
 #include "mutex.h"
 
+#include <cstring>
+
+#include "src/exception/exceptioncatalog.h"
+
 using namespace cerberus::mutex;
 
 //============================================================================
-Mutex::Mutex() : m_mutex()
+Mutex::Mutex()
+    : m_pmutex()
 {
-    // noop
+    pthread_mutexattr_t attr{};
+
+    if (pthread_mutexattr_init(&attr))
+    {
+        throw cerberusSystemExc("pthread_mutexattr_init error");
+    }
+
+    if (pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK))
+    {
+        throw cerberusSystemExc("pthread_mutexattr_settype error");
+    }
+
+    auto ret = pthread_mutex_init(&m_pmutex, &attr);  // default parameters
+
+    if (ret)
+    {
+        throw cerberusSystemExc("pthread_mutex_init error %s", strerror(ret));
+    }
+
+    pthread_mutexattr_destroy(&attr);
 }
 //============================================================================
-bool Mutex::lock(bool block)
+Mutex::~Mutex()
 {
-    if(block)
+    pthread_mutex_unlock(&m_pmutex);
+    pthread_mutex_destroy(&m_pmutex);
+}
+//============================================================================
+bool Mutex::lock(bool block)  // manage the EOWNERDEAD error
+{
+    if (block)
     {
-        m_mutex.lock();
+        auto ret = pthread_mutex_lock(&m_pmutex);
+
+        if (ret)
+        {
+            throw cerberusSystemExc("pthread_mutex_lock error %s", strerror(ret));
+        }
+
         return true;
     }
     else
     {
-        return m_mutex.try_lock();
+        auto ret = pthread_mutex_trylock(&m_pmutex);
+
+        if (ret)
+        {
+            if (ret == EBUSY)
+            {
+                return false;
+            }
+
+            throw cerberusSystemExc("pthread_mutex_trylock error %s", strerror(ret));
+        }
+
+        return true;
     }
 }
 //=============================================================================
 void Mutex::unlock()
 {
-    m_mutex.unlock();
+    auto ret = pthread_mutex_unlock(&m_pmutex);
+
+    if (ret)
+    {
+        throw cerberusSystemExc("pthread_mutex_unlock error %s", strerror(ret));
+    }
 }
 //=============================================================================

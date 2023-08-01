@@ -4,38 +4,48 @@
 /*  This class represents a mutex.
  *
  *  Mutexes can be used to synchronize the
- *  memory accesses done by threads.
+ *  memory accesses performed by threads.
  *
- *  This implementation offers locking, unlocking and conditional-locking of mutexes.
+ *  This interface offers locking, unlocking and conditional-locking of mutexes.
  */
 
-#include <mutex>
+#include <pthread.h>
+
 #include "../Cerberus_global.h"
 
 namespace cerberus
 {
+    namespace thread
+    {
+        class ThreadBase;
+    }
+
     namespace mutex
     {
         class CERBERUS_EXPORT Mutex
         {
-            private:
-                std::mutex m_mutex;
+            friend class ::cerberus::thread::ThreadBase;
 
-            public:
-                Mutex();
+           private:
+            pthread_mutex_t m_pmutex;
 
-                Mutex(const Mutex& other) = delete;
+           public:
+            Mutex();
 
-                //Takes mutex ownership. If block is true, this call will block or not,
-                //depending on the state of the mutex and it will always return true.
-                //If block is false and the mutex already locked, this call will not block and will return false, avoiding mutex locking.
-                //If block is false and the mutex is lockable, this call will not block and will return true, effectively locking the mutex.
-                bool lock(bool block = true);
+            Mutex(const Mutex& other) = delete;
 
-                //Unlocks the mutex. Do not attempt to call this before lock().
-                void unlock();
+            ~Mutex();
+
+            // Takes mutex ownership. If block is true, this call will block or not,
+            // depending on the state of the mutex and it will always return true.
+            // If block is false and the mutex already locked, this call will not block and will return false, avoiding mutex locking.
+            // If block is false and the mutex is lockable, this call will not block and will return true, effectively locking the mutex.
+            bool lock(bool block = true);
+
+            // Unlocks the mutex. Do not attempt to call this before lock().
+            void unlock();
         };
-    }
-}
+    }  // namespace mutex
+}  // namespace cerberus
 
-#endif // CERBERUS_MUTEX_MUTEX_H
+#endif  // CERBERUS_MUTEX_MUTEX_H

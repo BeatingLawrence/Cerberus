@@ -13,6 +13,7 @@ using namespace cerberus;
 TEST(threadTest, simple_thread_creation_destruction)
 {
     cerberus::thread::Thread* thread = new cerberus::thread::Thread("Simple-Thread");
+    thread->join(true);
     delete thread;
 }
 
@@ -24,6 +25,7 @@ TEST(threadTest, derived_thread_creation)
     thread2.start();
     std::this_thread::sleep_for(std::chrono::seconds(2));
     thread2.join(true);
+    debug("t1 joined");
     EXPECT_EQ(thread1.join(true), 10);
 }
 

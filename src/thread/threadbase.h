@@ -1,8 +1,10 @@
 #ifndef CERBERUS_THREAD_THREADBASE_H
 #define CERBERUS_THREAD_THREADBASE_H
 
-#include "../mutex/mutex.h"
+#include <pthread.h>
+
 #include "../message/messagequeue.h"
+#include "../mutex/mutex.h"
 
 namespace cerberus
 {
@@ -10,40 +12,44 @@ namespace cerberus
     {
         class ThreadBase
         {
-            private:
-                mutable mutex::Mutex m_mutex;
+           private:
+            mutable mutex::Mutex m_mutex;
 
-                message::MessageQueue m_queue;
+            pthread_cond_t m_cond;
 
-                bool m_pausedFlag;
+            message::MessageQueue m_queue;
 
-                bool m_terminateFlag;
+            bool m_pausedFlag;
 
-            protected:
-                ThreadBase();
+            bool m_terminateFlag;
 
-                virtual ~ThreadBase();
+           protected:
+            ThreadBase();
 
-                void setPausedFlag(bool state);
+            virtual ~ThreadBase();
 
-                void setTerminateFlag(bool state);
+            void setPausedFlag(bool state);
 
-                bool getPausedFlag();
+            void setTerminateFlag(bool state);
 
-                bool getTerminateFlag() const;
+            bool getPausedFlag();
 
-                message::cerberus_message nextMessage();
+            void pause();
 
-                message::cerberus_message nextMessageKeep() const;
+            bool getTerminateFlag() const;
 
-                bool isQueueEmpty() const;
+            message::cerberus_message nextMessage();
 
-            public:
-                void addMessage(message::cerberus_message message);
+            message::cerberus_message nextMessageKeep() const;
 
-                size_t messageCount() const;
+            bool isQueueEmpty() const;
+
+           public:
+            void addMessage(message::cerberus_message message);
+
+            size_t messageCount() const;
         };
-    }
-}
+    }  // namespace thread
+}  // namespace cerberus
 
-#endif // CERBERUS_THREAD_THREADBASE_H
+#endif  // CERBERUS_THREAD_THREADBASE_H
