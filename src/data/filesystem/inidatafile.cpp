@@ -2,45 +2,50 @@
 
 #include "../../core/cerberusutils.h"
 #include "../../types.h"
+#include "src/core/cerberuslog.h"
 
 using namespace cerberus::data::filesystem;
 
 //=============================================================================
-bool IniDataFile::_isValid(const std::string& line) { return std::regex_match(line, m_isValidRegex); }
+bool IniDataFile::isValid(const std::string& line) { return std::regex_match(line, m_isValidRegex); }
 //=============================================================================
-bool IniDataFile::_isInteger(const std::string& line) { return std::regex_match(line, m_isIntegerRegex); }
+bool IniDataFile::isInteger(const std::string& line) { return std::regex_match(line, m_isIntegerRegex); }
 //=============================================================================
-bool IniDataFile::_isDouble(const std::string& line) { return std::regex_match(line, m_isDoubleRegex); }
+bool IniDataFile::isDouble(const std::string& line) { return std::regex_match(line, m_isDoubleRegex); }
 //=============================================================================
-bool IniDataFile::_isBool(const std::string& line) { return std::regex_match(line, m_isBoolRegex); }
+bool IniDataFile::isBool(const std::string& line) { return std::regex_match(line, m_isBoolRegex); }
 //=============================================================================
-std::string IniDataFile::_getKey(const std::string& line)
+std::string IniDataFile::getKey(const std::string& line)
 {
-    size_t pos = line.find_first_of('=');
-
-    while (line[--pos] == ' ')
+    for (size_t i = line.find_first_of('=') - 1; i >= 0; i--)
     {
+        if (line[i] != ' ')
+        {
+            return line.substr(0, i + 1);
+        }
     }
 
-    return line.substr(0, ++pos);
+    return "";
 }
 //=============================================================================
-std::string IniDataFile::_getValue(const std::string& line)
+std::string IniDataFile::getValue(const std::string& line)
 {
-    size_t pos = line.find_first_of('=');
-
-    while (line[++pos] == ' ')
+    for (size_t i = line.find_first_of('=') + 1; i < line.size(); i++)
     {
+        if (line[i] != ' ')
+        {
+            return line.substr(i, std::string::npos);
+        }
     }
 
-    return line.substr(pos, std::string::npos);
+    return "";
 }
 //=============================================================================
-IniDataFile::Entry* IniDataFile::_search(const std::string& key)
+IniDataFile::Entry* IniDataFile::search(const std::string& key, const std::string& section)
 {
     for (auto& el : m_entries)
     {
-        if (el.key.compare(key) == 0)
+        if (el.key.compare(key) == 0 && el.section.compare(section) == 0)
         {
             return &el;
         }
@@ -49,7 +54,51 @@ IniDataFile::Entry* IniDataFile::_search(const std::string& key)
     return nullptr;
 }
 //=============================================================================
-bool IniDataFile::_syncFile()
+bool IniDataFile::exists(const std::vector<std::string>& v, const std::string& str)
+{
+    for (auto&& el : v)
+    {
+        if (el.compare(str) == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+//=============================================================================
+void IniDataFile::sort()
+{
+    std::vector<std::string> v;
+    std::vector<Entry> newEntries;
+
+    for (auto&& el : m_entries)
+    {
+        // check if the section already esists
+        if (!exists(v, el.section))
+        {
+            if (el.section.compare(MAIN_SECTION) == 0)  // if the section is the main, push at the beginning
+                v.insert(v.begin(), el.section);
+            else
+                v.push_back(el.section);
+        }
+    }
+
+    for (auto&& sec : v)
+    {
+        for (auto&& el : m_entries)
+        {
+            if (sec.compare(el.section) == 0)
+            {
+                newEntries.push_back(el);
+            }
+        }
+    }
+
+    m_entries = newEntries;
+}
+//=============================================================================
+bool IniDataFile::syncFile()
 {
     m_file.setOpenMode(FOM_ReadWriteTrunc);
 
@@ -58,10 +107,30 @@ bool IniDataFile::_syncFile()
         return false;
     }
 
+    if (m_entries.empty())
+    {
+        m_file.close();  // content discarded
+        return true;
+    }
+
+    sort();
+    std::string currentSection = m_entries.front().section;  // first section
+
+    if (currentSection.compare(MAIN_SECTION) != 0)
+    {
+        m_file.writeLine(core::CerberusUtils::strPrint("[%s]", currentSection.c_str()));
+    }
+
     for (auto& el : m_entries)
     {
-        std::string line = core::CerberusUtils::strPrint("%s = %s", el.key.c_str(), el.stringValue.c_str());
-        m_file.writeLine(line);
+        if (currentSection.compare(el.section) != 0 && el.section.compare(MAIN_SECTION) != 0)
+        {
+            m_file.writeLine();  // prints \n
+            m_file.writeLine(core::CerberusUtils::strPrint("[%s]", el.section.c_str()));
+            currentSection = el.section;
+        }
+
+        m_file.writeLine(core::CerberusUtils::strPrint("%s = %s", el.key.c_str(), el.stringValue.c_str()));
     }
 
     m_file.close();
@@ -71,17 +140,6 @@ bool IniDataFile::_syncFile()
 //=============================================================================
 IniDataFile::IniDataFile(const std::string& fileName)
     : m_file(fileName),
-      m_isValidRegex("[a-z][^=]*[=]{1} *[^=]+", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase),
-      m_isIntegerRegex("[a-z][^=]*[=]{1} *\\-?[0-9]+", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase),
-      m_isDoubleRegex("[a-z][^=]*[=]{1} *\\-?[0-9]+\\.{1}[0-9]+",
-                      std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase),
-      m_isBoolRegex("[a-z][^=]*[=]{1} *(true|false)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase)
-{
-    // noop
-}
-//=============================================================================
-IniDataFile::IniDataFile()
-    : m_file(),
       m_isValidRegex("[a-z][^=]*[=]{1} *[^=]+", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase),
       m_isIntegerRegex("[a-z][^=]*[=]{1} *\\-?[0-9]+", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase),
       m_isDoubleRegex("[a-z][^=]*[=]{1} *\\-?[0-9]+\\.{1}[0-9]+",
@@ -108,7 +166,8 @@ bool IniDataFile::load()
     }
 
     m_entries.clear();
-    bool isValid = true;
+    bool valid = true;
+    std::string section;
 
     while (true)
     {
@@ -126,66 +185,81 @@ bool IniDataFile::load()
             continue;
         }
 
-        if (_isValid(line))
+        if (core::CerberusUtils::startsWith(line, '#'))  // line is a comment
         {
-            Entry entry;
-            entry.key         = _getKey(line);
-            entry.stringValue = _getValue(line);
-            entry.type        = IniDataType::IDT_String;
+            continue;  // ignore
+        }
 
-            if (_isInteger(line))
+        // section check
+
+        if (core::CerberusUtils::startsWith(line, '[') && core::CerberusUtils::endsWith(line, ']'))  // line is a section specifier
+        {
+            section = line;
+            section.erase(0, 1);                // remove [
+            section.erase(section.size() - 1);  // remove ]
+            continue;
+        }
+
+        //
+
+        if (!isValid(line))
+        {
+            valid = false;
+            continue;
+        }
+
+        Entry entry;
+        entry.section     = section.empty() ? MAIN_SECTION : section;
+        entry.key         = getKey(line);
+        entry.stringValue = getValue(line);
+        entry.type        = IniDataType::IDT_String;
+
+        if (isDouble(line))
+        {
+            entry.doubleValue = std::stod(entry.stringValue);
+            entry.type |= IniDataType::IDT_Double;
+        }
+        else if (isInteger(line))
+        {
+            entry.integerValue = std::stoll(entry.stringValue);
+            entry.type |= IniDataType::IDT_Integer;
+        }
+        else if (isBool(line))
+        {
+            std::string boolean = core::CerberusUtils::toLower(entry.stringValue);
+            entry.type |= IniDataType::IDT_Bool;
+
+            if (boolean.compare("true") == 0)
             {
-                entry.integerValue = std::stoll(entry.stringValue);
-                entry.type |= IniDataType::IDT_Integer;
-            }
-
-            if (_isDouble(line))
-            {
-                entry.doubleValue = std::stod(entry.stringValue);
-                entry.type |= IniDataType::IDT_Double;
-            }
-
-            if (_isBool(line))
-            {
-                std::string boolean = core::CerberusUtils::toLower(entry.stringValue);
-                entry.type |= IniDataType::IDT_Bool;
-
-                if (boolean.compare("true") == 0)
-                {
-                    entry.boolValue = true;
-                }
-                else
-                {
-                    entry.boolValue = false;
-                }
-            }
-
-            Entry* found = _search(entry.key);
-
-            if (found == nullptr)
-            {
-                m_entries.push_back(entry);
+                entry.boolValue = true;
             }
             else
             {
-                *found = entry;
+                entry.boolValue = false;
             }
+        }
+
+        Entry* found = search(entry.key);
+
+        if (found == nullptr)
+        {
+            m_entries.push_back(entry);
         }
         else
         {
-            isValid = false;
+            *found = entry;
         }
     }
 
     m_file.close();
-    return isValid;
+    return valid;
 }
 //=============================================================================
-bool IniDataFile::exists(const std::string& key) { return (_search(key) != nullptr); }
+bool IniDataFile::exists(const std::string& key) { return (search(key) != nullptr); }
 //=============================================================================
 uint8_t IniDataFile::type(const std::string& key)
 {
-    Entry* found = _search(key);
+    Entry* found = search(key);
 
     if (found == nullptr)
     {
@@ -195,23 +269,23 @@ uint8_t IniDataFile::type(const std::string& key)
     return found->type;
 }
 //=============================================================================
-bool IniDataFile::write_string(const std::string& key, const std::string& value)
+cerberus::OperationResult IniDataFile::write_string(const std::string& key, const std::string& value, const std::string& section)
 {
     std::string k    = core::CerberusUtils::removeBlank_copy(key);
     std::string v    = core::CerberusUtils::removeBlank_copy(value);
     std::string line = core::CerberusUtils::strPrint("%s = %s", k.c_str(), v.c_str());
 
-    if (!_isValid(line))
+    if (!isValid(line))
     {
-        // throw cerberusIllegalArgExc("Provided key=value string pair is not valid");
-        return false;
+        return OR_WrongArgument;
     }
 
-    Entry* found = _search(k);
+    Entry* found = search(k, section);
 
     if (found == nullptr)
     {
         Entry newEntry;
+        newEntry.section     = section;
         newEntry.key         = k;
         newEntry.stringValue = v;
         newEntry.type        = IniDataType::IDT_String;
@@ -225,38 +299,36 @@ bool IniDataFile::write_string(const std::string& key, const std::string& value)
         }
         else
         {
-            // throw cerberusIllegalArgExc("Value of provided key does not match data type");
-            return false;
+            return OR_WrongArgument;
         }
     }
 
-    _syncFile();
-    return true;
+    syncFile();
+    return OR_OK;
 }
 //=============================================================================
-bool IniDataFile::write_integer(const std::string& key, int64_t value)
+cerberus::OperationResult IniDataFile::write_integer(const std::string& key, int64_t value, const std::string& section)
 {
     std::string k        = core::CerberusUtils::removeBlank_copy(key);
     std::string strValue = core::CerberusUtils::strPrint("%i", value);
     std::string line     = core::CerberusUtils::strPrint("%s = %s", k.c_str(), strValue.c_str());
 
-    if (!_isValid(line))
+    if (!isValid(line))
     {
-        // throw cerberusIllegalArgExc("Provided key=value string pair is not valid");
-        return false;
+        return OR_WrongArgument;
     }
 
-    if (!_isInteger(line))
+    if (!isInteger(line))
     {
-        // throw cerberusIllegalArgExc("Provided key=value string pair is not a valid integer entry");
-        return false;
+        return OR_WrongArgument;
     }
 
-    Entry* found = _search(k);
+    Entry* found = search(k, section);
 
     if (found == nullptr)
     {
         Entry newEntry;
+        newEntry.section      = section;
         newEntry.key          = k;
         newEntry.stringValue  = strValue;
         newEntry.integerValue = value;
@@ -272,39 +344,37 @@ bool IniDataFile::write_integer(const std::string& key, int64_t value)
         }
         else
         {
-            // throw cerberusIllegalArgExc("Value of provided key does not match data type");
-            return false;
+            return OR_WrongArgument;
         }
     }
 
-    _syncFile();
+    syncFile();
 
-    return true;
+    return OR_OK;
 }
 //=============================================================================
-bool IniDataFile::write_double(const std::string& key, double value)
+cerberus::OperationResult IniDataFile::write_double(const std::string& key, double value, const std::string& section)
 {
     std::string k        = core::CerberusUtils::removeBlank_copy(key);
     std::string strValue = core::CerberusUtils::strPrint("%f", value);
     std::string line     = core::CerberusUtils::strPrint("%s = %s", k.c_str(), strValue.c_str());
 
-    if (!_isValid(line))
+    if (!isValid(line))
     {
-        // throw cerberusIllegalArgExc("Provided key=value string pair is not valid");
-        return false;
+        return OR_WrongArgument;
     }
 
-    if (!_isDouble(line))
+    if (!isDouble(line))
     {
-        // throw cerberusIllegalArgExc("Provided key=value string pair is not a valid double entry");
-        return false;
+        return OR_WrongArgument;
     }
 
-    Entry* found = _search(k);
+    Entry* found = search(k, section);
 
     if (found == nullptr)
     {
         Entry newEntry;
+        newEntry.section     = section;
         newEntry.key         = k;
         newEntry.stringValue = strValue;
         newEntry.doubleValue = value;
@@ -320,39 +390,37 @@ bool IniDataFile::write_double(const std::string& key, double value)
         }
         else
         {
-            // throw cerberusIllegalArgExc("Value of provided key does not match data type");
-            return false;
+            return OR_WrongArgument;
         }
     }
 
-    _syncFile();
+    syncFile();
 
-    return true;
+    return OR_OK;
 }
 //=============================================================================
-bool IniDataFile::write_bool(const std::string& key, bool value)
+cerberus::OperationResult IniDataFile::write_bool(const std::string& key, bool value, const std::string& section)
 {
     std::string k        = core::CerberusUtils::removeBlank_copy(key);
     std::string strValue = core::CerberusUtils::strPrint("%s", value ? "true" : "false");
     std::string line     = core::CerberusUtils::strPrint("%s = %s", k.c_str(), strValue.c_str());
 
-    if (!_isValid(line))
+    if (!isValid(line))
     {
-        // throw cerberusIllegalArgExc("Provided key=value string pair is not valid");
-        return false;
+        return OR_WrongArgument;
     }
 
-    if (!_isBool(line))
+    if (!isBool(line))
     {
-        // throw cerberusIllegalArgExc("Provided key=value string pair is not a valid bool entry");
-        return false;
+        return OR_WrongArgument;
     }
 
-    Entry* found = _search(k);
+    Entry* found = search(k, section);
 
     if (found == nullptr)
     {
         Entry newEntry;
+        newEntry.section     = section;
         newEntry.key         = k;
         newEntry.stringValue = strValue;
         newEntry.boolValue   = value;
@@ -368,87 +436,78 @@ bool IniDataFile::write_bool(const std::string& key, bool value)
         }
         else
         {
-            // throw cerberusIllegalArgExc("Value of provided key does not match data type");
-            return false;
+            return OR_WrongArgument;
         }
     }
 
-    _syncFile();
+    syncFile();
 
-    return true;
+    return OR_OK;
 }
 //=============================================================================
-std::string IniDataFile::read_string(const std::string& key)
+cerberus::OperationResult IniDataFile::read_string(const std::string& key, const std::string& section)
 {
-    Entry* found = _search(key);
+    Entry* found = search(key, section);
 
     if (found == nullptr)
     {
-        // throw cerberusIllegalArgExc("Provided key does not exist");
-        return "";
+        return OR_WrongArgument;
     }
 
     if (!(found->type & IniDataType::IDT_String))
     {
-        // throw cerberusIllegalArgExc("Value of provided key does not match data type");
-        return "";
+        return OR_WrongArgument;
     }
 
     return found->stringValue;
 }
 //=============================================================================
-int64_t IniDataFile::read_integer(const std::string& key)
+cerberus::OperationResult IniDataFile::read_integer(const std::string& key, const std::string& section)
 {
-    Entry* found = _search(key);
+    Entry* found = search(key, section);
 
     if (found == nullptr)
     {
-        // throw cerberusIllegalArgExc("Provided key does not exist");
-        return 0;
+        return OR_WrongArgument;
     }
 
     if (!(found->type & IniDataType::IDT_Integer))
     {
-        // throw cerberusIllegalArgExc("Value of provided key does not match data type");
-        return 0;
+        return OR_WrongArgument;
     }
 
     return found->integerValue;
 }
 //=============================================================================
-double IniDataFile::read_double(const std::string& key)
+cerberus::OperationResult IniDataFile::read_double(const std::string& key, const std::string& section)
 {
-    Entry* found = _search(key);
+    Entry* found = search(key, section);
 
     if (found == nullptr)
     {
-        // throw cerberusIllegalArgExc("Provided key does not exist");
-        return 0.0f;
+        return OR_WrongArgument;
     }
 
     if (!(found->type & IniDataType::IDT_Double))
     {
-        // throw cerberusIllegalArgExc("Value of provided key does not match data type");
-        return 0.0f;
+        return OR_WrongArgument;
     }
 
     return found->doubleValue;
 }
 //=============================================================================
-bool IniDataFile::read_bool(const std::string& key)
+cerberus::OperationResult IniDataFile::read_bool(const std::string& key, const std::string& section)
 {
-    Entry* found = _search(key);
+    Entry* found = search(key, section);
 
     if (found == nullptr)
     {
-        // throw cerberusIllegalArgExc("Provided key does not exist");
-        return false;
+        return OR_WrongArgument;
     }
 
     if (!(found->type & IniDataType::IDT_Bool))
     {
-        // throw cerberusIllegalArgExc("Value of provided key does not match data type");
-        return false;
+        return OR_WrongArgument;
     }
 
     return found->boolValue;

@@ -13,7 +13,7 @@ namespace cerberus
     {
         FOM_Read = 0,         // Open the file for reading only; the file must exist
         FOM_ReadWrite,        // Open the file for reading and writing; the file must exist
-        FOM_ReadWriteTrunc,   // Open the file for reading and writing; if the file exist the content is discarded, otherwise, the file is created
+        FOM_ReadWriteTrunc,   // Open the file for reading and writing; if the file exists the content is discarded, otherwise, the file is created
         FOM_ReadWriteAppend,  // Open the file for reading and writing; if the file does not esist, it is created.
                               // All the write operations happen at the end of the file
     };
@@ -35,13 +35,14 @@ namespace cerberus
 
     struct CerberusLogSetup
     {
-        LogLevel logLevel;
-        bool disableFormatting;
-        std::string logFileName;
-        CerberusLogRole infoRole;
-        CerberusLogRole warningRole;
-        CerberusLogRole errorRole;
-        CerberusLogRole debugRole;
+        LogLevel logLevel;            // set a log level. Minor levels will be silenced
+        bool disableFormatting;       // disable the color formatting of the output terminal
+        std::string logFileName;      // the log file name
+        SIZE logFileMaximumSize;      // set to zero to disable (not recommended)
+        CerberusLogRole infoRole;     // set the log role for the info level
+        CerberusLogRole warningRole;  // set the log role for the warning level
+        CerberusLogRole errorRole;    // set the log role for the error level
+        CerberusLogRole debugRole;    // set the log role for the debug level
     };
 
     struct CerberusInitParms
@@ -65,6 +66,7 @@ namespace cerberus
         ST_BOOL,        // 1 byte
         ST_VOIDP,       // pointer
         ST_STDSTRINGP,  // pointer
+        ST_BYTEBUFFER,  // ByteBuffer object
     };
 
     enum IniDataType : uint8_t
@@ -76,6 +78,7 @@ namespace cerberus
         IDT_Bool     = 4,  // true only if key value equals "true" or "false" (case insensitive)
     };
 
+    // The Result enum contains all the possible results of operation requested to the framework.
     enum Result
     {
         OR_Undefined,                 // [general] this result should never be given
@@ -85,18 +88,21 @@ namespace cerberus
         OR_WouldBlock,                // [general] attempt to run a blocking operation on a non-blocking call
         OR_TimedOut,                  // [general] operation timeout
         OR_Unavailable,               // [general] the requested operation is not available for the object
-        OR_WrongArgument,             // [general] at least one argument wrong
+        OR_WrongArgument,             // [general] at least one wrong argument
+        OR_InvalidPath,               // [general] the file does not exist or the given path is not valid
+        OR_SystemFailure,             // [general] a system error occurred
                                       //
-        OR_ResolveServerTempFailure,  // [socket DNS lookup] resolve method error
-        OR_ResolveServerFailure,      // [socket DNS lookup] resolve method error
-        OR_ResolveNoData,             // [socket DNS lookup] resolve method error
-        OR_ResolveNotFound,           // [socket DNS lookup] resolve method error
-        OR_ResolveSystemFailure,      // [socket DNS lookup] resolve method error
-        OR_ResolveFailure,            // [socket DNS lookup] resolve method error
+        OR_ResolveServerTempFailure,  // [DNS lookup] resolve method error
+        OR_ResolveServerFailure,      // [DNS lookup] resolve method error
+        OR_ResolveNoData,             // [DNS lookup] resolve method error
+        OR_ResolveNotFound,           // [DNS lookup] resolve method error
+        OR_ResolveSystemFailure,      // [DNS lookup] resolve method error
+        OR_ResolveFailure,            // [DNS lookup] resolve method error
                                       //
         OR_RecvZero,                  // [socket] a recv call returned zero
     };
 
+    // The OperationResult object contains a Result member and some data.
     struct OperationResult
     {
         Result res;
@@ -104,9 +110,12 @@ namespace cerberus
         union  // use one member per call
         {
             bool boolvalue;
-            int intvalue;
-            float floatvalue;
+            int64_t intvalue;
+            double floatvalue;
+            SIZE size;
         };
+
+        std::string str;
 
         OperationResult();  // construct undefined result
 
@@ -114,13 +123,21 @@ namespace cerberus
 
         OperationResult(bool b);
 
-        OperationResult(int i);
+        OperationResult(int64_t i);
 
-        OperationResult(float f);
+        OperationResult(double f);
+
+        OperationResult(SIZE s);
+
+        OperationResult(const std::string& str);
 
         bool operator==(const OperationResult& other);
 
         bool operator!=(const OperationResult& other);
+
+        bool ok();
+
+        bool fail();
     };
 
     struct Host

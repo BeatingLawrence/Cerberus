@@ -123,3 +123,47 @@ bool CerberusUtils::isAlpha(const std::string& str)
     return false;
 }
 //=============================================================================
+bool CerberusUtils::startsWith(const std::string& str1, const std::string& str2)
+{
+    if (str2.size() > str1.size()) return false;
+
+    for (int i = 0; i < str2.size(); i++)
+    {
+        if (str1[i] != str2[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+//=============================================================================
+bool CerberusUtils::startsWith(const std::string& str, char c)
+{
+    if (str.empty()) return false;
+    return (str.front() == c);
+}
+//=============================================================================
+bool CerberusUtils::endsWith(const std::string& str1, const std::string& str2)
+{
+    if (str2.size() > str1.size()) return false;
+
+    int diff = str1.size() - str2.size();
+
+    for (int i = 0; i < str2.size(); i++)
+    {
+        if (str1[diff + i] != str2[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+//=============================================================================
+bool CerberusUtils::endsWith(const std::string& str, char c)
+{
+    if (str.empty()) return false;
+    return (str.back() == c);
+}
+//=============================================================================

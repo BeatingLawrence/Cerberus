@@ -1,7 +1,7 @@
 TODO list for Cerberus:
 
 [TO FIX - High priority]
--Correct the IniDataFile behavior: expect comments and sections
+-none
 
 [Network]
 -Implement HTTP socket

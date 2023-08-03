@@ -218,19 +218,35 @@ cerberus::OperationResult::OperationResult(bool b)
 {
 }
 //=============================================================================
-cerberus::OperationResult::OperationResult(int i)
+cerberus::OperationResult::OperationResult(int64_t i)
     : res(OR_OK),
       intvalue(i)
 {
 }
 //=============================================================================
-cerberus::OperationResult::OperationResult(float f)
+cerberus::OperationResult::OperationResult(double f)
     : res(OR_OK),
       floatvalue(f)
+{
+}
+//=============================================================================
+cerberus::OperationResult::OperationResult(SIZE s)
+    : res(OR_OK),
+      size(s)
+{
+}
+//=============================================================================
+cerberus::OperationResult::OperationResult(const std::string &str)
+    : res(OR_OK),
+      str(str)
 {
 }
 //=============================================================================
 bool cerberus::OperationResult::operator==(const OperationResult &other) { return (res == other.res); }
 //=============================================================================
 bool cerberus::OperationResult::operator!=(const OperationResult &other) { return (res != other.res); }
+//=============================================================================
+bool cerberus::OperationResult::ok() { return (res == Result::OR_OK); }
+//=============================================================================
+bool cerberus::OperationResult::fail() { return !ok(); }
 //=============================================================================

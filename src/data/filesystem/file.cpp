@@ -6,7 +6,6 @@
 #include <regex>
 
 #include "../../core/cerberusutils.h"
-#include "../../exception/exceptioncatalog.h"
 #include "../bytebuffer.h"
 #include "src/core/cerberuslog.h"
 
@@ -20,18 +19,18 @@
 #endif
 
 //=============================================================================
-bool cerberus::data::filesystem::File::existsAsFile(const std::string& path)
+cerberus::OperationResult cerberus::data::filesystem::File::existsAsFile(const std::string& path)
 {
     if (path.empty())
     {
-        throw cerberusIllegalArgExc("Path is empty");
+        return OR_WrongArgument;
     }
 
 #ifdef WINDOWS_SYSTEM
 
     if (GetFileAttributesA(path.c_str()) != INVALID_FILE_ATTRIBUTES)  // TODO: true if is a file only
     {
-        exists = true;
+        return true;
     }
 
 #else
@@ -55,14 +54,14 @@ bool cerberus::data::filesystem::File::existsAsFile(const std::string& path)
         }
         else
         {
-            throw cerberusSystemExc("stat error: %s", strerror(errno));
+            return OR_SystemFailure;
         }
     }
 
 #endif
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::existsAsDirectory(const std::string& path)
+cerberus::OperationResult cerberus::data::filesystem::File::existsAsDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
     throw cerberusImplementationMissExc("DIRECTORY EXISTANCE CHECK NOT IMPLEMENTED YET");
@@ -93,14 +92,14 @@ bool cerberus::data::filesystem::File::existsAsDirectory(const std::string& path
         }
         else
         {
-            throw cerberusSystemExc("stat error: %s", strerror(errno));
+            return OR_SystemFailure;
         }
     }
 
 #endif
 }
 //=============================================================================
-void cerberus::data::filesystem::File::createDirectory(const std::string& path)
+cerberus::OperationResult cerberus::data::filesystem::File::createDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
     throw cerberusImplementationMissExc("DIRECTORY CREATION NOT IMPLEMENTED YET");
@@ -109,13 +108,15 @@ void cerberus::data::filesystem::File::createDirectory(const std::string& path)
 
     if (ret == -1)
     {
-        throw cerberusSystemExc("mkdir error: %s", strerror(errno));
+        logError("mkdir error: %s", strerror(errno));
+        return OR_SystemFailure;
     }
 
 #endif
+    return OR_OK;
 }
 //=============================================================================
-void cerberus::data::filesystem::File::deleteDirectory(const std::string& path)
+cerberus::OperationResult cerberus::data::filesystem::File::deleteDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
     throw cerberusImplementationMissExc("DIRECTORY DELETION NOT IMPLEMENTED YET");
@@ -124,13 +125,15 @@ void cerberus::data::filesystem::File::deleteDirectory(const std::string& path)
 
     if (ret == -1)
     {
-        throw cerberusSystemExc("rmdir error: %s", strerror(errno));
+        logError("rmdir error: %s", strerror(errno));
+        return OR_SystemFailure;
     }
 
 #endif
+    return OR_OK;
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::isEmptyDirectory(const std::string& path)
+cerberus::OperationResult cerberus::data::filesystem::File::isEmptyDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
     throw cerberusImplementationMissExc("DIRECTORY EMPTY CHECK NOT IMPLEMENTED YET");
@@ -141,7 +144,7 @@ bool cerberus::data::filesystem::File::isEmptyDirectory(const std::string& path)
 
     if (dir == NULL)
     {
-        throw cerberusIllegalArgExc("Given directory path is not a directory");
+        return OR_InvalidPath;
     }
 
     errno = 0;
@@ -158,7 +161,8 @@ bool cerberus::data::filesystem::File::isEmptyDirectory(const std::string& path)
 
     if (errno != 0)
     {
-        throw cerberusIllegalStateExc("readdir error: %s", strerror(errno));
+        logError("readdir error: %s", strerror(errno));
+        return OR_SystemFailure;
     }
 
     if (n <= 2)
@@ -167,6 +171,28 @@ bool cerberus::data::filesystem::File::isEmptyDirectory(const std::string& path)
     }
 
     return false;
+#endif
+}
+//=============================================================================
+cerberus::OperationResult cerberus::data::filesystem::File::sizeOf(const std::string& path)
+{
+#ifdef WINDOWS_SYSTEM
+    throw cerberusImplementationMissExc("sizeOf implementation missing");
+
+#else
+    struct stat stat_struct;
+    int ret = stat(path.c_str(), &stat_struct);
+
+    if (ret == 0)
+    {
+        SIZE s = stat_struct.st_size;
+        return s;
+    }
+    else
+    {
+        return OR_Failure;
+    }
+
 #endif
 }
 //=============================================================================
@@ -497,7 +523,7 @@ bool cerberus::data::filesystem::File::seekOffset(int64_t pos) const
     return true;
 }
 //=============================================================================
-void cerberus::data::filesystem::File::resetCursor() const { rewind(m_file); }
+void cerberus::data::filesystem::File::resetCursor() const { ::rewind(m_file); }
 //=============================================================================
 uint64_t cerberus::data::filesystem::File::getCursor() const { return ftell(m_file); }
 //=============================================================================

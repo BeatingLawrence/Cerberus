@@ -1,6 +1,8 @@
 #ifndef CERBERUS_DATA_FILESYSTEM_INIDATAFILE_H
 #define CERBERUS_DATA_FILESYSTEM_INIDATAFILE_H
 
+#define MAIN_SECTION "MAIN"
+
 #include <list>
 #include <regex>
 
@@ -22,40 +24,45 @@ namespace cerberus
                 std::regex m_isDoubleRegex;
                 std::regex m_isBoolRegex;
 
-                bool _isValid(const std::string& line);
+                bool isValid(const std::string& line);
 
-                bool _isInteger(const std::string& line);
+                bool isInteger(const std::string& line);
 
-                bool _isDouble(const std::string& line);
+                bool isDouble(const std::string& line);
 
-                bool _isBool(const std::string& line);
+                bool isBool(const std::string& line);
 
-                std::string _getKey(const std::string& line);  // use only on valid lines!
+                std::string getKey(const std::string& line);
 
-                std::string _getValue(const std::string& line);  // use only on valid lines!
+                std::string getValue(const std::string& line);
 
                 struct Entry
                 {
+                    std::string section;
                     std::string key;
                     uint8_t type;
                     std::string stringValue;
-                    int64_t integerValue;
-                    double doubleValue;
-                    bool boolValue;
+                    union
+                    {
+                        int64_t integerValue;
+                        double doubleValue;
+                        bool boolValue;
+                    };
                 };
 
-                Entry* _search(const std::string& key);
+                Entry* search(const std::string& key, const std::string& section = MAIN_SECTION);
 
-                bool _syncFile();  // rewrites the file reading from memory
+                static bool exists(const std::vector<std::string>& v, const std::string& str);
+
+                void sort();
+
+                bool syncFile();  // rewrites the file reading from memory
 
                 std::vector<Entry> m_entries;
 
                public:
                 // Construct an IniDataFile object with a file name
-                IniDataFile(const std::string& fileName);
-
-                // Construct an IniDataFile object without opening any file
-                IniDataFile();
+                IniDataFile(const std::string& fileName = std::string(""));
 
                 // Close the file if open and destroy the instance
                 ~IniDataFile();
@@ -83,24 +90,24 @@ namespace cerberus
                 // In this case it is important to ensure that the type is correct using type().
                 // If provided key does not exist, it will be created and added to the memory and file.
                 // If provided key=value string pair is not valid, the method will return false
-                bool write_string(const std::string& key, const std::string& value);
+                OperationResult write_string(const std::string& key, const std::string& value, const std::string& section = MAIN_SECTION);
 
-                bool write_integer(const std::string& key, int64_t value);
+                OperationResult write_integer(const std::string& key, int64_t value, const std::string& section = MAIN_SECTION);
 
-                bool write_double(const std::string& key, double value);
+                OperationResult write_double(const std::string& key, double value, const std::string& section = MAIN_SECTION);
 
-                bool write_bool(const std::string& key, bool value);
+                OperationResult write_bool(const std::string& key, bool value, const std::string& section = MAIN_SECTION);
 
                 // Read methods:
                 // These methods perform a read operation on the memory copied using load().
                 // Please ensure the data exists and is type-correct using exists() and type()
-                std::string read_string(const std::string& key);
+                OperationResult read_string(const std::string& key, const std::string& section = MAIN_SECTION);
 
-                int64_t read_integer(const std::string& key);
+                OperationResult read_integer(const std::string& key, const std::string& section = MAIN_SECTION);
 
-                double read_double(const std::string& key);
+                OperationResult read_double(const std::string& key, const std::string& section = MAIN_SECTION);
 
-                bool read_bool(const std::string& key);
+                OperationResult read_bool(const std::string& key, const std::string& section = MAIN_SECTION);
             };
         }  // namespace filesystem
     }      // namespace data

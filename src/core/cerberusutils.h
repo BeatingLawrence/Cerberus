@@ -19,7 +19,7 @@ namespace cerberus
     {
         class CERBERUS_EXPORT CerberusUtils
         {
-            CerberusUtils() = delete;
+            CerberusUtils()                           = delete;
             CerberusUtils(const CerberusUtils& other) = delete;
 
            public:
@@ -56,6 +56,18 @@ namespace cerberus
 
             // Tells if the string contains at least one alphabet character [a-z][A-Z]
             static bool isAlpha(const std::string& str);
+
+            // Check if str1 starts with str2 string
+            static bool startsWith(const std::string& str1, const std::string& str2);
+
+            // Check if str1 starts with c char
+            static bool startsWith(const std::string& str, char c);
+
+            // Check if str1 ends with str2 string
+            static bool endsWith(const std::string& str1, const std::string& str2);
+
+            // Check if str1 ends with c char
+            static bool endsWith(const std::string& str, char c);
         };
     }  // namespace core
 }  // namespace cerberus

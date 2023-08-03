@@ -37,25 +37,23 @@ namespace cerberus
                 std::string getOpenModeString();
 
                public:
-                // Checks wether a file exists on filesystem
-                // Throws an exception if the operation was not completed successfully
-                static bool existsAsFile(const std::string& path);
+                // Check wether a file exists on filesystem
+                static OperationResult existsAsFile(const std::string& path);
 
-                // Checks wether a directory exists on filesystem
-                // Throws an exception if the operation was not completed successfully
-                static bool existsAsDirectory(const std::string& path);
+                // Check wether a directory exists on filesystem
+                static OperationResult existsAsDirectory(const std::string& path);
 
-                // Creates a directory
-                // Throws an exception if the operation was not completed successfully
-                static void createDirectory(const std::string& path);
+                // Create a directory
+                static OperationResult createDirectory(const std::string& path);
 
-                // Deletes a directory (must be empty)
-                // Throws an exception if the operation was not completed successfully
-                static void deleteDirectory(const std::string& path);
+                // Delete a directory (must be empty)
+                static OperationResult deleteDirectory(const std::string& path);
 
-                // Checks if a given directory is empty
-                // Throws an exception if the operation was not completed successfully
-                static bool isEmptyDirectory(const std::string& path);
+                // Check if a given directory is empty
+                static OperationResult isEmptyDirectory(const std::string& path);
+
+                // Get the size of the file in the size field of the return value
+                static OperationResult sizeOf(const std::string& path);
 
                 // Create a File instance. The openMode parameter can be one of the FileOpenMode values
                 File(FileOpenMode openMode = FOM_Read, bool binaryMode = false);
@@ -86,7 +84,7 @@ namespace cerberus
 
                 bool write(const ByteBuffer& bytes);
 
-                bool writeLine(const std::string& line);
+                bool writeLine(const std::string& line = "");
 
                 // Read the file starting from start pos till the end of file
                 bool read(ByteBuffer& bytes, uint64_t start = 0) const;
