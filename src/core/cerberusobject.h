@@ -29,7 +29,6 @@ namespace cerberus
             Socket_TCP,
             Socket_TCPP2P,
             Socket_HTTP,
-            Socket_HTTPS,
             Socket_WEB,
             Socket_FTP,
             Socket_ICMP,

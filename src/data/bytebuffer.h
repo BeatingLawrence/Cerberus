@@ -92,6 +92,16 @@ namespace cerberus
             // An exception will be thrown if index >= size()
             unsigned char operator[](SIZE index);
 
+            // Append len bytes read from the given buffer to this ByteBuffer. [OWN]
+            void appendFrom(const char* buffer, SIZE len);
+
+            // Assigns the content of the given buffer to this ByteBuffer. Existing content will be discarded. [OWN]
+            void assignFrom(const char* buffer, SIZE len);
+
+            // Copy the content of this ByteBuffer to the given buffer. No more than maxLen bytes will be copied.
+            // If maxLen is 0, all the content of this ByteBuffer will be copied
+            void copyTo(char* buffer, SIZE maxLen = 0);
+
             // Checks if this ByteBuffer instance is equal to other
             bool operator==(const ByteBuffer& other);
 

@@ -42,9 +42,6 @@ std::string CerberusObject::toStr(const CerberusObject& obj)
         case Socket_HTTP:
             ret.append(" HTTP");
             break;
-        case Socket_HTTPS:
-            ret.append(" HTTPS");
-            break;
         case Socket_WEB:
             ret.append(" WEB");
             break;

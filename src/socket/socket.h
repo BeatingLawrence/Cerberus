@@ -17,6 +17,9 @@
 // This class implements stream socket as well as datagram, HTTP, FTP, ICMP sockets and so on.
 // The socket type mus be specified in the constructor
 
+typedef struct ssl_ctx_st SSL_CTX;
+typedef struct ssl_st SSL;
+
 namespace cerberus
 {
     namespace data
@@ -32,7 +35,7 @@ namespace cerberus
         class Socket : public CerberusObject
         {
            private:
-            Socket(SocketType type, int fd);
+            Socket(SocketType type, int fd, SSL_CTX* ctx = nullptr);
 
             // This method creates a datagram socket and assigns the resulting file descriptor to m_fd.
             // Check is the socket isFailed() after this call
@@ -62,6 +65,9 @@ namespace cerberus
 
             data::ByteBuffer m_recvBuffer;
 
+            SSL_CTX* m_sslCtx;  // for ssl
+            SSL* m_ssl;
+
            public:
             Socket() = delete;
 
@@ -73,10 +79,10 @@ namespace cerberus
 
             // GENERAL SECTION:
 
-            // Binds this socket to a given interface
+            // Bind this socket to a given interface
             OperationResult bind(const Host& iface);
 
-            // Connects this socket to a remote Host. If hostname field is not empty and
+            // Connect this socket to a remote Host. If hostname field is not empty and
             // not yet resolved, this method will call Host::resolve() internally
             OperationResult connect(const Host& dest);
 
@@ -84,6 +90,7 @@ namespace cerberus
             OperationResult send(const data::ByteBuffer& buffer, bool donotblock = false);
 
             // Receive a buffer
+            // dotonblock parameter is ignored in TLS mode
             OperationResult recv(data::ByteBuffer& buffer, bool donotblock = false);
 
             // Try to receive a buffer for a timeout time. If timeout is an invalid time an error will be returned
@@ -103,6 +110,10 @@ namespace cerberus
 
             // Close the socket
             OperationResult close();
+
+            // Set the socket to be a TLS socket. If the specified version is TLS_ANY,
+            // the socket will negotiate the best version possible with the counterpart.
+            OperationResult useTLS(const std::string& certfile = "", const std::string& keyfile = "");
 
             // UDP SECTION:
 

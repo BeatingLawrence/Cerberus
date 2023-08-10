@@ -1,5 +1,8 @@
 #include "cerberus.h"
 
+#include <openssl/conf.h>
+#include <openssl/ssl.h>
+
 #include <cstring>
 
 #include "./mutex/mutexlocker.h"
@@ -55,10 +58,16 @@ void Cerberus::init(const CerberusInitParms& parms)
     cerberus->m_initFlag = true;
     debug("Cerberus init completed");
     //
+    if (parms.useCiphers)
+    {
+        SSL_library_init();
+        SSL_load_error_strings();
+    }
+    //
 #ifndef WINDOWS_SYSTEM
     // PostgreSQL SIGPIPE Ignoring:
     struct sigaction action = {};
-    action.sa_handler = SIG_IGN;
+    action.sa_handler       = SIG_IGN;
 
     if (sigaction(SIGPIPE, &action, nullptr) != 0)
     {
@@ -89,22 +98,22 @@ CerberusInitParms Cerberus::cerberusDefaultParms()
 {
     CerberusInitParms toReturn{};
     toReturn.logSetup.disableFormatting = false;
-    toReturn.logSetup.logFileName = "./last.log";
-    toReturn.logSetup.logLevel = LL_Error;
+    toReturn.logSetup.logFileName       = "./last.log";
+    toReturn.logSetup.logLevel          = LL_Error;
 #ifdef WINDOWS_SYSTEM
-    toReturn.logSetup.infoRole.foregroundColor = TERMINAL_FOREGROUND_GREEN;
+    toReturn.logSetup.infoRole.foregroundColor    = TERMINAL_FOREGROUND_GREEN;
     toReturn.logSetup.warningRole.foregroundColor = (TERMINAL_FOREGROUND_GREEN | TERMINAL_FOREGROUND_RED);
-    toReturn.logSetup.errorRole.foregroundColor = TERMINAL_FOREGROUND_RED;
-    toReturn.logSetup.debugRole.foregroundColor = (TERMINAL_FOREGROUND_RED | TERMINAL_FOREGROUND_BLUE);
+    toReturn.logSetup.errorRole.foregroundColor   = TERMINAL_FOREGROUND_RED;
+    toReturn.logSetup.debugRole.foregroundColor   = (TERMINAL_FOREGROUND_RED | TERMINAL_FOREGROUND_BLUE);
 #else
-    toReturn.logSetup.infoRole.backgroundColor = TERMINAL_BACKGROUND_BLACK;
+    toReturn.logSetup.infoRole.backgroundColor    = TERMINAL_BACKGROUND_BLACK;
     toReturn.logSetup.warningRole.backgroundColor = TERMINAL_BACKGROUND_BLACK;
-    toReturn.logSetup.errorRole.backgroundColor = TERMINAL_BACKGROUND_BLACK;
-    toReturn.logSetup.debugRole.backgroundColor = TERMINAL_BACKGROUND_BLACK;
-    toReturn.logSetup.infoRole.foregroundColor = TERMINAL_FOREGROUND_GREEN;
+    toReturn.logSetup.errorRole.backgroundColor   = TERMINAL_BACKGROUND_BLACK;
+    toReturn.logSetup.debugRole.backgroundColor   = TERMINAL_BACKGROUND_BLACK;
+    toReturn.logSetup.infoRole.foregroundColor    = TERMINAL_FOREGROUND_GREEN;
     toReturn.logSetup.warningRole.foregroundColor = TERMINAL_FOREGROUND_YELLOW;
-    toReturn.logSetup.errorRole.foregroundColor = TERMINAL_FOREGROUND_RED;
-    toReturn.logSetup.debugRole.foregroundColor = TERMINAL_FOREGROUND_MAGENTA;
+    toReturn.logSetup.errorRole.foregroundColor   = TERMINAL_FOREGROUND_RED;
+    toReturn.logSetup.debugRole.foregroundColor   = TERMINAL_FOREGROUND_MAGENTA;
 #endif
     return toReturn;
 }

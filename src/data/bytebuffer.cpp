@@ -151,7 +151,7 @@ ByteBuffer::ByteBuffer(ByteBuffer&& other)
 
     if ((*m_instances) != 1)
     {
-        throw cerberusIllegalArgExc("move constructor call on a still sharing ByteBuffer");
+        throw cerberusIllegalStateExc("move constructor called on a still sharing ByteBuffer");
     }
 }
 //=============================================================================
@@ -194,6 +194,7 @@ ByteBuffer::~ByteBuffer()
         delete m_mutex;
         delete m_instances;
         delete m_size;
+        delete m_hasOwner;
         free(m_bytes);
     }
     else if ((*m_instances) != 0)
@@ -232,6 +233,41 @@ unsigned char ByteBuffer::operator[](SIZE index)
     }
 
     return *((unsigned char*)(m_bytes + index));
+}
+//=============================================================================
+void ByteBuffer::appendFrom(const char *buffer, SIZE len)
+{
+    ByteBuffer buf(len);
+    uint8_t* p = buf.data();
+    memmove(p, buffer, len);
+
+    append(buf);
+}
+//=============================================================================
+void ByteBuffer::assignFrom(const char *buffer, SIZE len)
+{
+    clear();
+    appendFrom(buffer, len);
+}
+//=============================================================================
+void ByteBuffer::copyTo(char *buffer, SIZE maxLen)
+{
+    mutex::MutexLocker ml(m_mutex);
+    becomeOwner();
+
+    if(*m_size == 0 || !m_bytes)
+    {
+        return;
+    }
+
+    if(maxLen)
+    {
+        memmove(buffer, m_bytes, maxLen);
+    }
+    else
+    {
+        memmove(buffer, m_bytes, (*m_size));
+    }
 }
 //=============================================================================
 bool ByteBuffer::operator==(const ByteBuffer& other)

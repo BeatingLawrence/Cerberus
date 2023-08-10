@@ -48,6 +48,7 @@ namespace cerberus
     struct CerberusInitParms
     {
         CerberusLogSetup logSetup;
+        bool useCiphers;  // enable cerberus to init and use the OpenSSL library
         // add more configuration members here..
     };
 
