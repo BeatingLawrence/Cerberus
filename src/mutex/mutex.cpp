@@ -7,7 +7,7 @@
 using namespace cerberus::mutex;
 
 //============================================================================
-Mutex::Mutex()
+Mutex::Mutex(MutexType type)
     : m_pmutex()
 {
     pthread_mutexattr_t attr{};
@@ -17,7 +17,20 @@ Mutex::Mutex()
         throw cerberusSystemExc("pthread_mutexattr_init error");
     }
 
-    if (pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK))
+    int kind = 0;
+
+    switch (type)
+    {
+        case Simple:
+            kind = PTHREAD_MUTEX_ERRORCHECK;
+            break;
+
+        case Recursive:
+            kind = PTHREAD_MUTEX_RECURSIVE;
+            break;
+    }
+
+    if (pthread_mutexattr_settype(&attr, kind))
     {
         throw cerberusSystemExc("pthread_mutexattr_settype error");
     }
@@ -30,6 +43,12 @@ Mutex::Mutex()
     }
 
     pthread_mutexattr_destroy(&attr);
+}
+//============================================================================
+Mutex::Mutex(const Mutex &other)
+    : m_pmutex(other.m_pmutex)
+{
+    // noop
 }
 //============================================================================
 Mutex::~Mutex()

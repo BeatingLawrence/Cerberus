@@ -7,8 +7,9 @@
 
 int main(int argc, char* argv[])
 {
-    auto parms = cerberus::Cerberus::cerberusDefaultParms();
+    auto parms              = cerberus::Cerberus::cerberusDefaultParms();
     parms.logSetup.logLevel = cerberus::LL_Debug;
+    parms.useCiphers        = true;
     cerberus::Cerberus::init(parms);
     // start testing
     ::testing::InitGoogleTest(&argc, argv);

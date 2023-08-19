@@ -85,13 +85,14 @@ namespace cerberus
         OR_Undefined,                 // [general] this result should never be given
         OR_OK,                        // [general] no errors
         OR_Failure,                   // [general] generic failure
-        OR_FailedInstance,            // [general] attempt to do something on a failed instance
+        OR_FailedInstance,            // [general] attempt to use a failed instance
         OR_WouldBlock,                // [general] attempt to run a blocking operation on a non-blocking call
         OR_TimedOut,                  // [general] operation timeout
         OR_Unavailable,               // [general] the requested operation is not available for the object
         OR_WrongArgument,             // [general] at least one wrong argument
         OR_InvalidPath,               // [general] the file does not exist or the given path is not valid
         OR_SystemFailure,             // [general] a system error occurred
+        OR_BadConditions,             // [general] bad conditions encountered when processing the operation
                                       //
         OR_ResolveServerTempFailure,  // [DNS lookup] resolve method error
         OR_ResolveServerFailure,      // [DNS lookup] resolve method error
@@ -101,6 +102,13 @@ namespace cerberus
         OR_ResolveFailure,            // [DNS lookup] resolve method error
                                       //
         OR_RecvZero,                  // [socket] a recv call returned zero
+        OR_Hangup                     // [socket] hangup condition (stream closed by the peer)
+    };
+
+    enum MutexType
+    {
+        Simple,     // ERRORCHECK mutex
+        Recursive,  // RECURSIVE mutex
     };
 
     // The OperationResult object contains a Result member and some data.
@@ -108,12 +116,18 @@ namespace cerberus
     {
         Result res;
 
-        union  // use one member per call
+        union  // save space. Access one member only
         {
-            bool boolvalue;
-            int64_t intvalue;
-            double floatvalue;
-            SIZE size;
+            struct
+            {
+                bool b1;
+                bool b2;
+                bool b3;
+                bool b4;
+            };
+            int64_t i;
+            double f;
+            SIZE sz;
         };
 
         std::string str;
@@ -122,7 +136,7 @@ namespace cerberus
 
         OperationResult(Result r);  // construct defined result
 
-        OperationResult(bool b);
+        OperationResult(bool b1, bool b2 = false, bool b3 = false, bool b4 = false);
 
         OperationResult(int64_t i);
 
@@ -136,9 +150,15 @@ namespace cerberus
 
         bool operator!=(const OperationResult& other);
 
+        // Return true if the Result is OR_OK, false otherwise
         bool ok();
 
-        bool fail();
+        // The opposite of ok(). This method can print the error
+        // with logError() internally, if printError is true and ok() is false
+        bool fail(bool printError = false);
+
+        // Translate the Result
+        std::string errorString();
     };
 
     struct Host
@@ -146,16 +166,6 @@ namespace cerberus
         static const uint32_t ADDR_ANY;
         static const uint32_t ADDR_LOOPBACK;
         static const uint32_t ADDR_BROADCAST;
-
-        // Construct an invalid Host (0.0.0.0:0)
-        Host();
-
-        // Construct an Host with str as hostname if it contains at least one letter,
-        // otherwise str will be used to extract ip:port as a fromString() call
-        Host(const std::string& str);
-
-        // Same as above
-        Host(const char* str);
 
         union
         {
@@ -168,21 +178,55 @@ namespace cerberus
 
         bool resolved;
 
-        // This method takes an ip address in the form of x.x.x.x or x.x.x.x:yyyyy
-        // and converts the string filling port and octet[] members.
-        // The port presence is not mandatory
-        // It is possible to use "any", "local" or "broadcast" (case insensitive) in place of
-        // ip address to specify 'any interface', 'localhost' and '255.255.255.255' respectively.
-        // It returns true if the conversion performed successfully
+        // Construct an invalid Host (0.0.0.0:0)
+        Host();
+
+        // Construct an Host with str as hostname if it contains at least one letter,
+        // otherwise str will be used to extract ip:port with a stringToHost() call.
+        Host(const std::string& str);
+
+        // Same as above
+        Host(const char* str);
+
+        // Take an ip address in the form of x.x.x.x or x.x.x.x:yyyyy
+        // and return an Host object with numeric IP and port members filled
+        // It is possible to use "any", "local" or "broadcast" (case insensitive) in place of the
+        // IP address to specify 'any interface', 'localhost' and '255.255.255.255' respectively.
+        // An invalid Host is returned if the conversion fails
+        static Host stringToHost(const std::string& str);
+
+        // Extract the port number from the given string.
+        // The port number must be the last element in the string and must
+        // be preceded by a column :
+        // If no port is found, 0 is returned
+        static uint16_t getPort(const std::string& str);
+
+        // Extract a numeric IP address and port and saves them in this Host instance.
+        // The instance becomes invalid if the conversion fails
         bool fromString(const std::string& str);
 
-        // Prints the numeric IP address and port, does not print the hostname
+        // Print the numeric IP address and port (not the hostname) to string.
         std::string toString();
 
-        // Tells if the Host is not valid, i.e. 0.0.0.0:0 and an empty hostname
+        // Tells if the Host is not valid for any usage
         bool isValid();
 
-        // Resolve the given Host. The resulting numeric IP address is written in the ip parameter
+        // Tell if the Host is valid for remote usage, e.g. connect() or sendTo().
+        // For this method to return true, the Host must have a valid port
+        // and either an hostname OR a numerical IP address
+        bool isValidRemote();
+
+        // Tell if the Host has a valid numerical IP
+        bool isNumeric();
+
+        // Tell if the Host has an hostname
+        bool isTextual();
+
+        // Tell if the Host has a valid port (port != 0)
+        bool hasPort();
+
+        // Resolve the given Host using the hostname member.
+        // The resulting numeric IP address is written in the ip parameter
         OperationResult resolve();
     };
 }  // namespace cerberus

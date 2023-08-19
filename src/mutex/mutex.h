@@ -12,6 +12,7 @@
 #include <pthread.h>
 
 #include "../Cerberus_global.h"
+#include "src/types.h"
 
 namespace cerberus
 {
@@ -30,9 +31,9 @@ namespace cerberus
             pthread_mutex_t m_pmutex;
 
            public:
-            Mutex();
+            Mutex(MutexType type = Simple);
 
-            Mutex(const Mutex& other) = delete;
+            Mutex(const Mutex& other);
 
             ~Mutex();
 

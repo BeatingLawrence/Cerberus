@@ -11,8 +11,8 @@
  *  It will be automatically unlocked while the thread will reach the end of the calling method.
  */
 
-#include "./mutex.h"
 #include "../Cerberus_global.h"
+#include "./mutex.h"
 
 namespace cerberus
 {
@@ -20,19 +20,21 @@ namespace cerberus
     {
         class CERBERUS_EXPORT MutexLocker
         {
-            private:
-                Mutex* m_mutex;
+           private:
+            Mutex* m_mutex;
 
-            public:
-                MutexLocker() = delete;
+           public:
+            MutexLocker() = delete;
 
-                MutexLocker(const MutexLocker& other) = delete;
+            MutexLocker(const MutexLocker& other) = delete;
 
-                MutexLocker(Mutex* mutex);
+            MutexLocker(Mutex* mutex);
 
-                ~MutexLocker();
+            MutexLocker(Mutex& mutex);
+
+            ~MutexLocker();
         };
-    }
-}
+    }  // namespace mutex
+}  // namespace cerberus
 
-#endif // CERBERUS_MUTEX_MUTEXLOCKER_H
+#endif  // CERBERUS_MUTEX_MUTEXLOCKER_H

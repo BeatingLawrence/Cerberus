@@ -30,7 +30,6 @@ namespace cerberus
             Socket_TCPP2P,
             Socket_HTTP,
             Socket_WEB,
-            Socket_FTP,
             Socket_ICMP,
             Socket_IPC,
         };

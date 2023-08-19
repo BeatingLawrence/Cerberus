@@ -135,8 +135,9 @@ namespace cerberus
             // If the new size is less than the current one, data loss may take place. [OWN]
             void resize(SIZE size);
 
-            // Assign another ByteBuffer value to this instance, the memory is deep-copied. [OWN]
-            void assign(const ByteBuffer& buffer);
+            // Assign first len bytes of another ByteBuffer value to this instance, the memory is deep-copied. [OWN]
+            // If len is 0, all the buffer is assigned
+            void assign(const ByteBuffer& buffer, SIZE len = 0);
 
             // Assign the c-string str value to this buffer.
             // After this call the size will be equal to the size of the given string. [OWN]

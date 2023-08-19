@@ -30,11 +30,11 @@ void ByteBuffer::becomeOwner(bool force) const
 
     (*m_instances)--;
 
-    m_bytes     = nullptr;           // null
-    m_instances = new uint32_t(0);   // zero
-    m_mutex     = new mutex::Mutex;  // new
-    m_size      = new SIZE(0);       // zero
-    m_hasOwner  = new bool(true);    // true
+    m_bytes     = nullptr;                      // null
+    m_instances = new uint32_t(0);              // zero
+    m_mutex     = new mutex::Mutex(Recursive);  // new
+    m_size      = new SIZE(0);                  // zero
+    m_hasOwner  = new bool(true);               // true
 
     if (oldSize != 0)
     {
@@ -77,7 +77,7 @@ void ByteBuffer::_clear()
 ByteBuffer::ByteBuffer(SIZE size)
     : m_bytes(nullptr),
       m_instances(new uint32_t(0)),
-      m_mutex(new mutex::Mutex),
+      m_mutex(new mutex::Mutex(Recursive)),
       m_size(new SIZE(size)),
       m_hasOwner(new bool(true)),
       m_owner(true)
@@ -96,7 +96,7 @@ ByteBuffer::ByteBuffer(SIZE size)
 ByteBuffer::ByteBuffer(SIZE size, uint8_t val)
     : m_bytes(nullptr),
       m_instances(new uint32_t(0)),
-      m_mutex(new mutex::Mutex),
+      m_mutex(new mutex::Mutex(Recursive)),
       m_size(new SIZE(size)),
       m_hasOwner(new bool(true)),
       m_owner(true)
@@ -115,7 +115,7 @@ ByteBuffer::ByteBuffer(SIZE size, uint8_t val)
 ByteBuffer::ByteBuffer()
     : m_bytes(nullptr),
       m_instances(new uint32_t(0)),
-      m_mutex(new mutex::Mutex),
+      m_mutex(new mutex::Mutex(Recursive)),
       m_size(new SIZE(0)),
       m_hasOwner(new bool(true)),
       m_owner(true)
@@ -158,7 +158,7 @@ ByteBuffer::ByteBuffer(ByteBuffer&& other)
 ByteBuffer::ByteBuffer(const char* str)
     : m_bytes(nullptr),
       m_instances(new uint32_t(0)),
-      m_mutex(new mutex::Mutex),
+      m_mutex(new mutex::Mutex(Recursive)),
       m_size(new SIZE(0)),
       m_hasOwner(new bool(true)),
       m_owner(true)
@@ -235,7 +235,7 @@ unsigned char ByteBuffer::operator[](SIZE index)
     return *((unsigned char*)(m_bytes + index));
 }
 //=============================================================================
-void ByteBuffer::appendFrom(const char *buffer, SIZE len)
+void ByteBuffer::appendFrom(const char* buffer, SIZE len)
 {
     ByteBuffer buf(len);
     uint8_t* p = buf.data();
@@ -244,23 +244,24 @@ void ByteBuffer::appendFrom(const char *buffer, SIZE len)
     append(buf);
 }
 //=============================================================================
-void ByteBuffer::assignFrom(const char *buffer, SIZE len)
+void ByteBuffer::assignFrom(const char* buffer, SIZE len)
 {
+    mutex::MutexLocker ml(m_mutex);  // make use of recursive mutex
     clear();
     appendFrom(buffer, len);
 }
 //=============================================================================
-void ByteBuffer::copyTo(char *buffer, SIZE maxLen)
+void ByteBuffer::copyTo(char* buffer, SIZE maxLen)
 {
     mutex::MutexLocker ml(m_mutex);
     becomeOwner();
 
-    if(*m_size == 0 || !m_bytes)
+    if (*m_size == 0 || !m_bytes)
     {
         return;
     }
 
-    if(maxLen)
+    if (maxLen)
     {
         memmove(buffer, m_bytes, maxLen);
     }
@@ -391,7 +392,7 @@ void ByteBuffer::resize(SIZE size)
     _resize(size);
 }
 //=============================================================================
-void ByteBuffer::assign(const ByteBuffer& buffer)
+void ByteBuffer::assign(const ByteBuffer& buffer, SIZE len)
 {
     mutex::MutexLocker ml2(buffer.m_mutex);
 
@@ -404,14 +405,16 @@ void ByteBuffer::assign(const ByteBuffer& buffer)
     mutex::MutexLocker ml1(m_mutex);
     becomeOwner(true);
 
-    SIZE s = *buffer.m_size;
+    SIZE s;
+
+    if (len)
+        s = len;
+    else
+        s = *buffer.m_size;
 
     _resize(s);
 
-    if (s)
-    {
-        memmove(m_bytes, buffer.m_bytes, s);
-    }
+    memmove(m_bytes, buffer.m_bytes, s);
 }
 //=============================================================================
 void ByteBuffer::assign(const char* str)

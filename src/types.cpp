@@ -30,13 +30,13 @@ cerberus::Host::Host(const std::string &str)
       port(0),
       resolved(false)
 {
+    auto h = stringToHost(str);
+
     if (!fromString(str))
-    {
         if (core::CerberusUtils::isAlpha(str))
         {
             hostname = str;
         }
-    }
 }
 //=============================================================================
 cerberus::Host::Host(const char *str)
@@ -45,30 +45,17 @@ cerberus::Host::Host(const char *str)
       resolved(false)
 {
     if (!fromString(str))
-    {
         if (core::CerberusUtils::isAlpha(str))
         {
             hostname = str;
         }
-    }
 }
 //=============================================================================
-bool cerberus::Host::fromString(const std::string &str)
+cerberus::Host cerberus::Host::stringToHost(const std::string &str)
 {
-    auto col    = str.find_last_of(':');
-    int portint = 0;
-
-    if (col != std::string::npos && col != str.size() - 1)
-    {
-        // address with port
-        std::string portstr = str.substr(col + 1);
-        portint             = atoi(portstr.c_str());
-
-        if (portint < 0 || portint > 65535)
-        {
-            return false;
-        }
-    }
+    Host ret{};
+    auto col = str.find_last_of(':');
+    ret.port = Host::getPort(str);
 
     int32_t oct[4];
     std::string::size_type dots[3];
@@ -78,23 +65,20 @@ bool cerberus::Host::fromString(const std::string &str)
 
     if (core::CerberusUtils::areEqual(core::CerberusUtils::toLower(ip), "any"))
     {
-        octet_networkOrder = ADDR_ANY;
-        port               = portint;
-        return true;
+        ret.octet_networkOrder = ADDR_ANY;
+        return ret;
     }
 
     if (core::CerberusUtils::areEqual(core::CerberusUtils::toLower(ip), "local"))
     {
-        octet_networkOrder = ADDR_LOOPBACK;
-        port               = portint;
-        return true;
+        ret.octet_networkOrder = ADDR_LOOPBACK;
+        return ret;
     }
 
     if (core::CerberusUtils::areEqual(core::CerberusUtils::toLower(ip), "broadcast"))
     {
-        octet_networkOrder = ADDR_BROADCAST;
-        port               = portint;
-        return true;
+        ret.octet_networkOrder = ADDR_BROADCAST;
+        return ret;
     }
 
     //
@@ -104,7 +88,7 @@ bool cerberus::Host::fromString(const std::string &str)
 
     if (oct[0] < 0 || oct[0] > 255 || sub.empty())
     {
-        return false;
+        return Host();
     }
 
     dots[1] = ip.find_first_of('.', dots[0] + 1);
@@ -113,7 +97,7 @@ bool cerberus::Host::fromString(const std::string &str)
 
     if (oct[1] < 0 || oct[1] > 255 || sub.empty())
     {
-        return false;
+        return Host();
     }
 
     dots[2] = ip.find_first_of('.', dots[1] + 1);
@@ -122,7 +106,7 @@ bool cerberus::Host::fromString(const std::string &str)
 
     if (oct[2] < 0 || oct[2] > 255 || sub.empty())
     {
-        return false;
+        return Host();
     }
 
     sub    = ip.substr(dots[2] + 1);
@@ -130,20 +114,60 @@ bool cerberus::Host::fromString(const std::string &str)
 
     if (oct[3] < 0 || oct[3] > 255 || sub.empty())
     {
-        return false;
+        return Host();
     }
 
-    octect[0] = oct[0];
-    octect[1] = oct[1];
-    octect[2] = oct[2];
-    octect[3] = oct[3];
-    port      = portint;
-    return true;
+    ret.octect[0] = oct[0];
+    ret.octect[1] = oct[1];
+    ret.octect[2] = oct[2];
+    ret.octect[3] = oct[3];
+    return ret;
+}
+//=============================================================================
+uint16_t cerberus::Host::getPort(const std::string &str)
+{
+    auto col    = str.find_last_of(':');
+    int portint = 0;
+
+    if (col != std::string::npos && col != str.size() - 1)
+    {
+        std::string portstr = str.substr(col + 1);
+        portint             = atoi(portstr.c_str());
+
+        if (portint < 0 || portint > 65535)
+        {
+            return 0;
+        }
+    }
+
+    return portint;
+}
+//=============================================================================
+bool cerberus::Host::fromString(const std::string &str)
+{
+    auto h = Host::stringToHost(str);
+
+    if (h.isValid())
+    {
+        if (h.port) port = h.port;
+        octet_networkOrder = h.octet_networkOrder;
+        return true;
+    }
+
+    return false;
 }
 //=============================================================================
 std::string cerberus::Host::toString() { return cerberus::core::CerberusUtils::strPrint("%u.%u.%u.%u:%u", octect[0], octect[1], octect[2], octect[3], port); }
 //=============================================================================
-bool cerberus::Host::isValid() { return !(octet_networkOrder == 0 && port == 0 && hostname.empty()); }
+bool cerberus::Host::isValid() { return (isNumeric() || isTextual() || hasPort()); }
+//=============================================================================
+bool cerberus::Host::isValidRemote() { return (isNumeric() || isTextual()) && hasPort(); }
+//=============================================================================
+bool cerberus::Host::isNumeric() { return octet_networkOrder != 0; }
+//=============================================================================
+bool cerberus::Host::isTextual() { return !hostname.empty(); }
+//=============================================================================
+bool cerberus::Host::hasPort() { return port != 0; }
 //=============================================================================
 cerberus::OperationResult cerberus::Host::resolve()
 {
@@ -191,7 +215,7 @@ cerberus::OperationResult cerberus::Host::resolve()
     else if (ret == EAI_SYSTEM)
     {
         debug("DNS lookup: system failure, %s [%s]", strerror(errno), hostname.c_str());
-        return OR_ResolveNotFound;
+        return OR_ResolveSystemFailure;
     }
     else
     {
@@ -202,37 +226,40 @@ cerberus::OperationResult cerberus::Host::resolve()
 //=============================================================================
 cerberus::OperationResult::OperationResult()
     : res(OR_Undefined),
-      intvalue(0)
+      i(0)
 {
 }
 //=============================================================================
 cerberus::OperationResult::OperationResult(Result r)
     : res(r),
-      intvalue(0)
+      i(0)
 {
 }
 //=============================================================================
-cerberus::OperationResult::OperationResult(bool b)
+cerberus::OperationResult::OperationResult(bool b1, bool b2, bool b3, bool b4)
     : res(OR_OK),
-      boolvalue(b)
+      b1(b1),
+      b2(b2),
+      b3(b3),
+      b4(b4)
 {
 }
 //=============================================================================
 cerberus::OperationResult::OperationResult(int64_t i)
     : res(OR_OK),
-      intvalue(i)
+      i(i)
 {
 }
 //=============================================================================
 cerberus::OperationResult::OperationResult(double f)
     : res(OR_OK),
-      floatvalue(f)
+      f(f)
 {
 }
 //=============================================================================
 cerberus::OperationResult::OperationResult(SIZE s)
     : res(OR_OK),
-      size(s)
+      sz(s)
 {
 }
 //=============================================================================
@@ -248,5 +275,65 @@ bool cerberus::OperationResult::operator!=(const OperationResult &other) { retur
 //=============================================================================
 bool cerberus::OperationResult::ok() { return (res == Result::OR_OK); }
 //=============================================================================
-bool cerberus::OperationResult::fail() { return !ok(); }
+bool cerberus::OperationResult::fail(bool printError)
+{
+    if (!ok())
+    {
+        if (printError)
+        {
+            logError("Operation result failed: %s", errorString().c_str());
+        }
+
+        return true;
+    }
+
+    return false;
+}
+//=============================================================================
+std::string cerberus::OperationResult::errorString()
+{
+    switch (res)
+    {
+        case OR_Undefined:
+            return "Undefined";
+        case OR_OK:
+            return "OK";
+        case OR_Failure:
+            return "Generic failure";
+        case OR_FailedInstance:
+            return "Operation was requested on a failed instance";
+        case OR_WouldBlock:
+            return "Operation would block";
+        case OR_TimedOut:
+            return "Operation Timeout";
+        case OR_Unavailable:
+            return "Requested operation is not available on this instance";
+        case OR_WrongArgument:
+            return "Wrong argument/s";
+        case OR_InvalidPath:
+            return "Path is invalid";
+        case OR_SystemFailure:
+            return "A system error occurred";
+        case OR_BadConditions:
+            return "Operation cannot be executed due to bad conditions";
+        case OR_ResolveServerTempFailure:
+            return "The name server returned a temporary failure indication";
+        case OR_ResolveServerFailure:
+            return "he name server returned a permanent failure indication";
+        case OR_ResolveNoData:
+            return "The specified network host exists, but does not have any network addresses defined";
+        case OR_ResolveNotFound:
+            return "The node or service is not known";
+        case OR_ResolveSystemFailure:
+            return "System error";
+        case OR_ResolveFailure:
+            return "Generic resolve failure";
+        case OR_RecvZero:
+            return "Zero was received";
+        case OR_Hangup:
+            return "Hangup";
+    }
+
+    return "Undefined";
+}
 //=============================================================================

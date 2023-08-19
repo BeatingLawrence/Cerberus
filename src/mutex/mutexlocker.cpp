@@ -3,14 +3,17 @@
 using namespace cerberus::mutex;
 
 //============================================================================
-MutexLocker::MutexLocker(Mutex* mutex):
-    m_mutex(mutex)
+MutexLocker::MutexLocker(Mutex* mutex)
+    : m_mutex(mutex)
 {
-    mutex->lock();
+    m_mutex->lock();
 }
 //============================================================================
-MutexLocker::~MutexLocker()
+MutexLocker::MutexLocker(Mutex& mutex)
+    : m_mutex(&mutex)
 {
-    m_mutex->unlock();
+    m_mutex->lock();
 }
+//============================================================================
+MutexLocker::~MutexLocker() { m_mutex->unlock(); }
 //============================================================================

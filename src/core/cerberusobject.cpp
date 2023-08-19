@@ -45,9 +45,6 @@ std::string CerberusObject::toStr(const CerberusObject& obj)
         case Socket_WEB:
             ret.append(" WEB");
             break;
-        case Socket_FTP:
-            ret.append(" FTP");
-            break;
         case Socket_ICMP:
             ret.append(" ICMP");
             break;
