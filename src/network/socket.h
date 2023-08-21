@@ -1,14 +1,14 @@
-#ifndef CERBERUS_SOCKET_SOCKET_H
-#define CERBERUS_SOCKET_SOCKET_H
+#ifndef CERBERUS_NETWORK_SOCKET_H
+#define CERBERUS_NETWORK_SOCKET_H
 
 #include "../types.h"
 #include "src/core/cerberusobject.h"
 #include "src/data/bytebuffer.h"
 #include "src/time/time.h"
 
-#define UDPSocket(namestr) cerberus::socket::Socket(cerberus::CerberusObject::Socket_UDP, namestr)
-#define TCPSocket(namestr) cerberus::socket::Socket(cerberus::CerberusObject::Socket_TCP, namestr)
-#define TCPP2PSocket(namestr) cerberus::socket::Socket(cerberus::CerberusObject::Socket_TCPP2P, namestr)
+#define UDPSocket(namestr) cerberus::network::Socket(cerberus::CerberusObject::Socket_UDP, namestr)
+#define TCPSocket(namestr) cerberus::network::Socket(cerberus::CerberusObject::Socket_TCP, namestr)
+#define TCPP2PSocket(namestr) cerberus::network::Socket(cerberus::CerberusObject::Socket_TCPP2P, namestr)
 
 // A socket capable of great things!
 
@@ -29,7 +29,7 @@ namespace cerberus
         }
     }  // namespace data
 
-    namespace socket
+    namespace network
     {
         class Socket : public CerberusObject
         {
@@ -94,14 +94,15 @@ namespace cerberus
             // Send out a buffer
             OperationResult send(const data::ByteBuffer& buffer, bool donotblock = false);
 
-            // Try to receive a buffer for a timeout time. If timeout is invalid, the call will never block
-            OperationResult recv(data::ByteBuffer& buffer, const time::Time& timeout);
-
-            // Receive a buffer. This call will always block if necessary
+            // Wait for data to arrive then receive and store them in the buffer.
             // The returned amount of data may be greater than the internal buffer size, since this method
             // actually calls the system recv() more times until no more data are present, and merges the buffers together.
-            // This method returns only in case of hangup or error
-            OperationResult recvAll(data::ByteBuffer& buffer);
+            // - If timeout is invalid, the call acts as a non-blocking call and will return data, or OR_WouldBlock if the operation would block.
+            // - If timeout is a valid timeout, the call waits for data for at most timeout time, then starts receiving data,
+            //   and then waits for new data become available or for timeout again. If the timeout is reached, and the call was able to receive
+            //   some data, this method will return OR_OK. If timeout is reached but the call was not able to get any data, it returns OR_TimedOut.
+            // - If cycTimeout is valid, the call uses timeout for the first recv(), and cycTimeout for the subsequent recv() cyclic calls
+            OperationResult recv(data::ByteBuffer& buffer, const time::Time& timeout, const time::Time& cycTimeout = time::Time());
 
             // Receive a buffer. This call will always block if necessary
             // The returned amount of data will not exceed the internal buffer size
@@ -242,7 +243,7 @@ namespace cerberus
             // and no data are ready to be received, this call blocks forever
             OperationResult recv(data::filesystem::File& file, const time::Time& timeout = time::Time());
         };
-    }  // namespace socket
+    }  // namespace network
 }  // namespace cerberus
 
-#endif  // CERBERUS_SOCKET_SOCKETBASE_H
+#endif  // CERBERUS_NETWORK_SOCKET_H

@@ -1,12 +1,12 @@
 #include <cerberus/cerberus.h>
-#include <cerberus/data/bytebuffer.h>
+#include <cerberus/data/sharedbytebuffer.h>
 #include <gtest/gtest.h>
 
-TEST(ByteBufferTest, equalityOperator)
+TEST(SharedByteBufferTest, equalityOperator)
 {
     // test the equality operator
-    cerberus::data::ByteBuffer b1("Hello, World!");
-    cerberus::data::ByteBuffer b2("Hello, World!");
+    cerberus::data::SharedByteBuffer b1("Hello, World!");
+    cerberus::data::SharedByteBuffer b2("Hello, World!");
 
     ASSERT_TRUE(b1 == b2);
     ASSERT_FALSE(b1 != b2);
@@ -17,14 +17,14 @@ TEST(ByteBufferTest, equalityOperator)
     ASSERT_FALSE(b1 == b2);
 }
 
-TEST(ByteBufferTest, COW)
+TEST(SharedByteBufferTest, COW)
 {
     // test the main feature of the ByteBuffer class
 
-    cerberus::data::ByteBuffer b1("Hello, World!");
+    cerberus::data::SharedByteBuffer b1("Hello, World!");
     EXPECT_EQ(b1.instances(), 1);
 
-    cerberus::data::ByteBuffer b2(b1);  // copy construct, the buffer is the same
+    cerberus::data::SharedByteBuffer b2(b1);  // copy construct, the buffer is the same
 
     EXPECT_EQ(b1.instances(), 2);
     EXPECT_EQ(b2.instances(), 2);
@@ -46,9 +46,9 @@ TEST(ByteBufferTest, COW)
     EXPECT_TRUE(b2 == "Hello, World! HEHE...");
 }
 
-TEST(ByteBufferTest, SubBuffer)
+TEST(SharedByteBufferTest, SubBuffer)
 {
-    cerberus::data::ByteBuffer b1("Hello, World!");
+    cerberus::data::SharedByteBuffer b1("Hello, World!");
 
     auto b2 = b1.subBuffer(7, 5);
 

@@ -19,9 +19,12 @@ file(GLOB_RECURSE test_files CONFIGURE_DEPENDS
     "test/*"
 )
 
-add_library(Cerberus SHARED  
+add_library(Cerberus SHARED
   ${src_files}
   ${header_files}
+  src/network/httpclient.h src/network/httpclient.cpp
+  src/data/httpdata.h src/data/httpdata.cpp
+  src/data/bytebuffer.h src/data/bytebuffer.cpp
 )
 
 add_executable(test EXCLUDE_FROM_ALL
@@ -88,7 +91,7 @@ else()
         "/usr/include"
     )
 
-    if(NOT EXISTS "../Dist/lib/libCerberus-d.so")
+if(NOT EXISTS "../Dist/lib/libCerberus-d.so")
         message(STATUS "Cerberus debug library NOT found!")
     endif()
 
@@ -111,6 +114,6 @@ endif(MSVC)
 
 target_link_directories(test PUBLIC "../Dist/lib")
 
-target_link_libraries(test LINK_PUBLIC Cerberus)
+target_link_libraries(test LINK_PUBLIC Cerberus-d)
 target_link_libraries(test LINK_PUBLIC ${GTEST_LIBRARY})
 target_link_libraries(test LINK_PUBLIC ${GTEST_MAIN_LIBRARY})

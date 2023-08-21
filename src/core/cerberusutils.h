@@ -9,9 +9,8 @@
  *  This class contains static methods only
  */
 
-#include <string>
-
 #include "../Cerberus_global.h"
+#include "src/types.h"
 
 namespace cerberus
 {
@@ -52,7 +51,7 @@ namespace cerberus
             static std::string environmentVariable(const std::string& variableName);
 
             // Converts a given string to an int
-            static int stringToInt(const std::string& str);
+            static int stringToInt(const std::string& str, Radix r = Radix::Decimal);
 
             // Tells if the string contains at least one alphabet character [a-z][A-Z]
             static bool isAlpha(const std::string& str);
@@ -68,6 +67,15 @@ namespace cerberus
 
             // Check if str1 ends with c char
             static bool endsWith(const std::string& str, char c);
+
+            // Replace all the occurrences of find in str with replace
+            static void replaceAll(std::string& str, const std::string& find, const std::string& replace);
+
+            // Normalize the given string. After the normalization the string will contain pure text
+            // and will be printable on a terminal or a text file safely.
+            // line-terminating characters are replaced with \n or \r\n
+            // other non-textual characters are replaced with #
+            static void normalize(std::string& str);
         };
     }  // namespace core
 }  // namespace cerberus

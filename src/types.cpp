@@ -6,6 +6,7 @@
 
 #include "./core/cerberusutils.h"
 #include "src/core/cerberuslog.h"
+#include "src/exception/exceptioncatalog.h"
 
 #ifdef WINDOWS_SYSTEM
 // define constants here
@@ -332,8 +333,9 @@ std::string cerberus::OperationResult::errorString()
             return "Zero was received";
         case OR_Hangup:
             return "Hangup";
+        case OR_NotFound:
+            return "Not found";
     }
 
     return "Undefined";
 }
-//=============================================================================

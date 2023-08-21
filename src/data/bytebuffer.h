@@ -1,64 +1,29 @@
 #ifndef CERBERUS_DATA_BYTEBUFFER_H
 #define CERBERUS_DATA_BYTEBUFFER_H
 
-#include <cstdint>
-
 #include "../Cerberus_global.h"
 #include "src/types.h"
 
-/* This is the ByteBuffer class, a smart way to share data between threads
- *
- *
- * The ByteBuffer is a contiguos buffer with support for multi-threading.
- * It allocates the requested size buffer with no reserved space
- * (exactly the request amount will be allocated in the heap).
- *
- * The implementation follows the copy-on-write concept:
- *      When a ByteBuffer is copy-constructed (e.g. passed as parameter of a function)
- *      its buffer is not immediately deep-copied. Instead, just a reference to the heap
- *      allocated memory is shared, and an instance counter is incremented.
- *
- *      When the calling thread performs a read call, the shared buffer is being accessed.
- *
- *      When the calling thread performs a write call, the ownership is forced, so the
- *      memory is deep-copied first, and then modified.
- *
- *      This mechanism makes the read-only instances copies more
- *      efficient, expecially when the buffer is large.
- *
- *
- *      The calls marked with the [OWN] tag are those who forcefully deep-copy the buffer before use it.
- *      Please note that if the owner instance is destroyed, the buffer is marked as 'not owned', and
- *      after that, any instance that refers to that buffer will TRY to own the buffer at any call, even read ones.
- *
- *
- *      [OWN]: Please note that this method will force this instance to be the owner of the buffer,
- *             thus, the buffer will be deep-copied if necessary
- */
-
 namespace cerberus
 {
-    namespace mutex
-    {
-        class Mutex;
-    }
     namespace data
     {
+        class SharedByteBuffer;
+
         class CERBERUS_EXPORT ByteBuffer
         {
-           private:
-            mutable uint8_t* m_bytes;       // heap
-            mutable uint32_t* m_instances;  // heap
-            mutable mutex::Mutex* m_mutex;  // heap
-            mutable SIZE* m_size;           // heap
-            mutable bool* m_hasOwner;       // heap
-            mutable bool m_owner;
+            friend class cerberus::data::SharedByteBuffer;
 
-            void becomeOwner(bool force = false) const;
+           private:
+            BYTE* m_bytes;  // heap
+            SIZE m_size;
+            mutable SIZE m_pos;
 
             void _resize(SIZE size);
 
             void _clear();
+
+            ByteBuffer(BYTE* buf, SIZE size);
 
            public:
             // Construct a ByteBuffer allocating size bytes. The buffer is not initialized and may contain garbage
@@ -82,81 +47,129 @@ namespace cerberus
             // Destroy the ByteBuffer instance and deallocate the memory ONLY if not used by another ByteBuffer
             virtual ~ByteBuffer();
 
-            // Obtain the main pointer of the buffer. [OWN]
-            unsigned char* data();
+            // Obtain the main pointer of the buffer.
+            BYTE* data();
 
             // Obtain the main pointer of the buffer (const version).
-            const unsigned char* data() const;
+            const BYTE* data() const;
 
             // Obtain a single element by value.
             // An exception will be thrown if index >= size()
-            unsigned char operator[](SIZE index);
+            BYTE at(SIZE index) const;
 
-            // Append len bytes read from the given buffer to this ByteBuffer. [OWN]
-            void appendFrom(const char* buffer, SIZE len);
+            // Obtain a single element by value.
+            // An exception will be thrown if index >= size()
+            BYTE operator[](SIZE index) const;
 
-            // Assigns the content of the given buffer to this ByteBuffer. Existing content will be discarded. [OWN]
-            void assignFrom(const char* buffer, SIZE len);
+            // Append len bytes read from the given buffer to this ByteBuffer.
+            void appendFrom(const BYTE* buffer, SIZE len);
+
+            // Assigns the content of the given buffer to this ByteBuffer. Existing content will be discarded.
+            void assignFrom(const BYTE* buffer, SIZE len);
 
             // Copy the content of this ByteBuffer to the given buffer. No more than maxLen bytes will be copied.
             // If maxLen is 0, all the content of this ByteBuffer will be copied
-            void copyTo(char* buffer, SIZE maxLen = 0);
+            void copyTo(BYTE* buffer, SIZE maxLen = 0) const;
 
             // Checks if this ByteBuffer instance is equal to other
-            bool operator==(const ByteBuffer& other);
+            bool operator==(const ByteBuffer& other) const;
 
             // Checks if this ByteBuffer instance is different from other
-            bool operator!=(const ByteBuffer& other);
+            bool operator!=(const ByteBuffer& other) const;
 
-            // Append the given ByteBuffer to the buffer. [OWN]
+            // Append the given ByteBuffer to the buffer.
             void operator+=(const ByteBuffer& other);
 
-            // Append the given char to the buffer. [OWN]
-            void operator+=(unsigned char c);
+            // Append the given char to the buffer.
+            void operator+=(char c);
 
-            // Assign another ByteBuffer value to this instance, the memory is deep-copied. [OWN]
+            // Assign another ByteBuffer value to this instance, the memory is deep-copied.
             ByteBuffer& operator=(const ByteBuffer& other);
 
             // Assign the c-string str value to this buffer.
-            // After this call the size will be equal to the size of the given string. [OWN]
+            // After this call the size will be equal to the size of the given string.
             ByteBuffer& operator=(const char* str);
 
             // Obtain another ByteBuffer instance that contains len bytes copied from position pos
-            ByteBuffer subBuffer(SIZE pos, SIZE len);
+            // If the pos is greater than or equal to the size, this call will return an empty buffer.
+            // If specified len is too large, the operation will copy the buffer till the end.
+            ByteBuffer subBuffer(SIZE pos, SIZE len) const;
+
+            // Obtain another ByteBuffer instance that contains bytes copied from position pos till the end of the buffer
+            // If the pos is greater than or equal to the size, this call will return an empty buffer.
+            ByteBuffer subBuffer(SIZE pos) const;
+
+            // Obtain another ByteBuffer instance that contains len bytes copied from current cursor position.
+            // The cursor position is incremented by len.
+            // If specified len is too large, the operation will copy the buffer till the end.
+            // If the current cursor position is at the end, this call will return an empty buffer.
+            ByteBuffer subBuffer_seek(SIZE len) const;
 
             // Append the given c-string str to the end of this buffer.
-            // The string must end with a \0, that will NOT be appended. [OWN]
+            // The string must end with a \0, that will NOT be appended.
             void appendString(const char* str);
+
+            // Appens the given char to the end of this buffer.
+            // The size will be incremented by one.
+            void appendChar(char c);
 
             // Get the current buffer size
             SIZE size() const;
 
             // Change the size of the ByteBuffer.
-            // If the new size is less than the current one, data loss may take place. [OWN]
+            // If the new size is less than the current one, data loss may take place.
             void resize(SIZE size);
 
-            // Assign first len bytes of another ByteBuffer value to this instance, the memory is deep-copied. [OWN]
+            // Assign first len bytes of another ByteBuffer value to this instance, the memory is deep-copied.
             // If len is 0, all the buffer is assigned
-            void assign(const ByteBuffer& buffer, SIZE len = 0);
+            void assign(const ByteBuffer& other, SIZE len = 0);
 
             // Assign the c-string str value to this buffer.
-            // After this call the size will be equal to the size of the given string. [OWN]
+            // After this call the size will be equal to the size of the given string.
             void assign(const char* str);
 
-            // Append other buffer to this buffer. [OWN]
+            // Append other buffer to this buffer.
             void append(const ByteBuffer& other);
 
-            // Clear this buffer completely, deallocating all the memory. [OWN]
+            // Clear this buffer completely, deallocating all the memory.
             void clear();
 
             // Check if the instance is valid
-            bool isValid();
+            bool isValid() const;
 
-            // Become the owner of the buffer, effectively deep-copying it if necessary
-            void appropriate();
+            // Return true if the content of this buffer matches against the content of other buffer
+            bool isEqual(const ByteBuffer& other) const;
 
-            // Get the number of instances which refer to this buffer
-            uint32_t instances();
+            // Return the buffer content as a string
+            std::string toString() const;
+
+            // Return the buffer content as a normalized string (it contains alpha-numeric,
+            // symbols, and cr lf and crlf are substituted by "\r" "\n" and "\r\n")
+            std::string toNormalizedString() const;
+
+            // Search a sequence of chars and return its position in the size field.
+            // If the given string is empty or if its size is larger than the buffer size,
+            // this method returns OR_WrongArgument.
+            // If str is not contained inside the buffer, this method returns OR_NotFound
+            OperationResult search(const char* str) const;
+
+            // Return data until one of the following sequences is found:
+            // { "\n", "\r\n"}
+            // The sequence is not inserted in the returned string
+            std::string getLine() const;
+
+            // Seek to the position pos
+            void seek(SIZE pos) const;
+
+            // Return the current cursor position
+            SIZE pos() const;
+
+            // Seek to zero if end == false,
+            // Seek to the last byte if end == true
+            void resetCursor(bool end = false) const;
+
+            // Tell if the cursor is at the end (no more data can be read)
+            bool end() const;
         };
     }  // namespace data
 }  // namespace cerberus

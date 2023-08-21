@@ -1,9 +1,8 @@
 #include <cerberus/cerberus.h>
-#include <cerberus/socket/socket.h>
+#include <cerberus/network/httpclient.h>
+#include <cerberus/network/socket.h>
+#include <cerberus/thread/thread.h>
 #include <gtest/gtest.h>
-
-#include "cerberus/thread/thread.h"
-#include "src/data/bytebuffer.h"
 
 #define THREAD_ERROR 1
 #define THREAD_SUCCESS 304050
@@ -245,14 +244,14 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
                         "Accept-Language: en-US,en;q=0.5\r\n"
                         "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0\r\n"
                         "Accept: text/html\r\n"
-                        "Connection: close\r\n"
+                        "Connection: keep-alive\r\n"
                         "Cache-Control: max-age=0\r\n\r\n")
                   .res,
               cerberus::OR_OK);
     cerberus::data::ByteBuffer buf;
     socket.setRecvBufferSize(8192);
     debug("receiving");
-    auto r = socket.recvAll(buf).res;
+    auto r = socket.recv(buf, 500, 200).res;
 
     debug("Checking shutdown state");
 
@@ -268,7 +267,7 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
         debug("SHUTDOWN RECEIVED");
     }
 
-    EXPECT_TRUE((r == cerberus::OR_OK) || (r == cerberus::OR_TimedOut));
+    EXPECT_EQ(r, cerberus::OR_OK);
 
     socket.close();
 
@@ -277,4 +276,42 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
     f.open();
     f.write(buf);
     f.close();
+}
+
+TEST(socketTest, HTTPClient)
+{
+    cerberus::network::HTTPClient client("HTTP Client test");
+    client.useTLS();
+    cerberus::Host h("www.google.com");
+    h.port = 443;
+    EXPECT_EQ(client.connectTo(h).res, cerberus::OR_OK);
+    debug("connected");
+    cerberus::data::HTTPData data;
+    data.setRequest({cerberus::data::HM_GET, "/", cerberus::data::HV_1_1});
+    data.addHeaderField("Host", "www.google.com");
+    data.addHeaderField("Accept-Language", "en-US,en;q=0.5");
+    data.addHeaderField("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0");
+    data.addHeaderField("Accept", "text/html");
+    data.addHeaderField("Connection", "keep-alive");
+    data.addHeaderField("Cache-Control", "max-age=0");
+    EXPECT_FALSE(client.makeRequest(data).fail(true));
+    debug("request sent");
+    data.clear();
+    EXPECT_FALSE(client.getResponse(data, 1000).fail(true));
+
+    EXPECT_EQ(data.getStatus().statusCode, 200);  // 200 OK
+
+    debug("received header:");
+    for (int i = 0; i < data.getHeaderSize(); i++)
+    {
+        debug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
+    }
+
+    // save the payload in a file
+    cerberus::data::filesystem::File f("received_payload.txt", cerberus::FOM_ReadWriteTrunc);
+    f.open();
+    f.write(data.getPayload());
+    f.close();
+
+    debug("payload written on disk");
 }

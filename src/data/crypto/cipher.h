@@ -12,7 +12,7 @@ namespace cerberus
 {
     namespace data
     {
-        class ByteBuffer;
+    class SharedByteBuffer;
 
         namespace crypto
         {
@@ -31,13 +31,13 @@ namespace cerberus
 
                     //Computes the SHA256 digest of the input buffer and puts the result in
                     //the output buffer which is automatically allocated (32bytes).
-                    void computeDigest_SHA256(const ByteBuffer& input, ByteBuffer& digest);
+                    void computeDigest_SHA256(const SharedByteBuffer& input, SharedByteBuffer& digest);
 
                     //Crypts the input buffer and puts the result in output buffer which is automatically allocated (with padding).
-                    void encryptData_AES256(const ByteBuffer& input, const ByteBuffer& key, ByteBuffer& crypted);
+                    void encryptData_AES256(const SharedByteBuffer& input, const SharedByteBuffer& key, SharedByteBuffer& crypted);
 
                     //Decrypts the input buffer and puts the result in output buffer which is automatically allocated.
-                    void decryptData_AES256(const ByteBuffer& input, const ByteBuffer& key, ByteBuffer& decrypted);
+                    void decryptData_AES256(const SharedByteBuffer& input, const SharedByteBuffer& key, SharedByteBuffer& decrypted);
             };
         }
     }

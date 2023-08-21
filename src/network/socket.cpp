@@ -11,7 +11,6 @@
 #include <unistd.h>
 
 #include "src/core/cerberuslog.h"
-#include "src/data/bytebuffer.h"
 #include "src/data/filesystem/file.h"
 #include "src/exception/exceptioncatalog.h"
 #include "src/time/timer.h"
@@ -20,7 +19,7 @@
 #define DEFAULT_MAX_CONNECTIONS 15
 
 //=============================================================================
-cerberus::socket::Socket::Socket(SocketType type, int fd, SSL_CTX *ctx)
+cerberus::network::Socket::Socket(SocketType type, int fd, SSL_CTX *ctx)
     : CerberusObject(type),
       m_extern(true),
       m_maxConnections(DEFAULT_MAX_CONNECTIONS),
@@ -55,7 +54,7 @@ cerberus::socket::Socket::Socket(SocketType type, int fd, SSL_CTX *ctx)
     }
 }
 //=============================================================================
-void cerberus::socket::Socket::createUdpSocket()
+void cerberus::network::Socket::createUdpSocket()
 {
     m_fd = ::socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -65,7 +64,7 @@ void cerberus::socket::Socket::createUdpSocket()
     }
 }
 //=============================================================================
-void cerberus::socket::Socket::createTcpSocket()
+void cerberus::network::Socket::createTcpSocket()
 {
     m_fd = ::socket(AF_INET, SOCK_STREAM, 0);
 
@@ -75,7 +74,7 @@ void cerberus::socket::Socket::createTcpSocket()
     }
 }
 //=============================================================================
-cerberus::socket::Socket::TransportType cerberus::socket::Socket::transportType()
+cerberus::network::Socket::TransportType cerberus::network::Socket::transportType()
 {
     switch (socketType())
     {
@@ -100,7 +99,7 @@ cerberus::socket::Socket::TransportType cerberus::socket::Socket::transportType(
     throw cerberusImplMissExc("requested socket has not been implemented yet");
 }
 //=============================================================================
-int cerberus::socket::Socket::_accept(Host &peer)
+int cerberus::network::Socket::_accept(Host &peer)
 {
     if (m_extern)
     {
@@ -137,7 +136,7 @@ int cerberus::socket::Socket::_accept(Host &peer)
     return ret;
 }
 //=============================================================================
-void cerberus::socket::Socket::printSSLErrors()
+void cerberus::network::Socket::printSSLErrors()
 {
     char errstr[256] = {};
 
@@ -153,7 +152,7 @@ void cerberus::socket::Socket::printSSLErrors()
     }
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::_recv(data::ByteBuffer &buffer, bool donotblock)
+cerberus::OperationResult cerberus::network::Socket::_recv(data::ByteBuffer &buffer, bool donotblock)
 {
     buffer.clear();
 
@@ -212,7 +211,7 @@ cerberus::OperationResult cerberus::socket::Socket::_recv(data::ByteBuffer &buff
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::TLS_connect()
+cerberus::OperationResult cerberus::network::Socket::TLS_connect()
 {
     ERR_clear_error();
 
@@ -226,7 +225,7 @@ cerberus::OperationResult cerberus::socket::Socket::TLS_connect()
     return OR_OK;
 }
 //=============================================================================
-cerberus::socket::Socket::Socket(SocketType type, const std::string &name)
+cerberus::network::Socket::Socket(SocketType type, const std::string &name)
     : CerberusObject(type, name),
       m_extern(false),
       m_maxConnections(DEFAULT_MAX_CONNECTIONS),
@@ -254,7 +253,7 @@ cerberus::socket::Socket::Socket(SocketType type, const std::string &name)
     if (!isFailed()) debug("New %s", toObjStr().c_str());
 }
 //=============================================================================
-cerberus::socket::Socket::~Socket()
+cerberus::network::Socket::~Socket()
 {
     if (m_ssl)
     {
@@ -269,7 +268,7 @@ cerberus::socket::Socket::~Socket()
     }
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::bind(const Host &iface)
+cerberus::OperationResult cerberus::network::Socket::bind(const Host &iface)
 {
     if (isFailed())
     {
@@ -292,7 +291,7 @@ cerberus::OperationResult cerberus::socket::Socket::bind(const Host &iface)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::connect(const Host &dest)
+cerberus::OperationResult cerberus::network::Socket::connect(const Host &dest)
 {
     if (isFailed())
     {
@@ -335,7 +334,7 @@ cerberus::OperationResult cerberus::socket::Socket::connect(const Host &dest)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::send(const data::ByteBuffer &buffer, bool donotblock)
+cerberus::OperationResult cerberus::network::Socket::send(const data::ByteBuffer &buffer, bool donotblock)
 {
     if (isFailed())
     {
@@ -377,7 +376,7 @@ cerberus::OperationResult cerberus::socket::Socket::send(const data::ByteBuffer 
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::recv(data::ByteBuffer &buffer, const time::Time &timeout)
+cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buffer, const time::Time &timeout, const time::Time &cycTimeout)
 {
     if (isFailed())
     {
@@ -391,10 +390,12 @@ cerberus::OperationResult cerberus::socket::Socket::recv(data::ByteBuffer &buffe
 
     data::ByteBuffer b;
     buffer.clear();
+    bool first = true;
 
     while (true)
     {
-        auto waitRes = waitRead(timeout);
+        auto waitRes = waitRead((first || !cycTimeout.isValid()) ? timeout : cycTimeout);
+        first        = false;
 
         if (waitRes.fail())
         {
@@ -403,7 +404,10 @@ cerberus::OperationResult cerberus::socket::Socket::recv(data::ByteBuffer &buffe
 
         if (!waitRes.b1)
         {
-            return OR_TimedOut;  // timeout, no more data
+            if (buffer.size() == 0)
+                return OR_TimedOut;  // timeout, no data
+            else
+                return OR_OK;
         }
 
         auto ret = Socket::_recv(b, false).res;
@@ -415,42 +419,17 @@ cerberus::OperationResult cerberus::socket::Socket::recv(data::ByteBuffer &buffe
         else
             return ret;
     }
-
-    return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::recvAll(data::ByteBuffer &buffer)
-{
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
-
-    data::ByteBuffer b;
-    buffer.clear();
-
-    while (true)
-    {
-        auto ret = Socket::_recv(b, false).res;
-
-        if (ret == OR_OK)
-            buffer += b;
-        else if (ret == OR_RecvZero)
-            return OR_OK;
-        else
-            return ret;
-    }
-}
+cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buffer) { return _recv(buffer, false); }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::recv(data::ByteBuffer &buffer) { return _recv(buffer, false); }
+void cerberus::network::Socket::setMaxConnections(size_t maxconn) { m_maxConnections = maxconn; }
 //=============================================================================
-void cerberus::socket::Socket::setMaxConnections(size_t maxconn) { m_maxConnections = maxconn; }
+bool cerberus::network::Socket::isFailed() const { return (m_fd == -1) || (socketType() == Socket_None); }
 //=============================================================================
-bool cerberus::socket::Socket::isFailed() const { return (m_fd == -1) || (socketType() == Socket_None); }
+void cerberus::network::Socket::setRecvBufferSize(size_t size) { m_recvBuffer.resize(size); }
 //=============================================================================
-void cerberus::socket::Socket::setRecvBufferSize(size_t size) { m_recvBuffer.resize(size); }
-//=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::waitRead(const time::Time &timeout)
+cerberus::OperationResult cerberus::network::Socket::waitRead(const time::Time &timeout)
 {
     pollfd set{};
     set.fd     = m_fd;
@@ -497,7 +476,7 @@ cerberus::OperationResult cerberus::socket::Socket::waitRead(const time::Time &t
     return OR_Failure;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::waitWrite(const time::Time &timeout)
+cerberus::OperationResult cerberus::network::Socket::waitWrite(const time::Time &timeout)
 {
     pollfd set{};
     set.fd     = m_fd;
@@ -544,7 +523,7 @@ cerberus::OperationResult cerberus::socket::Socket::waitWrite(const time::Time &
     return OR_Failure;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::close()
+cerberus::OperationResult cerberus::network::Socket::close()
 {
     if (isFailed())
     {
@@ -566,9 +545,9 @@ cerberus::OperationResult cerberus::socket::Socket::close()
     return res;
 }
 //=============================================================================
-bool cerberus::socket::Socket::isTLS() { return (m_sslCtx) && (m_ssl); }
+bool cerberus::network::Socket::isTLS() { return (m_sslCtx) && (m_ssl); }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::TLS_init(const std::string &certfile, const std::string &keyfile, bool forceServer)
+cerberus::OperationResult cerberus::network::Socket::TLS_init(const std::string &certfile, const std::string &keyfile, bool forceServer)
 {
     if (isFailed())
     {
@@ -663,7 +642,7 @@ cerberus::OperationResult cerberus::socket::Socket::TLS_init(const std::string &
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::TLS_deinit()
+cerberus::OperationResult cerberus::network::Socket::TLS_deinit()
 {
     if (!isTLS()) return OR_Unavailable;
 
@@ -675,7 +654,7 @@ cerberus::OperationResult cerberus::socket::Socket::TLS_deinit()
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::TLS_shutdown()
+cerberus::OperationResult cerberus::network::Socket::TLS_shutdown()
 {
     if (!isTLS()) return OR_Unavailable;
 
@@ -702,7 +681,7 @@ cerberus::OperationResult cerberus::socket::Socket::TLS_shutdown()
     }
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::TLS_ignoreHangup(bool restrict)
+cerberus::OperationResult cerberus::network::Socket::TLS_ignoreHangup(bool restrict)
 {
     if (!isTLS()) return OR_Unavailable;
 
@@ -718,7 +697,7 @@ cerberus::OperationResult cerberus::socket::Socket::TLS_ignoreHangup(bool restri
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::TLS_getShutdown()
+cerberus::OperationResult cerberus::network::Socket::TLS_getShutdown()
 {
     if (!isTLS()) return OR_Unavailable;
 
@@ -729,7 +708,7 @@ cerberus::OperationResult cerberus::socket::Socket::TLS_getShutdown()
     return {(ret & SSL_SENT_SHUTDOWN) == SSL_SENT_SHUTDOWN, (ret & SSL_RECEIVED_SHUTDOWN) == SSL_RECEIVED_SHUTDOWN};
 }
 //=============================================================================
-std::string cerberus::socket::Socket::TLS_getProtocolName()
+std::string cerberus::network::Socket::TLS_getProtocolName()
 {
     if (isTLS())
         return SSL_get_cipher_version(m_ssl);
@@ -737,7 +716,7 @@ std::string cerberus::socket::Socket::TLS_getProtocolName()
         return "";
 }
 //=============================================================================
-std::string cerberus::socket::Socket::TLS_getCipherName()
+std::string cerberus::network::Socket::TLS_getCipherName()
 {
     if (isTLS())
         return SSL_get_cipher_name(m_ssl);
@@ -745,7 +724,7 @@ std::string cerberus::socket::Socket::TLS_getCipherName()
         return "";
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::TLS_securePeerRenegSupport()
+cerberus::OperationResult cerberus::network::Socket::TLS_securePeerRenegSupport()
 {
     if (!isTLS()) return OR_Unavailable;
 
@@ -759,7 +738,7 @@ cerberus::OperationResult cerberus::socket::Socket::TLS_securePeerRenegSupport()
     return false;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::sendTo(const data::ByteBuffer &buffer, const Host &dest, bool donotblock)
+cerberus::OperationResult cerberus::network::Socket::sendTo(const data::ByteBuffer &buffer, const Host &dest, bool donotblock)
 {
     if (isFailed())
     {
@@ -809,7 +788,7 @@ cerberus::OperationResult cerberus::socket::Socket::sendTo(const data::ByteBuffe
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::connectP2P(const Host &dest, const time::Time &timeout)
+cerberus::OperationResult cerberus::network::Socket::connectP2P(const Host &dest, const time::Time &timeout)
 {
     if (isFailed())
     {
@@ -875,13 +854,13 @@ cerberus::OperationResult cerberus::socket::Socket::connectP2P(const Host &dest,
 
     if (isTLS())  // TLS mode
     {
-        return TLS_connect();
+        return TLS_connect();  // BUG, server does not use connect
     }
 
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::listen(size_t maxconn)
+cerberus::OperationResult cerberus::network::Socket::listen(size_t maxconn)
 {
     if (isFailed())
     {
@@ -902,7 +881,7 @@ cerberus::OperationResult cerberus::socket::Socket::listen(size_t maxconn)
     return OR_OK;
 }
 //=============================================================================
-cerberus::socket::Socket cerberus::socket::Socket::accept(Host &peer)
+cerberus::network::Socket cerberus::network::Socket::accept(Host &peer)
 {
     if (isFailed() || transportType() != TCP)
     {
@@ -917,13 +896,13 @@ cerberus::socket::Socket cerberus::socket::Socket::accept(Host &peer)
         return {socketType(), fd};
 }
 //=============================================================================
-cerberus::socket::Socket cerberus::socket::Socket::accept()
+cerberus::network::Socket cerberus::network::Socket::accept()
 {
     Host peer;  // mock
     return accept(peer);
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::setCork(bool cork)
+cerberus::OperationResult cerberus::network::Socket::setCork(bool cork)
 {
     if (isFailed())
     {
@@ -946,7 +925,7 @@ cerberus::OperationResult cerberus::socket::Socket::setCork(bool cork)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::useNagle(bool use)
+cerberus::OperationResult cerberus::network::Socket::useNagle(bool use)
 {
     if (isFailed())
     {
@@ -969,7 +948,7 @@ cerberus::OperationResult cerberus::socket::Socket::useNagle(bool use)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::setTimeout(uint32_t timeout)
+cerberus::OperationResult cerberus::network::Socket::setTimeout(uint32_t timeout)
 {
     if (isFailed())
     {
@@ -992,7 +971,7 @@ cerberus::OperationResult cerberus::socket::Socket::setTimeout(uint32_t timeout)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::useKeepAlive(bool use, int maxprobes, int idleTime, int interval)
+cerberus::OperationResult cerberus::network::Socket::useKeepAlive(bool use, int maxprobes, int idleTime, int interval)
 {
     if (isFailed())
     {
@@ -1043,7 +1022,7 @@ cerberus::OperationResult cerberus::socket::Socket::useKeepAlive(bool use, int m
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::useKeepAlive(bool use)
+cerberus::OperationResult cerberus::network::Socket::useKeepAlive(bool use)
 {
     if (isFailed())
     {
@@ -1066,7 +1045,7 @@ cerberus::OperationResult cerberus::socket::Socket::useKeepAlive(bool use)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::send(const data::filesystem::File &file)  // use SSL_sendfile for TLS mode
+cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem::File &file)  // use SSL_sendfile for TLS mode
 {
     if (isFailed())
     {
@@ -1094,7 +1073,7 @@ cerberus::OperationResult cerberus::socket::Socket::send(const data::filesystem:
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::socket::Socket::recv(data::filesystem::File &file, const time::Time &timeout)
+cerberus::OperationResult cerberus::network::Socket::recv(data::filesystem::File &file, const time::Time &timeout)
 {
     if (isFailed())
     {
@@ -1111,23 +1090,9 @@ cerberus::OperationResult cerberus::socket::Socket::recv(data::filesystem::File 
 
     ret = recv(buffer, timeout);
 
-    switch (ret.res)
+    if (ret.fail())
     {
-        case OR_OK:
-            // noop
-            break;
-
-        case OR_TimedOut:
-
-            if (file.size() == 0)
-            {
-                return OR_TimedOut;
-            }
-            break;
-
-        default:
-            return ret;
-            break;
+        return ret;
     }
 
     if (!file.write(buffer))

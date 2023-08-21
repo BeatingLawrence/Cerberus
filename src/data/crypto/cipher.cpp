@@ -1,7 +1,7 @@
 #include "cipher.h"
 #include <openssl/evp.h>
 #include <openssl/ssl3.h>
-#include "../bytebuffer.h"
+#include "../sharedbytebuffer.h"
 
 using namespace cerberus::data::crypto;
 
@@ -20,7 +20,7 @@ Cipher::~Cipher()
     EVP_CIPHER_CTX_free(m_cipher_ctx);
 }
 //=============================================================================
-void Cipher::computeDigest_SHA256(const ByteBuffer& input, ByteBuffer& digest)
+void Cipher::computeDigest_SHA256(const SharedByteBuffer& input, SharedByteBuffer& digest)
 {
     unsigned int outlen = 0;
     EVP_DigestInit_ex(m_md_ctx, m_sha256, NULL);
@@ -29,7 +29,7 @@ void Cipher::computeDigest_SHA256(const ByteBuffer& input, ByteBuffer& digest)
     EVP_DigestFinal_ex(m_md_ctx, digest.data(), &outlen);
 }
 //=============================================================================
-void Cipher::encryptData_AES256(const ByteBuffer& input, const ByteBuffer& key, ByteBuffer& crypted)
+void Cipher::encryptData_AES256(const SharedByteBuffer& input, const SharedByteBuffer& key, SharedByteBuffer& crypted)
 {
     EVP_EncryptInit_ex(m_cipher_ctx, m_aes256, NULL, key.data(), NULL);
     crypted.resize(((input.size() / 16) + 1) * 16);
@@ -40,7 +40,7 @@ void Cipher::encryptData_AES256(const ByteBuffer& input, const ByteBuffer& key, 
     EVP_EncryptFinal_ex(m_cipher_ctx, &out[wrote], &wrote2);
 }
 //=============================================================================
-void Cipher::decryptData_AES256(const ByteBuffer& input, const ByteBuffer& key, ByteBuffer& decrypted)
+void Cipher::decryptData_AES256(const SharedByteBuffer& input, const SharedByteBuffer& key, SharedByteBuffer& decrypted)
 {
     EVP_DecryptInit_ex(m_cipher_ctx, m_aes256, NULL, key.data(), NULL);
     decrypted.resize(input.size());

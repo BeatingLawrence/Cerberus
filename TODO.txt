@@ -4,7 +4,7 @@ TODO list for Cerberus:
 -none
 
 [Network]
--Implement an HTTP request handler, that generates the request texts and manages the TCP socket
+-Improve the HTTPClient class
 -Implement WebSocket
 -Implement ICMP socket (or a ping functionality)
 -Implement IPC socket

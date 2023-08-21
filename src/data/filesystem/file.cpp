@@ -6,7 +6,6 @@
 #include <regex>
 
 #include "../../core/cerberusutils.h"
-#include "../bytebuffer.h"
 #include "src/core/cerberuslog.h"
 
 #ifdef WINDOWS_SYSTEM

@@ -4,24 +4,25 @@
 #include <stdio.h>
 
 #include "../../Cerberus_global.h"
+#include "src/data/bytebuffer.h"
 #include "src/types.h"
 
 namespace cerberus
 {
-    namespace socket
+    namespace network
     {
         class Socket;
     }
 
     namespace data
     {
-        class ByteBuffer;
+    class SharedByteBuffer;
 
         namespace filesystem
         {
             class CERBERUS_EXPORT File
             {
-                friend class ::cerberus::socket::Socket;
+                friend class ::cerberus::network::Socket;
 
                private:
                 std::string m_filePath;
@@ -82,17 +83,17 @@ namespace cerberus
 
                 uint64_t size() const;
 
-                bool write(const ByteBuffer& bytes);
+                bool write(const cerberus::data::ByteBuffer &bytes);
 
                 bool writeLine(const std::string& line = "");
 
                 // Read the file starting from start pos till the end of file
-                bool read(ByteBuffer& bytes, uint64_t start = 0) const;
+                bool read(ByteBuffer &bytes, uint64_t start = 0) const;
 
                 // Read span bytes from file file starting from start pos
-                bool read(ByteBuffer& bytes, uint64_t start, uint64_t span) const;
+                bool read(ByteBuffer &bytes, uint64_t start, uint64_t span) const;
 
-                bool readChunk(ByteBuffer& bytes, uint64_t chunksize) const;
+                bool readChunk(ByteBuffer &bytes, uint64_t chunksize) const;
 
                 // Read a single line till \n
                 // Return false when EOF is reached and no more lines are available

@@ -3,11 +3,20 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace cerberus
 {
     typedef uint32_t SIZE;
     typedef uint64_t LSIZE;
+    typedef uint8_t BYTE;
+
+    struct DictLine
+    {
+        std::string key, val;
+    };
+
+    typedef std::vector<DictLine> Dictionary;
 
     enum FileOpenMode
     {
@@ -16,6 +25,13 @@ namespace cerberus
         FOM_ReadWriteTrunc,   // Open the file for reading and writing; if the file exists the content is discarded, otherwise, the file is created
         FOM_ReadWriteAppend,  // Open the file for reading and writing; if the file does not esist, it is created.
                               // All the write operations happen at the end of the file
+    };
+
+    enum Radix
+    {
+        Decimal,
+        Hexadecimal,
+        Binary,
     };
 
     enum LogLevel
@@ -93,6 +109,7 @@ namespace cerberus
         OR_InvalidPath,               // [general] the file does not exist or the given path is not valid
         OR_SystemFailure,             // [general] a system error occurred
         OR_BadConditions,             // [general] bad conditions encountered when processing the operation
+        OR_NotFound,                  // [general] the item was not found
                                       //
         OR_ResolveServerTempFailure,  // [DNS lookup] resolve method error
         OR_ResolveServerFailure,      // [DNS lookup] resolve method error
@@ -229,6 +246,6 @@ namespace cerberus
         // The resulting numeric IP address is written in the ip parameter
         OperationResult resolve();
     };
-}  // namespace cerberus
 
+}  // namespace cerberus
 #endif  // TYPES_H

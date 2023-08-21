@@ -95,13 +95,13 @@ std::string CerberusUtils::environmentVariable(const std::string& variableName)
     return std::string(val);
 }
 //=============================================================================
-int CerberusUtils::stringToInt(const std::string& str)
+int CerberusUtils::stringToInt(const std::string& str, Radix r)
 {
     int ret = 0;
 
     try
     {
-        ret = std::stoi(str);
+        ret = std::stoi(str, nullptr, r == Radix::Binary ? 2 : r == Radix::Decimal ? 10 : r == Radix::Hexadecimal ? 16 : 0);
     }
     catch (...)
     {
@@ -165,5 +165,30 @@ bool CerberusUtils::endsWith(const std::string& str, char c)
 {
     if (str.empty()) return false;
     return (str.back() == c);
+}
+//=============================================================================
+void CerberusUtils::replaceAll(std::string& str, const std::string& find, const std::string& replace)
+{
+    size_t start = 0;
+
+    while ((start = str.find(find, start)) != std::string::npos)
+    {
+        str.replace(start, find.length(), replace);
+        start += replace.length();  // Handles case where 'to' is a substring of 'from'
+    }
+}
+//=============================================================================
+void CerberusUtils::normalize(std::string& str)
+{
+    core::CerberusUtils::replaceAll(str, "\r", "\\r");
+    core::CerberusUtils::replaceAll(str, "\n", "\\n\n");
+
+    for (auto&& el : str)
+    {
+        if ((el < 32 || el > 126) && el != '\n')
+        {
+            el = '#';
+        }
+    }
 }
 //=============================================================================
