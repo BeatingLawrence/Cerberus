@@ -8,6 +8,8 @@
 #include <poll.h>
 #include <src/thread/thread.h>
 #include <string.h>
+
+#include "src/time/timer.h"
 #ifdef LINUX_SYSTEM
 #include <sys/sendfile.h>
 #endif
@@ -16,7 +18,7 @@
 #include "src/core/cerberuslog.h"
 #include "src/data/filesystem/file.h"
 #include "src/exception/exceptioncatalog.h"
-#include "src/time/systimer.h"
+#include "src/time/timer.h"
 
 #define DEFAULT_RECV_BUFFER_SIZE 512
 #define DEFAULT_MAX_CONNECTIONS 15
@@ -472,12 +474,7 @@ cerberus::OperationResult cerberus::network::Socket::waitRead(const time::Time &
     set.fd     = m_fd;
     set.events = POLLIN;
 
-    auto splitted = timeout.splittedTime();
-    timespec time{};
-    time.tv_sec  = splitted.seconds;
-    time.tv_nsec = splitted.nanoseconds;
-
-    int ret = ppoll(&set, 1, &time, NULL);
+    int ret = poll(&set, 1, timeout.isValid() ? timeout.milliseconds() : -1);
 
     if (ret == 0)  // timeout
     {
@@ -519,12 +516,7 @@ cerberus::OperationResult cerberus::network::Socket::waitWrite(const time::Time 
     set.fd     = m_fd;
     set.events = POLLOUT;
 
-    auto splitted = timeout.splittedTime();
-    timespec time{};
-    time.tv_sec  = splitted.seconds;
-    time.tv_nsec = splitted.nanoseconds;
-
-    int ret = ppoll(&set, 1, &time, NULL);
+    int ret = poll(&set, 1, timeout.isValid() ? timeout.milliseconds() : -1);
 
     if (ret == 0)  // timeout
     {
@@ -959,6 +951,7 @@ cerberus::network::Socket cerberus::network::Socket::accept()
     return accept(peer);
 }
 //=============================================================================
+#ifdef LINUX_SYSTEM
 cerberus::OperationResult cerberus::network::Socket::setCork(bool cork)
 {
     if (isFailed())
@@ -981,6 +974,7 @@ cerberus::OperationResult cerberus::network::Socket::setCork(bool cork)
 
     return OR_OK;
 }
+#endif
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::useNagle(bool use)
 {
@@ -1019,7 +1013,11 @@ cerberus::OperationResult cerberus::network::Socket::setTimeout(uint32_t timeout
 
     unsigned int val = timeout;
 
+#ifdef LINUX_SYSTEM
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_USER_TIMEOUT, &val, sizeof(val)) == -1)
+#elif APPLE_SYSTEM
+    if (setsockopt(m_fd, IPPROTO_TCP, TCP_CONNECTIONTIMEOUT, &val, sizeof(val)) == -1)
+#endif
     {
         debug("error in setTimeout function: %s", strerror(errno));
         return OR_Failure;  // improve error handling
@@ -1062,7 +1060,11 @@ cerberus::OperationResult cerberus::network::Socket::useKeepAlive(bool use, int 
 
     val = idleTime;
 
+#ifdef LINUX_SYSTEM
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPIDLE, &val, sizeof(val)) == -1)
+#elif APPLE_SYSTEM
+    if (setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPALIVE, &val, sizeof(val)) == -1)
+#endif
     {
         debug("error in useKeepAlive:TCP_KEEPIDLE function: %s", strerror(errno));
         return OR_Failure;  // improve error handling
@@ -1140,8 +1142,7 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem
     do
     {
         bytes = sendfile(m_fd, file.m_fd, &offset, file.size());
-    }
-    while (bytes > 0);
+    } while (bytes > 0);
 
     if (bytes == -1)
     {
@@ -1149,14 +1150,13 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem
         return OR_Failure;
     }
 #elif APPLE_SYSTEM
-    off_t len  = 0;
+    off_t len = 0;
     int bytes = 1;
 
     do
     {
         bytes = sendfile(file.m_fd, m_fd, 0, &len, nullptr, 0);
-    }
-    while (bytes > 0);
+    } while (bytes > 0);
 
     if (bytes == -1)
     {

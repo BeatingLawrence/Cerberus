@@ -1,15 +1,14 @@
 #include "exception.h"
+
 #include "../core/cerberusutils.h"
 
 using namespace cerberus::exception;
 
 //=============================================================================
-Exception::Exception() noexcept
-{
-    m_error = "Unspecified exception";
-}
+Exception::Exception() noexcept { m_error = "Unspecified exception"; }
 //=============================================================================
-Exception::Exception(const Exception& other) noexcept : m_error(other.m_error)
+Exception::Exception(const Exception& other) noexcept
+    : m_error(other.m_error)
 {
     // noop
 }
@@ -19,14 +18,14 @@ Exception::Exception(const char* text, uint32_t line, const char* fileName, Exce
     std::string file(fileName);
     size_t slashPos = file.find_last_of("/\\");
 
-    if(slashPos == std::string::npos)
+    if (slashPos == std::string::npos)
     {
         slashPos = 0;
     }
 
     file = file.substr(++slashPos);
 
-    switch(type)
+    switch (type)
     {
         case ET_Unknown:
             m_error = core::CerberusUtils::strPrint("Unknown exception in %s:%u, %s", file.c_str(), line, text);
@@ -47,6 +46,9 @@ Exception::Exception(const char* text, uint32_t line, const char* fileName, Exce
         case ET_MissingImplementation:
             m_error = core::CerberusUtils::strPrint("Missing implementation exception in %s:%u, %s", file.c_str(), line, text);
             break;
+        case ET_InvalidCast:
+            m_error = core::CerberusUtils::strPrint("Invalid cast exception in %s:%u, %s", file.c_str(), line, text);
+            break;
     }
 }
 //=============================================================================
@@ -61,8 +63,5 @@ Exception::~Exception()
     // noop
 }
 //=============================================================================
-const char* Exception::what() const noexcept
-{
-    return m_error.c_str();
-}
+const char* Exception::what() const noexcept { return m_error.c_str(); }
 //=============================================================================

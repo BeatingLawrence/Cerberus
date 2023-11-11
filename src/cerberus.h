@@ -6,9 +6,14 @@
 
 namespace cerberus
 {
+    namespace time
+    {
+        class Timer;
+    }
     class CERBERUS_EXPORT Cerberus : public core::CerberusCore
     {
         friend class ::cerberus::CerberusObject;
+        friend class ::cerberus::time::Timer;
 
        private:
         Cerberus();

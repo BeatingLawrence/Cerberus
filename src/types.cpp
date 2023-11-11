@@ -334,6 +334,13 @@ std::string cerberus::OperationResult::errorString()
             return "Not found";
         case OR_TemporaryUnavailable:
             return "Temporary unavailable";
+        case OR_QueryFailure:
+            return "Query failure";
+        case OR_DBFailure:
+            return "Database failure";
+        case OR_TableAlreadyPresent:
+            return "Table already present";
+            break;
     }
 
     return "Undefined";

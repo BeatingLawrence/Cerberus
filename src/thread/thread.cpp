@@ -104,7 +104,7 @@ void cerberus::thread::Thread::sleep(const time::Time& time)
     nanosleep(&t, NULL);
 }
 //=============================================================================
-cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity periodicity, const time::Time& time)
+cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const time::Time& time, const std::string& name)
     : ThreadBase(periodicity),
       CerberusObject(CerberusObject::ObjectType::Thread, name),
       m_pthread(),

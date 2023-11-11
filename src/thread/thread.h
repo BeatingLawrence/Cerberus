@@ -94,7 +94,7 @@ namespace cerberus
 
            public:
             // Construct a non-periodic thread by default. If periodicity is TP_Periodic a valid time must be specified.
-            Thread(const std::string& name = "", ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& time = time::Time());
+            Thread(ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& time = time::Time(), const std::string& name = "");
 
             Thread(const Thread& other) = delete;
 

@@ -11,6 +11,8 @@ namespace cerberus
     typedef uint64_t LSIZE;
     typedef uint8_t BYTE;
 
+    typedef void (*timerCallback)();
+
     struct DictLine
     {
         std::string key, val;

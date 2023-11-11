@@ -9,6 +9,7 @@
  */
 
 #include "../data/filesystem/file.h"
+#include "src/core/fastloop.h"
 #include "src/thread/thread.h"
 
 namespace cerberus
@@ -31,6 +32,8 @@ namespace cerberus
             void _writeLineOnFile(const std::string& line);
 
            public:
+            FastLoop m_fastLoop;
+
             CerberusCore();
 
             virtual ~CerberusCore();

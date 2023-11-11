@@ -8,7 +8,8 @@
 
 #include <atomic>
 
-#include "time.h"
+#include "src/time/time.h"
+#include "src/types.h"
 
 namespace cerberus
 {
@@ -17,8 +18,6 @@ namespace cerberus
         class SysTimer
         {
            private:
-            typedef void (*timerCallback)();
-
             timerCallback m_callback;
 
             static void defaultTimeoutCallback();
