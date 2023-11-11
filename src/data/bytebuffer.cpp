@@ -412,7 +412,7 @@ cerberus::OperationResult ByteBuffer::search(const char* str) const
         {
             if (*(m_bytes + i + j) == *(str + j))
             {
-                if (j == s - 1) return SIZE(i);
+                if (j == s - 1) return int64_t(i);
             }
             else
                 break;

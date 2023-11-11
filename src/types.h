@@ -27,6 +27,13 @@ namespace cerberus
                               // All the write operations happen at the end of the file
     };
 
+    enum StandardMessage
+    {
+        SM_LogMsg,
+        SM_TerminationMsg,
+        // add more custom messages here
+    };
+
     enum Radix
     {
         Decimal,
@@ -110,6 +117,7 @@ namespace cerberus
         OR_SystemFailure,             // [general] a system error occurred
         OR_BadConditions,             // [general] bad conditions encountered when processing the operation
         OR_NotFound,                  // [general] the item was not found
+        OR_TemporaryUnavailable,      // [general] the requested operation is not available at the moment, retry later
                                       //
         OR_ResolveServerTempFailure,  // [DNS lookup] resolve method error
         OR_ResolveServerFailure,      // [DNS lookup] resolve method error
@@ -135,16 +143,8 @@ namespace cerberus
 
         union  // save space. Access one member only
         {
-            struct
-            {
-                bool b1;
-                bool b2;
-                bool b3;
-                bool b4;
-            };
             int64_t i;
             double f;
-            SIZE sz;
         };
 
         std::string str;
@@ -153,13 +153,9 @@ namespace cerberus
 
         OperationResult(Result r);  // construct defined result
 
-        OperationResult(bool b1, bool b2 = false, bool b3 = false, bool b4 = false);
-
         OperationResult(int64_t i);
 
         OperationResult(double f);
-
-        OperationResult(SIZE s);
 
         OperationResult(const std::string& str);
 
@@ -168,7 +164,7 @@ namespace cerberus
         bool operator!=(const OperationResult& other);
 
         // Return true if the Result is OR_OK, false otherwise
-        bool ok();
+        bool ok(bool printError = false);
 
         // The opposite of ok(). This method can print the error
         // with logError() internally, if printError is true and ok() is false

@@ -2,7 +2,6 @@
 
 #include "../../core/cerberusutils.h"
 #include "../../types.h"
-#include "src/core/cerberuslog.h"
 
 using namespace cerberus::data::filesystem;
 
@@ -510,6 +509,6 @@ cerberus::OperationResult IniDataFile::read_bool(const std::string& key, const s
         return OR_WrongArgument;
     }
 
-    return found->boolValue;
+    return (int64_t)(found->boolValue);
 }
 //=============================================================================

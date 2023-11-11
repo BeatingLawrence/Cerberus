@@ -1,8 +1,9 @@
-#include <gtest/gtest.h>
 #include <cerberus/cerberus.h>
-#include <cerberus/message/slot/charslot.h>
-#include <cerberus/message/messagetemplate.h>
 #include <cerberus/core/cerberusfactory.h>
+#include <cerberus/core/cerberusregister.h>
+#include <cerberus/message/messagetemplate.h>
+#include <cerberus/message/slot/charslot.h>
+#include <gtest/gtest.h>
 
 TEST(messageFactoryTest, registering_message)
 {
@@ -15,16 +16,16 @@ TEST(messageFactoryTest, registering_message)
 
 TEST(messageFactoryTest, probing_message)
 {
-    uint32_t typeID = cerberus::core::CerberusFactory::messageIdByName("UNKNOWN_MESSAGE");
-    EXPECT_EQ(typeID, CERBERUS_INVALID_ID);
-    typeID = cerberus::core::CerberusFactory::messageIdByName("Test-Message");
-    EXPECT_NE(typeID, CERBERUS_INVALID_ID);
+    auto tmplt = cerberus::core::CerberusRegister::msgTemplateByName("UNKNOWN_MESSAGE");
+    EXPECT_EQ(tmplt.id(), CERBERUS_INVALID_ID);
+    EXPECT_FALSE(tmplt.isObjValid());
+    tmplt = cerberus::core::CerberusRegister::msgTemplateByName("Test-Message");
+    EXPECT_NE(tmplt.id(), CERBERUS_INVALID_ID);
+    EXPECT_TRUE(tmplt.isObjValid());
 }
 
 TEST(messageFactoryTest, constructing_message)
 {
-    cerberus::message::cerberus_message msg =
-        cerberus::core::CerberusFactory::messageConstruct(cerberus::core::CerberusFactory::messageIdByName("Test-Message"));
-    EXPECT_NE(msg, nullptr);
+    auto msg = cerberus::core::CerberusFactory::messageConstruct("Test-Message");
     EXPECT_EQ(msg->count(), 3);
 }

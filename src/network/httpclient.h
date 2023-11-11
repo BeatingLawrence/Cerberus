@@ -39,6 +39,8 @@ namespace cerberus
            public:
             HTTPClient(const std::string &name = std::string());
 
+            ~HTTPClient();
+
             // Specify wether the instance should use a TLS connection or not
             void useTLS(bool use = true, const std::string &certfile = std::string(), const std::string &keyfile = std::string());
 
@@ -52,7 +54,9 @@ namespace cerberus
             cerberus::OperationResult makeRequest(const data::HTTPData &data);
 
             // Block until a response is available to be read
-            cerberus::OperationResult getResponse(data::HTTPData &data, const time::Time &timeout = time::Time());
+            cerberus::OperationResult getResponse(data::HTTPData &data, const time::Time &timeout = time::Time(), const time::Time &cycTimeout = time::Time());
+
+            cerberus::network::Socket *getSocket();
         };
     }  // namespace network
 }  // namespace cerberus

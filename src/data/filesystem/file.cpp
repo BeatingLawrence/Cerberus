@@ -40,16 +40,16 @@ cerberus::OperationResult cerberus::data::filesystem::File::existsAsFile(const s
     {
         if (S_ISREG(stat_struct.st_mode))
         {
-            return true;
+            return (int64_t)1;
         }
 
-        return false;
+        return (int64_t)0;
     }
     else
     {
         if (errno == ENOENT)
         {
-            return false;
+            return (int64_t)0;
         }
         else
         {
@@ -78,16 +78,16 @@ cerberus::OperationResult cerberus::data::filesystem::File::existsAsDirectory(co
     {
         if (S_ISDIR(stat_struct.st_mode))
         {
-            return true;
+            return (int64_t)1;
         }
 
-        return false;
+        return (int64_t)0;
     }
     else
     {
         if (errno == ENOENT)
         {
-            return false;
+            return (int64_t)0;
         }
         else
         {
@@ -166,10 +166,10 @@ cerberus::OperationResult cerberus::data::filesystem::File::isEmptyDirectory(con
 
     if (n <= 2)
     {
-        return true;
+        return (int64_t)1;
     }
 
-    return false;
+    return (int64_t)0;
 #endif
 }
 //=============================================================================
@@ -185,7 +185,7 @@ cerberus::OperationResult cerberus::data::filesystem::File::sizeOf(const std::st
     if (ret == 0)
     {
         SIZE s = stat_struct.st_size;
-        return s;
+        return (int64_t)s;
     }
     else
     {

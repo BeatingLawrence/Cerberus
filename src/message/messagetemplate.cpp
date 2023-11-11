@@ -1,23 +1,23 @@
 #include "messagetemplate.h"
 
-#include "../core/cerberusutils.h"
 #include "./message.h"
-#include "src/core/cerberuslog.h"
 
 using namespace cerberus::message;
 
 //=============================================================================
+MessageTemplate::MessageTemplate()
+    : CerberusObject(CerberusObject::InvalidObject)
+{
+}
+//=============================================================================
 MessageTemplate::MessageTemplate(const std::string& name)
     : CerberusObject(CerberusObject::MessageTemplate, name)
 {
-    debug("New %s", toObjStr().c_str());
 }
 //=============================================================================
 MessageTemplate::MessageTemplate(const Message& message, const std::string& name)
     : CerberusObject(CerberusObject::MessageTemplate, name)
 {
-    debug("New Message template '%s' with ID: %u", name.c_str(), id());
-
     for (size_t i = 0; i < message.count(); i++)
     {
         m_types.push_back(message.getSlotAt(i)->type());

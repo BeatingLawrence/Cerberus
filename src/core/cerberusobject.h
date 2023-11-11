@@ -11,11 +11,19 @@
 
 namespace cerberus
 {
+    namespace core
+    {
+        class CerberusRegister;
+    }
+
     class CERBERUS_EXPORT CerberusObject
     {
+        friend class ::cerberus::core::CerberusRegister;
+
        public:
         enum ObjectType : uint8_t
         {
+            InvalidObject,
             Thread,
             MessageTemplate,
             Socket,
@@ -54,6 +62,10 @@ namespace cerberus
         CerberusObject(ObjectType type, const std::string& name = std::string());
 
         CerberusObject(SocketType type, const std::string& name = std::string());
+
+        void registerThis();
+
+        void unregisterThis();
 
        public:
         virtual ~CerberusObject();

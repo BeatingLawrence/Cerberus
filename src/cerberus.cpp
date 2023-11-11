@@ -20,20 +20,21 @@ using namespace cerberus::core;
 //=============================================================================
 Cerberus::Cerberus()
     : CerberusCore(),
-      m_initFlag(false)
+      m_initFlag(false),
+      m_mutex()
 {
     // noop
 }
 //=============================================================================
-Cerberus* Cerberus::_instance()
+Cerberus& Cerberus::instance()
 {
     static Cerberus cerberus;
-    return &cerberus;
+    return cerberus;
 }
 //=============================================================================
 Cerberus::~Cerberus()
 {
-    if (_instance()->m_initFlag)
+    if (instance().m_initFlag)
     {
         deinit();
     }
@@ -41,21 +42,21 @@ Cerberus::~Cerberus()
 //=============================================================================
 void Cerberus::init(const CerberusInitParms& parms)
 {
-    Cerberus* cerberus = _instance();
-    mutex::MutexLocker locker(&cerberus->m_mutex);
+    auto& cerberus = instance();
+    mutex::MutexLocker locker(&cerberus.m_mutex);
 
-    if (cerberus->m_initFlag)
+    if (cerberus.m_initFlag)
     {
-        debug("Cerberus already initialized, skipping init() call..");
+        logWarning("Cerberus already initialized, skipping init() call..");
         return;
     }
 
     // do the initialization:
     core::CerberusLog::_setup(parms.logSetup);
-    cerberus->setLogFileName(parms.logSetup.logFileName);
-    cerberus->start();
+    cerberus.setLogFileName(parms.logSetup.logFileName);
+    cerberus.start();
     // Do other stuff..
-    cerberus->m_initFlag = true;
+    cerberus.m_initFlag = true;
     debug("Cerberus init completed");
     //
     if (parms.useCiphers)
@@ -81,16 +82,16 @@ void Cerberus::init() { init(cerberusDefaultParms()); }
 //=============================================================================
 void Cerberus::deinit()
 {
-    Cerberus* cerberus = _instance();
-    mutex::MutexLocker locker(&cerberus->m_mutex);
+    auto& cerberus = instance();
+    mutex::MutexLocker locker(&cerberus.m_mutex);
 
-    if (cerberus->m_initFlag == false)  // double-check
+    if (cerberus.m_initFlag == false)
     {
         return;
     }
 
-    _instance()->join();
-    _instance()->m_initFlag = false;
+    instance().join(true);
+    instance().m_initFlag = false;
     logInfo("Cerberus Memory Released");
 }
 //=============================================================================
@@ -120,5 +121,5 @@ CerberusInitParms Cerberus::cerberusDefaultParms()
 //=============================================================================
 std::string Cerberus::cerberusVersion() { return CERBERUS_VERSION; }
 //=============================================================================
-void Cerberus::send(message::cerberus_message message) { _instance()->addMessage(message); }
+void Cerberus::send(message::cerberus_message message) { instance().addMessage(message); }
 //=============================================================================

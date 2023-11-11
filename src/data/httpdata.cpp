@@ -86,7 +86,7 @@ OperationResult data::HTTPData::getHeaderMatch(const std::string &key, const std
         return res;
     }
 
-    return (core::CerberusUtils::areEqual(value, res.str));
+    return (int64_t)(core::CerberusUtils::areEqual(value, res.str));
 }
 //=============================================================================
 std::string data::HTTPData::getHeaderFieldName(SIZE index) const

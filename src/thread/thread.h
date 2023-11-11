@@ -56,15 +56,6 @@ namespace cerberus
     {
         class CERBERUS_EXPORT Thread : public cerberus::thread::ThreadBase, public CerberusObject
         {
-           public:
-            enum ThreadPeriodicity
-            {
-                TP_NonPeriodic,
-                TP_Periodic,
-                TP_PeriodicQueue,
-                TP_OneShot,
-            };
-
            private:
             pthread_t m_pthread;
 
@@ -73,8 +64,6 @@ namespace cerberus
             static void* _staticThread(void* context);
 
             void _thread();
-
-            ThreadPeriodicity m_periodicity;
 
             int m_retValue;
 
@@ -105,33 +94,23 @@ namespace cerberus
 
            public:
             // Construct a non-periodic thread by default. If periodicity is TP_Periodic a valid time must be specified.
-            Thread(const std::string& name, ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& time = time::Time());
+            Thread(const std::string& name = "", ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& time = time::Time());
 
             Thread(const Thread& other) = delete;
 
             Thread(Thread&& other) = delete;
 
-            // Terminate the Thread if not already terminated, before destructing it. Could block (join)
             virtual ~Thread();
 
             // Put the calling thread in sleep state for a given time
             static void sleep(const time::Time& time);
 
-            // Start the thread execution
-            void start();
-
-            // Stop the thread execution
-            void stop();
-
             // Block until thread terminates and return the last tick() exit value.
-            // If stop is true, the Thread is also terminated.
+            // If stop is true, the Thread is also started and terminated.
             int join(bool stop = false);
 
             // Detach the Thread from the owner Thread
             void detach();
-
-            // Terminate the Thread. This operation is irreversible
-            void terminate();
 
             // Set a custom callback to be executed as tick()
             void provideTickCallback(customTickCallback callback);

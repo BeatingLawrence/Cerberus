@@ -2,6 +2,7 @@
 
 #include <cstring>
 
+#include "src/core/cerberuslog.h"
 #include "src/exception/exceptioncatalog.h"
 
 using namespace cerberus::mutex;
@@ -57,35 +58,36 @@ Mutex::~Mutex()
     pthread_mutex_destroy(&m_pmutex);
 }
 //============================================================================
-bool Mutex::lock(bool block)  // manage the EOWNERDEAD error
+bool Mutex::lock(bool block)
 {
+    int ret = 0;
+
     if (block)
-    {
-        auto ret = pthread_mutex_lock(&m_pmutex);
-
-        if (ret)
-        {
-            throw cerberusSystemExc("pthread_mutex_lock error %s", strerror(ret));
-        }
-
-        return true;
-    }
+        ret = pthread_mutex_lock(&m_pmutex);
     else
-    {
-        auto ret = pthread_mutex_trylock(&m_pmutex);
+        ret = pthread_mutex_trylock(&m_pmutex);
 
-        if (ret)
+    if (ret)
+    {
+        if (!block && ret == EBUSY)
         {
-            if (ret == EBUSY)
+            return false;
+        }
+        else if (ret == EOWNERDEAD)
+        {
+            if (pthread_mutex_consistent(&m_pmutex))
             {
-                return false;
+                throw cerberusSystemExc("pthread_mutex_consistent error %s", strerror(ret));
             }
 
-            throw cerberusSystemExc("pthread_mutex_trylock error %s", strerror(ret));
+            logWarning("Mutex has been recovered from inconsistent state");
+            return true;
         }
 
-        return true;
+        throw cerberusSystemExc("pthread_mutex_%s error %s", block ? "lock" : "trylock", strerror(ret));
     }
+
+    return true;
 }
 //=============================================================================
 void Mutex::unlock()

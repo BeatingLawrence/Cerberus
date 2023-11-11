@@ -9,11 +9,12 @@ using namespace cerberus::thread;
 using namespace cerberus::mutex;
 
 //=============================================================================
-ThreadBase::ThreadBase()
+ThreadBase::ThreadBase(ThreadPeriodicity periodicity)
     : m_mutex(),
       m_cond(),
       m_pausedFlag(true),
-      m_terminateFlag(false)
+      m_terminateFlag(false),
+      m_periodicity(periodicity)
 {
     pthread_condattr_t attr{};
 
@@ -38,40 +39,23 @@ ThreadBase::~ThreadBase() { pthread_cond_destroy(&m_cond); }
 //=============================================================================
 void ThreadBase::setPausedFlag(bool state)
 {
-    MutexLocker locker(&m_mutex);
-
-    if (m_pausedFlag && !state)  // from paused to running
-    {
-        int ret = pthread_cond_signal(&m_cond);
-
-        if (ret)
-        {
-            throw cerberusSystemExc("pthread_cond_wait error %s", strerror(ret));
-        }
-    }
-
     m_pausedFlag = state;
-}
-//=============================================================================
-void ThreadBase::setTerminateFlag(bool state)
-{
-    MutexLocker locker(&m_mutex);
-    m_terminateFlag = state;
-}
-//=============================================================================
-bool ThreadBase::getPausedFlag()
-{
-    MutexLocker locker(&m_mutex);
-    return m_pausedFlag;
+
+    int ret = pthread_cond_signal(&m_cond);
+
+    if (ret)
+    {
+        throw cerberusSystemExc("pthread_cond_signal error %s", strerror(ret));
+    }
 }
 //=============================================================================
 void ThreadBase::pause()
 {
     MutexLocker locker(&m_mutex);
 
-    if (m_pausedFlag)
+    while (m_pausedFlag)
     {
-        int ret = pthread_cond_wait(&m_cond, &m_mutex.m_pmutex);
+        int ret = pthread_cond_wait(&m_cond, &m_mutex.m_pmutex);  // this call internally unlocks the mutex
 
         if (ret)
         {
@@ -89,6 +73,12 @@ bool ThreadBase::getTerminateFlag() const
 cerberus::message::cerberus_message ThreadBase::nextMessage()
 {
     MutexLocker locker(&m_mutex);
+
+    if (m_queue.size() == 1 && m_periodicity == TP_NonPeriodic && !m_pausedFlag)
+    {
+        setPausedFlag(true);
+    }
+
     return m_queue.next();
 }
 //=============================================================================
@@ -108,11 +98,34 @@ void ThreadBase::addMessage(message::cerberus_message message)
 {
     MutexLocker locker(&m_mutex);
     m_queue.add(message);
+
+    if (m_periodicity == TP_NonPeriodic && m_pausedFlag)
+    {
+        setPausedFlag(false);
+    }
 }
 //=============================================================================
 size_t ThreadBase::messageCount() const
 {
     MutexLocker locker(&m_mutex);
     return m_queue.size();
+}
+//=============================================================================
+void ThreadBase::start()
+{
+    MutexLocker locker(&m_mutex);
+    setPausedFlag(false);
+}
+//=============================================================================
+void ThreadBase::stop()
+{
+    MutexLocker locker(&m_mutex);
+    setPausedFlag(true);
+}
+//=============================================================================
+void ThreadBase::terminate()
+{
+    MutexLocker locker(&m_mutex);
+    m_terminateFlag = true;
 }
 //=============================================================================

@@ -253,20 +253,6 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
     debug("receiving");
     auto r = socket.recv(buf, 500, 200).res;
 
-    debug("Checking shutdown state");
-
-    auto sh = socket.TLS_getShutdown();
-
-    if (sh.b1)
-    {
-        debug("SHUTDOWN SENT");
-    }
-
-    if (sh.b2)
-    {
-        debug("SHUTDOWN RECEIVED");
-    }
-
     EXPECT_EQ(r, cerberus::OR_OK);
 
     socket.close();
@@ -287,7 +273,7 @@ TEST(socketTest, HTTPClient)
     EXPECT_EQ(client.connectTo(h).res, cerberus::OR_OK);
     debug("connected");
     cerberus::data::HTTPData data;
-    data.setRequest({cerberus::data::HM_GET, "/", cerberus::data::HV_1_1});
+    data.setRequest({cerberus::data::HTTP_GET, "/", cerberus::data::HTTP_1_1});
     data.addHeaderField("Host", "www.google.com");
     data.addHeaderField("Accept-Language", "en-US,en;q=0.5");
     data.addHeaderField("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0");
@@ -299,6 +285,8 @@ TEST(socketTest, HTTPClient)
     data.clear();
     EXPECT_FALSE(client.getResponse(data, 1000).fail(true));
 
+    client.disconnect();
+
     EXPECT_EQ(data.getStatus().statusCode, 200);  // 200 OK
 
     debug("received header:");
@@ -309,6 +297,80 @@ TEST(socketTest, HTTPClient)
 
     // save the payload in a file
     cerberus::data::filesystem::File f("received_payload.txt", cerberus::FOM_ReadWriteTrunc);
+    f.open();
+    f.write(data.getPayload());
+    f.close();
+
+    debug("payload written on disk");
+}
+
+#define BOT_TOKEN "6612599694:AAG2zBEEBYViDPTQZDyhIu3bbMa4aRVxSTI"
+
+TEST(socketTest, TelegramBot)
+{
+    cerberus::network::HTTPClient client("HTTP Bot Client");
+    client.useTLS();
+    cerberus::Host h("api.telegram.org:443");
+    EXPECT_EQ(client.connectTo(h).res, cerberus::OR_OK);
+    debug("connected!");
+    cerberus::data::HTTPData data;
+    data.setRequest({cerberus::data::HTTP_GET, "/bot" BOT_TOKEN "/getMe", cerberus::data::HTTP_1_1});
+    data.addHeaderField("Host", "api.telegram.org");
+    // data.addHeaderField("Connection", "keep-alive");
+    EXPECT_FALSE(client.makeRequest(data).fail(true));
+    debug("request sent");
+    data.clear();
+    EXPECT_FALSE(client.getResponse(data, 1000).fail(true));
+
+    client.disconnect();
+    EXPECT_EQ(data.getStatus().statusCode, 200);  // 200 OK
+
+    debug("received header:");
+    for (int i = 0; i < data.getHeaderSize(); i++)
+    {
+        debug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
+    }
+
+    // save the payload in a file
+    cerberus::data::filesystem::File f("received_payload_telegram.txt", cerberus::FOM_ReadWriteTrunc);
+    f.open();
+    f.write(data.getPayload());
+    f.close();
+
+    debug("payload written on disk");
+}
+
+TEST(socketTest, TelegramBotSendMessage)
+{
+    cerberus::network::HTTPClient client("HTTP Bot Client");
+    client.useTLS();
+    cerberus::Host h("api.telegram.org:443");
+    EXPECT_EQ(client.connectTo(h).res, cerberus::OR_OK);
+    debug("connected!");
+    cerberus::data::HTTPData data;
+    data.setRequest({cerberus::data::HTTP_POST, "/bot" BOT_TOKEN "/sendMessage", cerberus::data::HTTP_1_1});
+    data.addHeaderField("Host", "api.telegram.org");
+    data.addHeaderField("Content-Type", "application/json");
+    data.addHeaderField("Content-Length", "103");
+    // data.addHeaderField("Connection", "keep-alive");
+    cerberus::data::ByteBuffer payload("{\"chat_id\":-1001964113365,\"text\":\"Signore e signori, questo messaggio e' stato inviato con codice C++\"}");
+    data.setPayload(payload);
+    EXPECT_FALSE(client.makeRequest(data).fail(true));
+    debug("request sent");
+    data.clear();
+    EXPECT_FALSE(client.getResponse(data, 30000, 200).fail(true));
+
+    client.disconnect();
+    EXPECT_EQ(data.getStatus().statusCode, 200);  // 200 OK
+
+    debug("received header:");
+    for (int i = 0; i < data.getHeaderSize(); i++)
+    {
+        debug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
+    }
+
+    // save the payload in a file
+    cerberus::data::filesystem::File f("received_payload_telegram3.txt", cerberus::FOM_ReadWriteTrunc);
     f.open();
     f.write(data.getPayload());
     f.close();

@@ -31,13 +31,7 @@ cerberus::Host::Host(const std::string &str)
       port(0),
       resolved(false)
 {
-    auto h = stringToHost(str);
-
-    if (!fromString(str))
-        if (core::CerberusUtils::isAlpha(str))
-        {
-            hostname = str;
-        }
+    if (!fromString(str)) logError("Host % is invalid", str.c_str());
 }
 //=============================================================================
 cerberus::Host::Host(const char *str)
@@ -45,23 +39,15 @@ cerberus::Host::Host(const char *str)
       port(0),
       resolved(false)
 {
-    if (!fromString(str))
-        if (core::CerberusUtils::isAlpha(str))
-        {
-            hostname = str;
-        }
+    if (!fromString(str)) logError("Host % is invalid", str);
 }
 //=============================================================================
 cerberus::Host cerberus::Host::stringToHost(const std::string &str)
 {
     Host ret{};
-    auto col = str.find_last_of(':');
     ret.port = Host::getPort(str);
 
-    int32_t oct[4];
-    std::string::size_type dots[3];
-    std::string ip = str.substr(0, col);
-    std::string sub;
+    std::string ip = str.substr(0, str.find_last_of(':'));
     // search for any, local or broadcast
 
     if (core::CerberusUtils::areEqual(core::CerberusUtils::toLower(ip), "any"))
@@ -81,6 +67,16 @@ cerberus::Host cerberus::Host::stringToHost(const std::string &str)
         ret.octet_networkOrder = ADDR_BROADCAST;
         return ret;
     }
+
+    if (core::CerberusUtils::isAlpha(ip))  // Domain name
+    {
+        ret.hostname = ip;
+        return ret;
+    }
+
+    int32_t oct[4];
+    std::string::size_type dots[3];
+    std::string sub;
 
     //
     dots[0] = ip.find_first_of('.');
@@ -152,6 +148,7 @@ bool cerberus::Host::fromString(const std::string &str)
     {
         if (h.port) port = h.port;
         octet_networkOrder = h.octet_networkOrder;
+        hostname           = h.hostname;
         return true;
     }
 
@@ -237,15 +234,6 @@ cerberus::OperationResult::OperationResult(Result r)
 {
 }
 //=============================================================================
-cerberus::OperationResult::OperationResult(bool b1, bool b2, bool b3, bool b4)
-    : res(OR_OK),
-      b1(b1),
-      b2(b2),
-      b3(b3),
-      b4(b4)
-{
-}
-//=============================================================================
 cerberus::OperationResult::OperationResult(int64_t i)
     : res(OR_OK),
       i(i)
@@ -255,12 +243,6 @@ cerberus::OperationResult::OperationResult(int64_t i)
 cerberus::OperationResult::OperationResult(double f)
     : res(OR_OK),
       f(f)
-{
-}
-//=============================================================================
-cerberus::OperationResult::OperationResult(SIZE s)
-    : res(OR_OK),
-      sz(s)
 {
 }
 //=============================================================================
@@ -274,7 +256,22 @@ bool cerberus::OperationResult::operator==(const OperationResult &other) { retur
 //=============================================================================
 bool cerberus::OperationResult::operator!=(const OperationResult &other) { return (res != other.res); }
 //=============================================================================
-bool cerberus::OperationResult::ok() { return (res == Result::OR_OK); }
+bool cerberus::OperationResult::ok(bool printError)
+{
+    if (res == Result::OR_OK)
+    {
+        return true;
+    }
+    else
+    {
+        if (printError)
+        {
+            logError("Operation result failed: %s", errorString().c_str());
+        }
+    }
+
+    return false;
+}
 //=============================================================================
 bool cerberus::OperationResult::fail(bool printError)
 {
@@ -335,6 +332,8 @@ std::string cerberus::OperationResult::errorString()
             return "Hangup";
         case OR_NotFound:
             return "Not found";
+        case OR_TemporaryUnavailable:
+            return "Temporary unavailable";
     }
 
     return "Undefined";

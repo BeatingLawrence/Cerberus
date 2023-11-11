@@ -24,9 +24,8 @@ namespace cerberus
             std::vector<SlotType> m_types;
 
            public:
-            MessageTemplate() = delete;
-
-            MessageTemplate(const MessageTemplate& other) = default;
+            // Construct an invalid template
+            MessageTemplate();
 
             // Constructs an empty template with a name
             MessageTemplate(const std::string& name);
@@ -44,6 +43,9 @@ namespace cerberus
 
             // Returns the number of slots contained in this template
             size_t count() const;
+
+            using CerberusObject::registerThis;
+            using CerberusObject::unregisterThis;
         };
     }  // namespace message
 }  // namespace cerberus

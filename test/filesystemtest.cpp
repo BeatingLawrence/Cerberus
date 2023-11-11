@@ -16,7 +16,7 @@ TEST(iniDataFileTest, read)  // BEFORE TEST, prepare a read.ini file containing 
     cerberus::data::filesystem::IniDataFile file("read.ini");
     EXPECT_TRUE(file.load());
     EXPECT_STREQ(file.read_string("string_value").str.c_str(), "this is a string");
-    EXPECT_TRUE(file.read_bool("bool_value").b1);
+    EXPECT_TRUE(file.read_bool("bool_value").i);
     EXPECT_EQ(file.read_integer("integer_value").i, (uint64_t)1010);
 }
 
@@ -30,7 +30,7 @@ TEST(iniDataFileTest, write)
     //
     file.load();
     EXPECT_STREQ(file.read_string("string_value").str.c_str(), "this is a string");
-    EXPECT_TRUE(file.read_bool("bool_value").b1);
+    EXPECT_TRUE(file.read_bool("bool_value").i);
     EXPECT_EQ(file.read_integer("integer_value").i, (uint64_t)1010);
 }
 
@@ -62,7 +62,7 @@ TEST(iniDataFileTest, readSections)
     cerberus::data::filesystem::IniDataFile file("temp.ini");
     EXPECT_TRUE(file.load());
     //
-    EXPECT_EQ(file.read_bool("bool_value", "section 1").b1, true);
+    EXPECT_EQ(file.read_bool("bool_value", "section 1").i, true);
     EXPECT_EQ(file.read_integer("integer_value", "section 2").i, 1010);
     EXPECT_EQ(file.read_string("string_value", "section 2").str.compare("this is a string"), 0);
 }

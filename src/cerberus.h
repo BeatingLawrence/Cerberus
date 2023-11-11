@@ -3,7 +3,6 @@
 
 #include "Cerberus_global.h"
 #include "src/core/cerberuscore.h"
-#include "src/core/cerberuslog.h"
 
 namespace cerberus
 {
@@ -13,12 +12,9 @@ namespace cerberus
 
        private:
         Cerberus();
-
-        Cerberus(const Cerberus& other) = delete;
+        Cerberus(const Cerberus& other)  = delete;
         Cerberus(const Cerberus&& other) = delete;
-        void operator=(const Cerberus& other) = delete;
-
-        static Cerberus* _instance();
+        static Cerberus& instance();
 
         bool m_initFlag;
 
@@ -27,7 +23,7 @@ namespace cerberus
         ~Cerberus();
 
        public:
-        // Performs the init sequence of the Cerberus framework. This operation must precede any others [TRANSFERS: YES]
+        // Performs the init sequence of the Cerberus framework. This operation must precede any others
         // Specify nullptr as parameter to use default settings
         static void init(const CerberusInitParms& parms);
 
@@ -41,7 +37,7 @@ namespace cerberus
         // Sends a message
         static void send(message::cerberus_message message);
 
-        // Returns a working default set of init parameters [TRANSFERS: YES]
+        // Returns a working default set of init parameters
         static CerberusInitParms cerberusDefaultParms();
 
         // Returns the version of the cerberus framework

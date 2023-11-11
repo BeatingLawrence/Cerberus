@@ -4,7 +4,7 @@
 /*  This class provides a set of tools for general purpose.
  *
  *  Many components of this class are used in the Cerberus Framework, but
- *  they have been made available here to be used my developers.
+ *  they have been made available here to be used by developers too.
  *
  *  This class contains static methods only
  */
@@ -76,6 +76,10 @@ namespace cerberus
             // line-terminating characters are replaced with \n or \r\n
             // other non-textual characters are replaced with #
             static void normalize(std::string& str);
+
+            // Truncate the given string making it long at most size chars.
+            // If size is bigger than (or equal to) the str size, the str string is returned
+            static std::string truncStr(const std::string& str, SIZE size);
         };
     }  // namespace core
 }  // namespace cerberus

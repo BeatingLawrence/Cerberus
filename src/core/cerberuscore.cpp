@@ -3,9 +3,8 @@
 #include "../message/slot/stringslot.h"
 #include "../mutex/mutexlocker.h"
 #include "../thread/thread.h"
-#include "./cerberusfactory.h"
 #include "./cerberuslog.h"
-#include "src/core/cerberusobject.h"
+#include "./cerberusregister.h"
 
 using namespace cerberus::core;
 
@@ -30,30 +29,11 @@ int CerberusCore::tick()
 
     if (destination == CERBERUS_INVALID_ID)
     {
-        debug("Destination of message is invalid, dropping..");
+        debug("Destination of message is invalid, dropping");
     }
     else
     {
-        CerberusObject* found = core::CerberusFactory::_cerberusObjectById(destination);
-
-        if (found == nullptr)
-        {
-            debug("Destination of message is unknown, dropping..");
-        }
-        else
-        {
-            if (found->type() == CerberusObject::ObjectType::Thread)
-            {
-                thread::Thread* foundThread = found->to_p<thread::Thread>();
-                foundThread->addMessage(message);  // ownership transferred
-            }
-            else
-            {
-                debug("Destination of message cannot accept messages, dropping..");
-            }
-
-            // ADD other messages receivers here..
-        }
+        CerberusRegister::sendMsgToObj(destination, message);
     }
 
     // Do other stuff..
@@ -89,7 +69,7 @@ void CerberusCore::_writeLineOnFile(const std::string& line)
 }
 //=============================================================================
 CerberusCore::CerberusCore()
-    : cerberus::core::CoreThread(),
+    : cerberus::thread::Thread("Cerberus-core"),
       m_logFile(FOM_ReadWriteAppend)
 {
 }

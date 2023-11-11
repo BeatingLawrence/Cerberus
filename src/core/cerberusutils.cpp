@@ -192,3 +192,13 @@ void CerberusUtils::normalize(std::string& str)
     }
 }
 //=============================================================================
+std::string CerberusUtils::truncStr(const std::string& str, SIZE size)
+{
+    if (str.size() <= size)
+    {
+        return str;
+    }
+
+    return str.substr(0, size);
+}
+//=============================================================================

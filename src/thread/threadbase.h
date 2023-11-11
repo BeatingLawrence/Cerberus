@@ -12,6 +12,15 @@ namespace cerberus
     {
         class ThreadBase
         {
+           public:
+            enum ThreadPeriodicity
+            {
+                TP_NonPeriodic,
+                TP_Periodic,
+                TP_PeriodicQueue,
+                TP_OneShot,
+            };
+
            private:
             mutable mutex::Mutex m_mutex;
 
@@ -23,16 +32,15 @@ namespace cerberus
 
             bool m_terminateFlag;
 
+            // Call this method with the mutex locked!
+            void setPausedFlag(bool state);
+
            protected:
-            ThreadBase();
+            ThreadBase(ThreadPeriodicity periodicity);
 
             virtual ~ThreadBase();
 
-            void setPausedFlag(bool state);
-
-            void setTerminateFlag(bool state);
-
-            bool getPausedFlag();
+            ThreadPeriodicity m_periodicity;
 
             void pause();
 
@@ -48,6 +56,12 @@ namespace cerberus
             void addMessage(message::cerberus_message message);
 
             size_t messageCount() const;
+
+            void start();
+
+            void stop();
+
+            void terminate();
         };
     }  // namespace thread
 }  // namespace cerberus

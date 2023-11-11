@@ -25,6 +25,7 @@ add_library(Cerberus SHARED
   src/network/httpclient.h src/network/httpclient.cpp
   src/data/httpdata.h src/data/httpdata.cpp
   src/data/bytebuffer.h src/data/bytebuffer.cpp
+  src/core/libloader.h src/core/libloader.cpp
 )
 
 add_executable(test EXCLUDE_FROM_ALL

@@ -55,11 +55,11 @@ HTTPClient::StatusResult HTTPClient::getStatus(const data::ByteBuffer &statusLin
     core::CerberusUtils::toUpper(ver);
 
     if (core::CerberusUtils::areEqual(ver, "HTTP/1.0"))
-        ret.version = data::HV_1_0;
+        ret.version = data::HTTP_1_0;
     else if (core::CerberusUtils::areEqual(ver, "HTTP/1.1"))
-        ret.version = data::HV_1_1;
+        ret.version = data::HTTP_1_1;
     else if (core::CerberusUtils::areEqual(ver, "HTTP/2"))
-        ret.version = data::HV_2;
+        ret.version = data::HTTP_2;
     else
     {
         return StatusResult{OR_Failure, ret};
@@ -103,6 +103,8 @@ HTTPClient::HTTPClient(const std::string &name)
 {
 }
 //=============================================================================
+HTTPClient::~HTTPClient() { disconnect(); }
+//=============================================================================
 void HTTPClient::useTLS(bool use, const std::string &certfile, const std::string &keyfile)
 {
     m_useTLS   = use;
@@ -112,17 +114,35 @@ void HTTPClient::useTLS(bool use, const std::string &certfile, const std::string
 //=============================================================================
 cerberus::OperationResult HTTPClient::connectTo(const Host &host)
 {
-    if (!m_socket)
+    if (m_socket)
     {
-        m_socket = new Socket(CerberusObject::Socket_TCP, core::CerberusUtils::strPrint("[HTTP Client]", m_name.c_str()));
+        disconnect();
     }
+
+    m_socket = new Socket(CerberusObject::Socket_TCP, core::CerberusUtils::strPrint("[Socket] %s", m_name.c_str()));
 
     if (m_useTLS)
     {
-        m_socket->TLS_init(m_certFile, m_keyFile);
+        auto res = m_socket->TLS_init(m_certFile, m_keyFile);
+
+        if (res.fail())
+        {
+            disconnect();
+            return OR_Failure;
+        }
+
+        m_socket->TLS_ignoreHangup();
     }
 
-    return m_socket->connect(host);
+    auto res = m_socket->connect(host);
+
+    if (res.fail())
+    {
+        disconnect();
+        return res;
+    }
+
+    return OR_OK;
 }
 //=============================================================================
 void HTTPClient::disconnect()
@@ -146,31 +166,31 @@ cerberus::OperationResult HTTPClient::makeRequest(const data::HTTPData &data)
 
     switch (data.getRequest().method)
     {
-        case data::HM_GET:
+        case data::HTTP_GET:
             buf.appendString("GET ");
             break;
-        case data::HM_POST:
+        case data::HTTP_POST:
             buf.appendString("POST ");
             break;
-        case data::HM_HEAD:
+        case data::HTTP_HEAD:
             buf.appendString("HEAD ");
             break;
-        case data::HM_PUT:
+        case data::HTTP_PUT:
             buf.appendString("PUT ");
             break;
-        case data::HM_DELETE:
+        case data::HTTP_DELETE:
             buf.appendString("DELETE ");
             break;
-        case data::HM_PATCH:
+        case data::HTTP_PATCH:
             buf.appendString("PATCH ");
             break;
-        case data::HM_TRACE:
+        case data::HTTP_TRACE:
             buf.appendString("TRACE ");
             break;
-        case data::HM_OPTIONS:
+        case data::HTTP_OPTIONS:
             buf.appendString("OPTIONS ");
             break;
-        case data::HM_CONNECT:
+        case data::HTTP_CONNECT:
             buf.appendString("CONNECT ");
             break;
     }
@@ -180,13 +200,13 @@ cerberus::OperationResult HTTPClient::makeRequest(const data::HTTPData &data)
 
     switch (data.getRequest().version)
     {
-        case data::HV_1_0:
+        case data::HTTP_1_0:
             buf.appendString("HTTP/1.0\r\n");
             break;
-        case data::HV_1_1:
+        case data::HTTP_1_1:
             buf.appendString("HTTP/1.1\r\n");
             break;
-        case data::HV_2:
+        case data::HTTP_2:
             buf.appendString("HTTP/2\r\n");
             break;
     }
@@ -197,12 +217,14 @@ cerberus::OperationResult HTTPClient::makeRequest(const data::HTTPData &data)
     }
 
     buf.append("\r\n");
-    buf.append(data.getPayload());  //=============================================================================
+    buf.append(data.getPayload());
+
+    logInfo("REQUEST TEXT:\n%s\n", buf.toString().c_str());
 
     return m_socket->send(buf);
 }
 //=============================================================================
-cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const time::Time &timeout)
+cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const time::Time &timeout, const time::Time &cycTimeout)
 {
     if (!m_socket)
     {
@@ -212,7 +234,7 @@ cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const ti
     data::ByteBuffer buf;
     OperationResult res;
 
-    res = m_socket->recv(buf, timeout);
+    res = m_socket->recv(buf, timeout, cycTimeout);
 
     if (res.fail())
     {
@@ -221,11 +243,11 @@ cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const ti
 
     res = buf.search("\r\n\r\n");  // find the gap between header and payload
     if (res.fail()) return OR_Failure;
-    SIZE gap = res.sz;
+    SIZE gap = res.i;
 
     res = buf.search("\r\n");  // find the status line end
     if (res.fail()) return OR_Failure;
-    SIZE sle = res.sz;
+    SIZE sle = res.i;
 
     data.clear();
     data.setPayload(buf.subBuffer(gap + 4));
@@ -247,7 +269,7 @@ cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const ti
     }
     res = data.getHeaderMatch("transfer-encoding", "chunked");
 
-    if (res.ok() && res.b1)
+    if (res.ok() && res.i)
     {
         // chunked encoding
         debug("processing chunked data...");
@@ -256,4 +278,6 @@ cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const ti
 
     return OR_OK;
 }
+
+Socket *HTTPClient::getSocket() { return m_socket; }
 //=============================================================================

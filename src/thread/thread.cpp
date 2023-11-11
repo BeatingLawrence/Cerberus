@@ -27,36 +27,42 @@ void cerberus::thread::Thread::_thread()
             firstRun = false;
         }
 
-        if (m_periodicity == TP_OneShot)
+        switch (m_periodicity)
         {
-            m_retValue = tick();
-            setTerminateFlag(true);
-        }
-        else if (m_periodicity == TP_NonPeriodic)
-        {
-            if (isQueueEmpty())
+            case TP_NonPeriodic:
             {
-                // yield
+                if (isQueueEmpty())
+                {
+                    pause();
+                }
+                else
+                {
+                    m_retValue = tick();
+                }
             }
-            else
+            break;
+            case TP_Periodic:
             {
                 m_retValue = tick();
-            }
-        }
-        else if (m_periodicity == TP_Periodic)
-        {
-            m_retValue = tick();
-
-            wait();
-        }
-        else if (m_periodicity == TP_PeriodicQueue)
-        {
-            m_retValue = tick();
-
-            if (isQueueEmpty())
-            {
                 wait();
             }
+            break;
+            case TP_PeriodicQueue:
+            {
+                m_retValue = tick();
+
+                if (isQueueEmpty())
+                {
+                    wait();
+                }
+            }
+            break;
+            case TP_OneShot:
+            {
+                m_retValue = tick();
+                terminate();
+            }
+            break;
         }
     }
 
@@ -99,15 +105,16 @@ void cerberus::thread::Thread::sleep(const time::Time& time)
 }
 //=============================================================================
 cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity periodicity, const time::Time& time)
-    : ThreadBase(),
+    : ThreadBase(periodicity),
       CerberusObject(CerberusObject::ObjectType::Thread, name),
       m_pthread(),
-      m_periodicity(periodicity),
       m_retValue(0),
       m_tickCallback(&defaultTickCallback),
       m_warmUpCallback(&defaultWarmUpCallback),
       m_coolDownCallback(&defaultCoolDownCallback)
 {
+    registerThis();
+
     if (periodicity == ThreadPeriodicity::TP_NonPeriodic)
     {
         debug("New non-periodic %s", toObjStr().c_str());
@@ -144,19 +151,18 @@ cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity peri
     }
 
     pthread_attr_destroy(&attr);
+
+    if (!name.empty()) pthread_setname_np(m_pthread, core::CerberusUtils::truncStr(name, 15).c_str());
 }
 //=============================================================================
-cerberus::thread::Thread::~Thread() {}
-//=============================================================================
-void cerberus::thread::Thread::start() { setPausedFlag(false); }
-//=============================================================================
-void cerberus::thread::Thread::stop() { setPausedFlag(true); }
+cerberus::thread::Thread::~Thread() { unregisterThis(); }
 //=============================================================================
 int cerberus::thread::Thread::join(bool stop)
 {
     if (stop)
     {
         terminate();
+        start();
     }
 
     int ret = pthread_join(m_pthread, NULL);
@@ -168,12 +174,10 @@ int cerberus::thread::Thread::join(bool stop)
             logError("Thread not joinable");
             return 0;
         }
-        else if (ret == ESRCH)  // not executing anymore
+        else if (ret != ESRCH)  // ESRCH = not executing anymore
         {
-            return m_retValue;
+            throw cerberusSystemExc("pthread_join function failed: %s", strerror(ret));
         }
-
-        throw cerberusSystemExc("pthread_join function failed: %s", strerror(ret));
     }
 
     return m_retValue;
@@ -188,8 +192,6 @@ void cerberus::thread::Thread::detach()
         throw cerberusSystemExc("pthread_detach function failed: %s", strerror(ret));
     }
 }
-//=============================================================================
-void cerberus::thread::Thread::terminate() { setTerminateFlag(true); }
 //=============================================================================
 void cerberus::thread::Thread::provideTickCallback(customTickCallback callback) { m_tickCallback = callback; }
 //=============================================================================

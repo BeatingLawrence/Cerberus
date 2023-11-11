@@ -5,27 +5,12 @@
 #include "../message/slot/stringslot.h"
 #include "src/core/cerberuslog.h"
 #include "src/core/cerberusobject.h"
+#include "src/core/cerberusregister.h"
 
 using namespace cerberus::core;
 
 //=============================================================================
-CerberusFactory::CerberusFactory()
-{
-    // noop
-}
-//=============================================================================
-CerberusFactory::~CerberusFactory()
-{
-    // noop
-}
-//=============================================================================
-CerberusFactory* CerberusFactory::_instance()
-{
-    static CerberusFactory factory;
-    return &factory;
-}
-//=============================================================================
-cerberus::message::slot::cerberus_slot CerberusFactory::slotFactory(SlotType type)
+cerberus::message::slot::cerberus_slot CerberusFactory::slotConstruct(SlotType type)
 {
     switch (type)
     {
@@ -80,35 +65,20 @@ cerberus::message::slot::cerberus_slot CerberusFactory::slotFactory(SlotType typ
         case ST_STDSTRINGP:
             return message::slot::StringSlot::create();
             break;
+
+        case ST_BYTEBUFFER:
+            // TODO to implement
+            break;
     }
 
-    throw cerberusIllegalArgExc("SlotFactory: Given slot type does not exist");
+    throw cerberusImplMissExc("Missing creation for the given slot type");
 }
 //=============================================================================
 uint32_t CerberusFactory::registerMessage(const message::Message& message, const std::string& name)
 {
-    return (new cerberus::message::MessageTemplate(message, name))->id();
-}
-//=============================================================================
-uint32_t CerberusFactory::messageIdByName(const std::string& name)
-{
-    CerberusObject* found = _instance()->m_register.objectByName(name);
-
-    if (found == nullptr)
-    {
-        return CERBERUS_INVALID_ID;
-    }
-    else
-    {
-        if (found->type() == CerberusObject::ObjectType::MessageTemplate)
-        {
-            return found->id();
-        }
-        else
-        {
-            return CERBERUS_INVALID_ID;
-        }
-    }
+    auto tmplt = cerberus::message::MessageTemplate(message, name);
+    tmplt.registerThis();
+    return tmplt.id();
 }
 //=============================================================================
 cerberus::message::cerberus_message CerberusFactory::messageConstruct(uint32_t id)
@@ -121,52 +91,44 @@ cerberus::message::cerberus_message CerberusFactory::messageConstruct(uint32_t i
     if (id < CERBERUS_FACTORY_START_ID)
     {
         // reserved range
-        debug("Cannot construct a standard message. Use the standardMessageConstruct() instead");
+        logError("The requested ID is in the reserved range");
         return message::Message::create();
     }
 
-    CerberusObject* found = _instance()->m_register.objectById(id);
+    auto tmplt = cerberus::core::CerberusRegister::msgTemplateById(id);
 
-    if (found == nullptr)
+    if (!tmplt.isObjValid())
     {
         return message::Message::create();
     }
 
-    if (found->type() != CerberusObject::ObjectType::MessageTemplate)
-    {
-        return message::Message::create();
-    }
+    message::cerberus_message message = message::Message::create(id);
 
-    message::MessageTemplate* tmplt = found->to_p<message::MessageTemplate>();
-    message::cerberus_message message = message::Message::create(found->id());
-
-    for (size_t i = 0; i < tmplt->count(); i++)
+    for (size_t i = 0; i < tmplt.count(); i++)
     {
-        message->addSlot(slotFactory(tmplt->getSlotTypeAt(i)));
+        message->addSlot(slotConstruct(tmplt.getSlotTypeAt(i)));
     }
 
     return message;
 }
 //=============================================================================
-uint32_t CerberusFactory::threadIdByName(const std::string& name)
+cerberus::message::cerberus_message CerberusFactory::messageConstruct(const std::string& name)
 {
-    CerberusObject* found = _instance()->m_register.objectByName(name);
+    auto tmplt = cerberus::core::CerberusRegister::msgTemplateByName(name);
 
-    if (found == nullptr)
+    if (!tmplt.isObjValid())
     {
-        return CERBERUS_INVALID_ID;
+        return message::Message::create();
     }
-    else
+
+    message::cerberus_message message = message::Message::create(tmplt.id());
+
+    for (size_t i = 0; i < tmplt.count(); i++)
     {
-        if (found->type() == CerberusObject::ObjectType::Thread)
-        {
-            return found->id();
-        }
-        else
-        {
-            return CERBERUS_INVALID_ID;
-        }
+        message->addSlot(slotConstruct(tmplt.getSlotTypeAt(i)));
     }
+
+    return message;
 }
 //=============================================================================
 cerberus::message::cerberus_message CerberusFactory::standardMessageConstruct(StandardMessage type)
@@ -175,29 +137,23 @@ cerberus::message::cerberus_message CerberusFactory::standardMessageConstruct(St
 
     switch (type)
     {
-        case cerberus::core::CerberusFactory::SM_LogMessage:
+        case SM_LogMsg:
             msg = message::Message::create(CERBERUS_MESSAGE_LOG_ID);
             msg->addSlot(message::slot::StringSlot::create());
             break;
 
-        case cerberus::core::CerberusFactory::SM_ShutdownMessage:
-            msg = message::Message::create(CERBERUS_MESSAGE_SHUTDOWN_ID);
+        case SM_TerminationMsg:
+            msg = message::Message::create(CERBERUS_MESSAGE_TERM_ID);
             break;
 
             // add here more message specializations..
 
         default:
-            debug("Default message factory given type was not implemented");
+            logError("Given type does not exist");
             msg = message::Message::create(CERBERUS_INVALID_ID);
             break;
     }
 
     return msg;
 }
-//=============================================================================
-cerberus::CerberusObject* CerberusFactory::_cerberusObjectById(uint32_t id) { return _instance()->m_register.objectById(id); }
-//=============================================================================
-uint32_t CerberusFactory::_registerCerberusObject(CerberusObject* object) { return _instance()->m_register.registerObject(object); }
-//=============================================================================
-void CerberusFactory::_unregisterCerberusObject(uint32_t id) { _instance()->m_register.unregisterObject(id); }
 //=============================================================================

@@ -16,22 +16,22 @@ namespace cerberus
 
         enum HTTPVersion
         {
-            HV_1_0,
-            HV_1_1,
-            HV_2,
+            HTTP_1_0,
+            HTTP_1_1,
+            HTTP_2,
         };
 
         enum HTTPMethod
         {
-            HM_GET,
-            HM_POST,
-            HM_HEAD,
-            HM_PUT,
-            HM_DELETE,
-            HM_PATCH,
-            HM_TRACE,
-            HM_OPTIONS,
-            HM_CONNECT,
+            HTTP_GET,
+            HTTP_POST,
+            HTTP_HEAD,
+            HTTP_PUT,
+            HTTP_DELETE,
+            HTTP_PATCH,
+            HTTP_TRACE,
+            HTTP_OPTIONS,
+            HTTP_CONNECT,
         };
 
         struct HTTPRequest  // given to the HTTPData to make a request
@@ -104,8 +104,8 @@ namespace cerberus
             // This method will return OR_NotFound if the requested field name was not found
             OperationResult getHeaderField(const std::string& key) const;
 
-            // Get the matching result of a value corresponding to a key in the bool member of the result
-            // This method will return true if the key value of the header matches against the provided value argument.
+            // Get the matching result of a value corresponding to a key in the int member of the result
+            // This method will return 1 if the key value of the header matches against the provided value argument.
             // This method will return OR_NotFound if the requested field name was not found
             OperationResult getHeaderMatch(const std::string& key, const std::string& value) const;
 

@@ -1,38 +1,43 @@
 #ifndef CERBERUS_CORE_CERBERUSCORE_H
 #define CERBERUS_CORE_CERBERUSCORE_H
 
-#include "./corethread.h"
+/*  This is the CerberusCore class.
+ *
+ *  The CerberusCore is the main thread of execution of the framework.
+ *  It's used to route messages, log on file, create other Threads and other stuff..
+ *
+ */
+
 #include "../data/filesystem/file.h"
+#include "src/thread/thread.h"
 
 namespace cerberus
 {
-    class CerberusObject;
-
     namespace core
     {
-        class CerberusCore : public cerberus::core::CoreThread
+        class CerberusCore : protected cerberus::thread::Thread
         {
-            private:
-                virtual int tick() override;
+           private:
+            virtual int tick() override;
 
-                virtual void warmUp() override;
+            virtual void warmUp() override;
 
-                virtual void coolDown() override;
+            virtual void coolDown() override;
 
-                data::filesystem::File m_logFile;
+            data::filesystem::File m_logFile;
 
-                mutex::Mutex m_fileMutex;
+            mutex::Mutex m_fileMutex;
 
-                void _writeLineOnFile(const std::string& line);
+            void _writeLineOnFile(const std::string& line);
 
-            public:
-                CerberusCore();
+           public:
+            CerberusCore();
 
-                virtual ~CerberusCore();
+            virtual ~CerberusCore();
 
-                void setLogFileName(const std::string& filename);
+            void setLogFileName(const std::string& filename);
         };
-    }
-}
+    }  // namespace core
+}  // namespace cerberus
 
-#endif // CERBERUS_CORE_CERBERUSCORE_H
+#endif  // CERBERUS_CORE_CERBERUSCORE_H

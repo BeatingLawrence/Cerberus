@@ -1,6 +1,6 @@
 #include "cerberusobject.h"
 
-#include "src/core/cerberusfactory.h"
+#include "src/core/cerberusregister.h"
 #include "src/define.h"
 
 using namespace cerberus;
@@ -12,11 +12,13 @@ std::string CerberusObject::toStr(const CerberusObject& obj)
 
     switch (obj.m_type)
     {
+        case InvalidObject:
+            return "Invalid object";
         case Thread:
             ret.append("Thread");
             break;
         case MessageTemplate:
-            ret.append("Template");
+            ret.append("Message template");
             break;
         case Socket:
             ret.append("Socket");
@@ -81,7 +83,6 @@ CerberusObject::CerberusObject(ObjectType type, const std::string& name)
       m_name(name),
       m_socketType(Socket_None)
 {
-    m_id = core::CerberusFactory::_registerCerberusObject(this);
 }
 //=============================================================================
 CerberusObject::CerberusObject(SocketType type, const std::string& name)
@@ -90,10 +91,13 @@ CerberusObject::CerberusObject(SocketType type, const std::string& name)
       m_name(name),
       m_socketType(type)
 {
-    if (m_socketType != Socket_None) m_id = core::CerberusFactory::_registerCerberusObject(this);
 }
 //=============================================================================
-CerberusObject::~CerberusObject() { core::CerberusFactory::_unregisterCerberusObject(m_id); }
+void CerberusObject::registerThis() { core::CerberusRegister::registerObj(this); }
+//=============================================================================
+void CerberusObject::unregisterThis() { core::CerberusRegister::unregisterObj(m_id); }
+//=============================================================================
+CerberusObject::~CerberusObject() {}
 //=============================================================================
 bool CerberusObject::isObjValid() { return (m_id != CERBERUS_INVALID_ID); }
 //=============================================================================
