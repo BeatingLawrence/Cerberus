@@ -1,9 +1,5 @@
 #include "sqldatabase.h"
 
-#include <pqxx/connection>
-#include <pqxx/result_iterator.hxx>
-#include <pqxx/transaction>
-
 #include "../../cerberus.h"
 #include "sqldata.h"
 
@@ -11,171 +7,56 @@ using namespace cerberus::data::database;
 
 //=============================================================================
 SQLDatabase::SQLDatabase(const std::string& parameters) noexcept
-    : m_connection(nullptr),
-      m_failed(false),
+    : m_failed(false),
       m_failureReason()
 {
-    try
-    {
-        m_connection = new pqxx::connection(parameters.c_str());
-    }
-    catch (pqxx::failure e)
-    {
-        m_failed        = true;
-        m_failureReason = e.what();
-    }
+    //connect to DB
 }
 //=============================================================================
 SQLDatabase::~SQLDatabase()
 {
-    if (m_connection != nullptr)
-    {
-        delete m_connection;
-    }
+    //de-init the DB
 }
 //=============================================================================
 bool SQLDatabase::isFailed() const { return m_failed; }
 //=============================================================================
 std::string SQLDatabase::failureReason() const { return m_failureReason; }
 //=============================================================================
-SQLDatabase::OperationResult SQLDatabase::queryBlock(const std::string& query, SQLBlock& output)
+cerberus::OperationResult SQLDatabase::queryBlock(const std::string& query, SQLBlock& output)
 {
-    if (m_failed)  // return a failed result if connection is in a failed state
-    {
-        output.m_failed        = true;
-        output.m_failureReason = "Connection error: " + m_failureReason;
-        return OperationResult::OR_DB_FAILURE;
-    }
-
-    output.clear();
-
-    try
-    {
-        pqxx::work w(*m_connection);
-        pqxx::result res = w.exec(query);
-        w.commit();
-
-        for (auto&& row : res)
-        {
-            SQLRow r;
-
-            for (auto&& val : row)
-            {
-                r.append(val.c_str());
-            }
-
-            output.append(r);
-        }
-
-        if (output.empty())
-        {
-            return OperationResult::OR_NOT_FOUND;
-        }
-    }
-    catch (pqxx::sql_error e)
-    {
-        logError(e.what());
-        logError(e.sqlstate());
-        output.m_failed        = true;  // return a failed result if query failed
-        output.m_failureReason = e.what();
-        return OperationResult::OR_QUERY_FAILURE;
-    }
-    catch (pqxx::failure e)
-    {
-        output.m_failed        = true;  // return a failed result if connection failed
-        output.m_failureReason = "Database failure: " + std::string(e.what());
-        m_failed               = true;
-        m_failureReason        = e.what();
-        return OperationResult::OR_DB_FAILURE;
-    }
-
-    return OperationResult::OR_OK;
+    //Query a single block
+    return OR_Undefined;
 }
 //=============================================================================
-SQLDatabase::OperationResult SQLDatabase::queryPrototype(SQLTablePrototype& prototype)
+cerberus::OperationResult SQLDatabase::queryPrototype(SQLTablePrototype& prototype)
 {
-    if (prototype.name().empty())
-    {
-        logError("Queried the prototype of an empty-named table");
-        return OperationResult::OR_QUERY_FAILURE;
-    }
-
-    SQLBlock block(prototype.name());
-    auto res = queryBlock(
-        core::CerberusUtils::strPrint("SELECT a.attname as \"Column\", pg_catalog.format_type(a.atttypid, a.atttypmod) as \"Datatype\", a.atttypmod as \"Mod\" "
-                                      "FROM pg_catalog.pg_attribute a "
-                                      "WHERE a.attnum > 0 "
-                                      "AND NOT a.attisdropped "
-                                      "AND a.attrelid = ( "
-                                      "SELECT c.oid "
-                                      "FROM pg_catalog.pg_class c "
-                                      "LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace "
-                                      "WHERE c.relname = '%s' "
-                                      "AND pg_catalog.pg_table_is_visible(c.oid));",
-                                      prototype.name().c_str()),
-        block);
-
-    if (res == OperationResult::OR_OK)
-    {
-        prototype.clear();
-
-        for (int i = 0; i < block.size(); i++)
-        {
-            prototype.add(block[i][0].raw(), SQLTablePrototype::toSQLDataType(block[i][1].raw()), block[i][2].toInt());
-        }
-    }
-
-    return res;
+    //Query a prototype
+    return OR_Undefined;
 }
 //=============================================================================
-SQLDatabase::OperationResult SQLDatabase::command(const std::string& query)
+cerberus::OperationResult SQLDatabase::command(const std::string& query)
 {
-    if (m_failed)
-    {
-        return OperationResult::OR_DB_FAILURE;
-    }
-
-    debug("executing: %s", query.c_str());
-
-    try
-    {
-        pqxx::work w(*m_connection);
-        w.exec0(query);
-        w.commit();
-    }
-    catch (pqxx::sql_error e)
-    {
-        logError(e.what());
-        logError(e.sqlstate());
-        return OperationResult::OR_QUERY_FAILURE;
-    }
-    catch (pqxx::failure e)
-    {
-        m_failed        = true;
-        m_failureReason = e.what();
-        return OperationResult::OR_DB_FAILURE;
-    }
-
-    return OperationResult::OR_OK;
+    //Send a command
+    return OR_Undefined;
 }
 //=============================================================================
-SQLDatabase::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototype)
+cerberus::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototype)
 {
     if (prototype.name().empty())
     {
         logError("Asked to create an empty-named table");
-        return OperationResult::OR_QUERY_FAILURE;
+        return OR_QueryFailure;
     }
 
     SQLTablePrototype p(prototype.name());
     auto res = queryPrototype(p);
 
-    if (res != OperationResult::OR_NOT_FOUND)
+    if (res != OR_NotFound)
     {
-        if (res == OperationResult::OR_OK)
+        if (res == OR_OK)
         {
             logError("Asked to create an existing table");
-            return OperationResult::OR_TABLE_ALREADY_PRESENT;
+            return OR_TableAlreadyPresent;
         }
 
         return res;
@@ -206,12 +87,12 @@ SQLDatabase::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototy
     return command(cmd);
 }
 //=============================================================================
-SQLDatabase::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
+cerberus::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
 {
     if (block.m_prototype.name().empty())
     {
         logError("Asked to insert into an empty-named table");
-        return OperationResult::OR_QUERY_FAILURE;
+        return OR_QueryFailure;
     }
 
     std::string cmd("INSERT INTO ");
@@ -251,27 +132,27 @@ SQLDatabase::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
     return command(cmd);
 }
 //=============================================================================
-SQLDatabase::OperationResult SQLDatabase::dropTable(const std::string& table)
+cerberus::OperationResult SQLDatabase::dropTable(const std::string& table)
 {
     return command(cerberus::core::CerberusUtils::strPrint("DROP TABLE %s;", table.c_str()));
 }
 //=============================================================================
-SQLDatabase::OperationResult SQLDatabase::querytable(const std::string& tableName, SQLBlock& output)
+cerberus::OperationResult SQLDatabase::querytable(const std::string& tableName, SQLBlock& output)
 {
     SQLTablePrototype prototype(tableName);
 
-    switch (queryPrototype(prototype))
+    switch (queryPrototype(prototype).res)
     {
-        case cerberus::data::database::SQLDatabase::OR_QUERY_FAILURE:
-            return SQLDatabase::OR_QUERY_FAILURE;
+        case OR_QueryFailure:
+            return OR_QueryFailure;
             break;
 
-        case cerberus::data::database::SQLDatabase::OR_DB_FAILURE:
-            return SQLDatabase::OR_DB_FAILURE;
+        case OR_DBFailure:
+            return OR_DBFailure;
             break;
 
-        case cerberus::data::database::SQLDatabase::OR_NOT_FOUND:
-            return SQLDatabase::OR_NOT_FOUND;
+        case OR_NotFound:
+            return OR_NotFound;
             break;
 
         default:
@@ -282,18 +163,18 @@ SQLDatabase::OperationResult SQLDatabase::querytable(const std::string& tableNam
     output.m_prototype = prototype;  // now it's structured
     SQLBlock block;
 
-    switch (queryBlock(cerberus::core::CerberusUtils::strPrint("SELECT * FROM %s;", tableName.c_str()), block))
+    switch (queryBlock(cerberus::core::CerberusUtils::strPrint("SELECT * FROM %s;", tableName.c_str()), block).res)
     {
-        case cerberus::data::database::SQLDatabase::OR_QUERY_FAILURE:
-            return SQLDatabase::OR_QUERY_FAILURE;
+        case OR_QueryFailure:
+            return OR_QueryFailure;
             break;
 
-        case cerberus::data::database::SQLDatabase::OR_DB_FAILURE:
-            return SQLDatabase::OR_DB_FAILURE;
+        case OR_DBFailure:
+            return OR_DBFailure;
             break;
 
-        case cerberus::data::database::SQLDatabase::OR_NOT_FOUND:
-            return SQLDatabase::OR_NOT_FOUND;
+        case OR_NotFound:
+            return OR_NotFound;
             break;
 
         default:
@@ -301,6 +182,6 @@ SQLDatabase::OperationResult SQLDatabase::querytable(const std::string& tableNam
     }
 
     output.m_rows = block.m_rows;
-    return SQLDatabase::OR_OK;
+    return OR_OK;
 }
 //=============================================================================

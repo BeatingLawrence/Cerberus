@@ -1,5 +1,5 @@
-#include "timer.h"
-
+#include "systimer.h"
+#ifdef LINUX_SYSTEM
 #include <cerrno>
 #include <cstring>
 
@@ -8,18 +8,18 @@
 using namespace cerberus::time;
 
 //=============================================================================
-void Timer::defaultTimeoutCallback()
+void SysTimer::defaultTimeoutCallback()
 {
     // noop
 }
 //=============================================================================
-void Timer::mainCallback(sigval val)
+void SysTimer::mainCallback(sigval val)
 {
-    ((Timer *)val.sival_ptr)->m_running = false;
-    ((Timer *)val.sival_ptr)->m_callback();
+    ((SysTimer *)val.sival_ptr)->m_running = false;
+    ((SysTimer *)val.sival_ptr)->m_callback();
 }
 //=============================================================================
-Timer::Timer()
+SysTimer::SysTimer()
     : m_callback(&defaultTimeoutCallback),
       m_running(false),
       m_timerId(0),
@@ -40,7 +40,7 @@ Timer::Timer()
     }
 }
 //=============================================================================
-Timer::~Timer()
+SysTimer::~SysTimer()
 {
     if (timer_delete(m_timerId) == -1)
     {
@@ -48,7 +48,7 @@ Timer::~Timer()
     }
 }
 //=============================================================================
-Timer::Timer(const Time &time, bool periodic)
+SysTimer::SysTimer(const Time &time, bool periodic)
     : m_callback(&defaultTimeoutCallback),
       m_running(false),
       m_timerId(0),
@@ -69,9 +69,9 @@ Timer::Timer(const Time &time, bool periodic)
     }
 }
 //=============================================================================
-void Timer::setTime(const Time &time) { m_time = time; }
+void SysTimer::setTime(const Time &time) { m_time = time; }
 //=============================================================================
-void Timer::start()
+void SysTimer::start()
 {
     itimerspec spec{};
     auto split = m_time.splittedTime();
@@ -95,7 +95,7 @@ void Timer::start()
     }
 }
 //=============================================================================
-void Timer::stop()
+void SysTimer::stop()
 {
     itimerspec spec{};
 
@@ -110,15 +110,16 @@ void Timer::stop()
     }
 }
 //=============================================================================
-void Timer::reset()
+void SysTimer::reset()
 {
     stop();
     start();
 }
 //=============================================================================
-bool Timer::isRunning() { return m_running; }
+bool SysTimer::isRunning() { return m_running; }
 //=============================================================================
-bool Timer::isFailed() { return m_failed; }
+bool SysTimer::isFailed() { return m_failed; }
 //=============================================================================
-void Timer::provideTimeoutCallback(timerCallback callback) { m_callback = callback; }
+void SysTimer::provideTimeoutCallback(timerCallback callback) { m_callback = callback; }
 //=============================================================================
+#endif

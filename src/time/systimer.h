@@ -1,5 +1,7 @@
-#ifndef CERBERUS_TIME_TIMER_H
-#define CERBERUS_TIME_TIMER_H
+#ifndef CERBERUS_TIME_SYSTIMER_H
+#define CERBERUS_TIME_SYSTIMER_H
+
+#ifdef LINUX_SYSTEM
 
 #include <signal.h>
 #include <time.h>
@@ -12,7 +14,7 @@ namespace cerberus
 {
     namespace time
     {
-        class Timer
+        class SysTimer
         {
            private:
             typedef void (*timerCallback)();
@@ -32,13 +34,13 @@ namespace cerberus
             Time m_time;
 
            public:
-            Timer();
+            SysTimer();
 
-            Timer(const Time& time, bool periodic = false);
+            SysTimer(const Time& time, bool periodic = false);
 
-            Timer(const Timer& other) = delete;
+            SysTimer(const SysTimer& other) = delete;
 
-            ~Timer();
+            ~SysTimer();
 
             void setTime(const Time& time);
 
@@ -58,4 +60,5 @@ namespace cerberus
     }  // namespace time
 }  // namespace cerberus
 
-#endif  // CERBERUS_TIME_TIMER_H
+#endif
+#endif  // CERBERUS_TIME_SYSTIMER_H

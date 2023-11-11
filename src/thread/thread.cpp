@@ -152,7 +152,11 @@ cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity peri
 
     pthread_attr_destroy(&attr);
 
+#ifdef LINUX_SYSTEM
+
     if (!name.empty()) pthread_setname_np(m_pthread, core::CerberusUtils::truncStr(name, 15).c_str());
+
+#endif
 }
 //=============================================================================
 cerberus::thread::Thread::~Thread() { unregisterThis(); }

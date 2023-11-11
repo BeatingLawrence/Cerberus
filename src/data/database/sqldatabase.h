@@ -27,11 +27,7 @@
  */
 
 #include <string>
-
-namespace pqxx
-{
-    class connection;
-}
+#include "src/types.h"
 
 namespace cerberus
 {
@@ -46,23 +42,11 @@ namespace cerberus
             class SQLDatabase
             {
                 private:
-                    pqxx::connection* m_connection;
-
                     bool m_failed;
 
                     std::string m_failureReason;
 
                 public:
-                    enum OperationResult
-                    {
-                        OR_OK,
-                        OR_QUERY_FAILURE,
-                        OR_DB_FAILURE,
-                        OR_NOT_FOUND,
-                        OR_TABLE_ALREADY_PRESENT,
-                        // add more here
-                    };
-
                     SQLDatabase() = delete;
 
                     ~SQLDatabase();
@@ -76,10 +60,10 @@ namespace cerberus
                     /*  This method performs a query and returns a result.
                      *  The result can be:
                      *      > OR_OK if the query is successfully completed. The queried information are inside output parameter
-                     *      > OR_QUERY_FAIL if the query has a problem during execution. The failure information are inside output parameter
-                     *      > OR_DB_FAIL if the database encounters a problem and the query failed.
+                     *      > OR_QueryFailure if the query has a problem during execution. The failure information are inside output parameter
+                     *      > OR_DBFailure if the database encounters a problem and the query failed.
                      *        The failure information are obtainable through failureReason()
-                     *      > OR_NOT_FOUND if the query was successfully completed but gave no information (0 results found)
+                     *      > OR_NotFound if the query was successfully completed but gave no information (0 results found)
                      *
                      *  The given block is an unstructured block
                      */
@@ -89,18 +73,18 @@ namespace cerberus
                      *  This method also alters the given prototype to match the correct one of the queried table
                      *  The result can be:
                      *      > OR_OK if the query is successfully completed. The queried information are inside prototype parameter
-                     *      > OR_QUERY_FAIL if the query has a problem during execution. The failure information are inside prototype parameter
-                     *      > OR_DB_FAIL if the database encounters a problem and the query failed.
+                     *      > OR_QueryFailure if the query has a problem during execution. The failure information are inside prototype parameter
+                     *      > OR_DBFailure if the database encounters a problem and the query failed.
                      *        The failure information are obtainable through failureReason()
-                     *      > OR_NOT_FOUND if the query was successfully completed but no such table exists
+                     *      > OR_NotFound if the query was successfully completed but no such table exists
                      */
                     OperationResult queryPrototype(SQLTablePrototype& prototype);
 
                     /*  This method executes a command and returns a result.
                      *  The result can be:
                      *      > OR_OK if the command is successfully executed
-                     *      > OR_QUERY_FAIL if the query has a problem during execution.
-                     *      > OR_DB_FAIL if the database encounters a problem and the command failed.
+                     *      > OR_QueryFailure if the query has a problem during execution.
+                     *      > OR_DBFailure if the database encounters a problem and the command failed.
                      *        The failure information are obtainable through failureReason()
                      */
                     OperationResult command(const std::string& query);
@@ -108,10 +92,10 @@ namespace cerberus
                     /*  This method creates a table in the database.
                      *  The result can be:
                      *      > OR_OK if the creation is successfully executed and the table has been created
-                     *      > OR_QUERY_FAIL if the query has a problem during execution.
-                     *      > OR_DB_FAIL if the database encounters a problem and the command failed.
+                     *      > OR_QueryFailure if the query has a problem during execution.
+                     *      > OR_DBFailure if the database encounters a problem and the command failed.
                      *        The failure information are obtainable through failureReason()
-                     *      > OR_TABLE_ALREADY_PRESENT if the specified table already exists and could not be created
+                     *      > OR_TableAlreadyPresent if the specified table already exists and could not be created
                      */
                     OperationResult createTable(SQLTablePrototype& prototype);
 
@@ -120,8 +104,8 @@ namespace cerberus
                      *  This method will not do any error-check of such parameters
                      *  The result can be:
                      *      > OR_OK if the insertion is successfully executed
-                     *      > OR_QUERY_FAIL if the query has a problem during execution.
-                     *      > OR_DB_FAIL if the database encounters a problem and the command failed.
+                     *      > OR_QueryFailure if the query has a problem during execution.
+                     *      > OR_DBFailure if the database encounters a problem and the command failed.
                      *        The failure information are obtainable through failureReason()
                      */
                     OperationResult insertBlock(const SQLBlock& block);
@@ -129,8 +113,8 @@ namespace cerberus
                     /*  This method drops a table.
                      *  The result can be:
                      *      > OR_OK if the drop is successfully executed
-                     *      > OR_QUERY_FAIL if the query has a problem during execution.
-                     *      > OR_DB_FAIL if the database encounters a problem and the command failed.
+                     *      > OR_QueryFailure if the query has a problem during execution.
+                     *      > OR_DBFailure if the database encounters a problem and the command failed.
                      *        The failure information are obtainable through failureReason()
                      */
                     OperationResult dropTable(const std::string& table);
@@ -139,10 +123,10 @@ namespace cerberus
                      *  Be careful with this method, because if the requested table is huge, an insane amount of memory will be allocated
                      *  The result can be:
                      *      > OR_OK if the query is successfully completed. The queried information are inside output parameter
-                     *      > OR_QUERY_FAIL if the query has a problem during execution. The failure information are inside output parameter
-                     *      > OR_DB_FAIL if the database encounters a problem and the query failed.
+                     *      > OR_QueryFailure if the query has a problem during execution. The failure information are inside output parameter
+                     *      > OR_DBFailure if the database encounters a problem and the query failed.
                      *        The failure information are obtainable through failureReason()
-                     *      > OR_NOT_FOUND if the query was successfully completed but gave no information (0 results found)
+                     *      > OR_NotFound if the query was successfully completed but gave no information (0 results found)
                      *
                      *  The given block is a structured block
                      */

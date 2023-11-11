@@ -8,13 +8,15 @@
 #include <poll.h>
 #include <src/thread/thread.h>
 #include <string.h>
+#ifdef LINUX_SYSTEM
 #include <sys/sendfile.h>
+#endif
 #include <unistd.h>
 
 #include "src/core/cerberuslog.h"
 #include "src/data/filesystem/file.h"
 #include "src/exception/exceptioncatalog.h"
-#include "src/time/timer.h"
+#include "src/time/systimer.h"
 
 #define DEFAULT_RECV_BUFFER_SIZE 512
 #define DEFAULT_MAX_CONNECTIONS 15
@@ -1131,19 +1133,37 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem
         return OR_OK;
     }
 
+#ifdef LINUX_SYSTEM
     off_t offset  = 0;
-    ssize_t bytes = 1;
+    ssize_t bytes = 0;
 
-    while (bytes > 0)
+    do
     {
         bytes = sendfile(m_fd, file.m_fd, &offset, file.size());
     }
+    while (bytes > 0);
 
     if (bytes == -1)
     {
         logError("socket sendfile error, %s", strerror(errno));
         return OR_Failure;
     }
+#elif APPLE_SYSTEM
+    off_t len  = 0;
+    int bytes = 1;
+
+    do
+    {
+        bytes = sendfile(file.m_fd, m_fd, 0, &len, nullptr, 0);
+    }
+    while (bytes > 0);
+
+    if (bytes == -1)
+    {
+        logError("socket sendfile error, %s", strerror(errno));
+        return OR_Failure;
+    }
+#endif
 
     return OR_OK;
 }

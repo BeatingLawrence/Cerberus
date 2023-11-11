@@ -73,6 +73,7 @@ bool Mutex::lock(bool block)
         {
             return false;
         }
+#ifdef LINUX_SYSTEM
         else if (ret == EOWNERDEAD)
         {
             if (pthread_mutex_consistent(&m_pmutex))
@@ -83,7 +84,7 @@ bool Mutex::lock(bool block)
             logWarning("Mutex has been recovered from inconsistent state");
             return true;
         }
-
+#endif
         throw cerberusSystemExc("pthread_mutex_%s error %s", block ? "lock" : "trylock", strerror(ret));
     }
 

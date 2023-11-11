@@ -105,7 +105,7 @@ namespace cerberus
     // The Result enum contains all the possible results of operation requested to the framework.
     enum Result
     {
-        OR_Undefined,                 // [general] this result should never be given
+        OR_Undefined,                 // [general] this result should never be given (used for unimplemented methods)
         OR_OK,                        // [general] no errors
         OR_Failure,                   // [general] generic failure
         OR_FailedInstance,            // [general] attempt to use a failed instance
@@ -127,7 +127,11 @@ namespace cerberus
         OR_ResolveFailure,            // [DNS lookup] resolve method error
                                       //
         OR_RecvZero,                  // [socket] a recv call returned zero
-        OR_Hangup                     // [socket] hangup condition (stream closed by the peer)
+        OR_Hangup,                    // [socket] hangup condition (stream closed by the peer)
+                                      //
+        OR_QueryFailure,              // [database] query error
+        OR_DBFailure,                 // [database] DB error
+        OR_TableAlreadyPresent,       // [database] the table is already present
     };
 
     enum MutexType
