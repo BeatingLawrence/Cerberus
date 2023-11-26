@@ -7,6 +7,7 @@
 #include "../mutex/mutex.h"
 #include "../types.h"
 #include "./cerberusutils.h"
+#include <cstdint>
 
 // #define logInfo(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Info)
 // #define logWarning(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Warning)
@@ -74,6 +75,10 @@ namespace cerberus
 
             // Setups the logging singleton using given structure
             static void _setup(const CerberusLogSetup& setup);
+
+            static bool isMultiLine(const std::string& str);
+
+            static void align(std::string& str, LogLevel logLevel, uint32_t authorLen);
 
            public:
             // Logs the given string to stdout/stderr according to the specified logLevel
