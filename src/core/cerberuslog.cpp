@@ -1,6 +1,5 @@
 #include "cerberuslog.h"
 
-#include <chrono>
 #include <iostream>
 
 #include "../cerberus.h"
@@ -8,6 +7,7 @@
 #include "../mutex/mutexlocker.h"
 #include "./cerberusfactory.h"
 #include "./cerberusutils.h"
+#include "src/time/datetime.h"
 #include "src/types.h"
 
 using namespace cerberus::core;
@@ -100,15 +100,16 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
     }
 
     // time
-    auto now              = std::chrono::system_clock::now();  // USE time::Time for this
-    auto seconds          = std::chrono::time_point_cast<std::chrono::seconds>(now);
-    auto milli            = std::chrono::duration_cast<std::chrono::milliseconds>(now - seconds);
-    time_t coarseTime     = std::chrono::system_clock::to_time_t(now);
-    tm* local             = std::localtime(&coarseTime);
-    uint32_t fineTime     = milli.count();
-    std::string timestamp = CerberusUtils::strPrint("%.4u.%.2u.%.2u-%.2u:%.2u:%.2u.%.3u", local->tm_year + 1900, local->tm_mon + 1, local->tm_mday,
-                                                    local->tm_hour, local->tm_min, local->tm_sec, fineTime);
+    // auto now          = std::chrono::system_clock::now();  // USE time::Time for this
+    // auto seconds      = std::chrono::time_point_cast<std::chrono::seconds>(now);
+    // auto milli        = std::chrono::duration_cast<std::chrono::milliseconds>(now - seconds);
+    // time_t coarseTime = std::chrono::system_clock::to_time_t(now);
+    // tm* local         = std::localtime(&coarseTime);
+    // uint32_t fineTime = milli.count();
+    // std::string timestamp =
+    //    CerberusUtils::strPrint("%.4u.%.2u.%.2u-%.2u:%.2u:%.2u.%.3u", local->tm_year + 1900, local->tm_mon + 1, local->tm_mday, local->tm_hour, local->tm_min, local->tm_sec, fineTime);
     // author
+    std::string timestamp = time::DateTime::current().toTimeStampString();
     std::string logAuthor;
 
     if (!author.empty())
@@ -153,31 +154,31 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
         return;
     }
 
-#ifndef WINDOWS_SYSTEM
+#if defined(LINUX_SYSTEM) || defined(APPLE_SYSTEM)
 
     switch (logLevel)
     {
         case LL_Info:  // writes on stdout
-            std::cout << CerberusUtils::strPrint("%s%s [%sINFO%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(),
-                                                 instance->m_infoLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), str.c_str())
+            std::cout << CerberusUtils::strPrint("%s%s [%sINFO%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), instance->m_infoLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux,
+                                                 logAuthor.c_str(), str.c_str())
                       << std::endl;
             break;
 
         case LL_Warning:  // writes on stdout
-            std::cout << CerberusUtils::strPrint("%s%s [%sWARNING%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(),
-                                                 instance->m_warningLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), str.c_str())
+            std::cout << CerberusUtils::strPrint("%s%s [%sWARNING%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), instance->m_warningLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux,
+                                                 logAuthor.c_str(), str.c_str())
                       << std::endl;
             break;
 
         case LL_Error:  // writes on stderr
-            std::cerr << CerberusUtils::strPrint("%s%s [%sERROR%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(),
-                                                 instance->m_errorLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), str.c_str())
+            std::cerr << CerberusUtils::strPrint("%s%s [%sERROR%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), instance->m_errorLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux,
+                                                 logAuthor.c_str(), str.c_str())
                       << std::endl;
             break;
 
         case LL_Debug:  // writes on stderr
-            std::cerr << CerberusUtils::strPrint("%s%s [%sDEBUG%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(),
-                                                 instance->m_debugLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), str.c_str())
+            std::cerr << CerberusUtils::strPrint("%s%s [%sDEBUG%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), instance->m_debugLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux,
+                                                 logAuthor.c_str(), str.c_str())
                       << std::endl;
             break;
     }
@@ -230,6 +231,23 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
 #endif
 }
 //=============================================================================
+void CerberusLog::llDebug(const std::string& str, const std::string& author)
+{
+    // time
+    std::string timestamp = time::DateTime::current().toTimeStampString();
+    // author
+    std::string logAuthor;
+
+    if (!author.empty())
+    {
+        logAuthor = '[';
+        logAuthor += author;
+        logAuthor += "] ";
+    }
+
+    std::cerr << CerberusUtils::strPrint("%s [DEBUG] %s%s", timestamp.c_str(), logAuthor.c_str(), str.c_str()) << std::endl;
+}
+//=============================================================================
 void CerberusLog::_setup(const CerberusLogSetup& setup)
 {
     CerberusLog* instance = _instance();
@@ -255,7 +273,7 @@ void CerberusLog::_setup(const CerberusLogSetup& setup)
 #ifdef WINDOWS_SYSTEM
         instance->m_useFormattedTerminal = true;
 #else
-        instance->m_useFormattedTerminal               = (isatty(fileno(stdout)) == 1);
+        instance->m_useFormattedTerminal = (isatty(fileno(stdout)) == 1);
 #endif
     }
 

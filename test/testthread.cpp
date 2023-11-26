@@ -1,4 +1,5 @@
 #include "testthread.h"
+
 #include <cerberus/cerberus.h>
 
 int TestThread::tick()
@@ -7,17 +8,12 @@ int TestThread::tick()
     return 10;
 }
 
-void TestThread::warmUp()
-{
-    thrLogInfo("Warm-up");
-}
+void TestThread::warmUp() { thrLogInfo("Warm-up"); }
 
-void TestThread::coolDown()
-{
-    thrLogInfo("Cool-down");
-}
+void TestThread::coolDown() { thrLogInfo("Cool-down"); }
 
-TestThread::TestThread(const char* name) : cerberus::thread::Thread(name, Thread::ThreadPeriodicity::TP_Periodic, 500)
+TestThread::TestThread(const char* name)
+    : cerberus::thread::Thread(Thread::ThreadPeriodicity::TP_Periodic, 500, name)
 {
     // noop
 }

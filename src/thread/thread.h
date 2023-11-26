@@ -46,7 +46,7 @@
  *  coolDown() will be called after the last run of tick(), when terminate() is called. When coolDown() execution finishes, the join() returns.
  */
 
-#include "../time/time.h"
+#include "../time/timeframe.h"
 #include "./threadbase.h"
 #include "src/core/cerberusobject.h"
 
@@ -85,6 +85,8 @@ namespace cerberus
 
             void wait();
 
+            void construct(ThreadPeriodicity periodicity, const time::TimeFrame& time, const std::string& name);
+
            protected:
             virtual int tick();
 
@@ -93,8 +95,15 @@ namespace cerberus
             virtual void coolDown();
 
            public:
-            // Construct a non-periodic thread by default. If periodicity is TP_Periodic a valid time must be specified.
-            Thread(ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& time = time::Time(), const std::string& name = "");
+            // Construct a thread.
+            // If periodicity is TP_Periodic or TP_PeriodicQueue a valid time must be specified.
+            Thread(ThreadPeriodicity periodicity, const time::TimeFrame& time = time::TimeFrame(), const std::string& name = "");
+
+            // Construct a non-periodic thread with the given name if provided
+            Thread(const std::string& name = "");
+
+            // Construct a thread with given periodicity and name
+            Thread(ThreadPeriodicity periodicity, const std::string& name = "");
 
             Thread(const Thread& other) = delete;
 
@@ -103,7 +112,7 @@ namespace cerberus
             virtual ~Thread();
 
             // Put the calling thread in sleep state for a given time
-            static void sleep(const time::Time& time);
+            static void sleep(const time::TimeFrame& time);
 
             // Block until thread terminates and return the last tick() exit value.
             // If stop is true, the Thread is also started and terminated.

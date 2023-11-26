@@ -52,7 +52,36 @@ TEST(SharedByteBufferTest, SubBuffer)
 
     auto b2 = b1.subBuffer(7, 5);
 
+    //
     EXPECT_TRUE(b2 == "World");
     EXPECT_EQ(b2.size(), 5);
     EXPECT_EQ(b1.size(), 13);
+    // EXPECT_EQ(b1.instances(), 1);
+    // EXPECT_EQ(b2.instances(), 1);
+    //
+    char a[20] = {};
+    b1.copyTo((cerberus::BYTE*)&a[0]);
+
+    char b[20] = {};
+    b2.copyTo((cerberus::BYTE*)&b[0]);
+
+    logInfo(cerberus::core::CerberusUtils::strPrint("b1: %u, b2: %u", b1.size(), b2.size()));
+    logInfo(b);
+    logInfo(a);
+
+    //
+
+    cerberus::data::ByteBuffer bb("hello hello hello");
+
+    char c[20] = {};
+    bb.copyTo((cerberus::BYTE*)&c[0]);
+    logInfo(cerberus::core::CerberusUtils::strPrint("bb: %u", bb.size()));
+    logInfo(c);
+
+    auto bbb = bb.subBuffer(0, 5);
+
+    char d[20] = {};
+    bbb.copyTo((cerberus::BYTE*)&d[0]);
+    logInfo(cerberus::core::CerberusUtils::strPrint("bbb: %u", bbb.size()));
+    logInfo(d);
 }

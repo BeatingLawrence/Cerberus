@@ -103,6 +103,74 @@ std::string data::HTTPData::getHeaderFieldValue(SIZE index) const
     return m_header[index].val;
 }
 //=============================================================================
+data::ByteBuffer data::HTTPData::getHeader() const
+{
+    data::ByteBuffer buf;
+
+    switch (getRequest().method)
+    {
+        case data::HTTP_GET:
+            buf.appendString("GET ");
+            break;
+        case data::HTTP_POST:
+            buf.appendString("POST ");
+            break;
+        case data::HTTP_HEAD:
+            buf.appendString("HEAD ");
+            break;
+        case data::HTTP_PUT:
+            buf.appendString("PUT ");
+            break;
+        case data::HTTP_DELETE:
+            buf.appendString("DELETE ");
+            break;
+        case data::HTTP_PATCH:
+            buf.appendString("PATCH ");
+            break;
+        case data::HTTP_TRACE:
+            buf.appendString("TRACE ");
+            break;
+        case data::HTTP_OPTIONS:
+            buf.appendString("OPTIONS ");
+            break;
+        case data::HTTP_CONNECT:
+            buf.appendString("CONNECT ");
+            break;
+    }
+
+    buf.appendString(getRequest().url.c_str());
+    buf.appendString(" ");
+
+    switch (getRequest().version)
+    {
+        case data::HTTP_1_0:
+            buf.appendString("HTTP/1.0\r\n");
+            break;
+        case data::HTTP_1_1:
+            buf.appendString("HTTP/1.1\r\n");
+            break;
+        case data::HTTP_2:
+            buf.appendString("HTTP/2\r\n");
+            break;
+    }
+
+    for (SIZE i = 0; i < getHeaderSize(); i++)
+    {
+        buf.appendString(core::CerberusUtils::strPrint("%s: %s\r\n", getHeaderFieldName(i).c_str(), getHeaderFieldValue(i).c_str()).c_str());
+    }
+
+    buf.append("\r\n");
+
+    return buf;
+}
+//=============================================================================
+data::ByteBuffer data::HTTPData::getData() const
+{
+    data::ByteBuffer buf = getHeader();
+    buf.append(getPayload());
+    return buf;
+}
+//=============================================================================
 const cerberus::data::ByteBuffer &data::HTTPData::getPayload() const { return m_payload; }
 //=============================================================================
 data::ByteBuffer &data::HTTPData::getPayload() { return m_payload; }

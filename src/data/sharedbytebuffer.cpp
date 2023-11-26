@@ -52,13 +52,15 @@ SharedByteBuffer::SharedByteBuffer(SIZE size, uint8_t val)
 {
 }
 //=============================================================================
-SharedByteBuffer::SharedByteBuffer(const ByteBuffer& buffer)
+SharedByteBuffer::SharedByteBuffer(ByteBuffer& buffer)
     : m_buffer(new ByteBuffer(buffer.m_bytes, buffer.m_size)),  // private constructor
       m_instances(new uint32_t(1)),
       m_mutex(new mutex::Mutex(Recursive)),
       m_hasOwner(new bool(true)),
       m_owner(true)
 {
+    buffer.m_bytes = nullptr;
+    buffer.m_size  = 0;
 }
 //=============================================================================
 SharedByteBuffer::SharedByteBuffer()
@@ -203,12 +205,8 @@ SharedByteBuffer SharedByteBuffer::subBuffer(SIZE pos, SIZE len)
     mutex::MutexLocker ml(m_mutex);
     becomeOwner();
 
-    if ((pos + len) > m_buffer->size())
-    {
-        return SharedByteBuffer();  // null
-    }
-
-    return SharedByteBuffer(m_buffer->subBuffer(pos, len));
+    auto sub = m_buffer->subBuffer(pos, len);
+    return SharedByteBuffer(sub);
 }
 //=============================================================================
 void SharedByteBuffer::appendString(const char* str)

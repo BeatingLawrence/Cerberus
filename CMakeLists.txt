@@ -11,6 +11,7 @@ set(CMAKE_DEBUG_POSTFIX -d)
 file(GLOB_RECURSE src_files CONFIGURE_DEPENDS
     "src/*.cpp"
 )
+
 file(GLOB_RECURSE header_files CONFIGURE_DEPENDS
     "src/*.h"
 )
@@ -31,6 +32,7 @@ add_executable(test EXCLUDE_FROM_ALL
 set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
 
 target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY PRIVATE _CRT_SECURE_NO_WARNINGS PRIVATE CERBERUS_VERSION="${CMAKE_PROJECT_VERSION}")
+
 message(STATUS ${CMAKE_PROJECT_VERSION})
 
 install(TARGETS Cerberus DESTINATION lib)
@@ -104,8 +106,8 @@ elseif(UNIX)
 
     target_link_libraries(Cerberus LINK_PUBLIC ssl)
     target_link_libraries(Cerberus LINK_PUBLIC crypto)
-    target_link_libraries(test LINK_PUBLIC ssl)
-    target_link_libraries(test LINK_PUBLIC crypto)
+    #target_link_libraries(test LINK_PUBLIC ssl)
+    #target_link_libraries(test LINK_PUBLIC crypto)
 
 endif()
 

@@ -119,7 +119,7 @@ cerberus::OperationResult HTTPClient::connectTo(const Host &host)
         disconnect();
     }
 
-    m_socket = new Socket(CerberusObject::Socket_TCP, core::CerberusUtils::strPrint("[Socket] %s", m_name.c_str()));
+    m_socket = new Socket(CerberusObject::Socket_TCP, core::CerberusUtils::strPrint("Socket of \"%s\"", m_name.c_str()));
 
     if (m_useTLS)
     {
@@ -131,8 +131,10 @@ cerberus::OperationResult HTTPClient::connectTo(const Host &host)
             return OR_Failure;
         }
 
-        m_socket->TLS_ignoreHangup();
+        m_socket->TLS_ignoreHangup(false);
     }
+
+    m_socket->setRecvBufferSize(8192);
 
     auto res = m_socket->connect(host);
 
@@ -162,74 +164,17 @@ cerberus::OperationResult HTTPClient::makeRequest(const data::HTTPData &data)
         return OR_BadConditions;
     }
 
-    data::ByteBuffer buf;
-
-    switch (data.getRequest().method)
-    {
-        case data::HTTP_GET:
-            buf.appendString("GET ");
-            break;
-        case data::HTTP_POST:
-            buf.appendString("POST ");
-            break;
-        case data::HTTP_HEAD:
-            buf.appendString("HEAD ");
-            break;
-        case data::HTTP_PUT:
-            buf.appendString("PUT ");
-            break;
-        case data::HTTP_DELETE:
-            buf.appendString("DELETE ");
-            break;
-        case data::HTTP_PATCH:
-            buf.appendString("PATCH ");
-            break;
-        case data::HTTP_TRACE:
-            buf.appendString("TRACE ");
-            break;
-        case data::HTTP_OPTIONS:
-            buf.appendString("OPTIONS ");
-            break;
-        case data::HTTP_CONNECT:
-            buf.appendString("CONNECT ");
-            break;
-    }
-
-    buf.appendString(data.getRequest().url.c_str());
-    buf.appendString(" ");
-
-    switch (data.getRequest().version)
-    {
-        case data::HTTP_1_0:
-            buf.appendString("HTTP/1.0\r\n");
-            break;
-        case data::HTTP_1_1:
-            buf.appendString("HTTP/1.1\r\n");
-            break;
-        case data::HTTP_2:
-            buf.appendString("HTTP/2\r\n");
-            break;
-    }
-
-    for (SIZE i = 0; i < data.getHeaderSize(); i++)
-    {
-        buf.appendString(core::CerberusUtils::strPrint("%s: %s\r\n", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str()).c_str());
-    }
-
-    buf.append("\r\n");
-    buf.append(data.getPayload());
-
-    logInfo("REQUEST TEXT:\n%s\n", buf.toString().c_str());
-
-    return m_socket->send(buf);
+    return m_socket->send(data.getData());
 }
 //=============================================================================
-cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const time::Time &timeout, const time::Time &cycTimeout)
+cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
 {
     if (!m_socket)
     {
         return OR_BadConditions;
     }
+
+    data.clear();
 
     data::ByteBuffer buf;
     OperationResult res;
@@ -249,7 +194,6 @@ cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const ti
     if (res.fail()) return OR_Failure;
     SIZE sle = res.i;
 
-    data.clear();
     data.setPayload(buf.subBuffer(gap + 4));
 
     // get status line
@@ -278,6 +222,6 @@ cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const ti
 
     return OR_OK;
 }
-
+//=============================================================================
 Socket *HTTPClient::getSocket() { return m_socket; }
 //=============================================================================

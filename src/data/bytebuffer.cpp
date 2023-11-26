@@ -29,7 +29,7 @@ void ByteBuffer::_resize(SIZE size)
 //=============================================================================
 void ByteBuffer::_clear()
 {
-    free(m_bytes);
+    if (m_bytes) free(m_bytes);
     m_bytes = nullptr;
     m_size  = 0;
     m_pos   = 0;
@@ -50,6 +50,11 @@ ByteBuffer::ByteBuffer(SIZE size)
     if (size != 0)
     {
         m_bytes = (BYTE*)malloc(size);
+
+        if (m_bytes == nullptr)
+        {
+            throw cerberusSystemExc("could not allocate ByteBuffer memory");
+        }
     }
 }
 //=============================================================================
@@ -61,7 +66,12 @@ ByteBuffer::ByteBuffer(SIZE size, uint8_t val)
     if (size != 0)
     {
         m_bytes = (BYTE*)malloc(size);
-        if (m_bytes)
+
+        if (m_bytes == nullptr)
+        {
+            throw cerberusSystemExc("could not allocate ByteBuffer memory");
+        }
+        else
         {
             memset(m_bytes, val, size);
         }
@@ -117,10 +127,7 @@ ByteBuffer::ByteBuffer(const char* str)
     }
 }
 //=============================================================================
-ByteBuffer::~ByteBuffer()
-{
-    if (m_bytes) free(m_bytes);
-}
+ByteBuffer::~ByteBuffer() { _clear(); }
 //=============================================================================
 cerberus::BYTE* ByteBuffer::data() { return m_bytes; }
 //=============================================================================
@@ -203,7 +210,7 @@ ByteBuffer ByteBuffer::subBuffer(SIZE pos, SIZE len) const
     }
 
     ByteBuffer ret(len);
-    memmove(ret.data(), m_bytes + pos, ret.size());
+    memmove(ret.data(), m_bytes + pos, len);
 
     return ret;
 }
@@ -388,6 +395,27 @@ std::string ByteBuffer::toNormalizedString() const
     auto str = toString();
     core::CerberusUtils::normalize(str);
     return str;
+}
+//=============================================================================
+std::string ByteBuffer::toBinaryDumpString(uint32_t align) const
+{
+    std::string ret;
+    uint32_t aligncounter = 0;
+
+    for (SIZE i = 0; i < m_size; i++)
+    {
+        if (align && aligncounter == align)
+        {
+            ret.append("\n");
+            aligncounter = 0;
+        }
+
+        ret.append(core::CerberusUtils::strPrint("%02hhx ", (uint8_t)(*(m_bytes + i))));
+
+        aligncounter++;
+    }
+
+    return ret;
 }
 //=============================================================================
 cerberus::OperationResult ByteBuffer::search(const char* str) const

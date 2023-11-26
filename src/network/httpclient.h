@@ -54,8 +54,9 @@ namespace cerberus
             cerberus::OperationResult makeRequest(const data::HTTPData &data);
 
             // Block until a response is available to be read
-            cerberus::OperationResult getResponse(data::HTTPData &data, const time::Time &timeout = time::Time(), const time::Time &cycTimeout = time::Time());
+            cerberus::OperationResult getResponse(data::HTTPData &data, const time::TimeFrame &timeout = time::TimeFrame(1000), const time::TimeFrame &cycTimeout = time::TimeFrame());
 
+            // Get the internal socket (use for debugging purposes)
             cerberus::network::Socket *getSocket();
         };
     }  // namespace network

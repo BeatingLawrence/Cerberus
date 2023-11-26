@@ -120,6 +120,7 @@ namespace cerberus
         OR_BadConditions,             // [general] bad conditions encountered when processing the operation
         OR_NotFound,                  // [general] the item was not found
         OR_TemporaryUnavailable,      // [general] the requested operation is not available at the moment, retry later
+        OR_InvalidFile,               // [general] the provided file instance is not valid
                                       //
         OR_ResolveServerTempFailure,  // [DNS lookup] resolve method error
         OR_ResolveServerFailure,      // [DNS lookup] resolve method error

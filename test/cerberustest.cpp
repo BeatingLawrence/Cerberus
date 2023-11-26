@@ -60,13 +60,13 @@ TEST(cerberusTest, hostTest)
     }
     //
     {
-        cerberus::Host h("google.com");
+        cerberus::Host h("google.com:80");
         EXPECT_TRUE(h.isValidRemote());
         EXPECT_EQ(h.octect[0], 0);
         EXPECT_EQ(h.octect[1], 0);
         EXPECT_EQ(h.octect[2], 0);
         EXPECT_EQ(h.octect[3], 0);
-        EXPECT_EQ(h.port, 0);
+        EXPECT_EQ(h.port, 80);
     }
     //
     {

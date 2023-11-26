@@ -78,6 +78,41 @@ void cerberus::network::Socket::createTcpSocket()
     if (m_fd == -1)
     {
         logError("error in TCP socket creation: %s", strerror(errno));
+        return;
+    }
+
+    int val = 1;
+    if (::setsockopt(m_fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(int)) == -1)
+    {
+        logError("error in setsockopt() when setting SO_REUSEADDR: %s", strerror(errno));
+        close();
+    }
+}
+//=============================================================================
+bool cerberus::network::Socket::reopen()
+{
+    close();
+    createTcpSocket();  // recreate the socket
+
+    if (m_bind.isValid())
+    {
+        // re-bind
+        return bind(m_bind).ok();
+    }
+
+    return m_fd != -1;
+}
+//=============================================================================
+void cerberus::network::Socket::recvUntilEOF(data::ByteBuffer &buffer)
+{
+    data::ByteBuffer b;
+
+    while (true)
+    {
+        if (Socket::_recv(b, true).res == OR_OK)
+            buffer += b;
+        else
+            return;
     }
 }
 //=============================================================================
@@ -159,12 +194,12 @@ void cerberus::network::Socket::printSSLErrors()
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::_recv(data::ByteBuffer &buffer, bool donotblock)
 {
-    buffer.clear();
-
     if (isFailed())
     {
         return OR_FailedInstance;
     }
+
+    buffer.clear();
 
     if (isTLS())  // TLS mode
     {
@@ -316,6 +351,8 @@ cerberus::OperationResult cerberus::network::Socket::bind(const Host &iface)
         return OR_Failure;
     }
 
+    m_bind = iface;  // backup iface
+
     return OR_OK;
 }
 //=============================================================================
@@ -350,7 +387,13 @@ cerberus::OperationResult cerberus::network::Socket::connect(const Host &dest)
 
     if (ret == -1)
     {
-        logError("error in socket connect: %s, tried: %u", strerror(errno), h.octet_networkOrder);
+        logError("error in socket connect: %s", strerror(errno));
+
+        if (transportType() == TCP)
+        {
+            close();  // the socket will not be usable anymore
+        }
+
         return OR_Failure;
     }
 
@@ -404,7 +447,7 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::ByteBuffer
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buffer, const time::Time &timeout, const time::Time &cycTimeout)
+cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buffer, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
 {
     if (isFailed())
     {
@@ -425,14 +468,14 @@ cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buff
         auto waitRes = waitRead((first || !cycTimeout.isValid()) ? timeout : cycTimeout);  // for TLS must call read() to make stuff be ready
         first        = false;
 
-        if (waitRes.fail())
+        if (waitRes.res == OR_Hangup)  // maybe there's still some data to read
         {
-            return OR_Failure;
+            recvUntilEOF(buffer);
+            break;
         }
-
-        if (!waitRes.i)
+        else if (waitRes.res == OR_TimedOut)
         {
-            if (isTLS())  // try to flush TLS data
+            if (isTLS())  // maybe there's still some data remained in the TLS layer
             {
                 while (TLS_pending().i != 0)
                 {
@@ -440,24 +483,33 @@ cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buff
                     {
                         buffer += b;
                     }
+                    // else
+                    //     break;    //maybe needed, maybe not
                 }
             }
 
-            if (buffer.size() == 0)
-                return OR_TimedOut;  // timeout, no data
-            else
-                return OR_OK;
+            break;
         }
+        else if (waitRes.fail())
+            return OR_Failure;
+
+
+        // wait is OK, data is available
 
         auto ret = Socket::_recv(b, false).res;
 
         if (ret == OR_OK)
             buffer += b;
-        else if (ret == OR_RecvZero)
+        else if (ret == OR_RecvZero)  // HUP or zero lenght datagram
             return OR_OK;
         else
             return ret;
     }
+
+    // enough..
+    if (buffer.size() == 0) return OR_TimedOut;
+
+    return OR_OK;
 }
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buffer) { return _recv(buffer, false); }
@@ -468,22 +520,22 @@ bool cerberus::network::Socket::isFailed() const { return (m_fd == -1) || (socke
 //=============================================================================
 void cerberus::network::Socket::setRecvBufferSize(size_t size) { m_recvBuffer.resize(size); }
 //=============================================================================
-cerberus::OperationResult cerberus::network::Socket::waitRead(const time::Time &timeout)
+cerberus::OperationResult cerberus::network::Socket::waitRead(const time::TimeFrame &timeout)
 {
     pollfd set{};
     set.fd     = m_fd;
     set.events = POLLIN;
 
-    int ret = poll(&set, 1, timeout.isValid() ? timeout.milliseconds() : -1);
+    int ret = poll(&set, 1, timeout.isValid() ? timeout.toMilliseconds() : -1);
 
     if (ret == 0)  // timeout
     {
-        return (int64_t)0;
+        return OR_TimedOut;
     }
 
     if (ret == -1)
     {
-        logError("error in select: %s", strerror(errno));
+        logError("error in poll: %s", strerror(errno));
         return OR_SystemFailure;
     }
 
@@ -504,28 +556,28 @@ cerberus::OperationResult cerberus::network::Socket::waitRead(const time::Time &
 
     if (set.revents & POLLIN)
     {
-        return (int64_t)1;
+        return OR_OK;
     }
 
     return OR_Failure;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::network::Socket::waitWrite(const time::Time &timeout)
+cerberus::OperationResult cerberus::network::Socket::waitWrite(const time::TimeFrame &timeout)
 {
     pollfd set{};
     set.fd     = m_fd;
     set.events = POLLOUT;
 
-    int ret = poll(&set, 1, timeout.isValid() ? timeout.milliseconds() : -1);
+    int ret = poll(&set, 1, timeout.isValid() ? timeout.toMilliseconds() : -1);
 
     if (ret == 0)  // timeout
     {
-        return (int64_t)0;
+        return OR_TimedOut;
     }
 
     if (ret == -1)
     {
-        logError("error in select: %s", strerror(errno));
+        logError("error in poll: %s", strerror(errno));
         return OR_SystemFailure;
     }
 
@@ -546,7 +598,7 @@ cerberus::OperationResult cerberus::network::Socket::waitWrite(const time::Time 
 
     if (set.revents & POLLOUT)
     {
-        return (int64_t)1;
+        return OR_OK;
     }
 
     return OR_Failure;
@@ -560,6 +612,8 @@ cerberus::OperationResult cerberus::network::Socket::close()
     }
 
     TLS_deinit();  // discard return value
+
+    shutdown(m_fd, SHUT_WR);  // discard return value
 
     Result res = OR_OK;
 
@@ -834,7 +888,7 @@ cerberus::OperationResult cerberus::network::Socket::sendTo(const data::ByteBuff
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::network::Socket::connectP2P(const Host &dest, const time::Time &timeout)
+cerberus::OperationResult cerberus::network::Socket::connectP2P(const Host &dest, const time::TimeFrame &timeout)
 {
     if (isFailed())
     {
@@ -878,21 +932,31 @@ cerberus::OperationResult cerberus::network::Socket::connectP2P(const Host &dest
         overrideFlag = true;
     }
 
-    int ret = -1;
+    int ret = 0;
 
     while (timer.isRunning() || overrideFlag)
     {
         ret = ::connect(m_fd, (sockaddr *)&addr, sizeof(sockaddr_in));
 
-        if (ret == 0 || (ret == -1 && errno != ECONNREFUSED))
+        if (ret == -1)
         {
+            if (errno == ECONNREFUSED)  // refused, retry
+            {
+                if (reopen())
+                {
+                    continue;
+                }
+            }
+            else if (errno == EISCONN)  // already connected
+                ret = 0;
+
             break;
         }
     }
 
     if (ret == -1)
     {
-        debug("error in socket connect: %s", strerror(errno));
+        logError("error in socket connect: %s", strerror(errno));
         return OR_Failure;
     }
 
@@ -1168,7 +1232,7 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::network::Socket::recv(data::filesystem::File &file, const time::Time &timeout, const time::Time &cycTimeout)
+cerberus::OperationResult cerberus::network::Socket::recv(data::filesystem::File &file, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
 {
     if (isFailed())
     {
@@ -1181,9 +1245,7 @@ cerberus::OperationResult cerberus::network::Socket::recv(data::filesystem::File
     }
 
     data::ByteBuffer buffer;
-    OperationResult ret;
-
-    ret = recv(buffer, timeout, cycTimeout);
+    OperationResult ret = recv(buffer, timeout, cycTimeout);
 
     if (ret.fail())
     {
@@ -1192,7 +1254,8 @@ cerberus::OperationResult cerberus::network::Socket::recv(data::filesystem::File
 
     if (!file.write(buffer))
     {
-        return OR_Failure;
+        // could not write
+        return OR_InvalidFile;
     }
 
     return OR_OK;

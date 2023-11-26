@@ -65,7 +65,7 @@ namespace cerberus
             // Construct a SharedByteBuffer using a given ByteBuffer instance.
             // Do not attempt to call any method on the ByteBuffer object after this call,
             // use the implementation of the SharedByteBuffer instead
-            explicit SharedByteBuffer(const ByteBuffer& buffer);
+            explicit SharedByteBuffer(ByteBuffer& buffer);
 
             // Construct an invalid SharedByteBuffer, no buffer memory allocation performed
             SharedByteBuffer();

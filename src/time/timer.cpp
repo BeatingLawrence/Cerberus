@@ -18,7 +18,7 @@ Timer::Timer()
 {
 }
 //=============================================================================
-Timer::Timer(const Time &time, bool periodic)
+Timer::Timer(const TimeFrame &time, bool periodic)
     : m_running(false),
       m_periodic(periodic),
       m_time(time),
@@ -26,23 +26,24 @@ Timer::Timer(const Time &time, bool periodic)
 {
 }
 //=============================================================================
-Timer::~Timer() {}
+Timer::~Timer() { stop(); }
 //=============================================================================
-void Timer::setTime(const Time &time) { m_time = time; }
+void Timer::setTime(const TimeFrame &time) { m_time = time; }
 //=============================================================================
 void Timer::start()
 {
     auto &i = cerberus::Cerberus::instance();
 
-    uint32_t time = m_time.microseconds() / 100;
-    i.m_fastLoop.startTimer(m_running, time, m_periodic, m_callback);
+    if (m_periodic)
+        i.m_eventScheduler.startTimer(m_running, m_time, m_callback);
+    else
+        i.m_eventScheduler.startTimer(m_running, time::DateTime::current().add(m_time), m_callback);
 }
 //=============================================================================
 void Timer::stop()
 {
     auto &i = cerberus::Cerberus::instance();
-
-    i.m_fastLoop.stopTimer(m_running);
+    i.m_eventScheduler.stopTimer(m_running);
 }
 //=============================================================================
 void Timer::reset()

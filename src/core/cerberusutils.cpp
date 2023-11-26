@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "src/core/cerberuslog.h"
+
 using namespace cerberus::core;
 
 //=============================================================================
@@ -185,7 +187,7 @@ void CerberusUtils::normalize(std::string& str)
 
     for (auto&& el : str)
     {
-        if ((el < 32 || el > 126) && el != '\n')
+        if ((el < 32 || el > 126) && el != '\n' && el != 0)
         {
             el = '#';
         }

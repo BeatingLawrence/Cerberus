@@ -117,6 +117,12 @@ namespace cerberus
             // An exception is thrown if index is greater or equal to the size returned by getHeaderSize()
             std::string getHeaderFieldValue(SIZE index) const;
 
+            // Construct and return the header
+            data::ByteBuffer getHeader() const;
+
+            // Construct and return all the data as text(header+payload), ready to be sent to servers
+            data::ByteBuffer getData() const;
+
             // Get the HTTP payload
             const data::ByteBuffer& getPayload() const;
             data::ByteBuffer& getPayload();

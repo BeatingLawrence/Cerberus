@@ -49,14 +49,14 @@ void CerberusCore::warmUp()
         debug("LogFile open failed");
     }
 
-    debug("Starting FastLoop");
-    m_fastLoop.start();
+    debug("Starting Event Scheduler");
+    m_eventScheduler.start();
 }
 //=============================================================================
 void CerberusCore::coolDown()
 {
-    debug("Stopping FastLoop");
-    m_fastLoop.terminate();
+    debug("Stopping Event Scheduler");
+    m_eventScheduler.terminate();
     debug("Stopping Cerberus Core..");
     _writeLineOnFile("---LOG-END---");
     debug("Closing log file..");
@@ -74,7 +74,7 @@ void CerberusCore::_writeLineOnFile(const std::string& line)
 }
 //=============================================================================
 CerberusCore::CerberusCore()
-    : cerberus::thread::Thread(TP_NonPeriodic, time::Time(), "Cerberus-core"),
+    : cerberus::thread::Thread(TP_NonPeriodic, time::TimeFrame(), "Cerberus-core"),
       m_logFile(FOM_ReadWriteAppend)
 {
 }

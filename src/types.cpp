@@ -6,7 +6,6 @@
 
 #include "./core/cerberusutils.h"
 #include "src/core/cerberuslog.h"
-#include "src/exception/exceptioncatalog.h"
 
 #ifdef WINDOWS_SYSTEM
 // define constants here
@@ -31,7 +30,7 @@ cerberus::Host::Host(const std::string &str)
       port(0),
       resolved(false)
 {
-    if (!fromString(str)) logError("Host % is invalid", str.c_str());
+    if (!fromString(str)) logError("Host %s is invalid", str.c_str());
 }
 //=============================================================================
 cerberus::Host::Host(const char *str)
@@ -39,7 +38,7 @@ cerberus::Host::Host(const char *str)
       port(0),
       resolved(false)
 {
-    if (!fromString(str)) logError("Host % is invalid", str);
+    if (!fromString(str)) logError("Host %s is invalid", str);
 }
 //=============================================================================
 cerberus::Host cerberus::Host::stringToHost(const std::string &str)
@@ -266,7 +265,7 @@ bool cerberus::OperationResult::ok(bool printError)
     {
         if (printError)
         {
-            logError("Operation result failed: %s", errorString().c_str());
+            logError("Operation failed: %s", errorString().c_str());
         }
     }
 
@@ -279,7 +278,7 @@ bool cerberus::OperationResult::fail(bool printError)
     {
         if (printError)
         {
-            logError("Operation result failed: %s", errorString().c_str());
+            logError("Operation failed: %s", errorString().c_str());
         }
 
         return true;
@@ -340,7 +339,8 @@ std::string cerberus::OperationResult::errorString()
             return "Database failure";
         case OR_TableAlreadyPresent:
             return "Table already present";
-            break;
+        case OR_InvalidFile:
+            return "Given file is not valid";
     }
 
     return "Undefined";

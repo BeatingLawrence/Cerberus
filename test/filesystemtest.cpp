@@ -5,10 +5,10 @@
 
 TEST(fileTest, creation)
 {
-    cerberus::data::filesystem::File file("testFile.txt", cerberus::FOM_ReadWrite);
-    file.open();
-    file.writeLine("this is a test");
-    file.close();
+    cerberus::data::filesystem::File file("testFile.txt", cerberus::FOM_ReadWriteTrunc);
+    ASSERT_TRUE(file.open());
+    ASSERT_TRUE(file.writeLine("this is a test"));
+    ASSERT_TRUE(file.close());
 }
 
 TEST(iniDataFileTest, read)  // BEFORE TEST, prepare a read.ini file containing the following data:
@@ -36,7 +36,7 @@ TEST(iniDataFileTest, write)
 
 TEST(iniDataFileTest, modify)
 {
-    cerberus::data::filesystem::IniDataFile file("read.ini");
+    cerberus::data::filesystem::IniDataFile file("write.ini");
     file.load();
     EXPECT_EQ(file.read_integer("integer_value").i, (uint64_t)1010);
     file.write_integer("integer_value", (uint64_t)1200);

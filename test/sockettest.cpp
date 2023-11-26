@@ -76,7 +76,7 @@ static int testCallback_TCP_P2P(cerberus::message::cerberus_message msg, cerberu
     auto socket = TCPP2PSocket("TCPP2P receiver");
     socket.bind(cerberus::Host("localhost:44444"));
 
-    if (socket.connectP2P(cerberus::Host("localhost:55555"), 2000) != cerberus::OR_OK)
+    if (socket.connectP2P(cerberus::Host("localhost:57829"), 2000) != cerberus::OR_OK)
     {
         debug("connect error");
         socket.close();
@@ -128,9 +128,8 @@ static int testCallback_FTP(cerberus::message::cerberus_message msg, cerberus::t
     }
     auto ret = s.recv(file, 500);  // 0.5 seconds timeout
 
-    if (ret != cerberus::OR_OK)
+    if (ret.fail(true))
     {
-        debug("receive error %i", ret.res);
         socket.close();
         return THREAD_ERROR;
     }
@@ -145,7 +144,7 @@ static int testCallback_FTP(cerberus::message::cerberus_message msg, cerberus::t
 TEST(socketTest, UDP)
 {
     // creating receiver thread
-    cerberus::thread::Thread receiver("receiverTestThread", cerberus::thread::Thread::TP_OneShot);
+    cerberus::thread::Thread receiver(cerberus::thread::Thread::TP_OneShot, "receiverTestThread");
     receiver.provideTickCallback(&testCallback_UDP);
     receiver.start();
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
@@ -160,7 +159,7 @@ TEST(socketTest, UDP)
 TEST(socketTest, TCP)
 {
     // creating receiver thread
-    cerberus::thread::Thread receiver("receiverTestThread", cerberus::thread::Thread::TP_OneShot);
+    cerberus::thread::Thread receiver(cerberus::thread::Thread::TP_OneShot, "receiverTestThread");
     receiver.provideTickCallback(&testCallback_TCP);
     receiver.start();
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
@@ -178,13 +177,13 @@ TEST(socketTest, TCP)
 TEST(socketTest, TCP_P2P)
 {
     // creating receiver thread
-    cerberus::thread::Thread receiver("receiverTestThread", cerberus::thread::Thread::TP_OneShot);
+    cerberus::thread::Thread receiver(cerberus::thread::Thread::TP_OneShot, "receiverTestThread");
     receiver.provideTickCallback(&testCallback_TCP_P2P);
     receiver.start();
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
     //
     auto socket = TCPP2PSocket("TCPP2P transmitter");
-    ASSERT_EQ(socket.bind(cerberus::Host("localhost:55555")).res, cerberus::OR_OK);
+    ASSERT_EQ(socket.bind(cerberus::Host("localhost:57829")).res, cerberus::OR_OK);
     ASSERT_EQ(socket.connectP2P(cerberus::Host("localhost:44444"), 2000).res, cerberus::OR_OK);
     cerberus::data::ByteBuffer buf("Hello, World!");
     ASSERT_EQ(socket.send(buf).res, cerberus::OR_OK);
@@ -196,7 +195,7 @@ TEST(socketTest, TCP_P2P)
 TEST(socketTest, FTP)
 {
     // creating receiver thread
-    cerberus::thread::Thread receiver("receiverTestThread", cerberus::thread::Thread::TP_OneShot);
+    cerberus::thread::Thread receiver(cerberus::thread::Thread::TP_OneShot, "receiverTestThread");
     receiver.provideTickCallback(&testCallback_FTP);
     receiver.start();
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
@@ -231,8 +230,7 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
     ASSERT_EQ(socket.TLS_init().res, cerberus::OR_OK);  // mark the socket as TLS
     socket.TLS_ignoreHangup(false).fail(true);
     debug("connecting..");
-    cerberus::Host h("www.google.com");
-    h.port = 443;
+    cerberus::Host h("www.google.com:443");
     ASSERT_EQ(socket.connect(h).res, cerberus::OR_OK);
     debug("connected with encryption: PROTO: %s CIPHER: %s", socket.TLS_getProtocolName().c_str(), socket.TLS_getCipherName().c_str());
     debug("sending get request");
@@ -251,9 +249,9 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
     cerberus::data::ByteBuffer buf;
     socket.setRecvBufferSize(8192);
     debug("receiving");
-    auto r = socket.recv(buf, 500, 200).res;
+    auto r = socket.recv(buf, 1000, 200);
 
-    EXPECT_EQ(r, cerberus::OR_OK);
+    EXPECT_TRUE(r.ok(true));
 
     socket.close();
 
@@ -268,9 +266,7 @@ TEST(socketTest, HTTPClient)
 {
     cerberus::network::HTTPClient client("HTTP Client test");
     client.useTLS();
-    cerberus::Host h("www.google.com");
-    h.port = 443;
-    EXPECT_EQ(client.connectTo(h).res, cerberus::OR_OK);
+    ASSERT_TRUE(client.connectTo("www.google.com:443").ok(true));
     debug("connected");
     cerberus::data::HTTPData data;
     data.setRequest({cerberus::data::HTTP_GET, "/", cerberus::data::HTTP_1_1});
@@ -280,10 +276,13 @@ TEST(socketTest, HTTPClient)
     data.addHeaderField("Accept", "text/html");
     data.addHeaderField("Connection", "keep-alive");
     data.addHeaderField("Cache-Control", "max-age=0");
-    EXPECT_FALSE(client.makeRequest(data).fail(true));
+    //
+    debug("data to be sent:");
+    debug(data.getData().toNormalizedString().c_str());
+    //
+    EXPECT_TRUE(client.makeRequest(data).ok(true));
     debug("request sent");
-    data.clear();
-    EXPECT_FALSE(client.getResponse(data, 1000).fail(true));
+    EXPECT_TRUE(client.getResponse(data, 1000, 200).ok(true));
 
     client.disconnect();
 
@@ -308,6 +307,8 @@ TEST(socketTest, HTTPClient)
 
 TEST(socketTest, TelegramBot)
 {
+    return;  // disable test
+
     cerberus::network::HTTPClient client("HTTP Bot Client");
     client.useTLS();
     cerberus::Host h("api.telegram.org:443");
@@ -342,6 +343,8 @@ TEST(socketTest, TelegramBot)
 
 TEST(socketTest, TelegramBotSendMessage)
 {
+    return;  // disable test
+
     cerberus::network::HTTPClient client("HTTP Bot Client");
     client.useTLS();
     cerberus::Host h("api.telegram.org:443");

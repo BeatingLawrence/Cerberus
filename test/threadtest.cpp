@@ -42,7 +42,7 @@ static void testCoolDownCallback() { logInfo("Cool-down Callback"); }
 
 TEST(threadTest, thread_callback)
 {
-    cerberus::thread::Thread thread3("test-Thread3", cerberus::thread::Thread::TP_Periodic, 100);
+    cerberus::thread::Thread thread3(cerberus::thread::Thread::TP_Periodic, 100, "test-Thread3");
     thread3.provideTickCallback(&testCallback);
     thread3.provideWarmUpCallback(&testWarmUpCallback);
     thread3.provideCoolDownCallback(&testCoolDownCallback);
@@ -61,8 +61,7 @@ static int pingTestCallback(cerberus::message::cerberus_message msg, cerberus::t
     if (msg->isValid())
     {
         logInfo(core::CerberusUtils::strPrint("PONG! %u %u %u", msg->getSlotAt(0)->to<cerberus::message::slot::CharSlot>()->value(),
-                                              msg->getSlotAt(1)->to<cerberus::message::slot::CharSlot>()->value(),
-                                              msg->getSlotAt(2)->to<cerberus::message::slot::CharSlot>()->value()));
+                                              msg->getSlotAt(1)->to<cerberus::message::slot::CharSlot>()->value(), msg->getSlotAt(2)->to<cerberus::message::slot::CharSlot>()->value()));
     }
     else  // tick
     {
@@ -114,7 +113,7 @@ TEST(threadTest, thread_ping_pong)
     msg.addSlot(cerberus::message::slot::CharSlot::create());
     cerberus::core::CerberusFactory::registerMessage(msg, "PingPongMessage");
     // start the test
-    cerberus::thread::Thread ping("pingThread", cerberus::thread::Thread::TP_PeriodicQueue, 100);
+    cerberus::thread::Thread ping(cerberus::thread::Thread::TP_PeriodicQueue, 100, "pingThread");
     cerberus::thread::Thread pong("pongThread");  // Non-Periodic (receiver)
     ping.provideTickCallback(&pingTestCallback);
     pong.provideTickCallback(&pongTestCallback);

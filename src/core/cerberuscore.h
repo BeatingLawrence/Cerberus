@@ -9,7 +9,7 @@
  */
 
 #include "../data/filesystem/file.h"
-#include "src/core/fastloop.h"
+#include "src/core/eventscheduler.h"
 #include "src/thread/thread.h"
 
 namespace cerberus
@@ -32,7 +32,7 @@ namespace cerberus
             void _writeLineOnFile(const std::string& line);
 
            public:
-            FastLoop m_fastLoop;
+            EventScheduler m_eventScheduler;
 
             CerberusCore();
 

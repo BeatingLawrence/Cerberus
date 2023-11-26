@@ -3,7 +3,7 @@
 
 #include <atomic>
 
-#include "src/time/time.h"
+#include "src/time/timeframe.h"
 #include "src/types.h"
 
 namespace cerberus
@@ -17,7 +17,7 @@ namespace cerberus
 
             bool m_periodic;
 
-            Time m_time;
+            TimeFrame m_time;
 
             timerCallback m_callback;
 
@@ -26,13 +26,13 @@ namespace cerberus
            public:
             Timer();
 
-            Timer(const Time& time, bool periodic = false);
+            Timer(const TimeFrame& time, bool periodic = false);
 
             Timer(const Timer& other) = delete;
 
             ~Timer();
 
-            void setTime(const Time& time);
+            void setTime(const TimeFrame& time);
 
             void start();
 

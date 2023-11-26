@@ -147,6 +147,11 @@ namespace cerberus
             // symbols, and cr lf and crlf are substituted by "\r" "\n" and "\r\n")
             std::string toNormalizedString() const;
 
+            // Return the buffer content as a HEX binary data string
+            // The align argument specifies the number of bytes written per raw.
+            // A value of zero disables the alignment
+            std::string toBinaryDumpString(uint32_t align = 0) const;
+
             // Search a sequence of chars and return its position in the size field.
             // If the given string is empty or if its size is larger than the buffer size,
             // this method returns OR_WrongArgument.
