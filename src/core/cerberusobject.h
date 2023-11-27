@@ -94,7 +94,7 @@ namespace cerberus
 
             if (casted == nullptr)
             {
-                debug("failed to cast Cerberus object %u to %s", m_id, typeid(T).name());
+                cdebug("failed to cast Cerberus object %u to %s", m_id, typeid(T).name());
                 throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
             }
 
@@ -110,7 +110,7 @@ namespace cerberus
 
             if (casted == nullptr)
             {
-                debug("failed to cast Cerberus object %u to %s", m_id, typeid(T).name());
+                cdebug("failed to cast Cerberus object %u to %s", m_id, typeid(T).name());
                 throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
             }
 

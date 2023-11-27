@@ -91,7 +91,7 @@ cerberus::message::cerberus_message CerberusFactory::messageConstruct(uint32_t i
     if (id < CERBERUS_FACTORY_START_ID)
     {
         // reserved range
-        logError("The requested ID is in the reserved range");
+        clogError("The requested ID is in the reserved range");
         return message::Message::create();
     }
 
@@ -149,7 +149,7 @@ cerberus::message::cerberus_message CerberusFactory::standardMessageConstruct(St
             // add here more message specializations..
 
         default:
-            logError("Given type does not exist");
+            clogError("Given type does not exist");
             msg = message::Message::create(CERBERUS_INVALID_ID);
             break;
     }

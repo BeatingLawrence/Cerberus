@@ -30,8 +30,8 @@ HTTPClient::DictResult HTTPClient::getDictFromHeader(const data::ByteBuffer &hea
 
         if (p == std::string::npos)
         {
-            debug("Broken line found in the HTTP header");
-            debug("%s", str.c_str());
+            cdebug("Broken line found in the HTTP header");
+            cdebug("%s", str.c_str());
             return {OR_Failure, ret};
         }
 
@@ -216,7 +216,7 @@ cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const ti
     if (res.ok() && res.i)
     {
         // chunked encoding
-        debug("processing chunked data...");
+        cdebug("processing chunked data...");
         decodeChunkedData(data.getPayload());
     }
 

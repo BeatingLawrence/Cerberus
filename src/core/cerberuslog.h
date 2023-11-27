@@ -1,29 +1,35 @@
 #ifndef CERBERUS_CORE_CERBERUSLOG_H
 #define CERBERUS_CORE_CERBERUSLOG_H
 
+#include <cstdint>
 #include <string>
 
 #include "../Cerberus_global.h"
 #include "../mutex/mutex.h"
 #include "../types.h"
 #include "./cerberusutils.h"
-#include <cstdint>
 
 // #define logInfo(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Info)
 // #define logWarning(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Warning)
 // #define logError(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Error)
-// #define debug(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Debug)
+// #define debug(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_cdebug)
 
-#define logInfo(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Info)
-#define logWarning(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Warning)
-#define logError(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Error)
-#define debug(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Debug)
-#define lldebug(text, ...) ::cerberus::core::CerberusLog::llDebug(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__))
+#define clogInfo(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Info, "CERB", false)
+#define clogWarning(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Warning, "CERB", false)
+#define clogError(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Error, "CERB", false)
+#define cdebug(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Debug, "CERB", false)
 
-#define thrLogInfo(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_Info, this->name())
-#define thrLogWarning(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_Warning, this->name())
-#define thrLogError(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_Error, this->name())
-#define thrDebug(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_Debug, this->name())
+#define logInfo(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Info, "", true)
+#define logWarning(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Warning, "", true)
+#define logError(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Error, "", true)
+#define debug(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Debug, "", true)
+
+#define lldebug(text, ...) ::cerberus::core::CerberusLog::lldebug(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__))
+
+#define thrlogInfo(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_Info, this->name(), true)
+#define thrlogWarning(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_Warning, this->name(), true)
+#define thrlogError(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_Error, this->name(), true)
+#define thrdebug(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::LogLevel::LL_cdebug, this->name(), true)
 
 namespace cerberus
 {
@@ -47,7 +53,8 @@ namespace cerberus
 
             bool m_useFormattedTerminal;
             bool m_fileLogEnable;
-            LogLevel m_logLevel;
+            LogLevel m_appLogLevel;
+            LogLevel m_cerbLogLevel;
 
             std::string m_infoLogTerminalFormatting_Linux;                        // used for Linux only
             std::string m_warningLogTerminalFormatting_Linux;                     // used for Linux only
@@ -82,7 +89,8 @@ namespace cerberus
 
            public:
             // Logs the given string to stdout/stderr according to the specified logLevel
-            static void log(const std::string& str, LogLevel logLevel = LL_Info, const std::string& author = std::string());
+            static void log(const std::string& str, LogLevel logLevel = LL_Info, const std::string& author = std::string(), bool application = true);
+
             static void llDebug(const std::string& str, const std::string& author = std::string());
         };
     }  // namespace core

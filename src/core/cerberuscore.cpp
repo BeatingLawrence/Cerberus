@@ -29,7 +29,7 @@ int CerberusCore::tick()
 
     if (destination == CERBERUS_INVALID_ID)
     {
-        debug("Destination of message is invalid, dropping");
+        cdebug("Destination of message is invalid, dropping");
     }
     else
     {
@@ -42,24 +42,24 @@ int CerberusCore::tick()
 //=============================================================================
 void CerberusCore::warmUp()
 {
-    debug("Starting Core Thread..");
+    cdebug("Starting Core Thread..");
 
     if (!m_logFile.open() && !m_logFile.fileName().empty())
     {
-        debug("LogFile open failed");
+        cdebug("LogFile open failed");
     }
 
-    debug("Starting Event Scheduler");
+    cdebug("Starting Event Scheduler");
     m_eventScheduler.start();
 }
 //=============================================================================
 void CerberusCore::coolDown()
 {
-    debug("Stopping Event Scheduler");
+    cdebug("Stopping Event Scheduler");
     m_eventScheduler.terminate();
-    debug("Stopping Cerberus Core..");
+    cdebug("Stopping Cerberus Core..");
     _writeLineOnFile("---LOG-END---");
-    debug("Closing log file..");
+    cdebug("Closing log file..");
     m_logFile.close();
 }
 //=============================================================================

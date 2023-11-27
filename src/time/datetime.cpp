@@ -271,7 +271,7 @@ DateTime DateTime::current()
 
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
     {
-        debug("clock_gettime error: %s", strerror(errno));
+        cdebug("clock_gettime error: %s", strerror(errno));
     }
 
     return DateTime(ts.tv_sec, ts.tv_nsec);

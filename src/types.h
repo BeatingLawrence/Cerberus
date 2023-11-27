@@ -60,14 +60,15 @@ namespace cerberus
 
     struct CerberusLogSetup
     {
-        LogLevel logLevel;            // set a log level. Minor levels will be silenced
-        bool disableFormatting;       // disable the color formatting of the output terminal
-        std::string logFileName;      // the log file name
-        SIZE logFileMaximumSize;      // set to zero to disable (not recommended)
-        CerberusLogRole infoRole;     // set the log role for the info level
-        CerberusLogRole warningRole;  // set the log role for the warning level
-        CerberusLogRole errorRole;    // set the log role for the error level
-        CerberusLogRole debugRole;    // set the log role for the debug level
+        LogLevel applicationLogLevel;  // set the application log level. Minor levels will be silenced
+        LogLevel cerberusLogLevel;     // set the Cerberus framework log level. Minor levels will be silenced
+        bool disableFormatting;        // disable the color formatting of the output terminal
+        std::string logFileName;       // the log file name
+        SIZE logFileMaximumSize;       // set to zero to disable (not recommended)
+        CerberusLogRole infoRole;      // set the log role for the info level
+        CerberusLogRole warningRole;   // set the log role for the warning level
+        CerberusLogRole errorRole;     // set the log role for the error level
+        CerberusLogRole debugRole;     // set the log role for the debug level
     };
 
     struct CerberusInitParms

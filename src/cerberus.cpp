@@ -47,7 +47,7 @@ void Cerberus::init(const CerberusInitParms& parms)
 
     if (cerberus.m_initFlag)
     {
-        logWarning("Cerberus already initialized, skipping init() call..");
+        clogWarning("Cerberus already initialized, skipping init() call..");
         return;
     }
 
@@ -57,7 +57,7 @@ void Cerberus::init(const CerberusInitParms& parms)
     cerberus.start();
     // Do other stuff..
     cerberus.m_initFlag = true;
-    debug("Cerberus init completed");
+    cdebug("Cerberus init completed");
     //
     if (parms.useCiphers)
     {
@@ -72,7 +72,7 @@ void Cerberus::init(const CerberusInitParms& parms)
 
     if (sigaction(SIGPIPE, &action, nullptr) != 0)
     {
-        logError("Unable to ignore SIGPIPE system signal, using SQL may terminate the process");
+        clogError("Unable to ignore SIGPIPE system signal, using SQL may terminate the process");
     }
 
 #endif
@@ -92,15 +92,17 @@ void Cerberus::deinit()
 
     instance().join(true);
     instance().m_initFlag = false;
-    logInfo("Cerberus Memory Released");
+    clogInfo("Cerberus Memory Released");
 }
 //=============================================================================
 CerberusInitParms Cerberus::cerberusDefaultParms()
 {
     CerberusInitParms toReturn{};
-    toReturn.logSetup.disableFormatting = false;
-    toReturn.logSetup.logFileName       = "./last.log";
-    toReturn.logSetup.logLevel          = LL_Error;
+    toReturn.logSetup.disableFormatting   = false;
+    toReturn.logSetup.logFileName         = "./last.log";
+    toReturn.logSetup.applicationLogLevel = LL_Error;
+    toReturn.logSetup.cerberusLogLevel    = LL_Error;
+
 #ifdef WINDOWS_SYSTEM
     toReturn.logSetup.infoRole.foregroundColor    = TERMINAL_FOREGROUND_GREEN;
     toReturn.logSetup.warningRole.foregroundColor = (TERMINAL_FOREGROUND_GREEN | TERMINAL_FOREGROUND_RED);

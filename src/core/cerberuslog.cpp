@@ -31,7 +31,8 @@ const uint8_t CerberusLog::EndOfFormatting_Windows = TERMINAL_FOREGROUND_BLUE | 
 CerberusLog::CerberusLog()
     : m_useFormattedTerminal(false),
       m_fileLogEnable(true),
-      m_logLevel(LL_Error),
+      m_appLogLevel(LL_Error),
+      m_cerbLogLevel(LL_Error),
       m_infoLogTerminalFormatting_Linux(),
       m_warningLogTerminalFormatting_Linux(),
       m_errorLogTerminalFormatting_Linux(),
@@ -94,14 +95,14 @@ CerberusLog* CerberusLog::_instance()
     return &instance;
 }
 //=============================================================================
-void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::string& author)
+void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::string& author, bool application)
 {
     std::string s         = str;
     CerberusLog* instance = _instance();
     mutex::MutexLocker locker(&(instance->m_mutex));
 
     // loglevel check
-    if (logLevel > instance->m_logLevel)
+    if ((application && logLevel > instance->m_appLogLevel) || (!application && logLevel > instance->m_cerbLogLevel))
     {
         return;
     }
@@ -266,7 +267,8 @@ void CerberusLog::_setup(const CerberusLogSetup& setup)
     instance->m_warningLogTerminalFormatting_Linux   = std::string();
     instance->m_errorLogTerminalFormatting_Linux     = std::string();
     instance->m_debugLogTerminalFormatting_Linux     = std::string();
-    instance->m_logLevel                             = setup.logLevel;
+    instance->m_appLogLevel                          = setup.applicationLogLevel;
+    instance->m_cerbLogLevel                         = setup.cerberusLogLevel;
 
     if (setup.disableFormatting)
     {

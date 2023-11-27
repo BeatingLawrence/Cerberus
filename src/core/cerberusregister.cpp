@@ -98,7 +98,7 @@ void CerberusRegister::unregisterObj(uint32_t id)
     {
         if ((*it)->id() == id)
         {
-            debug("Unregistering %s", (*it)->toObjStr().c_str());
+            cdebug("Unregistering %s", (*it)->toObjStr().c_str());
 
             if ((*it)->type() == CerberusObject::MessageTemplate)
             {

@@ -107,7 +107,7 @@ cerberus::OperationResult cerberus::data::filesystem::File::createDirectory(cons
 
     if (ret == -1)
     {
-        logError("mkdir error: %s", strerror(errno));
+        clogError("mkdir error: %s", strerror(errno));
         return OR_SystemFailure;
     }
 
@@ -124,7 +124,7 @@ cerberus::OperationResult cerberus::data::filesystem::File::deleteDirectory(cons
 
     if (ret == -1)
     {
-        logError("rmdir error: %s", strerror(errno));
+        clogError("rmdir error: %s", strerror(errno));
         return OR_SystemFailure;
     }
 
@@ -160,7 +160,7 @@ cerberus::OperationResult cerberus::data::filesystem::File::isEmptyDirectory(con
 
     if (errno != 0)
     {
-        logError("readdir error: %s", strerror(errno));
+        clogError("readdir error: %s", strerror(errno));
         return OR_SystemFailure;
     }
 
@@ -302,7 +302,7 @@ bool cerberus::data::filesystem::File::close()
 {
     if (fclose(m_file) != 0)
     {
-        debug("fclose error: %s", strerror(errno));
+        cdebug("fclose error: %s", strerror(errno));
         return false;
     }
 
@@ -320,7 +320,7 @@ bool cerberus::data::filesystem::File::deleteFromDisk()
 
     if (::remove(m_filePath.c_str()) != 0)
     {
-        debug("remove error: %s", strerror(errno));
+        cdebug("remove error: %s", strerror(errno));
         return false;
     }
 
@@ -336,7 +336,7 @@ bool cerberus::data::filesystem::File::move(const std::string& newName)
 
     if (::rename(m_filePath.c_str(), newName.c_str()) != 0)
     {
-        debug("rename error: %s", strerror(errno));
+        cdebug("rename error: %s", strerror(errno));
         return false;
     }
 

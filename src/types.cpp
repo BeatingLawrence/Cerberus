@@ -30,7 +30,7 @@ cerberus::Host::Host(const std::string &str)
       port(0),
       resolved(false)
 {
-    if (!fromString(str)) logError("Host %s is invalid", str.c_str());
+    if (!fromString(str)) clogError("Host %s is invalid", str.c_str());
 }
 //=============================================================================
 cerberus::Host::Host(const char *str)
@@ -38,7 +38,7 @@ cerberus::Host::Host(const char *str)
       port(0),
       resolved(false)
 {
-    if (!fromString(str)) logError("Host %s is invalid", str);
+    if (!fromString(str)) clogError("Host %s is invalid", str);
 }
 //=============================================================================
 cerberus::Host cerberus::Host::stringToHost(const std::string &str)
@@ -191,32 +191,32 @@ cerberus::OperationResult cerberus::Host::resolve()
 
     if (ret == EAI_AGAIN)
     {
-        debug("DNS lookup: temporary server failure [%s]", hostname.c_str());
+        cdebug("DNS lookup: temporary server failure [%s]", hostname.c_str());
         return OR_ResolveServerTempFailure;
     }
     else if (ret == EAI_FAIL)
     {
-        debug("DNS lookup: server failure [%s]", hostname.c_str());
+        cdebug("DNS lookup: server failure [%s]", hostname.c_str());
         return OR_ResolveServerFailure;
     }
     else if (ret == EAI_NODATA)
     {
-        debug("DNS lookup: hostname exists but has no ip associated [%s]", hostname.c_str());
+        cdebug("DNS lookup: hostname exists but has no ip associated [%s]", hostname.c_str());
         return OR_ResolveNoData;
     }
     else if (ret == EAI_NONAME)
     {
-        debug("DNS lookup: hostname was not found [%s]", hostname.c_str());
+        cdebug("DNS lookup: hostname was not found [%s]", hostname.c_str());
         return OR_ResolveNotFound;
     }
     else if (ret == EAI_SYSTEM)
     {
-        debug("DNS lookup: system failure, %s [%s]", strerror(errno), hostname.c_str());
+        cdebug("DNS lookup: system failure, %s [%s]", strerror(errno), hostname.c_str());
         return OR_ResolveSystemFailure;
     }
     else
     {
-        debug("DNS lookup: failure, %s [%s]", gai_strerror(ret), hostname.c_str());
+        cdebug("DNS lookup: failure, %s [%s]", gai_strerror(ret), hostname.c_str());
         return OR_ResolveFailure;
     }
 }
@@ -265,7 +265,7 @@ bool cerberus::OperationResult::ok(bool printError)
     {
         if (printError)
         {
-            logError("Operation failed: %s", errorString().c_str());
+            clogError("Operation failed: %s", errorString().c_str());
         }
     }
 
@@ -278,7 +278,7 @@ bool cerberus::OperationResult::fail(bool printError)
     {
         if (printError)
         {
-            logError("Operation failed: %s", errorString().c_str());
+            clogError("Operation failed: %s", errorString().c_str());
         }
 
         return true;

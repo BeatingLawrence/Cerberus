@@ -10,12 +10,12 @@ SQLDatabase::SQLDatabase(const std::string& parameters) noexcept
     : m_failed(false),
       m_failureReason()
 {
-    //connect to DB
+    // connect to DB
 }
 //=============================================================================
 SQLDatabase::~SQLDatabase()
 {
-    //de-init the DB
+    // de-init the DB
 }
 //=============================================================================
 bool SQLDatabase::isFailed() const { return m_failed; }
@@ -24,19 +24,19 @@ std::string SQLDatabase::failureReason() const { return m_failureReason; }
 //=============================================================================
 cerberus::OperationResult SQLDatabase::queryBlock(const std::string& query, SQLBlock& output)
 {
-    //Query a single block
+    // Query a single block
     return OR_Undefined;
 }
 //=============================================================================
 cerberus::OperationResult SQLDatabase::queryPrototype(SQLTablePrototype& prototype)
 {
-    //Query a prototype
+    // Query a prototype
     return OR_Undefined;
 }
 //=============================================================================
 cerberus::OperationResult SQLDatabase::command(const std::string& query)
 {
-    //Send a command
+    // Send a command
     return OR_Undefined;
 }
 //=============================================================================
@@ -44,7 +44,7 @@ cerberus::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototype)
 {
     if (prototype.name().empty())
     {
-        logError("Asked to create an empty-named table");
+        clogError("Asked to create an empty-named table");
         return OR_QueryFailure;
     }
 
@@ -55,7 +55,7 @@ cerberus::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototype)
     {
         if (res == OR_OK)
         {
-            logError("Asked to create an existing table");
+            clogError("Asked to create an existing table");
             return OR_TableAlreadyPresent;
         }
 
@@ -91,7 +91,7 @@ cerberus::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
 {
     if (block.m_prototype.name().empty())
     {
-        logError("Asked to insert into an empty-named table");
+        clogError("Asked to insert into an empty-named table");
         return OR_QueryFailure;
     }
 
@@ -132,10 +132,7 @@ cerberus::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
     return command(cmd);
 }
 //=============================================================================
-cerberus::OperationResult SQLDatabase::dropTable(const std::string& table)
-{
-    return command(cerberus::core::CerberusUtils::strPrint("DROP TABLE %s;", table.c_str()));
-}
+cerberus::OperationResult SQLDatabase::dropTable(const std::string& table) { return command(cerberus::core::CerberusUtils::strPrint("DROP TABLE %s;", table.c_str())); }
 //=============================================================================
 cerberus::OperationResult SQLDatabase::querytable(const std::string& tableName, SQLBlock& output)
 {

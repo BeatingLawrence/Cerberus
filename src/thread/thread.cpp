@@ -95,14 +95,14 @@ void cerberus::thread::Thread::construct(ThreadPeriodicity periodicity, const ti
 
     if (periodicity == ThreadPeriodicity::TP_NonPeriodic)
     {
-        debug("New non-periodic %s", toObjStr().c_str());
+        cdebug("New non-periodic %s", toObjStr().c_str());
     }
     else if (periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicQueue)
     {
         if (time.isValid())
         {
             m_time = time.splittedTime();
-            debug("New periodic %s, PERIOD:%ums", toObjStr().c_str(), time.milliseconds());
+            cdebug("New periodic %s, PERIOD:%ums", toObjStr().c_str(), time.milliseconds());
         }
         else
         {
@@ -112,7 +112,7 @@ void cerberus::thread::Thread::construct(ThreadPeriodicity periodicity, const ti
     }
     else if (periodicity == ThreadPeriodicity::TP_OneShot)
     {
-        debug("New one-shot %s", toObjStr().c_str());
+        cdebug("New one-shot %s", toObjStr().c_str());
     }
 
     pthread_attr_t attr{};
@@ -207,7 +207,7 @@ int cerberus::thread::Thread::join(bool stop)
     {
         if (ret == EINVAL)
         {
-            logError("Thread not joinable");
+            clogError("Thread not joinable");
             return 0;
         }
         else if (ret != ESRCH)  // ESRCH = not executing anymore
