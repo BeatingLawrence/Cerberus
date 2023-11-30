@@ -42,24 +42,28 @@ int CerberusCore::tick()
 //=============================================================================
 void CerberusCore::warmUp()
 {
-    cdebug("Starting Core Thread..");
+    clogInfo("Starting Core Thread..");
 
     if (!m_logFile.open() && !m_logFile.fileName().empty())
     {
-        cdebug("LogFile open failed");
+        clogWarning("LogFile open failed");
     }
 
-    cdebug("Starting Event Scheduler");
+    clogInfo("Starting Event Scheduler");
     m_eventScheduler.start();
 }
 //=============================================================================
 void CerberusCore::coolDown()
 {
-    cdebug("Stopping Event Scheduler");
+    clogInfo("Stopping event scheduler");
     m_eventScheduler.terminate();
-    cdebug("Stopping Cerberus Core..");
+    //
+    clogInfo("Unloading shared objects");
+    unloadPlugins();
+    //
+    clogInfo("Stopping Cerberus core..");
     _writeLineOnFile("---LOG-END---");
-    cdebug("Closing log file..");
+    clogInfo("Closing log file..");
     m_logFile.close();
 }
 //=============================================================================
@@ -72,6 +76,8 @@ void CerberusCore::_writeLineOnFile(const std::string& line)
         m_logFile.writeLine(line);
     }
 }
+//=============================================================================
+void CerberusCore::unloadPlugins() { CerberusRegister::cleanupPlugins(); }
 //=============================================================================
 CerberusCore::CerberusCore()
     : cerberus::thread::Thread(TP_NonPeriodic, time::TimeFrame(), "Cerberus-core"),

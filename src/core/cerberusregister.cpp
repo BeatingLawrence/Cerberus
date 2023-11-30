@@ -1,5 +1,7 @@
 #include "cerberusregister.h"
 
+#include <dlfcn.h>
+
 #include <cstdlib>
 
 #include "cerberusobject.h"
@@ -110,6 +112,96 @@ void CerberusRegister::unregisterObj(uint32_t id)
             return;
         }
     }
+}
+//=============================================================================
+bool CerberusRegister::addPlugin(void* handle, const std::string& path)
+{
+    auto& reg = instance();
+    mutex::MutexLocker locker(reg.mutex);
+
+    // check if plugin exists
+
+    for (auto&& el : reg.m_plugins)
+    {
+        if (el.handle == handle)
+        {
+            return false;
+        }
+    }
+
+    reg.m_plugins.push_back(std::move(Plugin(handle, path)));
+
+    return true;
+}
+//=============================================================================
+void CerberusRegister::removePlugin(void* handle)
+{
+    auto& reg = instance();
+    mutex::MutexLocker locker(reg.mutex);
+
+    for (auto it = reg.m_plugins.begin(); it != reg.m_plugins.end(); it++)
+    {
+        if ((*it).handle == handle)
+        {
+            (*it).mutex.lock();  // wait the lock
+            (*it).mutex.unlock();
+            reg.m_plugins.erase(it);
+            return;
+        }
+    }
+}
+//=============================================================================
+void CerberusRegister::cleanupPlugins()
+{
+    auto& reg = instance();
+    mutex::MutexLocker locker(reg.mutex);
+
+    for (auto&& el : reg.m_plugins)
+    {
+        el.mutex.lock();  // wait the lock
+        el.mutex.unlock();
+        int ret = dlclose(el.handle);
+        if (ret != 0)
+        {
+            clogError("Error while unloading plugin %s", el.path.c_str());
+        }
+
+        return;
+    }
+
+    reg.m_plugins.clear();
+}
+//=============================================================================
+bool CerberusRegister::checkPlugin(void* handle)
+{
+    auto& reg = instance();
+    mutex::MutexLocker locker(reg.mutex);
+
+    for (auto&& el : reg.m_plugins)
+    {
+        if (el.handle == handle)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+//=============================================================================
+mutex::MutexLocker CerberusRegister::getPluginMutex(void* handle)
+{
+    auto& reg = instance();
+    mutex::MutexLocker locker(reg.mutex);
+
+    for (auto&& el : reg.m_plugins)
+    {
+        if (el.handle == handle)
+        {
+            return el.mutex;
+        }
+    }
+
+    return mutex::MutexLocker();  // invalid
 }
 //=============================================================================
 CerberusObject* CerberusRegister::objById(uint32_t id)

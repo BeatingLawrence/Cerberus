@@ -8,6 +8,7 @@
 #include "../mutex/mutex.h"
 #include "src/message/message.h"
 #include "src/message/messagetemplate.h"
+#include "src/mutex/mutexlocker.h"
 
 namespace cerberus
 {
@@ -15,12 +16,35 @@ namespace cerberus
 
     namespace core
     {
+        class LibLoader;
+        class CerberusCore;
         class CerberusRegister
         {
             friend class ::cerberus::CerberusObject;
+            friend class ::cerberus::core::LibLoader;
+            friend class ::cerberus::core::CerberusCore;
+
+            struct Plugin
+            {
+                Plugin(void* h, const std::string& p)
+                    : handle(h),
+                      path(p),
+                      mutex(){};
+
+                Plugin(Plugin&& other)
+                    : handle(other.handle),
+                      path(other.path),
+                      mutex(std::move(other.mutex)){};
+
+                void* handle;
+                std::string path;
+                mutex::Mutex mutex;
+            };
 
            private:
             std::list<CerberusObject*> m_objects;
+
+            std::list<Plugin> m_plugins;
 
             uint32_t findAvailableId();
 
@@ -40,6 +64,21 @@ namespace cerberus
             // Unregiste an object by its id
             // Nothing happens if the ID does not exist
             static void unregisterObj(uint32_t id);
+
+            // Add a plugin handle to the register. If the plugin already exixst, false is returned
+            static bool addPlugin(void* handle, const std::string& path);
+
+            // Remove the handle from the register
+            static void removePlugin(void* handle);
+
+            // Remove and unload all the loaded plugins
+            static void cleanupPlugins();
+
+            // Return true if the given handle is registered
+            static bool checkPlugin(void* handle);
+
+            // Get the mutexlocker of a loaded shared object. The mutex is locked before return
+            static mutex::MutexLocker getPluginMutex(void* handle);
 
             // Give a cerberus object from its ID, or nullptr if it does not exist
             // This method does not lock the mutex!

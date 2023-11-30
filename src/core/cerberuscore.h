@@ -31,6 +31,8 @@ namespace cerberus
 
             void _writeLineOnFile(const std::string& line);
 
+            void unloadPlugins();
+
            public:
             EventScheduler m_eventScheduler;
 

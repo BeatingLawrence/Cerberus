@@ -12,27 +12,37 @@
  */
 
 #include "../Cerberus_global.h"
-#include "./mutex.h"
 
 namespace cerberus
 {
     namespace mutex
     {
+        class Mutex;
         class CERBERUS_EXPORT MutexLocker
         {
            private:
-            Mutex* m_mutex;
+            struct MutexLockerData
+            {
+                Mutex* mutex;
+                int instances;
+            };
+
+            MutexLockerData* m_data;
 
            public:
-            MutexLocker() = delete;
+            MutexLocker();
 
-            MutexLocker(const MutexLocker& other) = delete;
+            MutexLocker(const MutexLocker& other);
 
             MutexLocker(Mutex* mutex);
 
             MutexLocker(Mutex& mutex);
 
             ~MutexLocker();
+
+            void operator=(const MutexLocker& other);
+
+            bool isValid();
         };
     }  // namespace mutex
 }  // namespace cerberus

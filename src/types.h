@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "src/mutex/mutexlocker.h"
+
 namespace cerberus
 {
     typedef uint32_t SIZE;
@@ -19,6 +21,14 @@ namespace cerberus
     };
 
     typedef std::vector<DictLine> Dictionary;
+
+    struct LoaderFunc
+    {
+        void* func;
+        mutex::MutexLocker mutexLocker;
+
+        bool isValid(){return func != nullptr;};
+    };
 
     enum FileOpenMode
     {
