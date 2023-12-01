@@ -3,6 +3,39 @@
 
 #include "src/types.h"
 
+/*  This is the LibLoader class
+ *
+ *  This class is used for loading a shared library (aka plugin)
+ *  inside the current process image space.
+ *
+ *  The LibLoader works in one of these modes:
+ *
+ *  standalone - After creation, the loader calls load() with the noreg = true.
+ *               In this way, the library is loaded in the process image space
+ *               and is owned by the owner of the LibLoader instance.
+ *               As soon as the owner calls unload() (or destroys the instance) the
+ *               plugin is unloaded. When the library is loaded, an unload() attempt from
+ *               another thread cannot happen in this mode.
+ *
+ *  shared     - After creation, the loader calls load() with the noreg = false (default).
+ *               In this way, the library is loaded in the process image space and is noted
+ *               in the Cerberus register. After this operation, the LibLoader instance has just
+ *               a reference to the shared library, but it has no ownership, so it cannot unload it anymore.
+ *               The Cerberue framework will automatically unload all the shared objects when the deinit()
+ *               will be called.
+ *               When another thread will call load() on the same plugin file, the plugin will not be loaded,
+ *               instead, the same reference will be gotten from the Cerberus framework register.
+ *
+ *               The swap() method:
+ *
+ *               The shared mode has the advantage of having the swap() method. This method unloads the
+ *               current plugin, and reloads another plugin in place of the unloaded one. This operation
+ *               is thread safe and is useful for changing the plugin implementation without restarting
+ *               the application and without implementing a synchronization mechanism.
+ *               The reload() method does the same thing as swap(), but it just uses the same path
+ *
+ */
+
 namespace cerberus
 {
     namespace core
@@ -10,6 +43,7 @@ namespace cerberus
         class LibLoader
         {
            private:
+            uint32_t m_id;
             void* m_handle;
             bool m_noreg;
             std::string m_path;
@@ -21,6 +55,8 @@ namespace cerberus
            public:
             LibLoader();
 
+            ~LibLoader();
+
             // Load a dynamic shared object. This call will link this instance of LibLoader to a
             // defined library image (if the load process completes successfully).
             // If noreg is false (default), then the object is owned by Cerberus and will be unloaded during
@@ -30,9 +66,17 @@ namespace cerberus
             // This call can also be used to setup a LibLoader instance for an already loaded object
             OperationResult load(const std::string& path, bool noreg = false);
 
-            // Unload a dynamic shared object. This method only works if the shared object
-            // has been loaded with noreg = true
+            // Unload a dynamic shared object.
+            // This method only works in standalone mode
             OperationResult unload();
+
+            // Swap the loaded library with the image provided at the given path.
+            // The operation is thread-safe and may be done while other threads are using the image
+            // This method only works in shared mode
+            OperationResult swap(const std::string& path);
+
+            // Reload the plugin. This method is equal to swpa(), just without changing path
+            OperationResult reload();
 
             // Get the pointer to an object contained in the plugin.
             // If an error occurs, an invalid LoaderFunc is returned.
@@ -44,7 +88,7 @@ namespace cerberus
             bool isLoaded() const;
 
             // Load a shared object into the Cerberus framework domain, avoiding
-            // the creation of a LibLoader instance
+            // to manually create a LibLoader instance
             static OperationResult fastload(const std::string& path);
         };
     }  // namespace core

@@ -26,16 +26,24 @@ namespace cerberus
 
             struct Plugin
             {
-                Plugin(void* h, const std::string& p)
-                    : handle(h),
+                Plugin(uint32_t id, void* h, const std::string& p)
+                    : id(id),
+                      handle(h),
                       path(p),
                       mutex(){};
 
                 Plugin(Plugin&& other)
-                    : handle(other.handle),
+                    : id(other.id),
+                      handle(other.handle),
                       path(other.path),
-                      mutex(std::move(other.mutex)){};
+                      mutex(std::move(other.mutex))
+                {
+                    other.id     = 0;
+                    other.handle = nullptr;
+                    other.path   = "";
+                };
 
+                uint32_t id;
                 void* handle;
                 std::string path;
                 mutex::Mutex mutex;
@@ -47,6 +55,8 @@ namespace cerberus
             std::list<Plugin> m_plugins;
 
             uint32_t findAvailableId();
+
+            uint32_t findAvailablePluginId();
 
             mutex::Mutex mutex;
 
@@ -65,20 +75,24 @@ namespace cerberus
             // Nothing happens if the ID does not exist
             static void unregisterObj(uint32_t id);
 
-            // Add a plugin handle to the register. If the plugin already exixst, false is returned
-            static bool addPlugin(void* handle, const std::string& path);
+            // Add a plugin handle to the register. If the handle already exixst, exists is true
+            // The new (or found) ID is returned
+            static uint32_t addPlugin(void* handle, const std::string& path, bool& exists);
 
             // Remove the handle from the register
-            static void removePlugin(void* handle);
+            static void removePlugin(uint32_t id);
 
             // Remove and unload all the loaded plugins
             static void cleanupPlugins();
 
-            // Return true if the given handle is registered
-            static bool checkPlugin(void* handle);
+            // Return the requested handle if it is registered, otherwise nullptr
+            static void* checkPlugin(uint32_t id);
 
             // Get the mutexlocker of a loaded shared object. The mutex is locked before return
-            static mutex::MutexLocker getPluginMutex(void* handle);
+            static mutex::MutexLocker getPluginMutex(uint32_t id);
+
+            // Replaces data of an existing plugin. Returns false if id does not exist, true otherwise
+            static bool updatePlugin(uint32_t id, const std::string& path, void* handle);
 
             // Give a cerberus object from its ID, or nullptr if it does not exist
             // This method does not lock the mutex!

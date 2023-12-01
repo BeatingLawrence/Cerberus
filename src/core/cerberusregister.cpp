@@ -40,6 +40,26 @@ uint32_t CerberusRegister::findAvailableId()
     }
 }
 //=============================================================================
+uint32_t CerberusRegister::findAvailablePluginId()
+{
+    while (true)
+    {
+        uint32_t id = (uint32_t)rand();
+
+        bool found = false;
+        for (auto&& el : m_plugins)
+        {
+            if (id == el.id)
+            {
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) return id;
+    }
+}
+//=============================================================================
 CerberusRegister::CerberusRegister() { srand(584239578); }
 //=============================================================================
 CerberusRegister& CerberusRegister::instance()
@@ -114,7 +134,7 @@ void CerberusRegister::unregisterObj(uint32_t id)
     }
 }
 //=============================================================================
-bool CerberusRegister::addPlugin(void* handle, const std::string& path)
+uint32_t CerberusRegister::addPlugin(void* handle, const std::string& path, bool& exists)
 {
     auto& reg = instance();
     mutex::MutexLocker locker(reg.mutex);
@@ -125,23 +145,28 @@ bool CerberusRegister::addPlugin(void* handle, const std::string& path)
     {
         if (el.handle == handle)
         {
-            return false;
+            exists = true;
+            return el.id;
         }
     }
 
-    reg.m_plugins.push_back(std::move(Plugin(handle, path)));
+    exists = false;
 
-    return true;
+    uint32_t id = reg.findAvailablePluginId();
+
+    reg.m_plugins.push_back(std::move(Plugin(id, handle, path)));
+
+    return id;
 }
 //=============================================================================
-void CerberusRegister::removePlugin(void* handle)
+void CerberusRegister::removePlugin(uint32_t id)
 {
     auto& reg = instance();
     mutex::MutexLocker locker(reg.mutex);
 
     for (auto it = reg.m_plugins.begin(); it != reg.m_plugins.end(); it++)
     {
-        if ((*it).handle == handle)
+        if ((*it).id == id)
         {
             (*it).mutex.lock();  // wait the lock
             (*it).mutex.unlock();
@@ -163,7 +188,7 @@ void CerberusRegister::cleanupPlugins()
         int ret = dlclose(el.handle);
         if (ret != 0)
         {
-            clogError("Error while unloading plugin %s", el.path.c_str());
+            clogError("Error while unloading plugin %u %s", el.id, el.path.c_str());
         }
 
         return;
@@ -172,36 +197,54 @@ void CerberusRegister::cleanupPlugins()
     reg.m_plugins.clear();
 }
 //=============================================================================
-bool CerberusRegister::checkPlugin(void* handle)
+void* CerberusRegister::checkPlugin(uint32_t id)
 {
     auto& reg = instance();
     mutex::MutexLocker locker(reg.mutex);
 
     for (auto&& el : reg.m_plugins)
     {
-        if (el.handle == handle)
+        if (el.id == id)
         {
-            return true;
+            return el.handle;
         }
     }
 
-    return false;
+    return nullptr;
 }
 //=============================================================================
-mutex::MutexLocker CerberusRegister::getPluginMutex(void* handle)
+mutex::MutexLocker CerberusRegister::getPluginMutex(uint32_t id)
 {
     auto& reg = instance();
     mutex::MutexLocker locker(reg.mutex);
 
     for (auto&& el : reg.m_plugins)
     {
-        if (el.handle == handle)
+        if (el.id == id)
         {
             return el.mutex;
         }
     }
 
     return mutex::MutexLocker();  // invalid
+}
+//=============================================================================
+bool CerberusRegister::updatePlugin(uint32_t id, const std::string& path, void* handle)
+{
+    auto& reg = instance();
+    mutex::MutexLocker locker(reg.mutex);
+
+    for (auto&& el : reg.m_plugins)
+    {
+        if (el.id == id)
+        {
+            el.handle = handle;
+            el.path   = path;
+            return true;
+        }
+    }
+
+    return false;
 }
 //=============================================================================
 CerberusObject* CerberusRegister::objById(uint32_t id)

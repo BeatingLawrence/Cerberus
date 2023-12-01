@@ -49,11 +49,14 @@ bool LibLoader::isLoaded(const std::string& path) const
 }
 //=============================================================================
 LibLoader::LibLoader()
-    : m_handle(nullptr),
+    : m_id(0),
+      m_handle(nullptr),
       m_noreg(false),
       m_path()
 {
 }
+//=============================================================================
+LibLoader::~LibLoader() { unload(); }
 //=============================================================================
 cerberus::OperationResult LibLoader::load(const std::string& path, bool noreg)
 {
@@ -97,7 +100,10 @@ cerberus::OperationResult LibLoader::load(const std::string& path, bool noreg)
 
     cdebug("loaded plugin %s in process memory", path.c_str());
 
-    if (!core::CerberusRegister::addPlugin(m_handle, path))
+    bool exists = false;
+    m_id        = core::CerberusRegister::addPlugin(m_handle, path, exists);
+
+    if (exists)
     {
         // it already exists
         ret = close(m_handle);
@@ -116,19 +122,67 @@ cerberus::OperationResult LibLoader::unload()
     if (!m_noreg) return OR_Unavailable;
     if (!m_handle) return OR_BadConditions;
 
-    return close(m_handle);
+    auto ret = close(m_handle);
+
+    if (ret.ok())
+    {
+        m_handle = nullptr;
+        m_path   = "";
+        return OR_OK;
+    }
+
+    return OR_Failure;
 }
+//=============================================================================
+cerberus::OperationResult LibLoader::swap(const std::string& path)
+{
+    if (m_noreg) return OR_Unavailable;
+
+    auto ml = core::CerberusRegister::getPluginMutex(m_id);
+
+    if (!ml.isValid())
+    {
+        return OR_NotFound;
+    };
+
+    if (m_handle != core::CerberusRegister::checkPlugin(m_id)) return OR_NotFound;
+
+    OperationResult ret;
+
+    ret = close(m_handle);
+
+    if (ret.fail())
+    {
+        return ret;
+    }
+
+    ret = open(path);
+
+    if (ret.fail())
+    {
+        return ret;
+    }
+
+    cdebug("swapped plugin %s[old] with %s[new]", m_path.c_str(), path.c_str());
+    m_path = path;
+
+    if (!core::CerberusRegister::updatePlugin(m_id, path, m_handle)) return OR_Failure;
+
+    return OR_OK;
+}
+//=============================================================================
+cerberus::OperationResult LibLoader::reload() { return swap(m_path); }
 //=============================================================================
 cerberus::LoaderFunc LibLoader::get(const std::string& symbol)
 {
-    mutex::MutexLocker mut;
+    mutex::MutexLocker ml;
 
     if (!m_noreg)
     {
-        mut = core::CerberusRegister::getPluginMutex(m_handle);
-        if (!mut.isValid())
+        ml = core::CerberusRegister::getPluginMutex(m_id);
+        if (!ml.isValid())
         {
-            return {nullptr, mut};
+            return {nullptr, mutex::MutexLocker()};
         };
     }
 
@@ -136,7 +190,7 @@ cerberus::LoaderFunc LibLoader::get(const std::string& symbol)
 
     if (!p) cdebug("Error while searching symbol %s: %s", symbol.c_str(), dlerror());
 
-    return {p, mut};
+    return {p, ml};
 }
 //=============================================================================
 bool LibLoader::isLoaded() const { return isLoaded(m_path); }
