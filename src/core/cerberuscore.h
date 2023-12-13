@@ -9,8 +9,8 @@
  */
 
 #include "../data/filesystem/file.h"
-#include "src/core/eventscheduler.h"
-#include "src/thread/thread.h"
+#include "../thread/thread.h"
+#include "eventscheduler.h"
 
 namespace cerberus
 {

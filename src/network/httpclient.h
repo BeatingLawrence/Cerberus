@@ -1,8 +1,8 @@
 #ifndef CERBERUS_NETWORK_HTTPCLIENT_H
 #define CERBERUS_NETWORK_HTTPCLIENT_H
 
+#include "../data/httpdata.h"
 #include "socket.h"
-#include "src/data/httpdata.h"
 
 namespace cerberus
 {

@@ -2,7 +2,7 @@
 #define CERBERUS_DATA_BYTEBUFFER_H
 
 #include "../Cerberus_global.h"
-#include "src/types.h"
+#include "../types.h"
 
 namespace cerberus
 {
@@ -22,6 +22,8 @@ namespace cerberus
             void _resize(SIZE size);
 
             void _clear();
+
+            BYTE& getat(SIZE index) const;
 
             ByteBuffer(BYTE* buf, SIZE size);
 
@@ -53,13 +55,14 @@ namespace cerberus
             // Obtain the main pointer of the buffer (const version).
             const BYTE* data() const;
 
-            // Obtain a single element by value.
+            // Obtain a single element by reference.
             // An exception will be thrown if index >= size()
-            BYTE at(SIZE index) const;
+            const BYTE& at(SIZE index) const;
+            BYTE& at(SIZE index);
 
             // Obtain a single element by value.
             // An exception will be thrown if index >= size()
-            BYTE operator[](SIZE index) const;
+            BYTE& operator[](SIZE index);
 
             // Append len bytes read from the given buffer to this ByteBuffer.
             void appendFrom(const BYTE* buffer, SIZE len);

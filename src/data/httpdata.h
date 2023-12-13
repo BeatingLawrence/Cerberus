@@ -1,7 +1,7 @@
 #ifndef CERBERUS_DATA_HTTPDATA_H
 #define CERBERUS_DATA_HTTPDATA_H
 
-#include "src/data/bytebuffer.h"
+#include "bytebuffer.h"
 
 namespace cerberus
 {

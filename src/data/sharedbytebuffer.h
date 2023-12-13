@@ -2,7 +2,7 @@
 #define CERBERUS_DATA_SHAREDBYTEBUFFER_H
 
 #include "../Cerberus_global.h"
-#include "src/types.h"
+#include "../types.h"
 
 /* This is the SharedByteBuffer class, a smart way to share data between threads
  *

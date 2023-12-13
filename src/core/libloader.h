@@ -1,7 +1,7 @@
 #ifndef CERBERUS_CORE_LIBLOADER_H
 #define CERBERUS_CORE_LIBLOADER_H
 
-#include "src/types.h"
+#include "../types.h"
 
 /*  This is the LibLoader class
  *

@@ -4,9 +4,9 @@
 #include <atomic>
 #include <vector>
 
-#include "src/mutex/mutex.h"
-#include "src/thread/thread.h"
-#include "src/time/datetime.h"
+#include "../mutex/mutex.h"
+#include "../thread/thread.h"
+#include "../time/datetime.h"
 
 namespace cerberus
 {

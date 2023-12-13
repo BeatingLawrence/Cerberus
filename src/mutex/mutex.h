@@ -12,7 +12,7 @@
 #include <pthread.h>
 
 #include "../Cerberus_global.h"
-#include "src/types.h"
+#include "../types.h"
 
 namespace cerberus
 {

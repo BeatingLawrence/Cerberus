@@ -3,8 +3,8 @@
 
 #include <atomic>
 
-#include "src/time/timeframe.h"
-#include "src/types.h"
+#include "../types.h"
+#include "timeframe.h"
 
 namespace cerberus
 {

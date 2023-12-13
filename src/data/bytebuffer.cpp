@@ -35,6 +35,16 @@ void ByteBuffer::_clear()
     m_pos   = 0;
 }
 //=============================================================================
+cerberus::BYTE& ByteBuffer::getat(SIZE index) const
+{
+    if (index >= m_size)
+    {
+        throw cerberusIllegalArgExc("index out of bound, %u/%u", index, m_size);
+    }
+
+    return *((unsigned char*)(m_bytes + index));
+}
+//=============================================================================
 ByteBuffer::ByteBuffer(BYTE* buf, SIZE size)
     : m_bytes(buf),
       m_size(size),
@@ -133,17 +143,11 @@ cerberus::BYTE* ByteBuffer::data() { return m_bytes; }
 //=============================================================================
 const cerberus::BYTE* ByteBuffer::data() const { return m_bytes; }
 //=============================================================================
-cerberus::BYTE ByteBuffer::at(SIZE index) const
-{
-    if (index >= m_size)
-    {
-        throw cerberusIllegalArgExc("index out of bound, %u/%u", index, m_size);
-    }
-
-    return *((unsigned char*)(m_bytes + index));
-}
+const cerberus::BYTE& ByteBuffer::at(SIZE index) const { return getat(index); }
 //=============================================================================
-cerberus::BYTE ByteBuffer::operator[](SIZE index) const { return at(index); }
+cerberus::BYTE& ByteBuffer::at(SIZE index) { return getat(index); }
+//=============================================================================
+cerberus::BYTE& ByteBuffer::operator[](SIZE index) { return at(index); }
 //=============================================================================
 void ByteBuffer::appendFrom(const BYTE* buffer, SIZE len)
 {

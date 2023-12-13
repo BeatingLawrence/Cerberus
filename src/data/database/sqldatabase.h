@@ -27,7 +27,8 @@
  */
 
 #include <string>
-#include "src/types.h"
+
+#include "../../types.h"
 
 namespace cerberus
 {
@@ -41,99 +42,99 @@ namespace cerberus
 
             class SQLDatabase
             {
-                private:
-                    bool m_failed;
+               private:
+                bool m_failed;
 
-                    std::string m_failureReason;
+                std::string m_failureReason;
 
-                public:
-                    SQLDatabase() = delete;
+               public:
+                SQLDatabase() = delete;
 
-                    ~SQLDatabase();
+                ~SQLDatabase();
 
-                    bool isFailed() const;
+                bool isFailed() const;
 
-                    std::string failureReason() const;
+                std::string failureReason() const;
 
-                    SQLDatabase(const std::string& parameters) noexcept;
+                SQLDatabase(const std::string& parameters) noexcept;
 
-                    /*  This method performs a query and returns a result.
-                     *  The result can be:
-                     *      > OR_OK if the query is successfully completed. The queried information are inside output parameter
-                     *      > OR_QueryFailure if the query has a problem during execution. The failure information are inside output parameter
-                     *      > OR_DBFailure if the database encounters a problem and the query failed.
-                     *        The failure information are obtainable through failureReason()
-                     *      > OR_NotFound if the query was successfully completed but gave no information (0 results found)
-                     *
-                     *  The given block is an unstructured block
-                     */
-                    OperationResult queryBlock(const std::string& query, SQLBlock& output);
+                /*  This method performs a query and returns a result.
+                 *  The result can be:
+                 *      > OR_OK if the query is successfully completed. The queried information are inside output parameter
+                 *      > OR_QueryFailure if the query has a problem during execution. The failure information are inside output parameter
+                 *      > OR_DBFailure if the database encounters a problem and the query failed.
+                 *        The failure information are obtainable through failureReason()
+                 *      > OR_NotFound if the query was successfully completed but gave no information (0 results found)
+                 *
+                 *  The given block is an unstructured block
+                 */
+                OperationResult queryBlock(const std::string& query, SQLBlock& output);
 
-                    /*  This method performs a query and returns a result.
-                     *  This method also alters the given prototype to match the correct one of the queried table
-                     *  The result can be:
-                     *      > OR_OK if the query is successfully completed. The queried information are inside prototype parameter
-                     *      > OR_QueryFailure if the query has a problem during execution. The failure information are inside prototype parameter
-                     *      > OR_DBFailure if the database encounters a problem and the query failed.
-                     *        The failure information are obtainable through failureReason()
-                     *      > OR_NotFound if the query was successfully completed but no such table exists
-                     */
-                    OperationResult queryPrototype(SQLTablePrototype& prototype);
+                /*  This method performs a query and returns a result.
+                 *  This method also alters the given prototype to match the correct one of the queried table
+                 *  The result can be:
+                 *      > OR_OK if the query is successfully completed. The queried information are inside prototype parameter
+                 *      > OR_QueryFailure if the query has a problem during execution. The failure information are inside prototype parameter
+                 *      > OR_DBFailure if the database encounters a problem and the query failed.
+                 *        The failure information are obtainable through failureReason()
+                 *      > OR_NotFound if the query was successfully completed but no such table exists
+                 */
+                OperationResult queryPrototype(SQLTablePrototype& prototype);
 
-                    /*  This method executes a command and returns a result.
-                     *  The result can be:
-                     *      > OR_OK if the command is successfully executed
-                     *      > OR_QueryFailure if the query has a problem during execution.
-                     *      > OR_DBFailure if the database encounters a problem and the command failed.
-                     *        The failure information are obtainable through failureReason()
-                     */
-                    OperationResult command(const std::string& query);
+                /*  This method executes a command and returns a result.
+                 *  The result can be:
+                 *      > OR_OK if the command is successfully executed
+                 *      > OR_QueryFailure if the query has a problem during execution.
+                 *      > OR_DBFailure if the database encounters a problem and the command failed.
+                 *        The failure information are obtainable through failureReason()
+                 */
+                OperationResult command(const std::string& query);
 
-                    /*  This method creates a table in the database.
-                     *  The result can be:
-                     *      > OR_OK if the creation is successfully executed and the table has been created
-                     *      > OR_QueryFailure if the query has a problem during execution.
-                     *      > OR_DBFailure if the database encounters a problem and the command failed.
-                     *        The failure information are obtainable through failureReason()
-                     *      > OR_TableAlreadyPresent if the specified table already exists and could not be created
-                     */
-                    OperationResult createTable(SQLTablePrototype& prototype);
+                /*  This method creates a table in the database.
+                 *  The result can be:
+                 *      > OR_OK if the creation is successfully executed and the table has been created
+                 *      > OR_QueryFailure if the query has a problem during execution.
+                 *      > OR_DBFailure if the database encounters a problem and the command failed.
+                 *        The failure information are obtainable through failureReason()
+                 *      > OR_TableAlreadyPresent if the specified table already exists and could not be created
+                 */
+                OperationResult createTable(SQLTablePrototype& prototype);
 
-                    /*  This method inserts a block of rows in the table specified by prototype.
-                     *  Please note that all the information present in the prototype of the block must be correct, even the data types.
-                     *  This method will not do any error-check of such parameters
-                     *  The result can be:
-                     *      > OR_OK if the insertion is successfully executed
-                     *      > OR_QueryFailure if the query has a problem during execution.
-                     *      > OR_DBFailure if the database encounters a problem and the command failed.
-                     *        The failure information are obtainable through failureReason()
-                     */
-                    OperationResult insertBlock(const SQLBlock& block);
+                /*  This method inserts a block of rows in the table specified by prototype.
+                 *  Please note that all the information present in the prototype of the block must be correct, even the data types.
+                 *  This method will not do any error-check of such parameters
+                 *  The result can be:
+                 *      > OR_OK if the insertion is successfully executed
+                 *      > OR_QueryFailure if the query has a problem during execution.
+                 *      > OR_DBFailure if the database encounters a problem and the command failed.
+                 *        The failure information are obtainable through failureReason()
+                 */
+                OperationResult insertBlock(const SQLBlock& block);
 
-                    /*  This method drops a table.
-                     *  The result can be:
-                     *      > OR_OK if the drop is successfully executed
-                     *      > OR_QueryFailure if the query has a problem during execution.
-                     *      > OR_DBFailure if the database encounters a problem and the command failed.
-                     *        The failure information are obtainable through failureReason()
-                     */
-                    OperationResult dropTable(const std::string& table);
+                /*  This method drops a table.
+                 *  The result can be:
+                 *      > OR_OK if the drop is successfully executed
+                 *      > OR_QueryFailure if the query has a problem during execution.
+                 *      > OR_DBFailure if the database encounters a problem and the command failed.
+                 *        The failure information are obtainable through failureReason()
+                 */
+                OperationResult dropTable(const std::string& table);
 
-                    /*  This method performs a query and returns an entire table.
-                     *  Be careful with this method, because if the requested table is huge, an insane amount of memory will be allocated
-                     *  The result can be:
-                     *      > OR_OK if the query is successfully completed. The queried information are inside output parameter
-                     *      > OR_QueryFailure if the query has a problem during execution. The failure information are inside output parameter
-                     *      > OR_DBFailure if the database encounters a problem and the query failed.
-                     *        The failure information are obtainable through failureReason()
-                     *      > OR_NotFound if the query was successfully completed but gave no information (0 results found)
-                     *
-                     *  The given block is a structured block
-                     */
-                    OperationResult querytable(const std::string& tableName, SQLBlock& output);
+                /*  This method performs a query and returns an entire table.
+                 *  Be careful with this method, because if the requested table is huge, an insane amount of memory will be allocated
+                 *  The result can be:
+                 *      > OR_OK if the query is successfully completed. The queried information are inside output parameter
+                 *      > OR_QueryFailure if the query has a problem during execution. The failure information are inside output parameter
+                 *      > OR_DBFailure if the database encounters a problem and the query failed.
+                 *        The failure information are obtainable through failureReason()
+                 *      > OR_NotFound if the query was successfully completed but gave no information (0 results found)
+                 *
+                 *  The given block is a structured block
+                 */
+                OperationResult querytable(const std::string& tableName, SQLBlock& output);
             };
-        }
-    }
-}
+        }  // namespace database
+    }      // namespace data
+}  // namespace cerberus
 
-#endif // CERBERUS_DATA_DATABASE_SQLDATABASE_H
+#endif  // CERBERUS_DATA_DATABASE_SQLDATABASE_H

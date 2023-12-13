@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "src/mutex/mutexlocker.h"
+#include "mutex/mutexlocker.h"
 
 namespace cerberus
 {
@@ -27,7 +27,7 @@ namespace cerberus
         void* func;
         mutex::MutexLocker mutexLocker;
 
-        bool isValid(){return func != nullptr;};
+        bool isValid() { return func != nullptr; };
     };
 
     enum FileOpenMode
@@ -190,6 +190,8 @@ namespace cerberus
 
         // Translate the Result
         std::string errorString();
+
+        bool boolVal() { return i != 0; };
     };
 
     struct Host

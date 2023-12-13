@@ -2,12 +2,11 @@
 #define CERBERUSOBJECT_H
 
 #include <cstdint>
-#include <memory>
 #include <string>
 
-#include "src/Cerberus_global.h"
-#include "src/core/cerberuslog.h"
-#include "src/exception/exceptioncatalog.h"
+#include "../Cerberus_global.h"
+#include "../exception/exceptioncatalog.h"
+#include "cerberuslog.h"
 
 namespace cerberus
 {

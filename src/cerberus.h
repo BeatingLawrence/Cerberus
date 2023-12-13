@@ -2,7 +2,7 @@
 #define CERBERUS_H
 
 #include "Cerberus_global.h"
-#include "src/core/cerberuscore.h"
+#include "core/cerberuscore.h"
 
 namespace cerberus
 {

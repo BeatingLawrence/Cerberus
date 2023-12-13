@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "../Cerberus_global.h"
-#include "src/core/cerberusobject.h"
+#include "../core/cerberusobject.h"
 
 namespace cerberus
 {

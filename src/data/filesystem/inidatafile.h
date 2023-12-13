@@ -3,10 +3,9 @@
 
 #define MAIN_SECTION "MAIN"
 
-#include <list>
 #include <regex>
 
-#include "./file.h"
+#include "file.h"
 
 namespace cerberus
 {

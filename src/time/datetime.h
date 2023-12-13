@@ -17,7 +17,7 @@
 #include <string>
 
 #include "../Cerberus_global.h"
-#include "src/time/timeframe.h"
+#include "timeframe.h"
 
 namespace cerberus
 {

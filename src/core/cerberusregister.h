@@ -5,10 +5,10 @@
 #include <list>
 #include <string>
 
+#include "../message/message.h"
+#include "../message/messagetemplate.h"
 #include "../mutex/mutex.h"
-#include "src/message/message.h"
-#include "src/message/messagetemplate.h"
-#include "src/mutex/mutexlocker.h"
+#include "../mutex/mutexlocker.h"
 
 namespace cerberus
 {

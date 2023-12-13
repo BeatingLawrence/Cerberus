@@ -46,9 +46,9 @@
  *  coolDown() will be called after the last run of tick(), when terminate() is called. When coolDown() execution finishes, the join() returns.
  */
 
+#include "../core/cerberusobject.h"
 #include "../time/timeframe.h"
 #include "./threadbase.h"
-#include "src/core/cerberusobject.h"
 
 namespace cerberus
 {

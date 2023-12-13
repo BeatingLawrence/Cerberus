@@ -7,7 +7,7 @@
 #include "../Cerberus_global.h"
 #include "../mutex/mutex.h"
 #include "../types.h"
-#include "./cerberusutils.h"
+#include "cerberusutils.h"
 
 // #define logInfo(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Info)
 // #define logWarning(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Warning)
@@ -22,7 +22,7 @@
 #define logInfo(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Info, "", true)
 #define logWarning(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Warning, "", true)
 #define logError(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Error, "", true)
-#define debug(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Debug, "", true)
+#define logDebug(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::LogLevel::LL_Debug, "", true)
 
 #define lldebug(text, ...) ::cerberus::core::CerberusLog::lldebug(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__))
 

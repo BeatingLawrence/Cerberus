@@ -1,10 +1,10 @@
 #ifndef CERBERUS_NETWORK_SOCKET_H
 #define CERBERUS_NETWORK_SOCKET_H
 
+#include "../core/cerberusobject.h"
+#include "../data/bytebuffer.h"
+#include "../time/timeframe.h"
 #include "../types.h"
-#include "src/core/cerberusobject.h"
-#include "src/data/bytebuffer.h"
-#include "src/time/timeframe.h"
 
 #define UDPSocket(namestr) cerberus::network::Socket(cerberus::CerberusObject::Socket_UDP, namestr)
 #define TCPSocket(namestr) cerberus::network::Socket(cerberus::CerberusObject::Socket_TCP, namestr)

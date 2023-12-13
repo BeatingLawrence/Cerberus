@@ -4,8 +4,8 @@
 #include <stdio.h>
 
 #include "../../Cerberus_global.h"
-#include "src/data/bytebuffer.h"
-#include "src/types.h"
+#include "../../data/bytebuffer.h"
+#include "../../types.h"
 
 namespace cerberus
 {
@@ -16,7 +16,7 @@ namespace cerberus
 
     namespace data
     {
-    class SharedByteBuffer;
+        class SharedByteBuffer;
 
         namespace filesystem
         {
@@ -83,17 +83,17 @@ namespace cerberus
 
                 uint64_t size() const;
 
-                bool write(const cerberus::data::ByteBuffer &bytes);
+                bool write(const cerberus::data::ByteBuffer& bytes);
 
                 bool writeLine(const std::string& line = "");
 
                 // Read the file starting from start pos till the end of file
-                bool read(ByteBuffer &bytes, uint64_t start = 0) const;
+                bool read(ByteBuffer& bytes, uint64_t start = 0) const;
 
                 // Read span bytes from file file starting from start pos
-                bool read(ByteBuffer &bytes, uint64_t start, uint64_t span) const;
+                bool read(ByteBuffer& bytes, uint64_t start, uint64_t span) const;
 
-                bool readChunk(ByteBuffer &bytes, uint64_t chunksize) const;
+                bool readChunk(ByteBuffer& bytes, uint64_t chunksize) const;
 
                 // Read a single line till \n
                 // Return false when EOF is reached and no more lines are available
