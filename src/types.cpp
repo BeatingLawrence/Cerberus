@@ -4,8 +4,9 @@
 
 #include <cstring>
 
-#include "./core/cerberusutils.h"
-#include "src/core/cerberuslog.h"
+#include "core/cerberusutils.h"
+#include "exception/exception.h"
+#include "src/cerberus.h"
 
 #ifdef WINDOWS_SYSTEM
 // define constants here
@@ -30,7 +31,7 @@ cerberus::Host::Host(const std::string &str)
       port(0),
       resolved(false)
 {
-    if (!fromString(str)) clogError("Host %s is invalid", str.c_str());
+    if (!fromString(str)) logError("Host %s is invalid", str.c_str());
 }
 //=============================================================================
 cerberus::Host::Host(const char *str)
@@ -38,7 +39,7 @@ cerberus::Host::Host(const char *str)
       port(0),
       resolved(false)
 {
-    if (!fromString(str)) clogError("Host %s is invalid", str);
+    if (!fromString(str)) logError("Host %s is invalid", str);
 }
 //=============================================================================
 cerberus::Host cerberus::Host::stringToHost(const std::string &str)
@@ -191,32 +192,32 @@ cerberus::OperationResult cerberus::Host::resolve()
 
     if (ret == EAI_AGAIN)
     {
-        cdebug("DNS lookup: temporary server failure [%s]", hostname.c_str());
+        logDebug("DNS lookup: temporary server failure [%s]", hostname.c_str());
         return OR_ResolveServerTempFailure;
     }
     else if (ret == EAI_FAIL)
     {
-        cdebug("DNS lookup: server failure [%s]", hostname.c_str());
+        logDebug("DNS lookup: server failure [%s]", hostname.c_str());
         return OR_ResolveServerFailure;
     }
     else if (ret == EAI_NODATA)
     {
-        cdebug("DNS lookup: hostname exists but has no ip associated [%s]", hostname.c_str());
+        logDebug("DNS lookup: hostname exists but has no ip associated [%s]", hostname.c_str());
         return OR_ResolveNoData;
     }
     else if (ret == EAI_NONAME)
     {
-        cdebug("DNS lookup: hostname was not found [%s]", hostname.c_str());
+        logDebug("DNS lookup: hostname was not found [%s]", hostname.c_str());
         return OR_ResolveNotFound;
     }
     else if (ret == EAI_SYSTEM)
     {
-        cdebug("DNS lookup: system failure, %s [%s]", strerror(errno), hostname.c_str());
+        logDebug("DNS lookup: system failure, %s [%s]", strerror(errno), hostname.c_str());
         return OR_ResolveSystemFailure;
     }
     else
     {
-        cdebug("DNS lookup: failure, %s [%s]", gai_strerror(ret), hostname.c_str());
+        logDebug("DNS lookup: failure, %s [%s]", gai_strerror(ret), hostname.c_str());
         return OR_ResolveFailure;
     }
 }
@@ -239,9 +240,15 @@ cerberus::OperationResult::OperationResult(int64_t i)
 {
 }
 //=============================================================================
-cerberus::OperationResult::OperationResult(double f)
+cerberus::OperationResult::OperationResult(long double f)
     : res(OR_OK),
       f(f)
+{
+}
+//=============================================================================
+cerberus::OperationResult::OperationResult(LSIZE sz)
+    : res(OR_OK),
+      sz(sz)
 {
 }
 //=============================================================================
@@ -255,37 +262,53 @@ bool cerberus::OperationResult::operator==(const OperationResult &other) { retur
 //=============================================================================
 bool cerberus::OperationResult::operator!=(const OperationResult &other) { return (res != other.res); }
 //=============================================================================
-bool cerberus::OperationResult::ok(bool printError)
+cerberus::OperationResult &cerberus::OperationResult::expect(const std::string &str)
+{
+    if (fail()) throw cerberus::exception::Exception(str.c_str());
+
+    return *this;
+}
+//=============================================================================
+cerberus::OperationResult &cerberus::OperationResult::expect(Result reason, const std::string &str)
+{
+    if (fail() && res == reason) throw cerberus::exception::Exception(str.c_str());
+
+    return *this;
+}
+//=============================================================================
+cerberus::OperationResult &cerberus::OperationResult::expect()
+{
+    if (fail())
+    {
+        std::string errorstr = errorString();
+
+        if (!str.empty())
+        {
+            errorstr.append(", ");
+            errorstr.append(str);
+        }
+
+        throw cerberus::exception::Exception(errorstr.c_str());
+    }
+
+    return *this;
+}
+//=============================================================================
+bool cerberus::OperationResult::ok(bool print)
 {
     if (res == Result::OR_OK)
     {
         return true;
     }
-    else
+    else if (print)
     {
-        if (printError)
-        {
-            clogError("Operation failed: %s", errorString().c_str());
-        }
+        logError("Operation failed: %s", errorString().c_str());
     }
 
     return false;
 }
 //=============================================================================
-bool cerberus::OperationResult::fail(bool printError)
-{
-    if (!ok())
-    {
-        if (printError)
-        {
-            clogError("Operation failed: %s", errorString().c_str());
-        }
-
-        return true;
-    }
-
-    return false;
-}
+bool cerberus::OperationResult::fail(bool print) { return !ok(print); }
 //=============================================================================
 std::string cerberus::OperationResult::errorString()
 {
@@ -341,6 +364,16 @@ std::string cerberus::OperationResult::errorString()
             return "Table already present";
         case OR_InvalidFile:
             return "Given file is not valid";
+        case OR_NotEmpty:
+            return "Directory is not empty";
+        case OR_Duplicate:
+            return "Object is a duplicate";
+        case OR_EOF:
+            return "End of file";
+        case OR_WrongType:
+            return "Wrong type";
+        case OR_ThreadNotJoinable:
+            return "Thread not joinable";
     }
 
     return "Undefined";

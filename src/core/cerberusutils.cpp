@@ -5,8 +5,6 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "src/core/cerberuslog.h"
-
 using namespace cerberus::core;
 
 //=============================================================================
@@ -47,14 +45,26 @@ std::string CerberusUtils::toUpper(const std::string& str)
 //=============================================================================
 std::string CerberusUtils::removeBlankBefore(const std::string& str)
 {
-    size_t start = str.find_first_not_of(' ');
-    return (start == std::string::npos) ? "" : str.substr(start);
+    size_t pos = 0;
+    for (auto&& el : str)
+    {
+        if (el != ' ' && el != 0x9) break;  // space or TAB
+        pos++;
+    }
+
+    return str.substr(pos);
 }
 //=============================================================================
 std::string CerberusUtils::removeBlankAfter(const std::string& str)
 {
-    size_t end = str.find_last_not_of(' ');
-    return (end == std::string::npos) ? "" : str.substr(0, end + 1);
+    size_t len = str.size();
+    for (auto it = str.rbegin(); it != str.rend(); it++)
+    {
+        if (*it != ' ' && *it != 0x9) break;  // space or TAB
+        len--;
+    }
+
+    return str.substr(0, len);
 }
 //=============================================================================
 std::string CerberusUtils::removeBlank_copy(const std::string& str) { return removeBlankAfter(removeBlankBefore(str)); }
@@ -75,11 +85,28 @@ bool CerberusUtils::contains(const std::string& str1, const std::string& str2)
     return true;
 }
 //=============================================================================
-bool CerberusUtils::areEqual(const std::string& str1, const std::string& str2)
+bool CerberusUtils::areEqual(const std::string& str1, const std::string& str2, WordMatch match)
 {
-    if (str1.compare(str2) == 0)
+    switch (match)
     {
-        return true;
+        case WM_CaseSensitive:
+            if (str1.compare(str2) == 0)
+            {
+                return true;
+            }
+            break;
+
+        case WM_CaseInsensitive:
+            auto s1 = str1;
+            auto s2 = str2;
+            toLower(s1);
+            toLower(s2);
+
+            if (s1.compare(s2) == 0)
+            {
+                return true;
+            }
+            break;
     }
 
     return false;
@@ -97,13 +124,28 @@ std::string CerberusUtils::environmentVariable(const std::string& variableName)
     return std::string(val);
 }
 //=============================================================================
-int CerberusUtils::stringToInt(const std::string& str, Radix r)
+long long int CerberusUtils::stringToInt(const std::string& str, Radix r)
 {
-    int ret = 0;
+    long long int ret = 0;
 
     try
     {
-        ret = std::stoi(str, nullptr, r == Radix::Binary ? 2 : r == Radix::Decimal ? 10 : r == Radix::Hexadecimal ? 16 : 0);
+        ret = std::stoll(str, nullptr, r == Radix::Binary ? 2 : r == Radix::Decimal ? 10 : r == Radix::Hexadecimal ? 16 : 0);
+    }
+    catch (...)
+    {
+    }
+
+    return ret;
+}
+//=============================================================================
+long double CerberusUtils::stringToDouble(const std::string& str)
+{
+    long double ret = 0.0f;
+
+    try
+    {
+        ret = std::stold(str, nullptr);
     }
     catch (...)
     {
@@ -196,11 +238,31 @@ void CerberusUtils::normalize(std::string& str)
 //=============================================================================
 std::string CerberusUtils::truncStr(const std::string& str, SIZE size)
 {
-    if (str.size() <= size)
+    if (size >= str.size())
     {
         return str;
     }
 
     return str.substr(0, size);
 }
+//=============================================================================
+std::string CerberusUtils::substrUntil(const std::string& str, const std::string& token)
+{
+    auto found = str.find(token);
+
+    if (found == std::string::npos) return str;
+
+    return str.substr(0, found);
+}
+//=============================================================================
+std::string CerberusUtils::substrFrom(const std::string& str, const std::string& token)
+{
+    auto found = str.find(token);
+
+    if (found == std::string::npos) return "";
+
+    return str.substr(found + token.size());
+}
+//=============================================================================
+cerberus::DoubleString CerberusUtils::split(const std::string& str, const std::string& token) { return {substrUntil(str, token), substrFrom(str, token)}; }
 //=============================================================================

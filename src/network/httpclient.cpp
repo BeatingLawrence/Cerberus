@@ -2,9 +2,11 @@
 
 #include <regex>
 
+#include "src/cerberus.h"
 #include "src/core/cerberusutils.h"
 
 using namespace cerberus::network;
+using namespace cerberus::core;
 
 //=============================================================================
 HTTPClient::DictResult HTTPClient::getDictFromHeader(const data::ByteBuffer &header)
@@ -30,8 +32,8 @@ HTTPClient::DictResult HTTPClient::getDictFromHeader(const data::ByteBuffer &hea
 
         if (p == std::string::npos)
         {
-            cdebug("Broken line found in the HTTP header");
-            cdebug("%s", str.c_str());
+            logDebug("Broken line found in the HTTP header");
+            logDebug("%s", str.c_str());
             return {OR_Failure, ret};
         }
 
@@ -216,7 +218,7 @@ cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const ti
     if (res.ok() && res.i)
     {
         // chunked encoding
-        cdebug("processing chunked data...");
+        logDebug("processing chunked data...");
         decodeChunkedData(data.getPayload());
     }
 

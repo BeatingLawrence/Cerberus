@@ -50,6 +50,9 @@ namespace cerberus
 
             // Tells wether the queue is empty or not
             bool isEmpty() const;
+
+            // Completely delete all the messages
+            void clear();
         };
     }  // namespace message
 }  // namespace cerberus

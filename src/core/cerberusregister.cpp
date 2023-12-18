@@ -4,11 +4,11 @@
 
 #include <cstdlib>
 
+#include "../cerberus.h"
+#include "../define.h"
+#include "../mutex/mutexlocker.h"
+#include "../thread/thread.h"
 #include "cerberusobject.h"
-#include "cerberusutils.h"
-#include "src/define.h"
-#include "src/mutex/mutexlocker.h"
-#include "src/thread/thread.h"
 
 using namespace cerberus;
 using namespace cerberus::core;
@@ -62,23 +62,15 @@ uint32_t CerberusRegister::findAvailablePluginId()
 //=============================================================================
 CerberusRegister::CerberusRegister() { srand(584239578); }
 //=============================================================================
-CerberusRegister& CerberusRegister::instance()
-{
-    static CerberusRegister reg;
-    return reg;
-}
-//=============================================================================
 void CerberusRegister::registerObj(CerberusObject* object)
 {
     if (object == nullptr) return;
 
-    auto& reg = instance();
-
-    mutex::MutexLocker locker(reg.mutex);
+    mutex::MutexLocker locker(m_mutex);
 
     if (!object->name().empty())
     {
-        for (auto& el : reg.m_objects)
+        for (auto& el : m_objects)
         {
             if (CerberusUtils::areEqual(object->name(), el->name()))
             {
@@ -87,20 +79,20 @@ void CerberusRegister::registerObj(CerberusObject* object)
         }
     }
 
-    object->m_id = reg.findAvailableId();
+    object->m_id = findAvailableId();
 
     if (object->type() == CerberusObject::Thread)
     {
-        reg.m_objects.push_back(object);
+        m_objects.push_back(object);
     }
     else if (object->type() == CerberusObject::MessageTemplate)
     {
         auto mt = new MessageTemplate(*(object->to_p<MessageTemplate>()));  // copy
-        reg.m_objects.push_back(mt);
+        m_objects.push_back(mt);
     }
     else if (object->type() == CerberusObject::Socket)
     {
-        reg.m_objects.push_back(object);
+        m_objects.push_back(object);
     }
     else
     {
@@ -112,22 +104,20 @@ void CerberusRegister::unregisterObj(uint32_t id)
 {
     if (id == CERBERUS_INVALID_ID) return;
 
-    auto& reg = instance();
+    mutex::MutexLocker locker(m_mutex);
 
-    mutex::MutexLocker locker(reg.mutex);
-
-    for (auto it = reg.m_objects.begin(); it != reg.m_objects.end(); it++)
+    for (auto it = m_objects.begin(); it != m_objects.end(); it++)
     {
         if ((*it)->id() == id)
         {
-            cdebug("Unregistering %s", (*it)->toObjStr().c_str());
+            logDebug("Unregistering %s", (*it)->toObjStr().c_str());
 
             if ((*it)->type() == CerberusObject::MessageTemplate)
             {
                 delete *it;
             }
 
-            reg.m_objects.erase(it);
+            m_objects.erase(it);
 
             return;
         }
@@ -136,12 +126,11 @@ void CerberusRegister::unregisterObj(uint32_t id)
 //=============================================================================
 uint32_t CerberusRegister::addPlugin(void* handle, const std::string& path, bool& exists)
 {
-    auto& reg = instance();
-    mutex::MutexLocker locker(reg.mutex);
+    mutex::MutexLocker locker(m_mutex);
 
     // check if plugin exists
 
-    for (auto&& el : reg.m_plugins)
+    for (auto&& el : m_plugins)
     {
         if (el.handle == handle)
         {
@@ -152,25 +141,24 @@ uint32_t CerberusRegister::addPlugin(void* handle, const std::string& path, bool
 
     exists = false;
 
-    uint32_t id = reg.findAvailablePluginId();
+    uint32_t id = findAvailablePluginId();
 
-    reg.m_plugins.push_back(std::move(Plugin(id, handle, path)));
+    m_plugins.push_back(std::move(Plugin(id, handle, path)));
 
     return id;
 }
 //=============================================================================
 void CerberusRegister::removePlugin(uint32_t id)
 {
-    auto& reg = instance();
-    mutex::MutexLocker locker(reg.mutex);
+    mutex::MutexLocker locker(m_mutex);
 
-    for (auto it = reg.m_plugins.begin(); it != reg.m_plugins.end(); it++)
+    for (auto it = m_plugins.begin(); it != m_plugins.end(); it++)
     {
         if ((*it).id == id)
         {
             (*it).mutex.lock();  // wait the lock
             (*it).mutex.unlock();
-            reg.m_plugins.erase(it);
+            m_plugins.erase(it);
             return;
         }
     }
@@ -178,31 +166,29 @@ void CerberusRegister::removePlugin(uint32_t id)
 //=============================================================================
 void CerberusRegister::cleanupPlugins()
 {
-    auto& reg = instance();
-    mutex::MutexLocker locker(reg.mutex);
+    mutex::MutexLocker locker(m_mutex);
 
-    for (auto&& el : reg.m_plugins)
+    for (auto&& el : m_plugins)
     {
         el.mutex.lock();  // wait the lock
         el.mutex.unlock();
         int ret = dlclose(el.handle);
         if (ret != 0)
         {
-            clogError("Error while unloading plugin %u %s", el.id, el.path.c_str());
+            logError("Error while unloading plugin %u %s", el.id, el.path.c_str());
         }
 
         return;
     }
 
-    reg.m_plugins.clear();
+    m_plugins.clear();
 }
 //=============================================================================
 void* CerberusRegister::checkPlugin(uint32_t id)
 {
-    auto& reg = instance();
-    mutex::MutexLocker locker(reg.mutex);
+    mutex::MutexLocker locker(m_mutex);
 
-    for (auto&& el : reg.m_plugins)
+    for (auto&& el : m_plugins)
     {
         if (el.id == id)
         {
@@ -215,10 +201,9 @@ void* CerberusRegister::checkPlugin(uint32_t id)
 //=============================================================================
 mutex::MutexLocker CerberusRegister::getPluginMutex(uint32_t id)
 {
-    auto& reg = instance();
-    mutex::MutexLocker locker(reg.mutex);
+    mutex::MutexLocker locker(m_mutex);
 
-    for (auto&& el : reg.m_plugins)
+    for (auto&& el : m_plugins)
     {
         if (el.id == id)
         {
@@ -231,10 +216,9 @@ mutex::MutexLocker CerberusRegister::getPluginMutex(uint32_t id)
 //=============================================================================
 bool CerberusRegister::updatePlugin(uint32_t id, const std::string& path, void* handle)
 {
-    auto& reg = instance();
-    mutex::MutexLocker locker(reg.mutex);
+    mutex::MutexLocker locker(m_mutex);
 
-    for (auto&& el : reg.m_plugins)
+    for (auto&& el : m_plugins)
     {
         if (el.id == id)
         {
@@ -262,40 +246,22 @@ CerberusObject* CerberusRegister::objById(uint32_t id)
     return nullptr;
 }
 //=============================================================================
-CerberusRegister::~CerberusRegister() {}
-//=============================================================================
-uint32_t CerberusRegister::threadIdByName(const std::string& name)
+uint32_t CerberusRegister::objIdByName(const std::string& name)
 {
-    auto& reg = instance();
+    mutex::MutexLocker locker(m_mutex);
 
-    mutex::MutexLocker locker(reg.mutex);
+    CerberusObject* found = objByName(name);
 
-    CerberusObject* found = reg.objByName(name);
+    if (found == nullptr) return CERBERUS_INVALID_ID;
 
-    if (found == nullptr)
-    {
-        return CERBERUS_INVALID_ID;
-    }
-    else
-    {
-        if (found->type() == CerberusObject::ObjectType::Thread)
-        {
-            return found->id();
-        }
-        else
-        {
-            return CERBERUS_INVALID_ID;
-        }
-    }
+    return found->id();
 }
 //=============================================================================
 MessageTemplate CerberusRegister::msgTemplateByName(const std::string& name)
 {
-    auto& reg = instance();
+    mutex::MutexLocker locker(m_mutex);
 
-    mutex::MutexLocker locker(reg.mutex);
-
-    CerberusObject* found = reg.objByName(name);
+    CerberusObject* found = objByName(name);
 
     if (found == nullptr)
     {
@@ -316,9 +282,8 @@ MessageTemplate CerberusRegister::msgTemplateByName(const std::string& name)
 //=============================================================================
 MessageTemplate CerberusRegister::msgTemplateById(uint32_t id)
 {
-    auto& reg = instance();
-    mutex::MutexLocker locker(reg.mutex);
-    CerberusObject* found = reg.objById(id);
+    mutex::MutexLocker locker(m_mutex);
+    CerberusObject* found = objById(id);
 
     if (found == nullptr)
     {
@@ -339,9 +304,8 @@ MessageTemplate CerberusRegister::msgTemplateById(uint32_t id)
 //=============================================================================
 void CerberusRegister::sendMsgToObj(uint32_t id, message::cerberus_message msg)
 {
-    auto& reg = instance();
-    mutex::MutexLocker locker(reg.mutex);
-    CerberusObject* found = reg.objById(id);
+    mutex::MutexLocker locker(m_mutex);
+    CerberusObject* found = objById(id);
 
     if (found->type() == CerberusObject::ObjectType::Thread)
     {

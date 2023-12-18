@@ -18,7 +18,7 @@ namespace cerberus
     {
         class Message;
 
-        class CERBERUS_EXPORT MessageTemplate : public CerberusObject
+        class CERBERUS_EXPORT MessageTemplate : public core::CerberusObject
         {
            private:
             std::vector<SlotType> m_types;

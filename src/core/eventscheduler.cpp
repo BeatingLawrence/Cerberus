@@ -75,7 +75,7 @@ void EventScheduler::addTimer(std::atomic_bool &bit, time::DateTime d, time::Tim
 }
 //=============================================================================
 EventScheduler::EventScheduler()
-    : cerberus::thread::Thread(TP_Periodic, time::TimeFrame(100, time::TimeFrame::U_MicroSecond))
+    : cerberus::thread::Thread(TP_Periodic, time::TimeFrame(100, time::TimeFrame::U_MicroSecond), "Event Scheduler")
 {
 }
 //=============================================================================

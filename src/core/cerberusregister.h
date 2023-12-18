@@ -12,18 +12,12 @@
 
 namespace cerberus
 {
-    class CerberusObject;
-
     namespace core
     {
-        class LibLoader;
-        class CerberusCore;
+        class CerberusObject;
+
         class CerberusRegister
         {
-            friend class ::cerberus::CerberusObject;
-            friend class ::cerberus::core::LibLoader;
-            friend class ::cerberus::core::CerberusCore;
-
             struct Plugin
             {
                 Plugin(uint32_t id, void* h, const std::string& p)
@@ -58,41 +52,37 @@ namespace cerberus
 
             uint32_t findAvailablePluginId();
 
-            mutex::Mutex mutex;
+            mutex::Mutex m_mutex;
 
+           public:
             CerberusRegister();
-
-            CerberusRegister(const CerberusRegister& other) = delete;
-
-            // Get the singleton instance
-            static CerberusRegister& instance();
 
             // Register a given object and return its id
             // Return an invalid ID if the registering failed
-            static void registerObj(CerberusObject* object);
+            void registerObj(CerberusObject* object);
 
             // Unregiste an object by its id
             // Nothing happens if the ID does not exist
-            static void unregisterObj(uint32_t id);
+            void unregisterObj(uint32_t id);
 
             // Add a plugin handle to the register. If the handle already exixst, exists is true
             // The new (or found) ID is returned
-            static uint32_t addPlugin(void* handle, const std::string& path, bool& exists);
+            uint32_t addPlugin(void* handle, const std::string& path, bool& exists);
 
             // Remove the handle from the register
-            static void removePlugin(uint32_t id);
+            void removePlugin(uint32_t id);
 
             // Remove and unload all the loaded plugins
-            static void cleanupPlugins();
+            void cleanupPlugins();
 
             // Return the requested handle if it is registered, otherwise nullptr
-            static void* checkPlugin(uint32_t id);
+            void* checkPlugin(uint32_t id);
 
             // Get the mutexlocker of a loaded shared object. The mutex is locked before return
-            static mutex::MutexLocker getPluginMutex(uint32_t id);
+            mutex::MutexLocker getPluginMutex(uint32_t id);
 
             // Replaces data of an existing plugin. Returns false if id does not exist, true otherwise
-            static bool updatePlugin(uint32_t id, const std::string& path, void* handle);
+            bool updatePlugin(uint32_t id, const std::string& path, void* handle);
 
             // Give a cerberus object from its ID, or nullptr if it does not exist
             // This method does not lock the mutex!
@@ -102,21 +92,18 @@ namespace cerberus
             // This method does not lock the mutex!
             CerberusObject* objByName(const std::string& name);
 
-           public:
-            ~CerberusRegister();
-
-            // Retrieves a Thread ID by its name
-            static uint32_t threadIdByName(const std::string& name);
+            // Retrieves an object ID by its name
+            uint32_t objIdByName(const std::string& name);
 
             // Retrieves a MessageTemplate by its name
-            static message::MessageTemplate msgTemplateByName(const std::string& name);
+            message::MessageTemplate msgTemplateByName(const std::string& name);  // consider hiding
 
             // Retrieves a MessageTemplate by its ID
-            static message::MessageTemplate msgTemplateById(uint32_t id);
+            message::MessageTemplate msgTemplateById(uint32_t id);  // consider hiding
 
             // Send a message to a cerberus object.
             // If the id is not valid or the message cannot be sent, nothing happens
-            static void sendMsgToObj(uint32_t id, message::cerberus_message msg);
+            void sendMsgToObj(uint32_t id, message::cerberus_message msg);
         };
     }  // namespace core
 }  // namespace cerberus

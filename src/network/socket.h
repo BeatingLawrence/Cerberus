@@ -6,9 +6,9 @@
 #include "../time/timeframe.h"
 #include "../types.h"
 
-#define UDPSocket(namestr) cerberus::network::Socket(cerberus::CerberusObject::Socket_UDP, namestr)
-#define TCPSocket(namestr) cerberus::network::Socket(cerberus::CerberusObject::Socket_TCP, namestr)
-#define TCPP2PSocket(namestr) cerberus::network::Socket(cerberus::CerberusObject::Socket_TCPP2P, namestr)
+#define UDPSocket(namestr) cerberus::network::Socket(cerberus::core::CerberusObject::Socket_UDP, namestr)
+#define TCPSocket(namestr) cerberus::network::Socket(cerberus::core::CerberusObject::Socket_TCP, namestr)
+#define TCPP2PSocket(namestr) cerberus::network::Socket(cerberus::core::CerberusObject::Socket_TCPP2P, namestr)
 
 // A socket capable of great things!
 
@@ -31,7 +31,7 @@ namespace cerberus
 
     namespace network
     {
-        class Socket : public CerberusObject
+        class Socket : public core::CerberusObject
         {
            private:
             Socket(SocketType type, int fd, SSL_CTX* ctx = nullptr);

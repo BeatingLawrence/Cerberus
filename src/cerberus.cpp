@@ -3,9 +3,10 @@
 #include <openssl/conf.h>
 #include <openssl/ssl.h>
 
-#include <cstring>
-
-#include "./mutex/mutexlocker.h"
+#include "core/cerberuscore.h"
+#include "core/cerberusregister.h"
+#include "exception/exception.h"
+#include "message/slot/slots.h"
 
 #ifdef WINDOWS_SYSTEM
 #include <windows.h>
@@ -14,57 +15,205 @@
 #include <unistd.h>
 #endif
 
+#define CANNOT_USE "cannot use the framework before the init() call"
+
 using namespace cerberus;
 using namespace cerberus::core;
 
-//=============================================================================
-Cerberus::Cerberus()
-    : CerberusCore(),
-      m_initFlag(false),
-      m_mutex()
-{
-    // noop
-}
-//=============================================================================
-Cerberus& Cerberus::instance()
-{
-    static Cerberus cerberus;
-    return cerberus;
-}
-//=============================================================================
-Cerberus::~Cerberus()
-{
-    if (instance().m_initFlag)
-    {
-        deinit();
-    }
-}
-//=============================================================================
-void Cerberus::init(const CerberusInitParms& parms)
-{
-    auto& cerberus = instance();
-    mutex::MutexLocker locker(&cerberus.m_mutex);
+SingularCerberusData Cerberus::singularCerbData;
 
-    if (cerberus.m_initFlag)
+//=============================================================================
+void Cerberus::registerObj(CerberusObject *object) { return Cerberus::singularCerbData.getReg()->registerObj(object); }
+//=============================================================================
+void Cerberus::unregisterObj(uint32_t id) { return Cerberus::singularCerbData.getReg()->unregisterObj(id); }
+//=============================================================================
+void Cerberus::sendMsgToObj(uint32_t id, message::cerberus_message msg) { return Cerberus::singularCerbData.getReg()->sendMsgToObj(id, msg); }
+//=============================================================================
+message::MessageTemplate Cerberus::msgTemplateById(uint32_t id) { return Cerberus::singularCerbData.getReg()->msgTemplateById(id); }
+//=============================================================================
+message::MessageTemplate Cerberus::msgTemplateByName(const std::string &name) { return Cerberus::singularCerbData.getReg()->msgTemplateByName(name); }
+//=============================================================================
+message::slot::cerberus_slot Cerberus::slotConstruct(SlotType type)
+{
+    switch (type)
     {
-        clogWarning("Cerberus already initialized, skipping init() call..");
-        return;
+        case ST_UCHAR:
+            // TODO to implement
+            break;
+
+        case ST_CHAR:
+            return message::slot::CharSlot::create();
+            break;
+
+        case ST_USHORT:
+            // TODO to implement
+            break;
+
+        case ST_SHORT:
+            // TODO to implement
+            break;
+
+        case ST_ULONG:
+            // TODO to implement
+            break;
+
+        case ST_LONG:
+            // TODO to implement
+            break;
+
+        case ST_ULONGLONG:
+            // TODO to implement
+            break;
+
+        case ST_LONGLONG:
+            // TODO to implement
+            break;
+
+        case ST_FLOAT:
+            // TODO to implement
+            break;
+
+        case ST_DOUBLE:
+            // TODO to implement
+            break;
+
+        case ST_BOOL:
+            // TODO to implement
+            break;
+
+        case ST_VOIDP:
+            // TODO to implement
+            break;
+
+        case ST_STDSTRINGP:
+            return message::slot::StringSlot::create();
+            break;
+
+        case ST_BYTEBUFFER:
+            // TODO to implement
+            break;
     }
 
-    // do the initialization:
-    core::CerberusLog::_setup(parms.logSetup);
-    cerberus.setLogFileName(parms.logSetup.logFileName);
-    cerberus.start();
-    // Do other stuff..
-    cerberus.m_initFlag = true;
-    cdebug("Cerberus init completed");
-    //
+    throw cerberusImplMissExc("Missing creation for the given slot type");
+}
+//=============================================================================
+uint32_t Cerberus::registerMessage(const message::Message &message, const std::string &name)
+{
+    auto tmplt = cerberus::message::MessageTemplate(message, name);
+    tmplt.registerThis();
+    return tmplt.id();
+}
+//=============================================================================
+message::cerberus_message Cerberus::messageConstruct(uint32_t id)
+{
+    if (id == CERBERUS_INVALID_ID)
+    {
+        return message::Message::create();
+    }
+
+    if (id < CERBERUS_FACTORY_START_ID)
+    {
+        // reserved range
+        logError("The requested ID is in the reserved range");
+        return message::Message::create();
+    }
+
+    auto tmplt = cerberus::Cerberus::msgTemplateById(id);
+
+    if (!tmplt.isObjValid())
+    {
+        return message::Message::create();
+    }
+
+    message::cerberus_message message = message::Message::create(id);
+
+    for (size_t i = 0; i < tmplt.count(); i++)
+    {
+        message->addSlot(slotConstruct(tmplt.getSlotTypeAt(i)));
+    }
+
+    return message;
+}
+//=============================================================================
+message::cerberus_message Cerberus::messageConstruct(const std::string &name)
+{
+    auto tmplt = Cerberus::msgTemplateByName(name);
+
+    if (!tmplt.isObjValid())
+    {
+        return message::Message::create();
+    }
+
+    message::cerberus_message message = message::Message::create(tmplt.id());
+
+    for (size_t i = 0; i < tmplt.count(); i++)
+    {
+        message->addSlot(slotConstruct(tmplt.getSlotTypeAt(i)));
+    }
+
+    return message;
+}
+//=============================================================================
+message::cerberus_message Cerberus::standardMessageConstruct(StandardMessage type)
+{
+    message::cerberus_message msg;
+
+    switch (type)
+    {
+        case SM_LogMsg:
+            msg = message::Message::create(CERBERUS_MESSAGE_LOG_ID);
+            msg->addSlot(message::slot::StringSlot::create());
+            break;
+
+        case SM_TerminationMsg:
+            msg = message::Message::create(CERBERUS_MESSAGE_TERM_ID);
+            break;
+
+            // add here more message specializations..
+
+        default:
+            logError("Given type does not exist");
+            msg = message::Message::create(CERBERUS_INVALID_ID);
+            break;
+    }
+
+    return msg;
+}
+//=============================================================================
+uint32_t Cerberus::addPlugin(void *handle, const std::string &path, bool &exists) { return Cerberus::singularCerbData.getReg()->addPlugin(handle, path, exists); }
+//=============================================================================
+mutex::MutexLocker Cerberus::getPluginMutex(uint32_t id) { return Cerberus::singularCerbData.getReg()->getPluginMutex(id); }
+//=============================================================================
+void *Cerberus::checkPlugin(uint32_t id) { return Cerberus::singularCerbData.getReg()->checkPlugin(id); }
+//=============================================================================
+bool Cerberus::updatePlugin(uint32_t id, const std::string &path, void *handle) { return Cerberus::singularCerbData.getReg()->updatePlugin(id, path, handle); }
+//=============================================================================
+void Cerberus::startTimer(std::atomic_bool &bit, time::TimeFrame t, timerCallback callback) { return Cerberus::singularCerbData.getCore()->m_eventScheduler.startTimer(bit, t, callback); }
+//=============================================================================
+void Cerberus::startTimer(std::atomic_bool &bit, time::DateTime d, time::TimeFrame t, timerCallback callback) { return Cerberus::singularCerbData.getCore()->m_eventScheduler.startTimer(bit, d, t, callback); }
+//=============================================================================
+void Cerberus::startTimer(std::atomic_bool &bit, time::DateTime d, timerCallback callback) { return Cerberus::singularCerbData.getCore()->m_eventScheduler.startTimer(bit, d, callback); }
+//=============================================================================
+void Cerberus::stopTimer(std::atomic_bool &bit) { return Cerberus::singularCerbData.getCore()->m_eventScheduler.stopTimer(bit); }
+//=============================================================================
+void Cerberus::init(const CerberusInitParms &parms)
+{
+    singularCerbData.constructLog();
+    singularCerbData.getLog()->setup(parms.logSetup);
+    singularCerbData.constructReg();
+    singularCerbData.constructCore();
+
+    singularCerbData.getLog()->start();
+    singularCerbData.getCore()->start();
+
+    logInfo("Cerberus init completed");
+
     if (parms.useCiphers)
     {
         SSL_library_init();
         SSL_load_error_strings();
     }
-    //
+
 #ifndef WINDOWS_SYSTEM
     // PostgreSQL SIGPIPE Ignoring:
     struct sigaction action = {};
@@ -72,34 +221,27 @@ void Cerberus::init(const CerberusInitParms& parms)
 
     if (sigaction(SIGPIPE, &action, nullptr) != 0)
     {
-        clogError("Unable to ignore SIGPIPE system signal, using SQL may terminate the process");
+        logError("Unable to ignore SIGPIPE system signal, using SQL may terminate the process");
     }
 
 #endif
 }
 //=============================================================================
-void Cerberus::init() { init(cerberusDefaultParms()); }
-//=============================================================================
 void Cerberus::deinit()
 {
-    auto& cerberus = instance();
-    mutex::MutexLocker locker(&cerberus.m_mutex);
-
-    if (cerberus.m_initFlag == false)
-    {
-        return;
-    }
-
-    instance().join(true);
-    instance().m_initFlag = false;
-    clogInfo("Cerberus Memory Released");
+    singularCerbData.destroyCore();
+    singularCerbData.getLog()->stop();
+    singularCerbData.destroyReg();
+    singularCerbData.destroyLog();
 }
 //=============================================================================
 CerberusInitParms Cerberus::cerberusDefaultParms()
 {
     CerberusInitParms toReturn{};
-    toReturn.logSetup.disableFormatting   = false;
+    toReturn.logSetup.colorFormatting     = true;
+    toReturn.logSetup.logOnFile           = true;
     toReturn.logSetup.logFileName         = "./last.log";
+    toReturn.logSetup.logFileMaximumSize  = 4096;  // 4Kb
     toReturn.logSetup.applicationLogLevel = LL_Error;
     toReturn.logSetup.cerberusLogLevel    = LL_Error;
 
@@ -123,5 +265,145 @@ CerberusInitParms Cerberus::cerberusDefaultParms()
 //=============================================================================
 std::string Cerberus::cerberusVersion() { return CERBERUS_VERSION; }
 //=============================================================================
-void Cerberus::send(message::cerberus_message message) { instance().addMessage(message); }
+void Cerberus::log(const std::string &str, LogLevel logLevel, const std::string &author, bool application) { Cerberus::singularCerbData.getLog()->log(str, logLevel, author, application); }
+//=============================================================================
+uint32_t Cerberus::objIdByName(const std::string &name) { return Cerberus::singularCerbData.getReg()->objIdByName(name); }
+//=============================================================================
+void Cerberus::send(message::cerberus_message message) { Cerberus::singularCerbData.getCore()->addMessage(message); }
+//=============================================================================
+void Cerberus::send(message::cerberus_message message, uint32_t id)
+{
+    message->setDestinationId(id);
+    Cerberus::singularCerbData.getCore()->addMessage(message);
+}
+//=============================================================================
+void Cerberus::send(message::cerberus_message message, const std::string &name)
+{
+    message->setDestinationId(objIdByName(name));
+    Cerberus::singularCerbData.getCore()->addMessage(message);
+}
+//=============================================================================
+void SingularCerberusData::constructLog()
+{
+    // wait for build operations to be finished
+    while (logWorking.test_and_set())
+    {
+    }
+
+    if (core) throw cerberusUsageErrorExc(CANNOT_USE);
+
+    log = new CerberusLog;
+
+    logWorking.clear();
+}
+//=============================================================================
+void SingularCerberusData::constructReg()
+{
+    // wait for build operations to be finished
+    while (regWorking.test_and_set())
+    {
+    }
+
+    if (reg) throw cerberusUsageErrorExc(CANNOT_USE);
+
+    reg = new CerberusRegister;
+
+    regWorking.clear();
+}
+//=============================================================================
+void SingularCerberusData::constructCore()
+{
+    // wait for build operations to be finished
+    while (coreWorking.test_and_set())
+    {
+    }
+
+    if (core) throw cerberusUsageErrorExc(CANNOT_USE);
+
+    core = new CerberusCore;
+
+    coreWorking.clear();
+}
+//=============================================================================
+void SingularCerberusData::destroyLog()
+{
+    // wait for build or use operations to be finished
+    while (logWorking.test_and_set())
+    {
+    }
+
+    if (!log) return;
+
+    delete log;
+    log = nullptr;
+    logWorking.clear();
+}
+//=============================================================================
+void SingularCerberusData::destroyReg()
+{
+    // wait for build or use operations to be finished
+    while (regWorking.test_and_set())
+    {
+    }
+
+    if (!reg) return;
+
+    reg->cleanupPlugins();
+
+    delete reg;
+    reg = nullptr;
+    regWorking.clear();
+}
+//=============================================================================
+void SingularCerberusData::destroyCore()
+{
+    // wait for build or use operations to be finished
+    while (coreWorking.test_and_set())
+    {
+    }
+
+    if (!core) return;
+
+    core->join(true).expect("Unable to join the core Thread");
+
+    delete core;
+    core = nullptr;
+    coreWorking.clear();
+}
+//=============================================================================
+CerberusCore *SingularCerberusData::getCore()
+{
+    // wait for build operations to be finished
+    while (coreWorking.test())
+    {
+    }
+
+    if (!core) throw cerberusUsageErrorExc(CANNOT_USE);
+
+    return core;
+}
+//=============================================================================
+CerberusRegister *SingularCerberusData::getReg()
+{
+    // wait for build operations to be finished
+    while (regWorking.test())
+    {
+    }
+
+    if (!reg) throw cerberusUsageErrorExc(CANNOT_USE);
+
+    return reg;
+}
+//=============================================================================
+CerberusLog *SingularCerberusData::getLog()
+{
+    // wait for build operations to be finished
+    while (logWorking.test())
+    {
+    }
+
+    if (!log) throw cerberusUsageErrorExc(CANNOT_USE);
+
+    return log;
+}
 //=============================================================================

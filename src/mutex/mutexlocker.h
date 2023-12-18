@@ -29,6 +29,8 @@ namespace cerberus
 
             MutexLockerData* m_data;
 
+            void unref();
+
            public:
             MutexLocker();
 

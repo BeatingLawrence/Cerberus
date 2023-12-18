@@ -22,38 +22,41 @@ namespace cerberus
             CerberusUtils(const CerberusUtils& other) = delete;
 
            public:
-            // Prints formatted content on a std::string which is returned
+            // Print formatted content on a std::string which is returned
             static std::string strPrint(std::string format, ...);
 
-            // Returns the lower case version of str
+            // Return the lower case version of str
             static std::string toLower(const std::string& str);
 
-            // Returns the upper case version of str
+            // Return the upper case version of str
             static std::string toUpper(const std::string& str);
 
-            // Removes spaces before str and returns the result.
+            // Remove spaces before str and return the result.
             static std::string removeBlankBefore(const std::string& str);
 
-            // Removes spaces after str and returns the result.
+            // Remove spaces after str and return the result.
             static std::string removeBlankAfter(const std::string& str);
 
-            // Removes spaces before and after str. Spaces between characters will remain
+            // Remove spaces before and after str. Spaces between characters will remain
             static std::string removeBlank_copy(const std::string& str);
             static void removeBlank(std::string& str);
 
-            // Checks if str1 contains str2 and returns true if it does
+            // Check if str1 contains str2 and return true if it does
             static bool contains(const std::string& str1, const std::string& str2);
 
-            // Returns true when given strings are equal (case sensitive)
-            static bool areEqual(const std::string& str1, const std::string& str2);
+            // Return true when given strings are equal (default = case sensitive)
+            static bool areEqual(const std::string& str1, const std::string& str2, WordMatch match = WM_CaseSensitive);
 
-            // Retrieves the value of specified environment variable
+            // Retrieve the value of specified environment variable
             static std::string environmentVariable(const std::string& variableName);
 
-            // Converts a given string to an int
-            static int stringToInt(const std::string& str, Radix r = Radix::Decimal);
+            // Convert a given string to an int (64 bit)
+            static long long int stringToInt(const std::string& str, Radix r = Radix::Decimal);
 
-            // Tells if the string contains at least one alphabet character [a-z][A-Z]
+            // Convert a given string to a long double
+            static long double stringToDouble(const std::string& str);
+
+            // Tell if the string contains at least one alphabet character [a-z][A-Z]
             static bool isAlpha(const std::string& str);
 
             // Check if str1 starts with str2 string
@@ -80,6 +83,19 @@ namespace cerberus
             // Truncate the given string making it long at most size chars.
             // If size is bigger than (or equal to) the str size, the str string is returned
             static std::string truncStr(const std::string& str, SIZE size);
+
+            // Return a substring of str that starts at pos 0 and ends at token pos (token excluded)
+            // If token was not found, the returned string will be equal to the str parameter
+            static std::string substrUntil(const std::string& str, const std::string& token);
+
+            // Return a substring of str that starts at token pos (token excluded) and ends at str end.
+            // If toke was not found, the returned string will be empty
+            static std::string substrFrom(const std::string& str, const std::string& token);
+
+            // Splits the given str in two pieces at the given token (that is excluded from both).
+            // If token was not found, all str will be placed in the left string returned, and the
+            // right string will be empty
+            static DoubleString split(const std::string& str, const std::string& token);
         };
     }  // namespace core
 }  // namespace cerberus

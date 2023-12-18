@@ -20,6 +20,12 @@ namespace cerberus
         std::string key, val;
     };
 
+    struct DoubleString
+    {
+        std::string left;
+        std::string right;
+    };
+
     typedef std::vector<DictLine> Dictionary;
 
     struct LoaderFunc
@@ -28,6 +34,12 @@ namespace cerberus
         mutex::MutexLocker mutexLocker;
 
         bool isValid() { return func != nullptr; };
+    };
+
+    enum WordMatch
+    {
+        WM_CaseSensitive,
+        WM_CaseInsensitive,
     };
 
     enum FileOpenMode
@@ -72,8 +84,9 @@ namespace cerberus
     {
         LogLevel applicationLogLevel;  // set the application log level. Minor levels will be silenced
         LogLevel cerberusLogLevel;     // set the Cerberus framework log level. Minor levels will be silenced
-        bool disableFormatting;        // disable the color formatting of the output terminal
-        std::string logFileName;       // the log file name
+        bool colorFormatting;          // enable the color formatting of the output terminal
+        bool logOnFile;                // enable the log on file
+        std::string logFileName;       // set the log file name
         SIZE logFileMaximumSize;       // set to zero to disable (not recommended)
         CerberusLogRole infoRole;      // set the log role for the info level
         CerberusLogRole warningRole;   // set the log role for the warning level
@@ -108,15 +121,14 @@ namespace cerberus
 
     enum IniDataType : uint8_t
     {
-        IDT_NotAType = 0,  // specified when a value has an unknown type
-        IDT_String   = 1,  // specified when a value is considered a string
-        IDT_Integer  = 2,  // false if key value contains a letter or a symbol
-        IDT_Double   = 3,  // false if key value does not contain a '.' or if it contains a letter
-        IDT_Bool     = 4,  // true only if key value equals "true" or "false" (case insensitive)
+        IDT_Invalid = 0,  // specified when a value has an unknown type
+        IDT_Integer = 2,  // false if key value contains a letter or a symbol
+        IDT_Double  = 3,  // false if key value does not contain a '.' or if it contains a letter
+        IDT_Bool    = 4,  // true only if key value equals "true" or "false" (case insensitive)
     };
 
     // The Result enum contains all the possible results of operation requested to the framework.
-    enum Result
+    enum Result : uint8_t
     {
         OR_Undefined,                 // [general] this result should never be given (used for unimplemented methods)
         OR_OK,                        // [general] no errors
@@ -132,6 +144,11 @@ namespace cerberus
         OR_NotFound,                  // [general] the item was not found
         OR_TemporaryUnavailable,      // [general] the requested operation is not available at the moment, retry later
         OR_InvalidFile,               // [general] the provided file instance is not valid
+        OR_Duplicate,                 // [general] the item is a duplicate
+        OR_WrongType,                 // [general] the item type is wrong
+                                      //
+        OR_EOF,                       // [file] EOF reached
+        OR_NotEmpty,                  // [file] the provided directory is not empty
                                       //
         OR_ResolveServerTempFailure,  // [DNS lookup] resolve method error
         OR_ResolveServerFailure,      // [DNS lookup] resolve method error
@@ -146,9 +163,11 @@ namespace cerberus
         OR_QueryFailure,              // [database] query error
         OR_DBFailure,                 // [database] DB error
         OR_TableAlreadyPresent,       // [database] the table is already present
+                                      //
+        OR_ThreadNotJoinable,         // [thread] the thread is not joinable
     };
 
-    enum MutexType
+    enum MutexType : uint8_t
     {
         Simple,     // ERRORCHECK mutex
         Recursive,  // RECURSIVE mutex
@@ -162,7 +181,8 @@ namespace cerberus
         union  // save space. Access one member only
         {
             int64_t i;
-            double f;
+            long double f;
+            LSIZE sz;
         };
 
         std::string str;
@@ -173,7 +193,9 @@ namespace cerberus
 
         OperationResult(int64_t i);
 
-        OperationResult(double f);
+        OperationResult(long double f);
+
+        explicit OperationResult(LSIZE sz);
 
         OperationResult(const std::string& str);
 
@@ -181,17 +203,29 @@ namespace cerberus
 
         bool operator!=(const OperationResult& other);
 
-        // Return true if the Result is OR_OK, false otherwise
-        bool ok(bool printError = false);
+        // Throw a generic exception with the given text only if the result is failed
+        OperationResult& expect(const std::string& str);
 
-        // The opposite of ok(). This method can print the error
-        // with logError() internally, if printError is true and ok() is false
-        bool fail(bool printError = false);
+        // Throw a generic exception with the given text only if the result fails and
+        // only if it fails with the given reason
+        OperationResult& expect(Result reason, const std::string& str);
+
+        // Throw a generic exception with the result status text only if the result fails
+        OperationResult& expect();
+
+        // Return true if the Result is OR_OK, false otherwise.
+        // If print is true, the error will be printer with logError
+        bool ok(bool print = false);
+
+        // Return false if the Result is OR_OK, true otherwise.
+        // If print is true, the error will be printer with logError
+        bool fail(bool print = false);
 
         // Translate the Result
         std::string errorString();
 
-        bool boolVal() { return i != 0; };
+        // Used for bool value
+        bool isTrue() { return i != 0; };
     };
 
     struct Host

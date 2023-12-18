@@ -1,12 +1,11 @@
 #include "sqldata.h"
 
 #include <inttypes.h>
-#include <stdarg.h>
 
 #include <cstdlib>
 
-#include "../../core/cerberuslog.h"
 #include "../../core/cerberusutils.h"
+#include "src/cerberus.h"
 
 using namespace cerberus::data::database;
 
@@ -188,7 +187,7 @@ bool SQLBlock::append(const SQLRow& row)
     if (structured())
         if (row.size() != m_prototype.size())
         {
-            clogError("Refusing to append a row to a block of different structure");
+            logError("Refusing to append a row to a block of different structure");
             return false;
         }
 
@@ -323,7 +322,7 @@ int64_t SQLCell::toInt()
 
     if (errno == ERANGE)
     {
-        clogError("INT64 limit reached during string to int conversion");
+        logError("INT64 limit reached during string to int conversion");
         return 0;
     }
 
@@ -336,7 +335,7 @@ double SQLCell::toFloat()
 
     if (errno == ERANGE)
     {
-        clogError("double limit reached during string to double conversion");
+        logError("double limit reached during string to double conversion");
         return 0.0f;
     }
 
@@ -356,7 +355,7 @@ bool SQLCell::toBool()
         return false;
     }
 
-    clogError("called toBool() on a non-boolean SQLCell, value %s not recognized", m_value.c_str());
+    logError("called toBool() on a non-boolean SQLCell, value %s not recognized", m_value.c_str());
     return false;
 }
 //=============================================================================
@@ -376,7 +375,7 @@ std::vector<bool> SQLCell::toBits()
         }
         else
         {
-            clogError("called toBits() on a SQLCell that does not contain any bit");
+            logError("called toBits() on a SQLCell that does not contain any bit");
             std::vector<bool> fail;
             return fail;
         }

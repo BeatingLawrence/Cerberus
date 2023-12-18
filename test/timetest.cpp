@@ -55,15 +55,15 @@ TEST(dateTimeTest, creation)
 {
     auto dt = DateTime::current();
 
-    debug("%s", dt.toString().c_str());
+    logDebug("%s", dt.toString().c_str());
 
-    debug(dt.usingDst() ? "USING DST" : "NOT USING DST");
+    logDebug(dt.usingDst() ? "USING DST" : "NOT USING DST");
 
     dt.addMonths(6);
 
-    debug("%s", dt.toString().c_str());
+    logDebug("%s", dt.toString().c_str());
 
-    debug(dt.usingDst() ? "USING DST" : "NOT USING DST");
+    logDebug(dt.usingDst() ? "USING DST" : "NOT USING DST");
 
-    debug("timestamp %s", dt.toTimeStampString().c_str());
+    logDebug("timestamp %s", dt.toTimeStampString().c_str());
 }

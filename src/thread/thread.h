@@ -54,7 +54,7 @@ namespace cerberus
 {
     namespace thread
     {
-        class CERBERUS_EXPORT Thread : public cerberus::thread::ThreadBase, public CerberusObject
+        class CERBERUS_EXPORT Thread : public cerberus::thread::ThreadBase, public core::CerberusObject
         {
            private:
             pthread_t m_pthread;
@@ -116,10 +116,10 @@ namespace cerberus
 
             // Block until thread terminates and return the last tick() exit value.
             // If stop is true, the Thread is also started and terminated.
-            int join(bool stop = false);
+            OperationResult join(bool stop = false);
 
             // Detach the Thread from the owner Thread
-            void detach();
+            OperationResult detach();
 
             // Set a custom callback to be executed as tick()
             void provideTickCallback(customTickCallback callback);

@@ -1,5 +1,4 @@
 #include <cerberus/cerberus.h>
-#include <cerberus/core/cerberuslog.h>
 #include <cerberus/core/cerberusutils.h>
 #include <gtest/gtest.h>
 
@@ -12,7 +11,7 @@ TEST(cerberusTest, logTest)
     logInfo("Info Log");
     logWarning("Warning Log");
     logError("Error Log");
-    debug("Debug Log");
+    logDebug("Debug Log");
 }
 
 TEST(cerberusTest, environmentVariable)

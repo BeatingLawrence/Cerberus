@@ -1,6 +1,7 @@
 #ifndef CERBERUS_DATA_FILESYSTEM_INIDATAFILE_H
 #define CERBERUS_DATA_FILESYSTEM_INIDATAFILE_H
 
+#include <list>
 #define MAIN_SECTION "MAIN"
 
 #include <regex>
@@ -23,89 +24,106 @@ namespace cerberus
                 std::regex m_isDoubleRegex;
                 std::regex m_isBoolRegex;
 
-                bool isValid(const std::string& line);
-
-                bool isInteger(const std::string& line);
-
-                bool isDouble(const std::string& line);
-
-                bool isBool(const std::string& line);
-
-                std::string getKey(const std::string& line);
-
-                std::string getValue(const std::string& line);
-
-                struct Entry
+                struct Line
                 {
-                    std::string section;
+                    bool sectionSpecifier;
+                    int16_t sectionId;
+                    std::string comment;
                     std::string key;
-                    uint8_t type;
-                    std::string stringValue;
-                    union
+                    std::string value;
+
+                    Line()
+                        : sectionSpecifier(false),
+                          sectionId(0),
+                          comment(),
+                          key(),
+                          value()
                     {
-                        int64_t integerValue;
-                        double doubleValue;
-                        bool boolValue;
-                    };
+                    }
                 };
 
-                Entry* search(const std::string& key, const std::string& section = MAIN_SECTION);
+                struct Section
+                {
+                    int16_t id;
+                    std::string name;
+                };
 
-                static bool exists(const std::vector<std::string>& v, const std::string& str);
+                std::list<Line> m_lines;
 
-                void sort();
+                std::vector<Section> m_sections;
 
-                bool syncFile();  // rewrites the file reading from memory
+                bool isValid(const std::string& line);
+                bool isInteger(const std::string& val);
+                bool isDouble(const std::string& val);
+                bool isBool(const std::string& val);
 
-                std::vector<Entry> m_entries;
+                Line* search(const std::string& key, int16_t sectionId);
+                Line* search(const std::string& key, const std::string& section);
+
+                std::string getSectionName(int16_t sectionId);
+                int16_t getSectionId(const std::string& name);
+                int16_t addNewSection(const std::string& name);
+
+                IniDataType valueType(const std::string& value);
+
+                void insertLine(const Line& line);
+
+                OperationResult syncFile();  // rewrites the file reading from memory
 
                public:
+                void printDebug();
                 // Construct an IniDataFile object with a file name
                 IniDataFile(const std::string& fileName = std::string(""));
 
-                // Close the file if open and destroy the instance
+                // Close the file if open
                 ~IniDataFile();
 
                 // Sets a file name for the .ini file.
                 void setFileName(const std::string& fileName);
 
-                // Returns true if the file is a valid .ini file or if it is empty.
-                // When an invalid line is found, the method will still attempt to load the following valid ones, and return false.
-                // Calling this method will result in a synchronization between file and memory.
-                // Entries that are in the memory but not in the file will be lost.
-                // This method open the .ini file in read-only mode
-                bool load();
+                // Attempt to load an .ini file.
+                // If load() manages to parse all the file with no errors, the result is OR_OK and true.
+                // If load() finds errors while parsing the file, the result is still OR_OK but it is false,
+                // to indicate that the operation retrieved all possible information from the file
+                // but some data was not correctly written and has been discarded.
+                // If a not ignoreable error has been encountered, OR_Failure is returned.
+                // If the given path is not valid, OR_InvalidFile is returned.
+                OperationResult load();
 
                 // Checks if a key exists in the memory
-                bool exists(const std::string& key);
+                bool exists(const std::string& key, const std::string& section = MAIN_SECTION);
 
-                // Returns an OR of possible data types of a key. Values used are defined in DataType enum.
-                // Returns DataType::DT_NotAType if provided key was not found
-                uint8_t type(const std::string& key);
+                // Returns the value type of the requested key.
+                // If key was not found, IDT_Invalid is returned
+                IniDataType type(const std::string& key, const std::string& section = MAIN_SECTION);
+
+                // Check if the key object is convertible to the given type
+                bool isType(const std::string& key, IniDataType type);
+
+                // Force the re-write of the entire file
+                OperationResult rewrite();
 
                 // Write methods:
-                // These methods perform a write operation on the file (and memory), modifying or adding a key=value entry.
-                // If provided key exists, its value will be modified.
-                // In this case it is important to ensure that the type is correct using type().
-                // If provided key does not exist, it will be created and added to the memory and file.
-                // If provided key=value string pair is not valid, the method will return false
+                // These methods synchronously add or modifiy a
+                // key=value pair in both the file and memory.
+                // If the given section does not exist it will be created as well,
+                // and inserted at the end of the file.
+                // When the main section is specified, the key=value pair is written
+                // at the top of the file instead.
+                // If provided key or value is empty, the method will return OR_WrongArgument
                 OperationResult write_string(const std::string& key, const std::string& value, const std::string& section = MAIN_SECTION);
-
                 OperationResult write_integer(const std::string& key, int64_t value, const std::string& section = MAIN_SECTION);
-
                 OperationResult write_double(const std::string& key, double value, const std::string& section = MAIN_SECTION);
-
                 OperationResult write_bool(const std::string& key, bool value, const std::string& section = MAIN_SECTION);
 
                 // Read methods:
-                // These methods perform a read operation on the memory copied using load().
-                // Please ensure the data exists and is type-correct using exists() and type()
+                // These methods return the requested data reading from the keys loaded with load().
+                // If the value does not exist, OR_NotFound is returned.
+                // If the value is of a different type, OR_WrongType is returned.
+                // read_string() does not check for the type because all values are strings
                 OperationResult read_string(const std::string& key, const std::string& section = MAIN_SECTION);
-
                 OperationResult read_integer(const std::string& key, const std::string& section = MAIN_SECTION);
-
                 OperationResult read_double(const std::string& key, const std::string& section = MAIN_SECTION);
-
                 OperationResult read_bool(const std::string& key, const std::string& section = MAIN_SECTION);
             };
         }  // namespace filesystem

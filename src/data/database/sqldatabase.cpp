@@ -44,7 +44,7 @@ cerberus::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototype)
 {
     if (prototype.name().empty())
     {
-        clogError("Asked to create an empty-named table");
+        logError("Asked to create an empty-named table");
         return OR_QueryFailure;
     }
 
@@ -55,7 +55,7 @@ cerberus::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototype)
     {
         if (res == OR_OK)
         {
-            clogError("Asked to create an existing table");
+            logError("Asked to create an existing table");
             return OR_TableAlreadyPresent;
         }
 
@@ -91,7 +91,7 @@ cerberus::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
 {
     if (block.m_prototype.name().empty())
     {
-        clogError("Asked to insert into an empty-named table");
+        logError("Asked to insert into an empty-named table");
         return OR_QueryFailure;
     }
 

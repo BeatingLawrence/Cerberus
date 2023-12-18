@@ -1,8 +1,8 @@
 #include "datetime.h"
 
-#include "src/core/cerberuslog.h"
+#include "src/cerberus.h"
 #include "src/core/cerberusutils.h"
-#include "src/exception/exceptioncatalog.h"
+#include "src/exception/exception.h"
 
 using namespace cerberus::time;
 
@@ -271,7 +271,7 @@ DateTime DateTime::current()
 
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
     {
-        cdebug("clock_gettime error: %s", strerror(errno));
+        logDebug("clock_gettime error: %s", strerror(errno));
     }
 
     return DateTime(ts.tv_sec, ts.tv_nsec);

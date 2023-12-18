@@ -32,19 +32,13 @@ void Timer::setTime(const TimeFrame &time) { m_time = time; }
 //=============================================================================
 void Timer::start()
 {
-    auto &i = cerberus::Cerberus::instance();
-
     if (m_periodic)
-        i.m_eventScheduler.startTimer(m_running, m_time, m_callback);
+        Cerberus::startTimer(m_running, m_time, m_callback);
     else
-        i.m_eventScheduler.startTimer(m_running, time::DateTime::current().add(m_time), m_callback);
+        Cerberus::startTimer(m_running, time::DateTime::current().add(m_time), m_callback);
 }
 //=============================================================================
-void Timer::stop()
-{
-    auto &i = cerberus::Cerberus::instance();
-    i.m_eventScheduler.stopTimer(m_running);
-}
+void Timer::stop() { Cerberus::stopTimer(m_running); }
 //=============================================================================
 void Timer::reset()
 {

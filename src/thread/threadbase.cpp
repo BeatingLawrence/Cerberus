@@ -3,7 +3,6 @@
 #include <cstring>
 
 #include "../mutex/mutexlocker.h"
-#include "src/core/cerberuslog.h"
 
 using namespace cerberus::thread;
 using namespace cerberus::mutex;
@@ -86,6 +85,12 @@ cerberus::message::cerberus_message ThreadBase::nextMessageKeep() const
 {
     MutexLocker locker(&m_mutex);
     return m_queue.nextKeep();
+}
+//=============================================================================
+void ThreadBase::discardMessageQueue()
+{
+    MutexLocker locker(&m_mutex);
+    m_queue.clear();
 }
 //=============================================================================
 bool ThreadBase::isQueueEmpty() const

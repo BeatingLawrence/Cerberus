@@ -14,42 +14,59 @@ Exception::Exception(const Exception& other) noexcept
 }
 //=============================================================================
 Exception::Exception(const char* text, uint32_t line, const char* fileName, ExceptionType type) noexcept
+    : m_error()
 {
-    std::string file(fileName);
-    size_t slashPos = file.find_last_of("/\\");
-
-    if (slashPos == std::string::npos)
-    {
-        slashPos = 0;
-    }
-
-    file = file.substr(++slashPos);
-
     switch (type)
     {
-        case ET_Unknown:
-            m_error = core::CerberusUtils::strPrint("Unknown exception in %s:%u, %s", file.c_str(), line, text);
-            break;
-
         case ET_IllegalArgument:
-            m_error = core::CerberusUtils::strPrint("Illegal argument exception in %s:%u, %s", file.c_str(), line, text);
+            m_error = "Illegal argument exception";
             break;
 
         case ET_IllegalState:
-            m_error = core::CerberusUtils::strPrint("Illegal state exception in %s:%u, %s", file.c_str(), line, text);
+            m_error = "Illegal state exception";
             break;
 
         case ET_System:
-            m_error = core::CerberusUtils::strPrint("System exception in %s:%u, %s", file.c_str(), line, text);
+            m_error = "System exception";
             break;
 
         case ET_MissingImplementation:
-            m_error = core::CerberusUtils::strPrint("Missing implementation exception in %s:%u, %s", file.c_str(), line, text);
+            m_error = "Missing implementation exception";
             break;
+
         case ET_InvalidCast:
-            m_error = core::CerberusUtils::strPrint("Invalid cast exception in %s:%u, %s", file.c_str(), line, text);
+            m_error = "Invalid cast exception";
+            break;
+
+        case ET_UsageError:
+            m_error = "Usage error exception";
+            break;
+
+        default:
+            m_error = "Exception";
             break;
     }
+
+    if (fileName)
+    {
+        std::string file(fileName);
+        if (!file.empty())
+        {
+            size_t slashPos = file.find_last_of("/\\");
+
+            if (slashPos == std::string::npos)
+            {
+                slashPos = 0;
+            }
+
+            file = file.substr(++slashPos);
+            m_error += " in ";
+            m_error += file;
+        }
+    }
+
+    if (line) m_error += core::CerberusUtils::strPrint(":%u", line);
+    if (text) m_error += core::CerberusUtils::strPrint(", %s", text);
 }
 //=============================================================================
 Exception& Exception::operator=(const Exception& other) noexcept

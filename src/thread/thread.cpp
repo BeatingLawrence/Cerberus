@@ -1,10 +1,9 @@
 #include "thread.h"
 
 #include <cstring>
-#include <iostream>
 
-#include "../core/cerberuslog.h"
-#include "../exception/exceptioncatalog.h"
+#include "../cerberus.h"
+#include "../exception/exception.h"
 
 //=============================================================================
 void* cerberus::thread::Thread::_staticThread(void* context)
@@ -95,14 +94,14 @@ void cerberus::thread::Thread::construct(ThreadPeriodicity periodicity, const ti
 
     if (periodicity == ThreadPeriodicity::TP_NonPeriodic)
     {
-        cdebug("New non-periodic %s", toObjStr().c_str());
+        logDebug("New non-periodic %s", toObjStr().c_str());
     }
     else if (periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicQueue)
     {
         if (time.isValid())
         {
             m_time = time.splittedTime();
-            cdebug("New periodic %s, PERIOD:%ums", toObjStr().c_str(), time.milliseconds());
+            logDebug("New periodic %s, PERIOD:%ums", toObjStr().c_str(), time.milliseconds());
         }
         else
         {
@@ -112,7 +111,7 @@ void cerberus::thread::Thread::construct(ThreadPeriodicity periodicity, const ti
     }
     else if (periodicity == ThreadPeriodicity::TP_OneShot)
     {
-        cdebug("New one-shot %s", toObjStr().c_str());
+        logDebug("New one-shot %s", toObjStr().c_str());
     }
 
     pthread_attr_t attr{};
@@ -193,12 +192,12 @@ cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const std::strin
 //=============================================================================
 cerberus::thread::Thread::~Thread() { unregisterThis(); }
 //=============================================================================
-int cerberus::thread::Thread::join(bool stop)
+cerberus::OperationResult cerberus::thread::Thread::join(bool stop)
 {
     if (stop)
     {
-        terminate();
-        start();
+        terminate();  // set termination flag
+        start();      // force the thread to run
     }
 
     int ret = pthread_join(m_pthread, NULL);
@@ -207,26 +206,31 @@ int cerberus::thread::Thread::join(bool stop)
     {
         if (ret == EINVAL)
         {
-            clogError("Thread not joinable");
-            return 0;
+            return OR_ThreadNotJoinable;
         }
         else if (ret != ESRCH)  // ESRCH = not executing anymore
         {
-            throw cerberusSystemExc("pthread_join function failed: %s", strerror(ret));
+            OperationResult toReturn(OR_Failure);
+            toReturn.str = strerror(ret);
+            return toReturn;
         }
     }
 
-    return m_retValue;
+    return (int64_t)m_retValue;
 }
 //=============================================================================
-void cerberus::thread::Thread::detach()
+cerberus::OperationResult cerberus::thread::Thread::detach()
 {
     int ret = pthread_detach(m_pthread);
 
     if (ret)
     {
-        throw cerberusSystemExc("pthread_detach function failed: %s", strerror(ret));
+        OperationResult toReturn(OR_Failure);
+        toReturn.str = strerror(ret);
+        return toReturn;
     }
+
+    return OR_OK;
 }
 //=============================================================================
 void cerberus::thread::Thread::provideTickCallback(customTickCallback callback) { m_tickCallback = callback; }

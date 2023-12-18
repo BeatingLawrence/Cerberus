@@ -1,9 +1,9 @@
 #include "cerberusobject.h"
 
-#include "src/core/cerberusregister.h"
+#include "src/cerberus.h"
 #include "src/define.h"
 
-using namespace cerberus;
+using namespace cerberus::core;
 
 //=============================================================================
 std::string CerberusObject::toStr(const CerberusObject& obj)
@@ -93,9 +93,9 @@ CerberusObject::CerberusObject(SocketType type, const std::string& name)
 {
 }
 //=============================================================================
-void CerberusObject::registerThis() { core::CerberusRegister::registerObj(this); }
+void CerberusObject::registerThis() { cerberus::Cerberus::registerObj(this); }
 //=============================================================================
-void CerberusObject::unregisterThis() { core::CerberusRegister::unregisterObj(m_id); }
+void CerberusObject::unregisterThis() { cerberus::Cerberus::unregisterObj(m_id); }
 //=============================================================================
 CerberusObject::~CerberusObject() {}
 //=============================================================================

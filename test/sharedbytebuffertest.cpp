@@ -2,6 +2,8 @@
 #include <cerberus/data/sharedbytebuffer.h>
 #include <gtest/gtest.h>
 
+#include "cerberus/data/bytebuffer.h"
+
 TEST(SharedByteBufferTest, equalityOperator)
 {
     // test the equality operator
@@ -68,8 +70,6 @@ TEST(SharedByteBufferTest, SubBuffer)
     logInfo(cerberus::core::CerberusUtils::strPrint("b1: %u, b2: %u", b1.size(), b2.size()));
     logInfo(b);
     logInfo(a);
-
-    //
 
     cerberus::data::ByteBuffer bb("hello hello hello");
 

@@ -39,9 +39,13 @@ namespace cerberus
 
                public:
                 // Check wether a file exists on filesystem
+                // This method returns OR_OK if the file exists, OR_NotFount if it does not exist or
+                // another error if an error occurred
                 static OperationResult existsAsFile(const std::string& path);
 
                 // Check wether a directory exists on filesystem
+                // This method returns OR_OK if the file exists, OR_NotFount if it does not exist or
+                // another error if an error occurred
                 static OperationResult existsAsDirectory(const std::string& path);
 
                 // Create a directory
@@ -51,9 +55,11 @@ namespace cerberus
                 static OperationResult deleteDirectory(const std::string& path);
 
                 // Check if a given directory is empty
+                // This method returns OR_OK if the directory is empty,
+                // OR_NotEmpty if the directory is not empty, or other values to signal system errors
                 static OperationResult isEmptyDirectory(const std::string& path);
 
-                // Get the size of the file in the size field of the return value
+                // Get the size of the file in the integer field of the return value
                 static OperationResult sizeOf(const std::string& path);
 
                 // Create a File instance. The openMode parameter can be one of the FileOpenMode values
@@ -95,9 +101,10 @@ namespace cerberus
 
                 bool readChunk(ByteBuffer& bytes, uint64_t chunksize) const;
 
-                // Read a single line till \n
-                // Return false when EOF is reached and no more lines are available
-                bool readLine(std::string& line) const;
+                // Read a single line till \n or EOF
+                // If the EOF is reached and the bytes read are zero, OR_EOF is returned
+                // If an error occurs during read, OR_Failure is returned
+                OperationResult readLine() const;
 
                 bool seek(uint64_t pos) const;
 

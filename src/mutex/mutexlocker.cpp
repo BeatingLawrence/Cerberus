@@ -5,6 +5,19 @@
 using namespace cerberus::mutex;
 
 //============================================================================
+void MutexLocker::unref()
+{
+    if (!m_data) return;
+
+    if (m_data->instances == 1)  // last instance is being destroyed
+    {
+        m_data->mutex->unlock();
+        delete m_data;
+    }
+    else
+        m_data->instances--;
+}
+//============================================================================
 MutexLocker::MutexLocker()
     : m_data(nullptr)
 {
@@ -28,33 +41,13 @@ MutexLocker::MutexLocker(Mutex& mutex)
     mutex.lock();
 }
 //============================================================================
-MutexLocker::~MutexLocker()
-{
-    if (!m_data) return;
-
-    if (m_data->instances == 1)  // last instance is being destroyed
-    {
-        m_data->mutex->unlock();
-        delete m_data;
-    }
-    else
-        m_data->instances--;
-}
+MutexLocker::~MutexLocker() { unref(); }
 //============================================================================
 void MutexLocker::operator=(const MutexLocker& other)
 {
     if (this == &other) return;
 
-    if (m_data)
-    {
-        if (m_data->instances == 1)  // last instance is being destroyed
-        {
-            m_data->mutex->unlock();
-            delete m_data;
-        }
-        else
-            m_data->instances--;
-    }
+    unref();
 
     m_data = other.m_data;
 

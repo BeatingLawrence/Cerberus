@@ -5,117 +5,114 @@
 #include <string>
 
 #include "../Cerberus_global.h"
-#include "../exception/exceptioncatalog.h"
-#include "cerberuslog.h"
+#include "../exception/exception.h"
 
 namespace cerberus
 {
     namespace core
     {
         class CerberusRegister;
-    }
 
-    class CERBERUS_EXPORT CerberusObject
-    {
-        friend class ::cerberus::core::CerberusRegister;
-
-       public:
-        enum ObjectType : uint8_t
+        class CERBERUS_EXPORT CerberusObject
         {
-            InvalidObject,
-            Thread,
-            MessageTemplate,
-            Socket,
-            // add more types here..
-        };
+            friend class ::cerberus::core::CerberusRegister;
 
-        enum SocketType : uint8_t
-        {
-            Socket_None,
-            Socket_UDP,
-            Socket_TCP,
-            Socket_TCPP2P,
-            Socket_HTTP,
-            Socket_WEB,
-            Socket_ICMP,
-            Socket_IPC,
-        };
-
-        // Return a string containing the object type (and socket type if present) and ID,
-        // like "Thread ID:123456" or "Socket TCP ID:123456"
-        static std::string toStr(const CerberusObject& obj);
-
-        // Same as above but non static version
-        std::string toObjStr();
-
-       private:
-        uint32_t m_id;
-
-        ObjectType m_type;
-
-        std::string m_name;
-
-        SocketType m_socketType;
-
-       protected:
-        CerberusObject(ObjectType type, const std::string& name = std::string());
-
-        CerberusObject(SocketType type, const std::string& name = std::string());
-
-        void registerThis();
-
-        void unregisterThis();
-
-       public:
-        virtual ~CerberusObject();
-
-        // Checks if the object is valid
-        bool isObjValid();
-
-        // Returns the object ID
-        uint32_t id() const;
-
-        // Returns the object type
-        ObjectType type() const;
-
-        // Returns the socket type
-        SocketType socketType() const;
-
-        // Returns the object name
-        std::string name() const;
-
-        // Performs a dynamic cast of this object into T. Throws an exception if the cast is not possible
-        // Checking the object type() before casting is a good practice
-        template <class T>
-        T* to_p()
-        {
-            T* casted = dynamic_cast<T*>(this);
-
-            if (casted == nullptr)
+           public:
+            enum ObjectType : uint8_t
             {
-                cdebug("failed to cast Cerberus object %u to %s", m_id, typeid(T).name());
-                throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
+                InvalidObject,
+                Thread,
+                MessageTemplate,
+                Socket,
+                // add more types here..
+            };
+
+            enum SocketType : uint8_t
+            {
+                Socket_None,
+                Socket_UDP,
+                Socket_TCP,
+                Socket_TCPP2P,
+                Socket_HTTP,
+                Socket_WEB,
+                Socket_ICMP,
+                Socket_IPC,
+            };
+
+            // Return a string containing the object type (and socket type if present) and ID,
+            // like "Thread ID:123456" or "Socket TCP ID:123456"
+            static std::string toStr(const CerberusObject& obj);
+
+            // Same as above but non static version
+            std::string toObjStr();
+
+           private:
+            uint32_t m_id;
+
+            ObjectType m_type;
+
+            std::string m_name;
+
+            SocketType m_socketType;
+
+           protected:
+            CerberusObject(ObjectType type, const std::string& name = std::string());
+
+            CerberusObject(SocketType type, const std::string& name = std::string());
+
+            void registerThis();
+
+            void unregisterThis();
+
+           public:
+            virtual ~CerberusObject();
+
+            // Checks if the object is valid
+            bool isObjValid();
+
+            // Returns the object ID
+            uint32_t id() const;
+
+            // Returns the object type
+            ObjectType type() const;
+
+            // Returns the socket type
+            SocketType socketType() const;
+
+            // Returns the object name
+            std::string name() const;
+
+            // Performs a dynamic cast of this object into T. Throws an exception if the cast is not possible
+            // Checking the object type() before casting is a good practice
+            template <class T>
+            T* to_p()
+            {
+                T* casted = dynamic_cast<T*>(this);
+
+                if (casted == nullptr)
+                {
+                    throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
+                }
+
+                return casted;
             }
 
-            return casted;
-        }
-
-        // Performs a dynamic cast of this object into T. Throws an exception if the cast is not possible
-        // Checking the object type() before casting is a good practice
-        template <class T>
-        T& to()
-        {
-            T* casted = dynamic_cast<T*>(this);
-
-            if (casted == nullptr)
+            // Performs a dynamic cast of this object into T. Throws an exception if the cast is not possible
+            // Checking the object type() before casting is a good practice
+            template <class T>
+            T& to()
             {
-                cdebug("failed to cast Cerberus object %u to %s", m_id, typeid(T).name());
-                throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
-            }
+                T* casted = dynamic_cast<T*>(this);
 
-            return *casted;
-        }
-    };
+                if (casted == nullptr)
+                {
+                    throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
+                }
+
+                return *casted;
+            }
+        };
+    }  // namespace core
 }  // namespace cerberus
 
 #endif  // CERBERUSOBJECT_H

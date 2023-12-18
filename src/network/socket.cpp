@@ -9,13 +9,13 @@
 #include <src/thread/thread.h>
 #include <string.h>
 
+#include "src/cerberus.h"
 #include "src/time/timer.h"
 #ifdef LINUX_SYSTEM
 #include <sys/sendfile.h>
 #endif
 #include <unistd.h>
 
-#include "src/core/cerberuslog.h"
 #include "src/data/filesystem/file.h"
 #include "src/exception/exceptioncatalog.h"
 #include "src/time/timer.h"
@@ -67,7 +67,7 @@ void cerberus::network::Socket::createUdpSocket()
 
     if (m_fd == -1)
     {
-        cdebug("error in UDP socket creation: %s", strerror(errno));
+        logDebug("error in UDP socket creation: %s", strerror(errno));
     }
 }
 //=============================================================================
@@ -77,14 +77,14 @@ void cerberus::network::Socket::createTcpSocket()
 
     if (m_fd == -1)
     {
-        clogError("error in TCP socket creation: %s", strerror(errno));
+        logError("error in TCP socket creation: %s", strerror(errno));
         return;
     }
 
     int val = 1;
     if (::setsockopt(m_fd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(int)) == -1)
     {
-        clogError("error in setsockopt() when setting SO_REUSEADDR: %s", strerror(errno));
+        logError("error in setsockopt() when setting SO_REUSEADDR: %s", strerror(errno));
         close();
     }
 }
@@ -155,7 +155,7 @@ int cerberus::network::Socket::_accept(Host &peer)
 
     if (ret == -1)
     {
-        cdebug("error in socket accept: %s", strerror(errno));
+        logDebug("error in socket accept: %s", strerror(errno));
         return -1;
     }
 
@@ -186,7 +186,7 @@ void cerberus::network::Socket::printSSLErrors()
     {
         ERR_error_string_n(err, &errstr[0], sizeof(errstr));
 
-        clogError("SSL: %s", &errstr);
+        logError("SSL: %s", &errstr);
 
         err = ERR_get_error();
     }
@@ -222,7 +222,7 @@ cerberus::OperationResult cerberus::network::Socket::_recv(data::ByteBuffer &buf
             }
 
             // TODO check the error
-            clogError("SSL socket recv error");
+            logError("SSL socket recv error");
             printSSLErrors();
             return OR_Failure;
         }
@@ -242,7 +242,7 @@ cerberus::OperationResult cerberus::network::Socket::_recv(data::ByteBuffer &buf
     if (ret == -1)
     {
         if (errno == EAGAIN || errno == EWOULDBLOCK) return OR_WouldBlock;  // no data available at the moment
-        cdebug("socket recv error, %s", strerror(errno));
+        logDebug("socket recv error, %s", strerror(errno));
         return OR_Failure;  // improve error handling
     }
 
@@ -262,7 +262,7 @@ cerberus::OperationResult cerberus::network::Socket::TLS_connect()
 
     if (SSL_connect(m_ssl) != 1)  // start SSL client handshaking
     {
-        clogError("SSL connect error");
+        logError("SSL connect error");
         printSSLErrors();
         return OR_Failure;
     }
@@ -276,7 +276,7 @@ cerberus::OperationResult cerberus::network::Socket::TLS_accept()
 
     if (SSL_accept(m_ssl) != 1)  // start SSL server handshaking
     {
-        clogError("SSL accept error");
+        logError("SSL accept error");
         printSSLErrors();
         return OR_Failure;
     }
@@ -311,7 +311,7 @@ cerberus::network::Socket::Socket(SocketType type, const std::string &name)
 
     registerThis();
 
-    if (!isFailed()) cdebug("New %s", toObjStr().c_str());
+    if (!isFailed()) logDebug("New %s", toObjStr().c_str());
 }
 //=============================================================================
 cerberus::network::Socket::~Socket()
@@ -347,7 +347,7 @@ cerberus::OperationResult cerberus::network::Socket::bind(const Host &iface)
 
     if (ret == -1)
     {
-        clogError("error in socket bind: %s", strerror(errno));
+        logError("error in socket bind: %s", strerror(errno));
         return OR_Failure;
     }
 
@@ -387,7 +387,7 @@ cerberus::OperationResult cerberus::network::Socket::connect(const Host &dest)
 
     if (ret == -1)
     {
-        clogError("error in socket connect: %s", strerror(errno));
+        logError("error in socket connect: %s", strerror(errno));
 
         if (transportType() == TCP)
         {
@@ -421,7 +421,7 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::ByteBuffer
         if (ret <= 0 || ret != buffer.size())
         {
             // TODO check the error
-            clogError("SSL socket send error");
+            logError("SSL socket send error");
             printSSLErrors();
             return OR_Failure;
         }
@@ -440,7 +440,7 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::ByteBuffer
 
     if (ret == -1)
     {
-        clogError("socket send error, %s", strerror(errno));
+        logError("socket send error, %s", strerror(errno));
         return OR_Failure;
     }
 
@@ -534,7 +534,7 @@ cerberus::OperationResult cerberus::network::Socket::waitRead(const time::TimeFr
 
     if (ret == -1)
     {
-        clogError("error in poll: %s", strerror(errno));
+        logError("error in poll: %s", strerror(errno));
         return OR_SystemFailure;
     }
 
@@ -576,7 +576,7 @@ cerberus::OperationResult cerberus::network::Socket::waitWrite(const time::TimeF
 
     if (ret == -1)
     {
-        clogError("error in poll: %s", strerror(errno));
+        logError("error in poll: %s", strerror(errno));
         return OR_SystemFailure;
     }
 
@@ -618,7 +618,7 @@ cerberus::OperationResult cerberus::network::Socket::close()
 
     if (::close(m_fd) == -1)
     {
-        clogError("socket close error, %s", strerror(errno));
+        logError("socket close error, %s", strerror(errno));
         res = OR_Failure;
     }
 
@@ -659,7 +659,7 @@ cerberus::OperationResult cerberus::network::Socket::TLS_init(const std::string 
     if (m_sslCtx == NULL)
     {
         // TODO check the error
-        clogError("SSL context creation failed");
+        logError("SSL context creation failed");
         printSSLErrors();
         return OR_SystemFailure;
     }
@@ -670,7 +670,7 @@ cerberus::OperationResult cerberus::network::Socket::TLS_init(const std::string 
         {
             SSL_CTX_free(m_sslCtx);
             // TODO check the error
-            clogError("SSL certificate file setup failed");
+            logError("SSL certificate file setup failed");
             printSSLErrors();
             return OR_Failure;
         }
@@ -682,7 +682,7 @@ cerberus::OperationResult cerberus::network::Socket::TLS_init(const std::string 
         {
             SSL_CTX_free(m_sslCtx);
             // TODO check the error
-            clogError("SSL private key file setup failed");
+            logError("SSL private key file setup failed");
             printSSLErrors();
             printSSLErrors();
             return OR_Failure;
@@ -693,7 +693,7 @@ cerberus::OperationResult cerberus::network::Socket::TLS_init(const std::string 
     {
         if (SSL_CTX_check_private_key(m_sslCtx) != 1)
         {
-            clogError("SSL private key check failed");  // continue anyway..
+            logError("SSL private key check failed");  // continue anyway..
             printSSLErrors();
         }
     }
@@ -706,7 +706,7 @@ cerberus::OperationResult cerberus::network::Socket::TLS_init(const std::string 
     {
         SSL_CTX_free(m_sslCtx);
         // TODO check the error
-        clogError("SSL object creation failed");
+        logError("SSL object creation failed");
         printSSLErrors();
         return OR_SystemFailure;
     }
@@ -716,7 +716,7 @@ cerberus::OperationResult cerberus::network::Socket::TLS_init(const std::string 
         SSL_free(m_ssl);
         SSL_CTX_free(m_sslCtx);
         // TODO check the error
-        clogError("SSL association with kernel fd failed");
+        logError("SSL association with kernel fd failed");
         printSSLErrors();
         return OR_Failure;
     }
@@ -757,7 +757,7 @@ cerberus::OperationResult cerberus::network::Socket::TLS_shutdown()
     else  // error
     {
         // TODO check the error
-        clogError("SSL socket shutdown error");
+        logError("SSL socket shutdown error");
         printSSLErrors();
         return OR_Failure;
     }
@@ -880,7 +880,7 @@ cerberus::OperationResult cerberus::network::Socket::sendTo(const data::ByteBuff
 
     if (ret == -1)
     {
-        clogError("socket send error, %s", strerror(errno));
+        logError("socket send error, %s", strerror(errno));
         return OR_Failure;
     }
 
@@ -955,7 +955,7 @@ cerberus::OperationResult cerberus::network::Socket::connectP2P(const Host &dest
 
     if (ret == -1)
     {
-        clogError("error in socket connect: %s", strerror(errno));
+        logError("error in socket connect: %s", strerror(errno));
         return OR_Failure;
     }
 
@@ -986,7 +986,7 @@ cerberus::OperationResult cerberus::network::Socket::listen(size_t maxconn)
 
     if (::listen(m_fd, maxconn == 0 ? m_maxConnections : maxconn) == -1)
     {
-        cdebug("error in socket listen: %s", strerror(errno));
+        logDebug("error in socket listen: %s", strerror(errno));
         return OR_Failure;
     }
 
@@ -1055,7 +1055,7 @@ cerberus::OperationResult cerberus::network::Socket::useNagle(bool use)
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val)) == -1)
     {
-        cdebug("error in useNagle function: %s", strerror(errno));
+        logDebug("error in useNagle function: %s", strerror(errno));
         return OR_Failure;  // improve error handling
     }
 
@@ -1082,7 +1082,7 @@ cerberus::OperationResult cerberus::network::Socket::setTimeout(uint32_t timeout
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_CONNECTIONTIMEOUT, &val, sizeof(val)) == -1)
 #endif
     {
-        cdebug("error in setTimeout function: %s", strerror(errno));
+        logDebug("error in setTimeout function: %s", strerror(errno));
         return OR_Failure;  // improve error handling
     }
 
@@ -1117,7 +1117,7 @@ cerberus::OperationResult cerberus::network::Socket::useKeepAlive(bool use, int 
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPCNT, &val, sizeof(val)) == -1)
     {
-        cdebug("error in useKeepAlive:TCP_KEEPCNT function: %s", strerror(errno));
+        logDebug("error in useKeepAlive:TCP_KEEPCNT function: %s", strerror(errno));
         return OR_Failure;  // improve error handling
     }
 
@@ -1129,7 +1129,7 @@ cerberus::OperationResult cerberus::network::Socket::useKeepAlive(bool use, int 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPALIVE, &val, sizeof(val)) == -1)
 #endif
     {
-        cdebug("error in useKeepAlive:TCP_KEEPIDLE function: %s", strerror(errno));
+        logDebug("error in useKeepAlive:TCP_KEEPIDLE function: %s", strerror(errno));
         return OR_Failure;  // improve error handling
     }
 
@@ -1137,7 +1137,7 @@ cerberus::OperationResult cerberus::network::Socket::useKeepAlive(bool use, int 
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPINTVL, &val, sizeof(val)) == -1)
     {
-        cdebug("error in useKeepAlive:TCP_KEEPINTVL function: %s", strerror(errno));
+        logDebug("error in useKeepAlive:TCP_KEEPINTVL function: %s", strerror(errno));
         return OR_Failure;  // improve error handling
     }
 
@@ -1160,7 +1160,7 @@ cerberus::OperationResult cerberus::network::Socket::useKeepAlive(bool use)
 
     if (setsockopt(m_fd, SOL_SOCKET, SO_KEEPALIVE, &val, sizeof(val)) == -1)
     {
-        cdebug("error in useKeepAlive:SO_KEEPALIVE function: %s", strerror(errno));
+        logDebug("error in useKeepAlive:SO_KEEPALIVE function: %s", strerror(errno));
         return OR_Failure;  // improve error handling
     }
 
@@ -1185,13 +1185,13 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem
 
         if (ret < 0)
         {
-            clogError("SSL socket sendfile error");
+            logError("SSL socket sendfile error");
             printSSLErrors();
             return OR_Failure;
         }
         else if (ret != file.size())
         {
-            clogError("SSL socket sendfile size mismatch");
+            logError("SSL socket sendfile size mismatch");
             return OR_Failure;
         }
 
@@ -1223,7 +1223,7 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem
 
     if (bytes == -1)
     {
-        clogError("socket sendfile error, %s", strerror(errno));
+        logError("socket sendfile error, %s", strerror(errno));
         return OR_Failure;
     }
 #endif

@@ -3,10 +3,9 @@
 #include <string.h>
 
 #include <cstdio>
-#include <regex>
 
+#include "../../cerberus.h"
 #include "../../core/cerberusutils.h"
-#include "src/core/cerberuslog.h"
 
 #ifdef WINDOWS_SYSTEM
 #include <windows.h>
@@ -40,16 +39,16 @@ cerberus::OperationResult cerberus::data::filesystem::File::existsAsFile(const s
     {
         if (S_ISREG(stat_struct.st_mode))
         {
-            return (int64_t)1;
+            return OR_OK;
         }
 
-        return (int64_t)0;
+        return OR_InvalidPath;
     }
     else
     {
         if (errno == ENOENT)
         {
-            return (int64_t)0;
+            return OR_InvalidPath;
         }
         else
         {
@@ -78,16 +77,16 @@ cerberus::OperationResult cerberus::data::filesystem::File::existsAsDirectory(co
     {
         if (S_ISDIR(stat_struct.st_mode))
         {
-            return (int64_t)1;
+            return OR_OK;
         }
 
-        return (int64_t)0;
+        return OR_InvalidPath;
     }
     else
     {
         if (errno == ENOENT)
         {
-            return (int64_t)0;
+            return OR_InvalidPath;
         }
         else
         {
@@ -107,7 +106,7 @@ cerberus::OperationResult cerberus::data::filesystem::File::createDirectory(cons
 
     if (ret == -1)
     {
-        clogError("mkdir error: %s", strerror(errno));
+        logError("mkdir error: %s", strerror(errno));
         return OR_SystemFailure;
     }
 
@@ -124,7 +123,7 @@ cerberus::OperationResult cerberus::data::filesystem::File::deleteDirectory(cons
 
     if (ret == -1)
     {
-        clogError("rmdir error: %s", strerror(errno));
+        logError("rmdir error: %s", strerror(errno));
         return OR_SystemFailure;
     }
 
@@ -160,16 +159,16 @@ cerberus::OperationResult cerberus::data::filesystem::File::isEmptyDirectory(con
 
     if (errno != 0)
     {
-        clogError("readdir error: %s", strerror(errno));
+        logError("readdir error: %s", strerror(errno));
         return OR_SystemFailure;
     }
 
     if (n <= 2)
     {
-        return (int64_t)1;
+        return OR_OK;
     }
 
-    return (int64_t)0;
+    return OR_NotEmpty;
 #endif
 }
 //=============================================================================
@@ -184,8 +183,8 @@ cerberus::OperationResult cerberus::data::filesystem::File::sizeOf(const std::st
 
     if (ret == 0)
     {
-        SIZE s = stat_struct.st_size;
-        return (int64_t)s;
+        LSIZE s = stat_struct.st_size;
+        return OperationResult((LSIZE)s);
     }
     else
     {
@@ -300,9 +299,14 @@ bool cerberus::data::filesystem::File::open()
 //=============================================================================
 bool cerberus::data::filesystem::File::close()
 {
+    if (!isOpen())
+    {
+        return false;
+    }
+
     if (fclose(m_file) != 0)
     {
-        cdebug("fclose error: %s", strerror(errno));
+        logDebug("fclose error: %s", strerror(errno));
         return false;
     }
 
@@ -320,7 +324,7 @@ bool cerberus::data::filesystem::File::deleteFromDisk()
 
     if (::remove(m_filePath.c_str()) != 0)
     {
-        cdebug("remove error: %s", strerror(errno));
+        logDebug("remove error: %s", strerror(errno));
         return false;
     }
 
@@ -336,7 +340,7 @@ bool cerberus::data::filesystem::File::move(const std::string& newName)
 
     if (::rename(m_filePath.c_str(), newName.c_str()) != 0)
     {
-        cdebug("rename error: %s", strerror(errno));
+        logDebug("rename error: %s", strerror(errno));
         return false;
     }
 
@@ -347,6 +351,8 @@ bool cerberus::data::filesystem::File::move(const std::string& newName)
 //=============================================================================
 uint64_t cerberus::data::filesystem::File::size() const
 {
+    // maybe we should use fstat() ?
+
     if (!isOpen())
     {
         return 0;
@@ -459,11 +465,10 @@ bool cerberus::data::filesystem::File::readChunk(ByteBuffer& bytes, uint64_t chu
     return true;
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::readLine(std::string& line) const
+cerberus::OperationResult cerberus::data::filesystem::File::readLine() const
 {
-    line.clear();
-
     clearerr(m_file);
+    std::string line;
 
     while (true)
     {
@@ -471,9 +476,9 @@ bool cerberus::data::filesystem::File::readLine(std::string& line) const
 
         fread(&c, 1, 1, m_file);
 
-        if (ferror(m_file)) return false;
+        if (ferror(m_file)) return OR_Failure;
 
-        if (feof(m_file) && line.empty()) return false;
+        if (feof(m_file) && line.empty()) return OR_EOF;
 
         if (c == '\n' || feof(m_file))
         {
@@ -483,7 +488,7 @@ bool cerberus::data::filesystem::File::readLine(std::string& line) const
         line += c;
     }
 
-    return true;
+    return OperationResult(line);
 }
 //=============================================================================
 bool cerberus::data::filesystem::File::seek(uint64_t pos) const

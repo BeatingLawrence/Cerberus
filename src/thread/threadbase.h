@@ -50,6 +50,8 @@ namespace cerberus
 
             message::cerberus_message nextMessageKeep() const;
 
+            void discardMessageQueue();
+
             bool isQueueEmpty() const;
 
            public:

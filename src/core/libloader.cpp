@@ -2,8 +2,8 @@
 
 #include <dlfcn.h>
 
-#include "src/core/cerberuslog.h"
-#include "src/core/cerberusregister.h"
+#include "../cerberus.h"
+#include "cerberusregister.h"
 
 using namespace cerberus::core;
 
@@ -13,7 +13,7 @@ cerberus::OperationResult LibLoader::close(void* handle)
     if (dlclose(handle) != 0)
     {
         // error
-        clogError("Error while calling dlclose: %s", dlerror());
+        logError("Error while calling dlclose: %s", dlerror());
         return OR_Failure;
     }
 
@@ -27,7 +27,7 @@ cerberus::OperationResult LibLoader::open(const std::string& path)
     if (p == nullptr)
     {
         // error
-        clogError("Error while loading plugin %s: %s", path.c_str(), dlerror());
+        logError("Error while loading plugin %s: %s", path.c_str(), dlerror());
         return OR_Failure;
     }
 
@@ -98,10 +98,10 @@ cerberus::OperationResult LibLoader::load(const std::string& path, bool noreg)
         return ret;
     }
 
-    cdebug("loaded plugin %s in process memory", path.c_str());
+    logDebug("loaded plugin %s in process memory", path.c_str());
 
     bool exists = false;
-    m_id        = core::CerberusRegister::addPlugin(m_handle, path, exists);
+    m_id        = cerberus::Cerberus::addPlugin(m_handle, path, exists);
 
     if (exists)
     {
@@ -138,14 +138,14 @@ cerberus::OperationResult LibLoader::swap(const std::string& path)
 {
     if (m_noreg) return OR_Unavailable;
 
-    auto ml = core::CerberusRegister::getPluginMutex(m_id);
+    auto ml = Cerberus::getPluginMutex(m_id);
 
     if (!ml.isValid())
     {
         return OR_NotFound;
     };
 
-    if (m_handle != core::CerberusRegister::checkPlugin(m_id)) return OR_NotFound;
+    if (m_handle != Cerberus::checkPlugin(m_id)) return OR_NotFound;
 
     OperationResult ret;
 
@@ -163,10 +163,10 @@ cerberus::OperationResult LibLoader::swap(const std::string& path)
         return ret;
     }
 
-    cdebug("swapped plugin %s[old] with %s[new]", m_path.c_str(), path.c_str());
+    logDebug("swapped plugin %s[old] with %s[new]", m_path.c_str(), path.c_str());
     m_path = path;
 
-    if (!core::CerberusRegister::updatePlugin(m_id, path, m_handle)) return OR_Failure;
+    if (!Cerberus::updatePlugin(m_id, path, m_handle)) return OR_Failure;
 
     return OR_OK;
 }
@@ -179,7 +179,7 @@ cerberus::LoaderFunc LibLoader::get(const std::string& symbol)
 
     if (!m_noreg)
     {
-        ml = core::CerberusRegister::getPluginMutex(m_id);
+        ml = Cerberus::getPluginMutex(m_id);
         if (!ml.isValid())
         {
             return {nullptr, mutex::MutexLocker()};
@@ -188,7 +188,7 @@ cerberus::LoaderFunc LibLoader::get(const std::string& symbol)
 
     void* p = dlsym(m_handle, symbol.c_str());
 
-    if (!p) cdebug("Error while searching symbol %s: %s", symbol.c_str(), dlerror());
+    if (!p) logDebug("Error while searching symbol %s: %s", symbol.c_str(), dlerror());
 
     return {p, ml};
 }

@@ -1,3 +1,4 @@
+#include "cerberus/data/filesystem/file.h"
 #include <cerberus/cerberus.h>
 #include <cerberus/network/httpclient.h>
 #include <cerberus/network/socket.h>
@@ -9,15 +10,15 @@
 
 static int testCallback_UDP(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
 {
-    debug("receiver thread routine entered");
+    logDebug("receiver thread routine entered");
     auto socket = UDPSocket("UDP receiver");
     cerberus::Host host("localhost:22012");
     socket.bind(host);
     cerberus::data::ByteBuffer buf;
     cerberus::data::ByteBuffer exp("Hello, World!");
-    debug("receiving");
+    logDebug("receiving");
     socket.recv(buf);
-    debug("received");
+    logDebug("received");
     socket.close();
     if (buf == exp)
     {
@@ -31,7 +32,7 @@ static int testCallback_UDP(cerberus::message::cerberus_message msg, cerberus::t
 
 static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
 {
-    debug("receiver thread routine entered");
+    logDebug("receiver thread routine entered");
     auto socket = TCPSocket("TCP receiver");
     socket.bind(cerberus::Host("localhost:33333"));
     socket.listen(3);
@@ -41,22 +42,22 @@ static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::t
     auto s = socket.accept(h);
     if (s.isFailed())
     {
-        debug("accept fail");
+        logDebug("accept fail");
         socket.close();
         return THREAD_ERROR;
     }
 
-    debug("accepted from, %s", h.toString().c_str());
+    logDebug("accepted from, %s", h.toString().c_str());
     s.setRecvBufferSize(exp.size());
     if (s.isFailed())
     {
-        debug("accept error");
+        logDebug("accept error");
         socket.close();
         return THREAD_ERROR;
     }
     s.recv(buf);
 
-    debug("received");
+    logDebug("received");
 
     socket.close();
 
@@ -72,13 +73,13 @@ static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::t
 
 static int testCallback_TCP_P2P(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
 {
-    debug("receiver thread routine entered");
+    logDebug("receiver thread routine entered");
     auto socket = TCPP2PSocket("TCPP2P receiver");
     socket.bind(cerberus::Host("localhost:44444"));
 
     if (socket.connectP2P(cerberus::Host("localhost:57829"), 2000) != cerberus::OR_OK)
     {
-        debug("connect error");
+        logDebug("connect error");
         socket.close();
         return THREAD_ERROR;
     }
@@ -89,7 +90,7 @@ static int testCallback_TCP_P2P(cerberus::message::cerberus_message msg, cerberu
 
     if (socket.recv(buf) == cerberus::OR_OK)
     {
-        debug("received");
+        logDebug("received");
     }
 
     socket.close();
@@ -106,23 +107,23 @@ static int testCallback_TCP_P2P(cerberus::message::cerberus_message msg, cerberu
 
 static int testCallback_FTP(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
 {
-    debug("receiver thread routine entered");
+    logDebug("receiver thread routine entered");
     auto socket = TCPSocket("FTP receiver");
     socket.bind("localhost:54321");
     socket.listen(3);
     cerberus::data::filesystem::File file("ftp_socket_test_file_received.file", cerberus::FOM_ReadWriteTrunc);
     if (!file.open())
     {
-        debug("file open error");
+        logDebug("file open error");
         socket.close();
         return THREAD_ERROR;
     }
     auto s = socket.accept();
     s.setRecvBufferSize(10);
-    debug("accepted");
+    logDebug("accepted");
     if (s.isFailed())
     {
-        debug("accept error");
+        logDebug("accept error");
         socket.close();
         return THREAD_ERROR;
     }
@@ -134,7 +135,7 @@ static int testCallback_FTP(cerberus::message::cerberus_message msg, cerberus::t
         return THREAD_ERROR;
     }
 
-    debug("received");
+    logDebug("received");
 
     file.close();
     socket.close();
@@ -153,7 +154,7 @@ TEST(socketTest, UDP)
     cerberus::data::ByteBuffer buf("Hello, World!");
     socket.sendTo(buf, "localhost:22012");
     socket.close();
-    EXPECT_EQ(receiver.join(), THREAD_SUCCESS);
+    EXPECT_EQ(receiver.join().expect().i, THREAD_SUCCESS);
 }
 
 TEST(socketTest, TCP)
@@ -165,13 +166,13 @@ TEST(socketTest, TCP)
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
     //
     auto socket = TCPSocket("TCP transmitter");
-    debug("connecting..");
+    logDebug("connecting..");
     ASSERT_EQ(socket.connect(cerberus::Host("localhost:33333")).res, cerberus::OR_OK);
-    debug("connected");
+    logDebug("connected");
     cerberus::data::ByteBuffer buf("Hello, World!");
     ASSERT_EQ(socket.send(buf).res, cerberus::OR_OK);
     socket.close();
-    EXPECT_EQ(receiver.join(), THREAD_SUCCESS);
+    EXPECT_EQ(receiver.join().expect().i, THREAD_SUCCESS);
 }
 
 TEST(socketTest, TCP_P2P)
@@ -189,7 +190,7 @@ TEST(socketTest, TCP_P2P)
     ASSERT_EQ(socket.send(buf).res, cerberus::OR_OK);
 
     socket.close();
-    EXPECT_EQ(receiver.join(), THREAD_SUCCESS);
+    EXPECT_EQ(receiver.join().expect().i, THREAD_SUCCESS);
 }
 
 TEST(socketTest, FTP)
@@ -213,9 +214,9 @@ TEST(socketTest, FTP)
     ASSERT_EQ(socket.connect("localhost:54321").res, cerberus::OR_OK);
     f.resetCursor();
     ASSERT_EQ(socket.send(f).res, cerberus::OR_OK);
-    debug("FILE SENT");
+    logDebug("FILE SENT");
     socket.close();
-    EXPECT_EQ(receiver.join(), THREAD_SUCCESS);
+    EXPECT_EQ(receiver.join().expect().i, THREAD_SUCCESS);
     cerberus::data::filesystem::File rf("ftp_socket_test_file_received.file");
     ASSERT_TRUE(rf.open());
     EXPECT_TRUE(rf.isEqual(f));
@@ -229,11 +230,11 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
     auto socket = TCPSocket("TLS socket");
     ASSERT_EQ(socket.TLS_init().res, cerberus::OR_OK);  // mark the socket as TLS
     socket.TLS_ignoreHangup(false).fail(true);
-    debug("connecting..");
+    logDebug("connecting..");
     cerberus::Host h("www.google.com:443");
     ASSERT_EQ(socket.connect(h).res, cerberus::OR_OK);
-    debug("connected with encryption: PROTO: %s CIPHER: %s", socket.TLS_getProtocolName().c_str(), socket.TLS_getCipherName().c_str());
-    debug("sending get request");
+    logDebug("connected with encryption: PROTO: %s CIPHER: %s", socket.TLS_getProtocolName().c_str(), socket.TLS_getCipherName().c_str());
+    logDebug("sending get request");
     EXPECT_EQ(socket
                   .send("GET / HTTP/1.1\r\n"
                         "Host: www.google.com\r\n"
@@ -248,7 +249,7 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
               cerberus::OR_OK);
     cerberus::data::ByteBuffer buf;
     socket.setRecvBufferSize(8192);
-    debug("receiving");
+    logDebug("receiving");
     auto r = socket.recv(buf, 1000, 200);
 
     EXPECT_TRUE(r.ok(true));
@@ -267,7 +268,7 @@ TEST(socketTest, HTTPClient)
     cerberus::network::HTTPClient client("HTTP Client test");
     client.useTLS();
     ASSERT_TRUE(client.connectTo("www.google.com:443").ok(true));
-    debug("connected");
+    logDebug("connected");
     cerberus::data::HTTPData data;
     data.setRequest({cerberus::data::HTTP_GET, "/", cerberus::data::HTTP_1_1});
     data.addHeaderField("Host", "www.google.com");
@@ -277,21 +278,21 @@ TEST(socketTest, HTTPClient)
     data.addHeaderField("Connection", "keep-alive");
     data.addHeaderField("Cache-Control", "max-age=0");
     //
-    debug("data to be sent:");
-    debug(data.getData().toNormalizedString().c_str());
+    logDebug("data to be sent:");
+    logDebug(data.getData().toNormalizedString().c_str());
     //
     EXPECT_TRUE(client.makeRequest(data).ok(true));
-    debug("request sent");
+    logDebug("request sent");
     EXPECT_TRUE(client.getResponse(data, 1000, 200).ok(true));
 
     client.disconnect();
 
     EXPECT_EQ(data.getStatus().statusCode, 200);  // 200 OK
 
-    debug("received header:");
+    logDebug("received header:");
     for (int i = 0; i < data.getHeaderSize(); i++)
     {
-        debug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
+        logDebug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
     }
 
     // save the payload in a file
@@ -300,7 +301,7 @@ TEST(socketTest, HTTPClient)
     f.write(data.getPayload());
     f.close();
 
-    debug("payload written on disk");
+    logDebug("payload written on disk");
 }
 
 #define BOT_TOKEN "6612599694:AAG2zBEEBYViDPTQZDyhIu3bbMa4aRVxSTI"
@@ -313,23 +314,23 @@ TEST(socketTest, TelegramBot)
     client.useTLS();
     cerberus::Host h("api.telegram.org:443");
     EXPECT_EQ(client.connectTo(h).res, cerberus::OR_OK);
-    debug("connected!");
+    logDebug("connected!");
     cerberus::data::HTTPData data;
     data.setRequest({cerberus::data::HTTP_GET, "/bot" BOT_TOKEN "/getMe", cerberus::data::HTTP_1_1});
     data.addHeaderField("Host", "api.telegram.org");
     // data.addHeaderField("Connection", "keep-alive");
     EXPECT_FALSE(client.makeRequest(data).fail(true));
-    debug("request sent");
+    logDebug("request sent");
     data.clear();
     EXPECT_FALSE(client.getResponse(data, 1000).fail(true));
 
     client.disconnect();
     EXPECT_EQ(data.getStatus().statusCode, 200);  // 200 OK
 
-    debug("received header:");
+    logDebug("received header:");
     for (int i = 0; i < data.getHeaderSize(); i++)
     {
-        debug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
+        logDebug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
     }
 
     // save the payload in a file
@@ -338,7 +339,7 @@ TEST(socketTest, TelegramBot)
     f.write(data.getPayload());
     f.close();
 
-    debug("payload written on disk");
+    logDebug("payload written on disk");
 }
 
 TEST(socketTest, TelegramBotSendMessage)
@@ -349,7 +350,7 @@ TEST(socketTest, TelegramBotSendMessage)
     client.useTLS();
     cerberus::Host h("api.telegram.org:443");
     EXPECT_EQ(client.connectTo(h).res, cerberus::OR_OK);
-    debug("connected!");
+    logDebug("connected!");
     cerberus::data::HTTPData data;
     data.setRequest({cerberus::data::HTTP_POST, "/bot" BOT_TOKEN "/sendMessage", cerberus::data::HTTP_1_1});
     data.addHeaderField("Host", "api.telegram.org");
@@ -359,17 +360,17 @@ TEST(socketTest, TelegramBotSendMessage)
     cerberus::data::ByteBuffer payload("{\"chat_id\":-1001964113365,\"text\":\"Signore e signori, questo messaggio e' stato inviato con codice C++\"}");
     data.setPayload(payload);
     EXPECT_FALSE(client.makeRequest(data).fail(true));
-    debug("request sent");
+    logDebug("request sent");
     data.clear();
     EXPECT_FALSE(client.getResponse(data, 30000, 200).fail(true));
 
     client.disconnect();
     EXPECT_EQ(data.getStatus().statusCode, 200);  // 200 OK
 
-    debug("received header:");
+    logDebug("received header:");
     for (int i = 0; i < data.getHeaderSize(); i++)
     {
-        debug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
+        logDebug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
     }
 
     // save the payload in a file
@@ -378,5 +379,5 @@ TEST(socketTest, TelegramBotSendMessage)
     f.write(data.getPayload());
     f.close();
 
-    debug("payload written on disk");
+    logDebug("payload written on disk");
 }

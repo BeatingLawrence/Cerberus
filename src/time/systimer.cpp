@@ -3,8 +3,6 @@
 #include <cerrno>
 #include <cstring>
 
-#include "src/core/cerberuslog.h"
-
 using namespace cerberus::time;
 
 //=============================================================================
@@ -29,7 +27,7 @@ SysTimer::SysTimer()
 {
     sigevent event{};
 
-    event.sigev_notify = SIGEV_THREAD;
+    event.sigev_notify          = SIGEV_THREAD;
     event.sigev_notify_function = &mainCallback;
     event.sigev_value.sival_ptr = this;
 
@@ -58,7 +56,7 @@ SysTimer::SysTimer(const Time &time, bool periodic)
 {
     sigevent event{};
 
-    event.sigev_notify = SIGEV_THREAD;
+    event.sigev_notify          = SIGEV_THREAD;
     event.sigev_notify_function = &mainCallback;
     event.sigev_value.sival_ptr = this;
 
@@ -74,14 +72,14 @@ void SysTimer::setTime(const Time &time) { m_time = time; }
 void SysTimer::start()
 {
     itimerspec spec{};
-    auto split = m_time.splittedTime();
+    auto split            = m_time.splittedTime();
     spec.it_value.tv_nsec = split.nanoseconds;
-    spec.it_value.tv_sec = split.seconds;
+    spec.it_value.tv_sec  = split.seconds;
 
     if (m_periodic)
     {
         spec.it_interval.tv_nsec = spec.it_value.tv_nsec;
-        spec.it_interval.tv_sec = spec.it_value.tv_sec;
+        spec.it_interval.tv_sec  = spec.it_value.tv_sec;
     }
 
     if (timer_settime(m_timerId, 0, &spec, nullptr) == -1)

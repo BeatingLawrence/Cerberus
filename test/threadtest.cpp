@@ -1,11 +1,7 @@
 #include <cerberus/cerberus.h>
-#include <cerberus/core/cerberusfactory.h>
 #include <cerberus/core/cerberusregister.h>
 #include <cerberus/message/slot/charslot.h>
 #include <gtest/gtest.h>
-
-#include <chrono>
-#include <thread>
 
 #include "./testthread.h"
 
@@ -26,8 +22,8 @@ TEST(threadTest, derived_thread_creation)
     thread2.start();
     cerberus::thread::Thread::sleep(2000);
     thread2.join(true);
-    debug("t1 joined");
-    EXPECT_EQ(thread1.join(true), 10);
+    logDebug("t1 joined");
+    EXPECT_EQ(thread1.join(true).expect().i, 10);
 }
 
 static int testCallback(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
@@ -49,7 +45,7 @@ TEST(threadTest, thread_callback)
     thread3.start();
     // debug("2");
     cerberus::thread::Thread::sleep(1000);
-    EXPECT_EQ(thread3.join(true), 20);
+    EXPECT_EQ(thread3.join(true).expect().i, 20);
 }
 
 static int pingTestCallback(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
@@ -67,22 +63,20 @@ static int pingTestCallback(cerberus::message::cerberus_message msg, cerberus::t
     {
         if (a == 10)
         {
-            auto message = cerberus::core::CerberusFactory::standardMessageConstruct(cerberus::SM_TerminationMsg);
-            message->setDestinationId(cerberus::core::CerberusRegister::threadIdByName("pongThread"));
-            cerberus::Cerberus::send(message);
+            auto message = Cerberus::standardMessageConstruct(cerberus::SM_TerminationMsg);
+            cerberus::Cerberus::send(message, "pongThread");
             thread->terminate();
             return 0;
         }
 
         logInfo("PING!");
         // Create message using factory
-        auto message = cerberus::core::CerberusFactory::messageConstruct("PingPongMessage");
+        auto message = Cerberus::messageConstruct("PingPongMessage");
         message->getSlotAt(0)->to<cerberus::message::slot::CharSlot>()->setValue(a++);
         message->getSlotAt(1)->to<cerberus::message::slot::CharSlot>()->setValue(b++);
         message->getSlotAt(2)->to<cerberus::message::slot::CharSlot>()->setValue(c++);
-        message->setDestinationId(cerberus::core::CerberusRegister::threadIdByName("pongThread"));
         // Send the message
-        cerberus::Cerberus::send(message);
+        cerberus::Cerberus::send(message, "pongThread");
     }
 
     return 0;
@@ -97,10 +91,8 @@ static int pongTestCallback(cerberus::message::cerberus_message msg, cerberus::t
     }
 
     logInfo("Sending Back..");
-    // Change destination
-    msg->setDestinationId(cerberus::core::CerberusRegister::threadIdByName("pingThread"));
-    // Send the message
-    cerberus::Cerberus::send(msg);
+    // change destination and send
+    cerberus::Cerberus::send(msg, "pingThread");
     return 0;
 }
 
@@ -111,7 +103,7 @@ TEST(threadTest, thread_ping_pong)
     msg.addSlot(cerberus::message::slot::CharSlot::create());
     msg.addSlot(cerberus::message::slot::CharSlot::create());
     msg.addSlot(cerberus::message::slot::CharSlot::create());
-    cerberus::core::CerberusFactory::registerMessage(msg, "PingPongMessage");
+    Cerberus::registerMessage(msg, "PingPongMessage");
     // start the test
     cerberus::thread::Thread ping(cerberus::thread::Thread::TP_PeriodicQueue, 100, "pingThread");
     cerberus::thread::Thread pong("pongThread");  // Non-Periodic (receiver)

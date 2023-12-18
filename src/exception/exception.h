@@ -6,6 +6,7 @@
 #include <string>
 
 #include "../Cerberus_global.h"
+#include "exceptioncatalog.h"
 
 namespace cerberus
 {
@@ -19,19 +20,20 @@ namespace cerberus
            public:
             enum ExceptionType
             {
-                ET_Unknown,
-                ET_IllegalArgument,
-                ET_IllegalState,
-                ET_System,
-                ET_MissingImplementation,
-                ET_InvalidCast,
+                ET_Exception,              // generic exception
+                ET_IllegalArgument,        // exception thrown when an argument is not valid
+                ET_IllegalState,           // exception thrown when the state of an object is not valid
+                ET_System,                 // exception thrown when system error occurs
+                ET_MissingImplementation,  // exception thrown when a requested piece of code has not been implemented yet
+                ET_InvalidCast,            // exception thrown for invalid cast operations
+                ET_UsageError,             // exception thrown for a bad usage of the framework
             };
 
             Exception() noexcept;
 
             Exception(const Exception& other) noexcept;
 
-            Exception(const char* text, uint32_t line, const char* fileName, ExceptionType type = ET_Unknown) noexcept;
+            Exception(const char* text, uint32_t line = 0, const char* fileName = nullptr, ExceptionType type = ET_Exception) noexcept;
 
             Exception& operator=(const Exception& other) noexcept;
 

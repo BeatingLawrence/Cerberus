@@ -8,7 +8,6 @@
  *
  */
 
-#include "../data/filesystem/file.h"
 #include "../thread/thread.h"
 #include "eventscheduler.h"
 
@@ -16,7 +15,7 @@ namespace cerberus
 {
     namespace core
     {
-        class CerberusCore : protected cerberus::thread::Thread
+        class CerberusCore : public cerberus::thread::Thread
         {
            private:
             virtual int tick() override;
@@ -25,22 +24,12 @@ namespace cerberus
 
             virtual void coolDown() override;
 
-            data::filesystem::File m_logFile;
-
-            mutex::Mutex m_fileMutex;
-
-            void _writeLineOnFile(const std::string& line);
-
-            void unloadPlugins();
-
            public:
             EventScheduler m_eventScheduler;
 
             CerberusCore();
 
             virtual ~CerberusCore();
-
-            void setLogFileName(const std::string& filename);
         };
     }  // namespace core
 }  // namespace cerberus

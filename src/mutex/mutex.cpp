@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include "src/exception/exceptioncatalog.h"
+#include "src/exception/exception.h"
 
 using namespace cerberus::mutex;
 
