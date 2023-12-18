@@ -179,11 +179,9 @@ cerberus::OperationResult IniDataFile::syncFile()
 {
     m_file.setOpenMode(FOM_ReadWriteTrunc);
 
-    if (!m_file.open())
-    {
-        lldebug("open failure");
-        return OR_Failure;
-    }
+    auto res = m_file.open();
+
+    if (res.fail()) return res;
 
     if (m_lines.empty())
     {
@@ -255,10 +253,9 @@ cerberus::OperationResult IniDataFile::load()
 {
     m_file.setOpenMode(FOM_Read);
 
-    if (!m_file.open())
-    {
-        return OR_InvalidFile;
-    }
+    auto res = m_file.open();
+
+    if (res.fail()) return res;
 
     m_lines.clear();
     m_sections.clear();

@@ -6,9 +6,9 @@
 TEST(fileTest, creation)
 {
     cerberus::data::filesystem::File file("testFile.txt", cerberus::FOM_ReadWriteTrunc);
-    ASSERT_TRUE(file.open());
-    ASSERT_TRUE(file.writeLine("this is a test"));
-    ASSERT_TRUE(file.close());
+    ASSERT_TRUE(file.open().ok(true));
+    ASSERT_TRUE(file.writeLine("this is a test").ok());
+    file.close();
 }
 
 TEST(iniDataFileTest, read)  // BEFORE TEST, prepare a read.ini file containing the following data:

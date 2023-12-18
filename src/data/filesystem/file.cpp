@@ -114,21 +114,32 @@ cerberus::OperationResult cerberus::data::filesystem::File::createDirectory(cons
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::data::filesystem::File::deleteDirectory(const std::string& path)
+cerberus::OperationResult cerberus::data::filesystem::File::remove(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
-    throw cerberusImplementationMissExc("DIRECTORY DELETION NOT IMPLEMENTED YET");
+    throw cerberusImplementationMissExc("REMOVE NOT IMPLEMENTED YET");
 #else
-    int ret = rmdir(path.c_str());
-
-    if (ret == -1)
+    if (::remove(path.c_str()) == -1)
     {
-        logError("rmdir error: %s", strerror(errno));
-        return OR_SystemFailure;
+        return {OR_Failure, strerror(errno)};
     }
 
-#endif
     return OR_OK;
+#endif
+}
+//=============================================================================
+cerberus::OperationResult cerberus::data::filesystem::File::move(const std::string& oldPath, const std::string& newPath)
+{
+#ifdef WINDOWS_SYSTEM
+    throw cerberusImplementationMissExc("MOVE NOT IMPLEMENTED YET");
+#else
+    if (::rename(oldPath.c_str(), newPath.c_str()) == -1)
+    {
+        return {OR_Failure, strerror(errno)};
+    }
+
+    return OR_OK;
+#endif
 }
 //=============================================================================
 cerberus::OperationResult cerberus::data::filesystem::File::isEmptyDirectory(const std::string& path)
@@ -214,33 +225,16 @@ cerberus::data::filesystem::File::File(const std::string& filePath, FileOpenMode
 //=============================================================================
 cerberus::data::filesystem::File::~File() {}
 //=============================================================================
-bool cerberus::data::filesystem::File::setFileName(const std::string& filePath)
-{
-    if (isOpen())
-    {
-        return false;
-    }
-
-    m_filePath = filePath;
-
-    return true;
-}
+void cerberus::data::filesystem::File::setFileName(const std::string& filePath) { m_filePath = filePath; }
 //=============================================================================
 bool cerberus::data::filesystem::File::canWrite() const { return (m_openMode != FOM_Read); }
 //=============================================================================
 std::string cerberus::data::filesystem::File::fileName() const { return m_filePath; }
 //=============================================================================
-bool cerberus::data::filesystem::File::setOpenMode(FileOpenMode openMode, bool binaryMode)
+void cerberus::data::filesystem::File::setOpenMode(FileOpenMode openMode, bool binaryMode)
 {
-    if (isOpen())
-    {
-        return false;
-    }
-
     m_openMode   = openMode;
     m_binaryMode = binaryMode;
-
-    return true;
 }
 //=============================================================================
 std::string cerberus::data::filesystem::File::getOpenModeString()
@@ -263,148 +257,100 @@ std::string cerberus::data::filesystem::File::getOpenModeString()
             break;
     }
 
-    if (m_binaryMode)
-    {
-        ret += "b";
-    }
+    if (m_binaryMode) ret += "b";
 
     return ret;
 }
 //=============================================================================
 bool cerberus::data::filesystem::File::isOpen() const { return m_file != NULL; }
 //=============================================================================
-bool cerberus::data::filesystem::File::open()
+cerberus::OperationResult cerberus::data::filesystem::File::open()
 {
-    if (isOpen() || m_filePath.empty())
-    {
-        return false;
-    }
+    if (m_filePath.empty()) return OR_InvalidPath;
 
     m_file = fopen(m_filePath.c_str(), getOpenModeString().c_str());
 
-    if (!isOpen())
-    {
-        return false;
-    }
+    if (!isOpen()) return {OR_Failure, strerror(errno)};
 
     m_fd = fileno(m_file);
 
-    if (m_fd == -1)
-    {
-        return false;
-    }
+    if (m_fd == -1) throw cerberusSystemExc("stream is not associated with a file");
 
-    return true;
+    return OR_OK;
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::close()
+void cerberus::data::filesystem::File::close()
 {
-    if (!isOpen())
-    {
-        return false;
-    }
+    if (!isOpen()) return;
 
-    if (fclose(m_file) != 0)
-    {
-        logDebug("fclose error: %s", strerror(errno));
-        return false;
-    }
+    if (fclose(m_file) != 0) logError("fclose error: %s", strerror(errno));
 
     m_file = nullptr;
     m_fd   = -1;
-    return true;
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::deleteFromDisk()
+cerberus::OperationResult cerberus::data::filesystem::File::deleteFromDisk()
 {
     if (isOpen())
     {
-        return false;
+        close();
     }
 
-    if (::remove(m_filePath.c_str()) != 0)
-    {
-        logDebug("remove error: %s", strerror(errno));
-        return false;
-    }
-
-    return true;
+    return remove(m_filePath);
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::move(const std::string& newName)
+cerberus::OperationResult cerberus::data::filesystem::File::move(const std::string& newName)
 {
-    if (isOpen())
-    {
-        return false;
-    }
+    auto res = move(m_filePath, newName);
 
-    if (::rename(m_filePath.c_str(), newName.c_str()) != 0)
-    {
-        logDebug("rename error: %s", strerror(errno));
-        return false;
-    }
+    if (res.ok()) m_filePath = newName;
 
-    m_filePath = newName;
-
-    return true;
+    return res;
 }
 //=============================================================================
-uint64_t cerberus::data::filesystem::File::size() const
+cerberus::OperationResult cerberus::data::filesystem::File::size() const
 {
     // maybe we should use fstat() ?
 
-    if (!isOpen())
-    {
-        return 0;
-    }
+    if (!isOpen()) return OR_BadConditions;
 
     auto backup = ftell(m_file);
 
     auto ret = fseek(m_file, 0L, SEEK_END);
 
-    if (ret == -1)
-    {
-        return 0;
-    }
+    if (ret == -1) return OR_Failure;
 
     auto size = ftell(m_file);
 
     ret = fseek(m_file, backup, SEEK_SET);
 
-    if (ret == -1)
-    {
-        return 0;
-    }
+    if (ret == -1) return OR_Failure;
 
-    return size;
+    return OperationResult((LSIZE)size);
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::write(const ByteBuffer& bytes)
+cerberus::OperationResult cerberus::data::filesystem::File::write(const ByteBuffer& bytes)
 {
-    if (!isOpen())
-    {
-        return false;
-    }
+    if (!isOpen()) return OR_BadConditions;
 
-    if (fwrite(bytes.data(), 1, bytes.size(), m_file) != bytes.size())
-    {
-        return false;
-    }
+    if (fwrite(bytes.data(), 1, bytes.size(), m_file) != bytes.size()) return OR_Failure;
 
     fflush(m_file);
-    return true;
+
+    return OR_OK;
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::writeLine(const std::string& line) { return write(core::CerberusUtils::strPrint("%s\n", line.c_str()).c_str()); }
+cerberus::OperationResult cerberus::data::filesystem::File::writeLine(const std::string& line) { return write(core::CerberusUtils::strPrint("%s\n", line.c_str()).c_str()); }
 //=============================================================================
-bool cerberus::data::filesystem::File::read(ByteBuffer& bytes, uint64_t start) const
+cerberus::OperationResult cerberus::data::filesystem::File::read(ByteBuffer& bytes, LSIZE start) const
 {
-    if (!seek(start))
-    {
-        return false;
-    }
+    if (!isOpen()) return OR_BadConditions;
 
-    uint64_t bytesToRead = size() - start;
+    auto res = seek(start);
+
+    if (res.fail()) return res;
+
+    uint64_t bytesToRead = size().sz - start;
 
     bytes.resize(bytesToRead);
 
@@ -412,24 +358,22 @@ bool cerberus::data::filesystem::File::read(ByteBuffer& bytes, uint64_t start) c
 
     auto ret = fread(bytes.data(), 1, bytesToRead, m_file);
 
-    if (ferror(m_file)) return false;
+    if (ferror(m_file)) return OR_Failure;
 
-    if (feof(m_file) && !ret) return false;
+    if (feof(m_file) && !ret) return OR_EOF;
 
-    return true;
+    return OR_OK;
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::read(ByteBuffer& bytes, uint64_t start, uint64_t span) const
+cerberus::OperationResult cerberus::data::filesystem::File::read(ByteBuffer& bytes, LSIZE start, LSIZE span) const
 {
-    if ((start + span) >= size())
-    {
-        return false;
-    }
+    if (!isOpen()) return OR_BadConditions;
 
-    if (!seek(start))
-    {
-        return false;
-    }
+    if ((start + span) >= size().sz) return OR_WrongArgument;
+
+    auto res = seek(start);
+
+    if (res.fail()) return res;
 
     bytes.resize(span);
 
@@ -437,15 +381,17 @@ bool cerberus::data::filesystem::File::read(ByteBuffer& bytes, uint64_t start, u
 
     auto ret = fread(bytes.data(), 1, span, m_file);
 
-    if (ferror(m_file)) return false;
+    if (ferror(m_file)) return OR_Failure;
 
-    if (feof(m_file) && !ret) return false;
+    if (feof(m_file) && !ret) return OR_EOF;
 
-    return true;
+    return OR_OK;
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::readChunk(ByteBuffer& bytes, uint64_t chunksize) const
+cerberus::OperationResult cerberus::data::filesystem::File::readChunk(ByteBuffer& bytes, SIZE chunksize) const
 {
+    if (!isOpen()) return OR_BadConditions;
+
     bytes.clear();
     bytes.resize(chunksize);
 
@@ -453,20 +399,19 @@ bool cerberus::data::filesystem::File::readChunk(ByteBuffer& bytes, uint64_t chu
 
     auto ret = fread(bytes.data(), 1, chunksize, m_file);
 
-    if (ferror(m_file)) return false;
+    if (ferror(m_file)) return OR_Failure;
 
-    if (ret == 0 && feof(m_file))
-    {
-        return false;
-    }
+    if (ret == 0 && feof(m_file)) return OR_EOF;
 
     bytes.resize(ret);
 
-    return true;
+    return OR_OK;
 }
 //=============================================================================
 cerberus::OperationResult cerberus::data::filesystem::File::readLine() const
 {
+    if (!isOpen()) return OR_BadConditions;
+
     clearerr(m_file);
     std::string line;
 
@@ -480,10 +425,7 @@ cerberus::OperationResult cerberus::data::filesystem::File::readLine() const
 
         if (feof(m_file) && line.empty()) return OR_EOF;
 
-        if (c == '\n' || feof(m_file))
-        {
-            break;
-        }
+        if (c == '\n' || feof(m_file)) break;
 
         line += c;
     }
@@ -491,76 +433,74 @@ cerberus::OperationResult cerberus::data::filesystem::File::readLine() const
     return OperationResult(line);
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::seek(uint64_t pos) const
+cerberus::OperationResult cerberus::data::filesystem::File::seek(cerberus::LSIZE pos) const
 {
-    if (!isOpen() || (pos >= size()))
-    {
-        return false;
-    }
+    if (!isOpen()) return OR_BadConditions;
+
+    if (pos >= size().sz) return OR_WrongArgument;
 
     auto ret = fseek(m_file, pos, SEEK_SET);
 
-    if (ret == -1)
-    {
-        return false;
-    }
+    if (ret == -1) return OR_Failure;
 
-    return true;
+    return OR_OK;
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::seekOffset(int64_t pos) const
+cerberus::OperationResult cerberus::data::filesystem::File::seekOffset(int64_t pos) const
 {
-    if (!isOpen())
-    {
-        return false;
-    }
+    if (!isOpen()) return OR_BadConditions;
 
     clearerr(m_file);
 
-    auto ret = fseek(m_file, pos, SEEK_CUR);
+    if (fseek(m_file, pos, SEEK_CUR) == -1) return {OR_Failure, strerror(errno)};
 
-    if (ret == -1)
-    {
-        return false;
-    }
-
-    return true;
+    return OR_OK;
 }
 //=============================================================================
 void cerberus::data::filesystem::File::resetCursor() const { ::rewind(m_file); }
 //=============================================================================
-uint64_t cerberus::data::filesystem::File::getCursor() const { return ftell(m_file); }
-//=============================================================================
-bool cerberus::data::filesystem::File::isEqual(File& other) const
+cerberus::OperationResult cerberus::data::filesystem::File::getCursor() const
 {
-    if (!isOpen() || !other.isOpen())
-    {
-        return false;
-    }
+    if (!isOpen()) return OR_BadConditions;
 
-    if (size() != other.size())
-    {
-        return false;
-    }
+    auto pos = ftell(m_file);
 
-    auto readBackup      = getCursor();
-    auto readBackupOther = other.getCursor();
+    if (pos == -1) return {OR_Failure, strerror(errno)};
+
+    return OperationResult((LSIZE)pos);
+}
+//=============================================================================
+cerberus::OperationResult cerberus::data::filesystem::File::isEqual(File& other) const
+{
+    if (!isOpen() || !other.isOpen()) return OR_BadConditions;
+
+    auto r1 = size();
+    auto r2 = other.size();
+    if (r1.fail()) return r1;
+    if (r2.fail()) return r2;
+
+    if (r1.sz != r2.sz) return (int64_t)0;
+
+    auto c1 = getCursor();
+    auto c2 = other.getCursor();
+    if (c1.fail()) return c1;
+    if (c2.fail()) return c2;
 
     resetCursor();
     other.resetCursor();
 
-    ByteBuffer one;
-    ByteBuffer two;
+    ByteBuffer first;
+    ByteBuffer second;
     bool equal = false;
 
     while (true)
     {
-        bool read1 = readChunk(one, 50);
-        bool read2 = other.readChunk(two, 50);
+        auto read1 = readChunk(first, 50);
+        auto read2 = other.readChunk(second, 50);
 
-        if (read1 && read2)
+        if (read1.ok() && read2.ok())
         {
-            if (one == two)
+            if (first == second)
             {
                 equal = true;
             }
@@ -570,7 +510,7 @@ bool cerberus::data::filesystem::File::isEqual(File& other) const
                 break;
             }
         }
-        else if (read1 != read2)
+        else if (read1.res != read2.res)
         {
             equal = false;
             break;
@@ -581,9 +521,9 @@ bool cerberus::data::filesystem::File::isEqual(File& other) const
         }
     }
 
-    seek(readBackup);
-    other.seek(readBackupOther);
+    seek(c1.sz);
+    other.seek(c2.sz);
 
-    return equal;
+    return (int64_t)equal;
 }
 //=============================================================================

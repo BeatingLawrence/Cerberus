@@ -189,19 +189,23 @@ namespace cerberus
 
         OperationResult();  // construct undefined result
 
-        OperationResult(Result r);  // construct defined result
+        // construct defined result
+        OperationResult(Result r, const std::string& reason = std::string());
 
         OperationResult(int64_t i);
 
-        OperationResult(long double f);
+        explicit OperationResult(long double f);
 
         explicit OperationResult(LSIZE sz);
 
         OperationResult(const std::string& str);
 
-        bool operator==(const OperationResult& other);
+        bool operator==(const OperationResult& other) = delete;
+        bool operator!=(const OperationResult& other) = delete;
 
-        bool operator!=(const OperationResult& other);
+        bool operator==(Result r);
+
+        bool operator!=(Result r);
 
         // Throw a generic exception with the given text only if the result is failed
         OperationResult& expect(const std::string& str);

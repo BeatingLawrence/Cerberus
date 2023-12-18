@@ -51,8 +51,11 @@ namespace cerberus
                 // Create a directory
                 static OperationResult createDirectory(const std::string& path);
 
-                // Delete a directory (must be empty)
-                static OperationResult deleteDirectory(const std::string& path);
+                // Delete a file or directory. If path is a directory, it must be empty
+                static OperationResult remove(const std::string& path);
+
+                // Move a file referenced by oldPath to newPath
+                static OperationResult move(const std::string& oldPath, const std::string& newPath);
 
                 // Check if a given directory is empty
                 // This method returns OR_OK if the directory is empty,
@@ -62,59 +65,81 @@ namespace cerberus
                 // Get the size of the file in the integer field of the return value
                 static OperationResult sizeOf(const std::string& path);
 
-                // Create a File instance. The openMode parameter can be one of the FileOpenMode values
+                // Create a File instance
                 File(FileOpenMode openMode = FOM_Read, bool binaryMode = false);
-
                 File(const std::string& filePath, FileOpenMode openMode = FOM_Read, bool binaryMode = false);
 
                 ~File();
 
-                bool setFileName(const std::string& filePath);
+                // Set the fileName (path) of the file
+                void setFileName(const std::string& filePath);
 
-                bool setOpenMode(FileOpenMode openMode, bool binaryMode = false);
+                // Set the openMode of the file
+                void setOpenMode(FileOpenMode openMode, bool binaryMode = false);
 
+                // Know if the instance can write with the currently set openMode
                 bool canWrite() const;
 
+                // Get the filename associated to this instance
                 std::string fileName() const;
 
+                // Check if the file is currently open
                 bool isOpen() const;
 
-                bool open();
+                // Open the file with the set file path and open mode.
+                // If the path is empty, OR_InvalidPath is returned.
+                // If the open fails, OR_Failure is returned, and info about the error
+                // are written inside str.
+                OperationResult open();
 
-                bool close();
+                // Close the file if open
+                void close();
 
-                bool deleteFromDisk();
+                // Close the file if open, and remove it from filesystem
+                OperationResult deleteFromDisk();
 
-                bool move(const std::string& newName);
+                // Move the current file to another path name
+                OperationResult move(const std::string& newName);
 
-                uint64_t size() const;
+                // Get the file size. Cursor position will not be altered
+                // The value will be inserted in the size field sz of the result
+                OperationResult size() const;
 
-                bool write(const cerberus::data::ByteBuffer& bytes);
+                // Write buffer to file
+                OperationResult write(const cerberus::data::ByteBuffer& bytes);
 
-                bool writeLine(const std::string& line = "");
+                // Write a single line of text on file
+                OperationResult writeLine(const std::string& line = "");
 
                 // Read the file starting from start pos till the end of file
-                bool read(ByteBuffer& bytes, uint64_t start = 0) const;
+                OperationResult read(ByteBuffer& bytes, LSIZE start = 0) const;
 
-                // Read span bytes from file file starting from start pos
-                bool read(ByteBuffer& bytes, uint64_t start, uint64_t span) const;
+                // Read span bytes from file starting from start pos
+                OperationResult read(ByteBuffer& bytes, LSIZE start, LSIZE span) const;
 
-                bool readChunk(ByteBuffer& bytes, uint64_t chunksize) const;
+                // Read a chunk of data from the current cursor position
+                OperationResult readChunk(ByteBuffer& bytes, SIZE chunksize) const;
 
                 // Read a single line till \n or EOF
                 // If the EOF is reached and the bytes read are zero, OR_EOF is returned
                 // If an error occurs during read, OR_Failure is returned
                 OperationResult readLine() const;
 
-                bool seek(uint64_t pos) const;
+                // Move the cursor to the absolute position pos
+                OperationResult seek(LSIZE pos) const;
 
-                bool seekOffset(int64_t pos) const;
+                // Move the cursor back or forth according to the sign of the parameter pos
+                OperationResult seekOffset(int64_t pos) const;
 
+                // Reset the cursor moving it to the beginning of the file
                 void resetCursor() const;
 
-                uint64_t getCursor() const;
+                // Get the cursor position.
+                // The value will be inserted in the size field sz of the result
+                OperationResult getCursor() const;
 
-                bool isEqual(File& other) const;
+                // Check if this file and other file are equal (same size, same content)
+                OperationResult isEqual(File& other) const;
             };
         }  // namespace filesystem
     }      // namespace data

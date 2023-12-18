@@ -1,9 +1,10 @@
-#include "cerberus/data/filesystem/file.h"
 #include <cerberus/cerberus.h>
 #include <cerberus/network/httpclient.h>
 #include <cerberus/network/socket.h>
 #include <cerberus/thread/thread.h>
 #include <gtest/gtest.h>
+
+#include "cerberus/data/filesystem/file.h"
 
 #define THREAD_ERROR 1
 #define THREAD_SUCCESS 304050
@@ -112,7 +113,7 @@ static int testCallback_FTP(cerberus::message::cerberus_message msg, cerberus::t
     socket.bind("localhost:54321");
     socket.listen(3);
     cerberus::data::filesystem::File file("ftp_socket_test_file_received.file", cerberus::FOM_ReadWriteTrunc);
-    if (!file.open())
+    if (file.open().fail(true))
     {
         logDebug("file open error");
         socket.close();
@@ -203,7 +204,7 @@ TEST(socketTest, FTP)
     //
     // file creation
     cerberus::data::filesystem::File f("ftp_socket_test_file_sent.file", cerberus::FOM_ReadWriteTrunc);
-    ASSERT_TRUE(f.open());
+    ASSERT_TRUE(f.open().ok(true));
     for (int i = 0; i < 500; i++)
     {
         f.writeLine("Hello, World!");
@@ -218,8 +219,8 @@ TEST(socketTest, FTP)
     socket.close();
     EXPECT_EQ(receiver.join().expect().i, THREAD_SUCCESS);
     cerberus::data::filesystem::File rf("ftp_socket_test_file_received.file");
-    ASSERT_TRUE(rf.open());
-    EXPECT_TRUE(rf.isEqual(f));
+    ASSERT_TRUE(rf.open().ok(true));
+    EXPECT_TRUE(rf.isEqual(f).isTrue());
 
     rf.close();
     f.close();

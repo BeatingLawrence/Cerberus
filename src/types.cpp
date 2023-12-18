@@ -228,9 +228,10 @@ cerberus::OperationResult::OperationResult()
 {
 }
 //=============================================================================
-cerberus::OperationResult::OperationResult(Result r)
+cerberus::OperationResult::OperationResult(Result r, const std::string &reason)
     : res(r),
-      i(0)
+      i(0),
+      str(reason)
 {
 }
 //=============================================================================
@@ -258,9 +259,9 @@ cerberus::OperationResult::OperationResult(const std::string &str)
 {
 }
 //=============================================================================
-bool cerberus::OperationResult::operator==(const OperationResult &other) { return (res == other.res); }
+bool cerberus::OperationResult::operator==(Result r) { return (res == r); }
 //=============================================================================
-bool cerberus::OperationResult::operator!=(const OperationResult &other) { return (res != other.res); }
+bool cerberus::OperationResult::operator!=(Result r) { return (res != r); }
 //=============================================================================
 cerberus::OperationResult &cerberus::OperationResult::expect(const std::string &str)
 {

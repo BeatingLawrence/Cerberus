@@ -12,7 +12,7 @@ int LoggerThread::tick()
 
     if (message->id() != CERBERUS_MESSAGE_LOG_ID || m_failed.test()) return 0;
 
-    if (!m_logFile.writeLine(message->getSlotAt(0)->to<message::slot::StringSlot>()->value()))
+    if (m_logFile.writeLine(message->getSlotAt(0)->to<message::slot::StringSlot>()->value()).fail())
     {
         m_failed.test_and_set();
         discardMessageQueue();
@@ -50,7 +50,7 @@ bool LoggerThread::isFailed() { return m_failed.test(); }
 //=============================================================================
 void LoggerThread::open()
 {
-    if (m_logFile.open())
+    if (m_logFile.open().ok())
     {
         logInfo("LogFile open succeeded");
         m_failed.clear();

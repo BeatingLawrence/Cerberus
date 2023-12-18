@@ -1179,9 +1179,12 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem
         return OR_Unavailable;
     }
 
+    auto res = file.size();
+    if (res.fail()) return res;
+
     if (isTLS())
     {
-        auto ret = SSL_sendfile(m_ssl, file.m_fd, 0, file.size(), 0);
+        auto ret = SSL_sendfile(m_ssl, file.m_fd, 0, res.sz, 0);
 
         if (ret < 0)
         {
@@ -1189,7 +1192,7 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem
             printSSLErrors();
             return OR_Failure;
         }
-        else if (ret != file.size())
+        else if (ret != res.sz)
         {
             logError("SSL socket sendfile size mismatch");
             return OR_Failure;
@@ -1204,7 +1207,7 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem
 
     do
     {
-        bytes = sendfile(m_fd, file.m_fd, &offset, file.size());
+        bytes = sendfile(m_fd, file.m_fd, &offset, res.sz);
     } while (bytes > 0);
 
     if (bytes == -1)
@@ -1213,7 +1216,7 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem
         return OR_Failure;
     }
 #elif APPLE_SYSTEM
-    off_t len = 0;
+    off_t len = 0;  // send until EOF
     int bytes = 1;
 
     do
@@ -1251,11 +1254,7 @@ cerberus::OperationResult cerberus::network::Socket::recv(data::filesystem::File
         return ret;
     }
 
-    if (!file.write(buffer))
-    {
-        // could not write
-        return OR_InvalidFile;
-    }
+    if (file.write(buffer).fail()) return OR_InvalidFile;
 
     return OR_OK;
 }

@@ -48,7 +48,7 @@ namespace cerberus
             static bool areEqual(const std::string& str1, const std::string& str2, WordMatch match = WM_CaseSensitive);
 
             // Retrieve the value of specified environment variable
-            static std::string environmentVariable(const std::string& variableName);
+            static OperationResult environmentVariable(const std::string& variableName);
 
             // Convert a given string to an int (64 bit)
             static long long int stringToInt(const std::string& str, Radix r = Radix::Decimal);

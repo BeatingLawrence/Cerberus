@@ -112,13 +112,13 @@ bool CerberusUtils::areEqual(const std::string& str1, const std::string& str2, W
     return false;
 }
 //=============================================================================
-std::string CerberusUtils::environmentVariable(const std::string& variableName)
+cerberus::OperationResult CerberusUtils::environmentVariable(const std::string& variableName)
 {
     char* val = getenv(variableName.c_str());
 
     if (val == nullptr)
     {
-        return std::string();
+        return OR_NotFound;
     }
 
     return std::string(val);
