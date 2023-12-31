@@ -280,7 +280,7 @@ TEST(socketTest, HTTPClient)
     data.addHeaderField("Cache-Control", "max-age=0");
     //
     logDebug("data to be sent:");
-    logDebug(data.getData().toNormalizedString().c_str());
+    logDebug(data.getData().toNormalizedString().str.c_str());
     //
     EXPECT_TRUE(client.makeRequest(data).ok(true));
     logDebug("request sent");

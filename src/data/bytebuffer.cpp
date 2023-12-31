@@ -1,10 +1,12 @@
 #include "bytebuffer.h"
 
+#include <cstdlib>
 #include <cstring>
 
 #include "src/exception/exception.h"
 
 using namespace cerberus::data;
+using namespace cerberus;
 
 //=============================================================================
 void ByteBuffer::_resize(SIZE size)
@@ -35,15 +37,7 @@ void ByteBuffer::_clear()
     m_pos   = 0;
 }
 //=============================================================================
-cerberus::BYTE& ByteBuffer::getat(SIZE index) const
-{
-    if (index >= m_size)
-    {
-        throw cerberusIllegalArgExc("index out of bound, %u/%u", index, m_size);
-    }
-
-    return *((unsigned char*)(m_bytes + index));
-}
+cerberus::BYTE& ByteBuffer::getat(SIZE index) const { return *((unsigned char*)(m_bytes + index)); }
 //=============================================================================
 ByteBuffer::ByteBuffer(BYTE* buf, SIZE size)
     : m_bytes(buf),
@@ -139,55 +133,100 @@ ByteBuffer::ByteBuffer(const char* str)
 //=============================================================================
 ByteBuffer::~ByteBuffer() { _clear(); }
 //=============================================================================
+ConstBBIterator ByteBuffer::begin() const
+{
+    if (isEmpty()) return nullptr;
+    return &getat(0);
+}
+//=============================================================================
+ConstBBIterator ByteBuffer::end() const
+{
+    if (isEmpty()) return nullptr;
+    return &getat(m_size);
+}
+//=============================================================================
+BBIterator ByteBuffer::begin()
+{
+    if (isEmpty()) return nullptr;
+    return &getat(0);
+}
+//=============================================================================
+BBIterator ByteBuffer::end()
+{
+    if (isEmpty()) return nullptr;
+    return &getat(m_size);
+}
+//=============================================================================
 cerberus::BYTE* ByteBuffer::data() { return m_bytes; }
 //=============================================================================
 const cerberus::BYTE* ByteBuffer::data() const { return m_bytes; }
 //=============================================================================
-const cerberus::BYTE& ByteBuffer::at(SIZE index) const { return getat(index); }
+const cerberus::BYTE& ByteBuffer::at(SIZE index) const
+{
+    if (index >= m_size)
+    {
+        throw cerberusIllegalArgExc("index out of bound, %u/%u", index, m_size);
+    }
+    return getat(index);
+}
 //=============================================================================
-cerberus::BYTE& ByteBuffer::at(SIZE index) { return getat(index); }
+cerberus::BYTE& ByteBuffer::at(SIZE index)
+{
+    if (index >= m_size)
+    {
+        throw cerberusIllegalArgExc("index out of bound, %u/%u", index, m_size);
+    }
+    return getat(index);
+}
 //=============================================================================
 cerberus::BYTE& ByteBuffer::operator[](SIZE index) { return at(index); }
 //=============================================================================
-void ByteBuffer::appendFrom(const BYTE* buffer, SIZE len)
+ByteBuffer& ByteBuffer::appendFrom(const BYTE* buffer, SIZE len)
 {
     ByteBuffer buf(len);
     BYTE* p = buf.data();
     memmove(p, buffer, len);
 
     append(buf);
+
+    return *this;
 }
 //=============================================================================
-void ByteBuffer::assignFrom(const BYTE* buffer, SIZE len)
+ByteBuffer& ByteBuffer::assignFrom(const BYTE* buffer, SIZE len)
 {
     clear();
     appendFrom(buffer, len);
+
+    return *this;
 }
 //=============================================================================
-void ByteBuffer::copyTo(BYTE* buffer, SIZE maxLen) const
+const ByteBuffer& ByteBuffer::copyTo(BYTE* buffer, SIZE maxLen) const
 {
-    if (m_size == 0 || !m_bytes)
-    {
-        return;
-    }
+    if (m_size == 0 || !m_bytes) return *this;
 
     if (maxLen)
-    {
         memmove(buffer, m_bytes, maxLen);
-    }
     else
-    {
         memmove(buffer, m_bytes, m_size);
-    }
+
+    return *this;
 }
 //=============================================================================
 bool ByteBuffer::operator==(const ByteBuffer& other) const { return isEqual(other); }
 //=============================================================================
 bool ByteBuffer::operator!=(const ByteBuffer& other) const { return !isEqual(other); }
 //=============================================================================
-void ByteBuffer::operator+=(const ByteBuffer& other) { append(other); }
+ByteBuffer& ByteBuffer::operator+=(const ByteBuffer& other)
+{
+    append(other);
+    return *this;
+}
 //=============================================================================
-void ByteBuffer::operator+=(char c) { appendChar(c); }
+ByteBuffer& ByteBuffer::operator+=(char c)
+{
+    appendChar(c);
+    return *this;
+}
 //=============================================================================
 ByteBuffer& ByteBuffer::operator=(const ByteBuffer& other)
 {
@@ -203,15 +242,9 @@ ByteBuffer& ByteBuffer::operator=(const char* str)
 //=============================================================================
 ByteBuffer ByteBuffer::subBuffer(SIZE pos, SIZE len) const
 {
-    if (pos >= m_size)
-    {
-        return ByteBuffer();
-    }
+    if (pos >= m_size) return ByteBuffer();
 
-    if (pos + len >= m_size)
-    {
-        len = m_size - pos;
-    }
+    if (pos + len >= m_size) len = m_size - pos;
 
     ByteBuffer ret(len);
     memmove(ret.data(), m_bytes + pos, len);
@@ -221,10 +254,7 @@ ByteBuffer ByteBuffer::subBuffer(SIZE pos, SIZE len) const
 //=============================================================================
 ByteBuffer ByteBuffer::subBuffer(SIZE pos) const
 {
-    if (pos >= m_size)
-    {
-        return ByteBuffer();
-    }
+    if (pos >= m_size) return ByteBuffer();
 
     ByteBuffer ret(m_size - pos);
     memmove(ret.data(), m_bytes + pos, ret.size());
@@ -232,33 +262,13 @@ ByteBuffer ByteBuffer::subBuffer(SIZE pos) const
     return ret;
 }
 //=============================================================================
-ByteBuffer ByteBuffer::subBuffer_seek(SIZE len) const
+ByteBuffer& ByteBuffer::appendString(const char* str)
 {
-    if (m_pos + len >= m_size)
-    {
-        auto p = m_pos;
-        m_pos  = m_size;
-        return subBuffer(p);
-    }
-
-    auto p = m_pos;
-    m_pos += len;
-    return subBuffer(p, len);
-}
-//=============================================================================
-void ByteBuffer::appendString(const char* str)
-{
-    if (*str == 0)
-    {
-        return;
-    }
+    if (*str == 0) return *this;
 
     const char* c = str;
 
-    while (*c)
-    {
-        c++;
-    }
+    while (*c) c++;
 
     SIZE s = c - str;
 
@@ -266,13 +276,12 @@ void ByteBuffer::appendString(const char* str)
 
     _resize(s + m_size);
 
-    if (m_bytes)
-    {
-        memmove(m_bytes + oldSize, str, s);
-    }
+    if (m_bytes) memmove(m_bytes + oldSize, str, s);
+
+    return *this;
 }
 //=============================================================================
-void ByteBuffer::appendChar(char c)
+ByteBuffer& ByteBuffer::appendChar(char c)
 {
     SIZE s = m_size;
 
@@ -280,36 +289,33 @@ void ByteBuffer::appendChar(char c)
 
     _resize(s);
 
-    if (m_bytes)
-    {
-        *(m_bytes + s - 1) = c;
-    }
+    if (m_bytes) *(m_bytes + s - 1) = c;
+
+    return *this;
 }
 //=============================================================================
 cerberus::SIZE ByteBuffer::size() const { return m_size; }
 //=============================================================================
-void ByteBuffer::resize(SIZE size)
+bool ByteBuffer::isEmpty() const { return m_size == 0; }
+//=============================================================================
+ByteBuffer& ByteBuffer::resize(SIZE size)
 {
-    if (size == 0)
-    {
-        clear();
-        return;
-    }
-
     _resize(size);
+
+    return *this;
 }
 //=============================================================================
-void ByteBuffer::assign(const ByteBuffer& other, SIZE len)
+ByteBuffer& ByteBuffer::assign(const ByteBuffer& other, SIZE len)
 {
     if (m_bytes == other.m_bytes)  // same instance
     {
-        return;
+        return *this;
     }
 
     if (other.m_size == 0)
     {
         clear();
-        return;
+        return *this;
     }
 
     SIZE s;
@@ -322,18 +328,17 @@ void ByteBuffer::assign(const ByteBuffer& other, SIZE len)
     _resize(s);
 
     memmove(m_bytes, other.m_bytes, s);
+
+    return *this;
 }
 //=============================================================================
-void ByteBuffer::assign(const char* str)
+ByteBuffer& ByteBuffer::assign(const char* str)
 {
     _clear();
 
     const char* c = str;
 
-    while (*c)
-    {
-        c++;
-    }
+    while (*c) c++;
 
     SIZE s = c - str;
 
@@ -346,29 +351,31 @@ void ByteBuffer::assign(const char* str)
             m_size = s;
         }
     }
+
+    return *this;
 }
 //=============================================================================
-void ByteBuffer::append(const ByteBuffer& other)
+ByteBuffer& ByteBuffer::append(const ByteBuffer& other)
 {
     SIZE s = other.m_size;
 
-    if (s == 0)
-    {
-        return;
-    }
+    if (s == 0) return *this;
 
     SIZE oldSize = m_size;
     SIZE newSize = oldSize + s;
 
     _resize(newSize);
 
-    if (m_bytes)
-    {
-        memmove(m_bytes + oldSize, other.m_bytes, s);
-    }
+    if (m_bytes) memmove(m_bytes + oldSize, other.m_bytes, s);
+
+    return *this;
 }
 //=============================================================================
-void ByteBuffer::clear() { _clear(); }
+ByteBuffer& ByteBuffer::clear()
+{
+    _clear();
+    return *this;
+}
 //=============================================================================
 bool ByteBuffer::isValid() const { return (m_size != 0 && m_bytes); }
 //=============================================================================
@@ -389,16 +396,18 @@ bool ByteBuffer::isEqual(const ByteBuffer& other) const
 //=============================================================================
 std::string ByteBuffer::toString() const
 {
-    std::string ret(m_size + 1, 0);
+    std::string ret(m_size, 0);
     copyTo((BYTE*)ret.data(), m_size);
     return ret;
 }
 //=============================================================================
-std::string ByteBuffer::toNormalizedString() const
+cerberus::OperationResult ByteBuffer::toNormalizedString() const
 {
     auto str = toString();
-    core::CerberusUtils::normalize(str);
-    return str;
+    OperationResult res(OR_OK);
+    res.i   = core::CerberusUtils::normalize(str);
+    res.str = str;
+    return res;
 }
 //=============================================================================
 std::string ByteBuffer::toBinaryDumpString(uint32_t align) const
@@ -426,17 +435,11 @@ cerberus::OperationResult ByteBuffer::search(const char* str) const
 {
     const char* c = str;
 
-    while (*c)
-    {
-        c++;
-    }
+    while (*c) c++;
 
     SIZE s = c - str;
 
-    if (s == 0 || s > m_size)
-    {
-        return OR_WrongArgument;
-    }
+    if (s == 0 || s > m_size) return OR_WrongArgument;
 
     for (SIZE i = 0; i < m_size - s; i++)
     {
@@ -452,6 +455,30 @@ cerberus::OperationResult ByteBuffer::search(const char* str) const
     }
 
     return OR_NotFound;
+}
+//=============================================================================
+bool ByteBuffer::startsWith(const ByteBuffer& buffer) const
+{
+    if (buffer.size() > size()) return false;
+
+    for (SIZE i = 0; i < buffer.size(); i++)
+    {
+        if (getat(i) != buffer.getat(i)) return false;
+    }
+
+    return true;
+}
+//=============================================================================
+bool ByteBuffer::endsWith(const ByteBuffer& buffer) const
+{
+    if (buffer.size() > size()) return false;
+
+    for (SIZE i = 1; i <= buffer.size(); i++)
+    {
+        if (getat(size() - i) != buffer.getat(buffer.size() - i)) return false;
+    }
+
+    return true;
 }
 //=============================================================================
 std::string ByteBuffer::getLine() const
@@ -487,23 +514,109 @@ std::string ByteBuffer::getLine() const
     }
 }
 //=============================================================================
-void ByteBuffer::seek(SIZE pos) const
+const ByteBuffer& ByteBuffer::consumeBlank() const
+{
+    while (!isEnd())
+    {
+        BYTE b = getat(m_pos);
+
+        if (b != ' ' && b != 0x9 && b != '\n' && b != '\r')  // space, TAB, LF, CR
+        {
+            return *this;
+        }
+
+        m_pos++;
+    }
+
+    return *this;
+}
+//=============================================================================
+ByteBuffer ByteBuffer::consumeUntil(const ByteBuffer& tokenSet) const
+{
+    ByteBuffer ret;
+
+    while (!isEnd())
+    {
+        BYTE b = getat(m_pos);
+
+        for (auto& el : tokenSet)
+            if (b == el) return ret;
+
+        m_pos++;
+        ret += b;
+    }
+
+    return ret;
+}
+//=============================================================================
+ByteBuffer ByteBuffer::read(SIZE len) const
+{
+    if (m_pos + len >= m_size)
+    {
+        auto p = m_pos;
+        m_pos  = m_size;
+        return subBuffer(p);
+    }
+
+    auto p = m_pos;
+    m_pos += len;
+    return subBuffer(p, len);
+}
+//=============================================================================
+cerberus::BYTE ByteBuffer::readByte() const
+{
+    auto b = at(m_pos);
+    m_pos++;
+    return b;
+}
+//=============================================================================
+const ByteBuffer& ByteBuffer::seek(SIZE pos) const
 {
     if (pos >= m_size)
         m_pos = m_size;
     else
         m_pos = pos;
+
+    return *this;
 }
 //=============================================================================
 cerberus::SIZE ByteBuffer::pos() const { return m_pos; }
 //=============================================================================
-void ByteBuffer::resetCursor(bool end) const
+const ByteBuffer& ByteBuffer::resetCursor(bool end) const
 {
     if (end)
         m_pos = m_size;
     else
         m_pos = 0;
+
+    return *this;
 }
 //=============================================================================
-bool ByteBuffer::end() const { return m_pos == m_size; }
+bool ByteBuffer::isEnd() const { return m_pos == m_size; }
+//=============================================================================
+const cerberus::BYTE& ByteBuffer::get() const { return at(m_pos); }
+//=============================================================================
+const ByteBuffer& ByteBuffer::moveCursor(OFFSET offset) const
+{
+    if (offset < 0)
+    {
+        if (llabs(offset) > m_pos)
+            m_pos = 0;
+        else
+            m_pos = m_pos + offset;
+    }
+    else
+    {
+        if ((offset + m_pos) < m_size)
+            m_pos = m_pos + offset;
+        else
+            m_pos = m_size;
+    }
+
+    return *this;
+}
+//=============================================================================
+const ByteBuffer& ByteBuffer::next() const { return moveCursor(1); }
+//=============================================================================
+const ByteBuffer& ByteBuffer::prev() const { return moveCursor(-1); }
 //=============================================================================

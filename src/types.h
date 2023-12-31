@@ -12,6 +12,79 @@ namespace cerberus
     typedef uint32_t SIZE;
     typedef uint64_t LSIZE;
     typedef uint8_t BYTE;
+    typedef int64_t OFFSET;
+
+    class BBIterator
+    {
+        BYTE* p;
+
+       public:
+        BBIterator(BYTE* x)
+            : p(x)
+        {
+        }
+
+        BBIterator(const BBIterator& it)
+            : p(it.p)
+        {
+        }
+
+        // Prefix increment
+        BBIterator& operator++()
+        {
+            p++;
+            return *this;
+        }
+
+        // Postfix increment
+        BBIterator operator++(int)
+        {
+            BBIterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        friend bool operator==(const BBIterator& a, const BBIterator& b) { return a.p == b.p; };
+        friend bool operator!=(const BBIterator& a, const BBIterator& b) { return a.p != b.p; };
+        BYTE& operator*() const { return *p; }
+        BYTE* operator->() { return p; };
+    };
+
+    class ConstBBIterator
+    {
+        const BYTE* p;
+
+       public:
+        ConstBBIterator(const BYTE* x)
+            : p(x)
+        {
+        }
+
+        ConstBBIterator(const ConstBBIterator& it)
+            : p(it.p)
+        {
+        }
+
+        // Prefix increment
+        ConstBBIterator& operator++()
+        {
+            p++;
+            return *this;
+        }
+
+        // Postfix increment
+        ConstBBIterator operator++(int)
+        {
+            ConstBBIterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        friend bool operator==(const ConstBBIterator& a, const ConstBBIterator& b) { return a.p == b.p; };
+        friend bool operator!=(const ConstBBIterator& a, const ConstBBIterator& b) { return a.p != b.p; };
+        const BYTE& operator*() const { return *p; }
+        const BYTE* operator->() { return p; };
+    };
 
     typedef void (*timerCallback)();
 
@@ -127,6 +200,16 @@ namespace cerberus
         IDT_Bool    = 4,  // true only if key value equals "true" or "false" (case insensitive)
     };
 
+    enum JsonDataType : uint8_t
+    {
+        JDT_Null = 0,
+        JDT_Number,
+        JDT_String,
+        JDT_Boolean,
+        JDT_Array,
+        JDT_Object,
+    };
+
     // The Result enum contains all the possible results of operation requested to the framework.
     enum Result : uint8_t
     {
@@ -146,9 +229,10 @@ namespace cerberus
         OR_InvalidFile,               // [general] the provided file instance is not valid
         OR_Duplicate,                 // [general] the item is a duplicate
         OR_WrongType,                 // [general] the item type is wrong
+        OR_NotEmpty,                  // [general] the item is not empty
+        OR_Empty,                     // [general] the item is empty
                                       //
         OR_EOF,                       // [file] EOF reached
-        OR_NotEmpty,                  // [file] the provided directory is not empty
                                       //
         OR_ResolveServerTempFailure,  // [DNS lookup] resolve method error
         OR_ResolveServerFailure,      // [DNS lookup] resolve method error

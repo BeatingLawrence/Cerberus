@@ -303,7 +303,10 @@ bool cerberus::OperationResult::ok(bool print)
     }
     else if (print)
     {
-        logError("Operation failed: %s", errorString().c_str());
+        std::string err = errorString();
+        if (!str.empty()) err.append("\n").append(str);
+
+        logError("Operation failed: %s", err.c_str());
     }
 
     return false;
@@ -366,7 +369,7 @@ std::string cerberus::OperationResult::errorString()
         case OR_InvalidFile:
             return "Given file is not valid";
         case OR_NotEmpty:
-            return "Directory is not empty";
+            return "Item is not empty";
         case OR_Duplicate:
             return "Object is a duplicate";
         case OR_EOF:
@@ -375,6 +378,8 @@ std::string cerberus::OperationResult::errorString()
             return "Wrong type";
         case OR_ThreadNotJoinable:
             return "Thread not joinable";
+        case OR_Empty:
+            return "Item is empty";
     }
 
     return "Undefined";

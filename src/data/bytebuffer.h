@@ -49,6 +49,12 @@ namespace cerberus
             // Destroy the ByteBuffer instance and deallocate the memory ONLY if not used by another ByteBuffer
             virtual ~ByteBuffer();
 
+            // Iterator implementation
+            ConstBBIterator begin() const;
+            ConstBBIterator end() const;
+            BBIterator begin();
+            BBIterator end();
+
             // Obtain the main pointer of the buffer.
             BYTE* data();
 
@@ -65,14 +71,14 @@ namespace cerberus
             BYTE& operator[](SIZE index);
 
             // Append len bytes read from the given buffer to this ByteBuffer.
-            void appendFrom(const BYTE* buffer, SIZE len);
+            ByteBuffer& appendFrom(const BYTE* buffer, SIZE len);
 
             // Assigns the content of the given buffer to this ByteBuffer. Existing content will be discarded.
-            void assignFrom(const BYTE* buffer, SIZE len);
+            ByteBuffer& assignFrom(const BYTE* buffer, SIZE len);
 
             // Copy the content of this ByteBuffer to the given buffer. No more than maxLen bytes will be copied.
             // If maxLen is 0, all the content of this ByteBuffer will be copied
-            void copyTo(BYTE* buffer, SIZE maxLen = 0) const;
+            const ByteBuffer& copyTo(BYTE* buffer, SIZE maxLen = 0) const;
 
             // Checks if this ByteBuffer instance is equal to other
             bool operator==(const ByteBuffer& other) const;
@@ -81,10 +87,10 @@ namespace cerberus
             bool operator!=(const ByteBuffer& other) const;
 
             // Append the given ByteBuffer to the buffer.
-            void operator+=(const ByteBuffer& other);
+            ByteBuffer& operator+=(const ByteBuffer& other);
 
             // Append the given char to the buffer.
-            void operator+=(char c);
+            ByteBuffer& operator+=(char c);
 
             // Assign another ByteBuffer value to this instance, the memory is deep-copied.
             ByteBuffer& operator=(const ByteBuffer& other);
@@ -102,40 +108,37 @@ namespace cerberus
             // If the pos is greater than or equal to the size, this call will return an empty buffer.
             ByteBuffer subBuffer(SIZE pos) const;
 
-            // Obtain another ByteBuffer instance that contains len bytes copied from current cursor position.
-            // The cursor position is incremented by len.
-            // If specified len is too large, the operation will copy the buffer till the end.
-            // If the current cursor position is at the end, this call will return an empty buffer.
-            ByteBuffer subBuffer_seek(SIZE len) const;
-
             // Append the given c-string str to the end of this buffer.
             // The string must end with a \0, that will NOT be appended.
-            void appendString(const char* str);
+            ByteBuffer& appendString(const char* str);
 
             // Appens the given char to the end of this buffer.
             // The size will be incremented by one.
-            void appendChar(char c);
+            ByteBuffer& appendChar(char c);
 
             // Get the current buffer size
             SIZE size() const;
 
+            // Tell if the buffer is empty
+            bool isEmpty() const;
+
             // Change the size of the ByteBuffer.
             // If the new size is less than the current one, data loss may take place.
-            void resize(SIZE size);
+            ByteBuffer& resize(SIZE size);
 
             // Assign first len bytes of another ByteBuffer value to this instance, the memory is deep-copied.
             // If len is 0, all the buffer is assigned
-            void assign(const ByteBuffer& other, SIZE len = 0);
+            ByteBuffer& assign(const ByteBuffer& other, SIZE len = 0);
 
             // Assign the c-string str value to this buffer.
             // After this call the size will be equal to the size of the given string.
-            void assign(const char* str);
+            ByteBuffer& assign(const char* str);
 
             // Append other buffer to this buffer.
-            void append(const ByteBuffer& other);
+            ByteBuffer& append(const ByteBuffer& other);
 
             // Clear this buffer completely, deallocating all the memory.
-            void clear();
+            ByteBuffer& clear();
 
             // Check if the instance is valid
             bool isValid() const;
@@ -147,8 +150,10 @@ namespace cerberus
             std::string toString() const;
 
             // Return the buffer content as a normalized string (it contains alpha-numeric,
-            // symbols, and cr lf and crlf are substituted by "\r" "\n" and "\r\n")
-            std::string toNormalizedString() const;
+            // symbols, and cr lf and crlf are substituted by "\r" "\n" and "\r\n").
+            // This method uses CerberusUtils::normalize() and if some non-textual character
+            // is found, the returned result will be true
+            OperationResult toNormalizedString() const;
 
             // Return the buffer content as a HEX binary data string
             // The align argument specifies the number of bytes written per raw.
@@ -161,23 +166,64 @@ namespace cerberus
             // If str is not contained inside the buffer, this method returns OR_NotFound
             OperationResult search(const char* str) const;
 
+            // Check if the buffer starts with the given buffer
+            bool startsWith(const ByteBuffer& buffer) const;
+
+            // Check if the buffer ends with the given buffer
+            bool endsWith(const ByteBuffer& buffer) const;
+
+            // =========================CURSOR METHODS===========================
+
             // Return data until one of the following sequences is found:
             // { "\n", "\r\n"}
-            // The sequence is not inserted in the returned string
+            // The termination sequence is not inserted in the returned string.
+            // This method uses the cursor, and increments it automatically before return
             std::string getLine() const;
 
+            // Increment the cursor until a non blank char is found (space | TAB)
+            const ByteBuffer& consumeBlank() const;
+
+            // Increment the cursor until a token contained in tokenSet is found
+            // and return the subBuffer. The found token is not appended to the returnd buffer
+            ByteBuffer consumeUntil(const ByteBuffer& tokenSet) const;
+
+            // Read len bytes copied from current cursor position.
+            // The cursor position is incremented by len.
+            // If specified len would exceed the buffer size,
+            // the operation will return data till the end.
+            ByteBuffer read(SIZE len) const;
+
+            // Read a single byte, incrementing the cursor by one.
+            // This method will throw an exception if end() returns true
+            BYTE readByte() const;
+
             // Seek to the position pos
-            void seek(SIZE pos) const;
+            const ByteBuffer& seek(SIZE pos) const;
 
             // Return the current cursor position
             SIZE pos() const;
 
             // Seek to zero if end == false,
             // Seek to the last byte if end == true
-            void resetCursor(bool end = false) const;
+            const ByteBuffer& resetCursor(bool end = false) const;
 
             // Tell if the cursor is at the end (no more data can be read)
-            bool end() const;
+            bool isEnd() const;
+
+            // Get the byte pointed by cursor. Same as calling at(pos())
+            // This method will throw an exception if end() returns true
+            const BYTE& get() const;
+
+            // Increment or decrement the cursor.
+            // If the operation would go out of bounds, this method sets
+            // the cursor to 0 or size according to the sign of the offset
+            const ByteBuffer& moveCursor(OFFSET offset) const;
+
+            // Increment the cursor by one (same as calling moveCursor(1))
+            const ByteBuffer& next() const;
+
+            // Decrement the cursor by one (same as calling moveCursor(-1))
+            const ByteBuffer& prev() const;
         };
     }  // namespace data
 }  // namespace cerberus

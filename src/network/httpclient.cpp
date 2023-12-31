@@ -1,7 +1,5 @@
 #include "httpclient.h"
 
-#include <regex>
-
 #include "src/cerberus.h"
 #include "src/core/cerberusutils.h"
 
@@ -25,7 +23,7 @@ HTTPClient::DictResult HTTPClient::getDictFromHeader(const data::ByteBuffer &hea
 
         if (str.empty())
         {
-            return {header.end() ? OR_OK : OR_Failure, ret};
+            return {header.isEnd() ? OR_OK : OR_Failure, ret};
         }
 
         auto p = str.find(": ");
@@ -88,7 +86,7 @@ void HTTPClient::decodeChunkedData(data::ByteBuffer &data)
             break;
         }
 
-        tmp.append(data.subBuffer_seek(size));
+        tmp.append(data.read(size));
         data.seek(data.pos() + 2);
     }
 

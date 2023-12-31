@@ -5,7 +5,11 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "src/cerberus.h"
+
 using namespace cerberus::core;
+
+std::regex CerberusUtils::isNumberRegex("\\-?[0-9]+(?:\\.[0-9]+)?", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
 
 //=============================================================================
 std::string CerberusUtils::strPrint(std::string format, ...)
@@ -77,10 +81,14 @@ void CerberusUtils::removeBlank(std::string& str)
 //=============================================================================
 bool CerberusUtils::contains(const std::string& str1, const std::string& str2)
 {
-    if (str1.find(str2) == std::string::npos)
-    {
-        return false;
-    }
+    if (str1.find(str2) == std::string::npos) return false;
+
+    return true;
+}
+//=============================================================================
+bool CerberusUtils::contains(const std::string& str1, char c)
+{
+    if (str1.find(c) == std::string::npos) return false;
 
     return true;
 }
@@ -167,6 +175,10 @@ bool CerberusUtils::isAlpha(const std::string& str)
     return false;
 }
 //=============================================================================
+bool CerberusUtils::isNumber(const std::string& str) { return std::regex_match(str, isNumberRegex); }
+//=============================================================================
+bool CerberusUtils::isBool(const std::string& str, WordMatch match) { return (CerberusUtils::areEqual(str, "true", match) || CerberusUtils::areEqual(str, "false", match)); }
+//=============================================================================
 bool CerberusUtils::startsWith(const std::string& str1, const std::string& str2)
 {
     if (str2.size() > str1.size()) return false;
@@ -222,8 +234,10 @@ void CerberusUtils::replaceAll(std::string& str, const std::string& find, const 
     }
 }
 //=============================================================================
-void CerberusUtils::normalize(std::string& str)
+bool CerberusUtils::normalize(std::string& str)
 {
+    bool ret = false;
+
     core::CerberusUtils::replaceAll(str, "\r", "\\r");
     core::CerberusUtils::replaceAll(str, "\n", "\\n\n");
 
@@ -231,9 +245,12 @@ void CerberusUtils::normalize(std::string& str)
     {
         if ((el < 32 || el > 126) && el != '\n' && el != 0)
         {
-            el = '#';
+            el  = '#';
+            ret = true;
         }
     }
+
+    return ret;
 }
 //=============================================================================
 std::string CerberusUtils::truncStr(const std::string& str, SIZE size)
@@ -265,4 +282,57 @@ std::string CerberusUtils::substrFrom(const std::string& str, const std::string&
 }
 //=============================================================================
 cerberus::DoubleString CerberusUtils::split(const std::string& str, const std::string& token) { return {substrUntil(str, token), substrFrom(str, token)}; }
+//=============================================================================
+cerberus::OperationResult CerberusUtils::cleanNumber(std::string& str)
+{
+    if (!isNumber(str)) return {OR_WrongArgument, strPrint("Given %s is not a number", str.c_str())};
+
+    bool negative = false;
+
+    if (startsWith(str, '-'))
+    {
+        // negative number
+        str.erase(0, 1);
+        negative = true;
+    }
+
+    bool isFloating = contains(str, '.');
+
+    if (isFloating)
+    {
+        // remove leading zeros
+
+        auto pos = str.find_first_not_of('0');  // cannot be npos
+
+        if (pos != 0)
+        {
+            if (str[pos] == '.' && str[pos - 1] == '0') pos--;
+
+            str = str.substr(pos);
+        }
+
+        // remove trailing zeros
+
+        pos = str.find_last_not_of('0');  // cannot be npos
+
+        if (str[pos] == '.')
+            str = str.substr(0, pos);  // remove also the dot
+        else
+            str = str.substr(0, pos + 1);
+    }
+    else
+    {
+        // remove leading zeros
+        auto pos = str.find_first_not_of('0');
+
+        if (pos == std::string::npos)
+            str = '0';
+        else
+            str = str.substr(pos);
+    }
+
+    if (negative && !areEqual(str, "0") && !areEqual(str, "0.0")) str.insert(str.begin(), '-');
+
+    return OR_OK;
+}
 //=============================================================================

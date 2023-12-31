@@ -9,6 +9,8 @@
  *  This class contains static methods only
  */
 
+#include <regex>
+
 #include "../Cerberus_global.h"
 #include "../types.h"
 
@@ -21,6 +23,8 @@ namespace cerberus
             CerberusUtils()                           = delete;
             CerberusUtils(const CerberusUtils& other) = delete;
 
+            static std::regex isNumberRegex;
+
            public:
             // Print formatted content on a std::string which is returned
             static std::string strPrint(std::string format, ...);
@@ -31,18 +35,21 @@ namespace cerberus
             // Return the upper case version of str
             static std::string toUpper(const std::string& str);
 
-            // Remove spaces before str and return the result.
+            // Remove spaces or TABs before str and return the result.
             static std::string removeBlankBefore(const std::string& str);
 
-            // Remove spaces after str and return the result.
+            // Remove spaces or TABs after str and return the result.
             static std::string removeBlankAfter(const std::string& str);
 
-            // Remove spaces before and after str. Spaces between characters will remain
+            // Remove spaces or TABs before and after str. Spaces between characters will remain
             static std::string removeBlank_copy(const std::string& str);
             static void removeBlank(std::string& str);
 
             // Check if str1 contains str2 and return true if it does
             static bool contains(const std::string& str1, const std::string& str2);
+
+            // Check if str1 contains c and return true if it does
+            static bool contains(const std::string& str1, char c);
 
             // Return true when given strings are equal (default = case sensitive)
             static bool areEqual(const std::string& str1, const std::string& str2, WordMatch match = WM_CaseSensitive);
@@ -58,6 +65,14 @@ namespace cerberus
 
             // Tell if the string contains at least one alphabet character [a-z][A-Z]
             static bool isAlpha(const std::string& str);
+
+            // Tell if the string is a number (floating point or integer).
+            // The string must contain the number only for this method to return true
+            static bool isNumber(const std::string& str);
+
+            // Tell if the string is a boolean.
+            // The string must contain true or false
+            static bool isBool(const std::string& str, WordMatch match = WM_CaseInsensitive);
 
             // Check if str1 starts with str2 string
             static bool startsWith(const std::string& str1, const std::string& str2);
@@ -78,7 +93,8 @@ namespace cerberus
             // and will be printable on a terminal or a text file safely.
             // line-terminating characters are replaced with \n or \r\n
             // other non-textual characters are replaced with #
-            static void normalize(std::string& str);
+            // If some non-textual character is found, this method returns true
+            static bool normalize(std::string& str);
 
             // Truncate the given string making it long at most size chars.
             // If size is bigger than (or equal to) the str size, the str string is returned
@@ -96,6 +112,12 @@ namespace cerberus
             // If token was not found, all str will be placed in the left string returned, and the
             // right string will be empty
             static DoubleString split(const std::string& str, const std::string& token);
+
+            // Clean the number contained inside str (floating or decimal) removing
+            // trailing or leading zeros (without altering the value of course).
+            // The method also removes the dot if the decimal part is null.
+            // This method fails if the supplied string is not a number
+            static OperationResult cleanNumber(std::string& str);
         };
     }  // namespace core
 }  // namespace cerberus
