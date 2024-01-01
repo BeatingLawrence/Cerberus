@@ -74,25 +74,3 @@ TEST(jsonDataTest, search)
     EXPECT_TRUE(found->generate(bb).ok(true));
     logInfo("GENERATED JSON:\n%s", bb.toString().c_str());
 }
-
-TEST(jsonDataTest, search2)
-{
-    JsonData data;
-    filesystem::File f("../../jsontestlong.json");
-    ASSERT_TRUE(f.open().ok(true));
-    ASSERT_TRUE(data.parse(f).ok(true));
-    auto found = data.deepSearch("result");
-
-    ASSERT_NE(found, nullptr);
-    ASSERT_TRUE(found->isArray());
-
-    auto& element = found->get();
-
-    std::string s;
-    element.toStr(s);
-    logInfo("JSON DATA: %s", s.c_str());
-    //
-    ByteBuffer bb;
-    EXPECT_TRUE(element.generate(bb).ok(true));
-    logInfo("GENERATED JSON:\n%s", bb.toString().c_str());
-}
