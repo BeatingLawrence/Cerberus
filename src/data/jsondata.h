@@ -15,42 +15,50 @@ namespace cerberus
         {
             enum ParseMode
             {
-                None = 0,
+                Unspecified = 0,
                 ParsingObject,
                 ParsingArray,
             };
 
-            std::string m_text;
+            enum Integrity
+            {
+                None,
+                Degraded,
+                GoodArray,
+                GoodObject,
+            };
+
+            std::string m_name, m_value;
 
             std::vector<JsonData> m_elements;
 
             JsonDataType m_type;
 
-            OperationResult _parse(const ByteBuffer& buffer, ParseMode mode = None);
+            OperationResult _parse(const ByteBuffer& buffer, ParseMode mode = Unspecified);
 
             void _generate(ByteBuffer& buffer);
 
-            void _getType();
-
-            void update();
-
-            std::string toText();
+            Integrity checkIntegrity() const;
 
            public:
-            // Construct a null JsonData
             JsonData();
 
-            // Construct a non-null JsonData (pure)
-            JsonData(const std::string& value);
-            JsonData(const char* value);
-            JsonData(long double value);
-            JsonData(float value);
-            JsonData(bool value);
+            // Construct a null JsonData
+            JsonData(const std::string& name);
 
-            // Construct a non-null JsonData (nested)
+            // Construct a string JsonData
+            JsonData(const std::string& name, const std::string& value);
+            JsonData(const std::string& name, const char* value);
 
-            JsonData(const std::string& value, const JsonData& data);
-            JsonData(const char* value, const JsonData& data);
+            // Construct a number JsonData
+            JsonData(const std::string& name, long double value);
+            JsonData(const std::string& name, float value);
+
+            // Construct a boolean JsonData
+            JsonData(const std::string& name, bool value);
+
+            // Construct a nested JsonData
+            JsonData(const std::string& name, const JsonData& data);
 
             // Iterators
             Iterator<JsonData> begin();
@@ -59,10 +67,12 @@ namespace cerberus
             ConstIterator<JsonData> end() const;
 
             // Get an element of the object.
-            // Use this method with index = 0 to get the value
-            // if the instance is not an array or a JSON object.
             // If index is out of bounds, an exception will be thrown
             JsonData& get(SIZE index = 0);
+
+            // Same as calling get(0).
+            // This method returns the first value.
+            JsonData& value();
 
             // Search an element of the object.
             // If no item is found, nullptr will be returned
@@ -75,57 +85,76 @@ namespace cerberus
             JsonData* deepSearch(const std::string& name);
 
             // Get the type of the object
-            JsonDataType type();
+            JsonDataType type() const;
 
             // Check if the object contains no value or null
-            bool isNull();
+            bool isNull() const;
 
             // Check if the object is an array
-            bool isArray();
+            bool isArray() const;
 
             // Check if the object is JSON object
-            bool isObject();
+            bool isObject() const;
 
             // Get the number of elements contained.
-            // If the object is a single value, this method will return 0.
+            // If the object is a single value, this method will return 1.
             // If the object is an array or a JSON object, this method
             // will return the number of elements contained
-            SIZE size();
+            SIZE size() const;
+
+            // Check if size() == 0
+            bool empty() const;
+
+            // Recursively check if the data contained inside the instance is good
+            bool check() const;
+
+            // Recursively check if the data contained inside the instance is good
+            // Also try to set correct types (only for array and object) if possible
+            OperationResult checkFix();
 
             // Convert the object to a numeric value
-            OperationResult toNumber();
+            OperationResult toNumber() const;
 
             // Convert the object to a string value
             // Initial and final " will be removed
-            OperationResult toString();
+            OperationResult toString() const;
 
             // Convert the object to a numeric value (true, false)
-            OperationResult toBool();
+            OperationResult toBool() const;
+
+            // Set the name of the object
+            JsonData& setName(const std::string& name);
 
             // Set the value of the object, discarding the previous one
-            void set(const std::string& value);
-            void setDouble(long double value);
-            void setBool(bool value);
+            JsonData& setString(const std::string& value);
+            JsonData& setNumber(long double value);
+            JsonData& setBoolean(bool value);
 
-            JsonData& setType(JsonDataType type);
+            // Add an object to this object.
+            JsonData& add(const JsonData& object);
 
-            // Add a value to the object.
-            // A reference to this object is returned to allow method chaining
-            JsonData& add(const JsonData& value);
+            // Add an unnamed value to the object.
+            // This methods may change the type
+            JsonData& add(const std::string& value);
+            JsonData& add(const char* value);
+            JsonData& add(const long double value);
+            JsonData& add(const float value);
+            JsonData& add(const bool value);
+
+            // Remove all the nested object only
+            JsonData& clear();
 
             // parser section
-
             OperationResult parse(const ByteBuffer& buffer);
 
             OperationResult parse(const filesystem::File& file);
 
             // generator section
-
             OperationResult generate(ByteBuffer& buffer);
 
             OperationResult generate(filesystem::File& file);
 
-            void toStr(std::string& str, uint8_t level = 0);
+            void toStr(std::string& str, uint8_t level = 0) const;
         };
     }  // namespace data
 }  // namespace cerberus

@@ -131,6 +131,22 @@ ByteBuffer::ByteBuffer(const char* str)
     }
 }
 //=============================================================================
+ByteBuffer::ByteBuffer(const std::string& str)
+    : m_bytes(nullptr),
+      m_size(0),
+      m_pos(0)
+{
+    if (str.empty()) return;
+
+    SIZE s  = str.size();
+    m_bytes = (BYTE*)malloc(s);
+    if (m_bytes)
+    {
+        memmove(m_bytes, str.data(), s);
+        m_size = s;
+    }
+}
+//=============================================================================
 ByteBuffer::~ByteBuffer() { _clear(); }
 //=============================================================================
 ConstIterator<BYTE> ByteBuffer::begin() const

@@ -8,13 +8,11 @@ TEST(jsonDataTest, create_generate)
 {
     JsonData root;
 
-    root.setType(cerberus::JDT_Object);
-    root.add(JsonData("test_string").add("This is a test string!"));
-    root.add(JsonData("bool_flag").add(true));
-    root.add(JsonData("number_value").add(0.2122f));
+    root.add(JsonData("test_string", "This is a test string!"));
+    root.add(JsonData("bool_flag", true));
+    root.add(JsonData("number_value", 0.2122f));
 
     JsonData days("days_of_week");
-    days.setType(cerberus::JDT_Array);
     days.add("Sunday");
     days.add("Monday");
     days.add("Tuesday");
@@ -74,5 +72,27 @@ TEST(jsonDataTest, search)
     //
     ByteBuffer bb;
     EXPECT_TRUE(found->generate(bb).ok(true));
+    logInfo("GENERATED JSON:\n%s", bb.toString().c_str());
+}
+
+TEST(jsonDataTest, search2)
+{
+    JsonData data;
+    filesystem::File f("../../jsontestlong.json");
+    ASSERT_TRUE(f.open().ok(true));
+    ASSERT_TRUE(data.parse(f).ok(true));
+    auto found = data.deepSearch("result");
+
+    ASSERT_NE(found, nullptr);
+    ASSERT_TRUE(found->isArray());
+
+    auto& element = found->get();
+
+    std::string s;
+    element.toStr(s);
+    logInfo("JSON DATA: %s", s.c_str());
+    //
+    ByteBuffer bb;
+    EXPECT_TRUE(element.generate(bb).ok(true));
     logInfo("GENERATED JSON:\n%s", bb.toString().c_str());
 }

@@ -46,6 +46,9 @@ namespace cerberus
             // Construct a ByteBuffer from a c-string. The string must end with a \0, that will NOT be copied
             ByteBuffer(const char* str);
 
+            // Construct a ByteBuffer from an std::string
+            ByteBuffer(const std::string& str);
+
             // Destroy the ByteBuffer instance and deallocate the memory ONLY if not used by another ByteBuffer
             virtual ~ByteBuffer();
 
