@@ -14,76 +14,68 @@ namespace cerberus
     typedef uint8_t BYTE;
     typedef int64_t OFFSET;
 
-    class BBIterator
+    template <class T>
+    class Iterator
     {
-        BYTE* p;
+        T* p;
 
        public:
-        BBIterator(BYTE* x)
+        Iterator(T* x)
             : p(x)
         {
         }
 
-        BBIterator(const BBIterator& it)
-            : p(it.p)
-        {
-        }
-
         // Prefix increment
-        BBIterator& operator++()
+        Iterator& operator++()
         {
             p++;
             return *this;
         }
 
         // Postfix increment
-        BBIterator operator++(int)
+        Iterator operator++(int)
         {
-            BBIterator tmp = *this;
+            Iterator tmp = *this;
             ++(*this);
             return tmp;
         }
 
-        friend bool operator==(const BBIterator& a, const BBIterator& b) { return a.p == b.p; };
-        friend bool operator!=(const BBIterator& a, const BBIterator& b) { return a.p != b.p; };
-        BYTE& operator*() const { return *p; }
-        BYTE* operator->() { return p; };
+        friend bool operator==(const Iterator& a, const Iterator& b) { return a.p == b.p; };
+        friend bool operator!=(const Iterator& a, const Iterator& b) { return a.p != b.p; };
+        T& operator*() const { return *p; }
+        T* operator->() { return p; };
     };
 
-    class ConstBBIterator
+    template <class T>
+    class ConstIterator
     {
-        const BYTE* p;
+        const T* p;
 
        public:
-        ConstBBIterator(const BYTE* x)
+        ConstIterator(const T* x)
             : p(x)
         {
         }
 
-        ConstBBIterator(const ConstBBIterator& it)
-            : p(it.p)
-        {
-        }
-
         // Prefix increment
-        ConstBBIterator& operator++()
+        ConstIterator& operator++()
         {
             p++;
             return *this;
         }
 
         // Postfix increment
-        ConstBBIterator operator++(int)
+        ConstIterator operator++(int)
         {
-            ConstBBIterator tmp = *this;
+            ConstIterator tmp = *this;
             ++(*this);
             return tmp;
         }
 
-        friend bool operator==(const ConstBBIterator& a, const ConstBBIterator& b) { return a.p == b.p; };
-        friend bool operator!=(const ConstBBIterator& a, const ConstBBIterator& b) { return a.p != b.p; };
-        const BYTE& operator*() const { return *p; }
-        const BYTE* operator->() { return p; };
+        friend bool operator==(const ConstIterator& a, const ConstIterator& b) { return a.p == b.p; };
+        friend bool operator!=(const ConstIterator& a, const ConstIterator& b) { return a.p != b.p; };
+        const T& operator*() const { return *p; }
+        const T* operator->() { return p; };
     };
 
     typedef void (*timerCallback)();

@@ -133,25 +133,25 @@ ByteBuffer::ByteBuffer(const char* str)
 //=============================================================================
 ByteBuffer::~ByteBuffer() { _clear(); }
 //=============================================================================
-ConstBBIterator ByteBuffer::begin() const
+ConstIterator<BYTE> ByteBuffer::begin() const
 {
     if (isEmpty()) return nullptr;
     return &getat(0);
 }
 //=============================================================================
-ConstBBIterator ByteBuffer::end() const
+ConstIterator<BYTE> ByteBuffer::end() const
 {
     if (isEmpty()) return nullptr;
     return &getat(m_size);
 }
 //=============================================================================
-BBIterator ByteBuffer::begin()
+Iterator<BYTE> ByteBuffer::begin()
 {
     if (isEmpty()) return nullptr;
     return &getat(0);
 }
 //=============================================================================
-BBIterator ByteBuffer::end()
+Iterator<BYTE> ByteBuffer::end()
 {
     if (isEmpty()) return nullptr;
     return &getat(m_size);

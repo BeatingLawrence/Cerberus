@@ -50,10 +50,10 @@ namespace cerberus
             virtual ~ByteBuffer();
 
             // Iterator implementation
-            ConstBBIterator begin() const;
-            ConstBBIterator end() const;
-            BBIterator begin();
-            BBIterator end();
+            ConstIterator<BYTE> begin() const;
+            ConstIterator<BYTE> end() const;
+            Iterator<BYTE> begin();
+            Iterator<BYTE> end();
 
             // Obtain the main pointer of the buffer.
             BYTE* data();

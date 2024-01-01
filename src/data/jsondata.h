@@ -34,6 +34,8 @@ namespace cerberus
 
             void update();
 
+            std::string toText();
+
            public:
             // Construct a null JsonData
             JsonData();
@@ -50,6 +52,12 @@ namespace cerberus
             JsonData(const std::string& value, const JsonData& data);
             JsonData(const char* value, const JsonData& data);
 
+            // Iterators
+            Iterator<JsonData> begin();
+            Iterator<JsonData> end();
+            ConstIterator<JsonData> begin() const;
+            ConstIterator<JsonData> end() const;
+
             // Get an element of the object.
             // Use this method with index = 0 to get the value
             // if the instance is not an array or a JSON object.
@@ -59,6 +67,12 @@ namespace cerberus
             // Search an element of the object.
             // If no item is found, nullptr will be returned
             JsonData* search(const std::string& name);
+
+            // Search an element in this object and all its children recursively.
+            // If no item is found, nullptr will be returned.
+            // NOTE: this method will return the only the first occurrence even if
+            // there are more than one
+            JsonData* deepSearch(const std::string& name);
 
             // Get the type of the object
             JsonDataType type();

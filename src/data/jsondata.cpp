@@ -133,15 +133,15 @@ void JsonData::_generate(ByteBuffer &buffer)
 {
     update();
 
-    if (!m_text.empty()) buffer += CerberusUtils::strPrint(m_elements.empty() ? "%s" : "%s: ", m_text.c_str()).c_str();
+    buffer += toText().c_str();
 
     switch (m_type)
     {
         case JDT_Array:
-            buffer += "[";
+            buffer += '[';
             break;
         case JDT_Object:
-            buffer += "{";
+            buffer += '{';
             break;
         default:
             break;
@@ -170,10 +170,33 @@ void JsonData::_generate(ByteBuffer &buffer)
 //=============================================================================
 void JsonData::update()
 {
-    if (m_type == JDT_Null) m_text = "null";
-
     if (m_type != JDT_Object && m_type != JDT_Array && m_type != JDT_String) m_elements.clear();
 }
+//=============================================================================
+std::string JsonData::toText()
+{
+    if (m_type == JDT_Null) return "null";
+
+    if (m_text.empty()) return "";
+
+    std::string ret;
+
+    switch (m_type)
+    {
+        case JDT_Array:
+        case JDT_Object:
+        case JDT_String:
+            ret = CerberusUtils::strPrint("\"%s\"", m_text.c_str());
+            break;
+        default:
+            return CerberusUtils::strPrint("%s", m_text.c_str());
+    }
+
+    if (!m_elements.empty()) ret.append(": ");
+
+    return ret;
+}
+
 //=============================================================================
 JsonData::JsonData()
     : m_text(),
@@ -236,6 +259,30 @@ JsonData::JsonData(const char *value, const JsonData &data)
 {
 }
 //=============================================================================
+cerberus::Iterator<JsonData> JsonData::begin()
+{
+    if (m_elements.empty()) return nullptr;
+    return &m_elements.front();
+}
+//=============================================================================
+cerberus::Iterator<JsonData> JsonData::end()
+{
+    if (m_elements.empty()) return nullptr;
+    return ((&m_elements.back()) + 1);
+}
+//=============================================================================
+cerberus::ConstIterator<JsonData> JsonData::begin() const
+{
+    if (m_elements.empty()) return nullptr;
+    return &m_elements.front();
+}
+//=============================================================================
+cerberus::ConstIterator<JsonData> JsonData::end() const
+{
+    if (m_elements.empty()) return nullptr;
+    return ((&m_elements.back()) + 1);
+}
+//=============================================================================
 JsonData &JsonData::get(SIZE index)
 {
     if (index >= size()) throw cerberusIllegalArgExc("index out of bounds");
@@ -246,6 +293,20 @@ JsonData *JsonData::search(const std::string &name)
 {
     for (auto &el : m_elements)
         if (core::CerberusUtils::areEqual(el.m_text, name)) return &el;
+
+    return nullptr;
+}
+//=============================================================================
+JsonData *JsonData::deepSearch(const std::string &name)
+{
+    JsonData *found = search(name);
+    if (found) return found;
+
+    for (auto &el : m_elements)
+    {
+        found = el.deepSearch(name);
+        if (found) return found;
+    }
 
     return nullptr;
 }
@@ -271,7 +332,7 @@ cerberus::OperationResult JsonData::toString()
 {
     if (m_type != JDT_String) return OR_Unavailable;
 
-    return m_text.substr(1, m_text.size() - 2);
+    return m_text;
 }
 //=============================================================================
 cerberus::OperationResult JsonData::toBool()
@@ -298,7 +359,7 @@ void JsonData::set(const std::string &value)
 {
     m_elements.clear();
 
-    m_text = CerberusUtils::strPrint("\"%s\"", value.c_str());
+    m_text = value;
 
     m_type = JDT_String;
 }
