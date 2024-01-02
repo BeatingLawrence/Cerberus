@@ -19,7 +19,29 @@ TEST(cerberusTest, environmentVariable)
     logInfo(core::CerberusUtils::environmentVariable("APPDATA").str.c_str());  // works only on windows
 }
 
-TEST(cerberusTest, cerberusVersion) { logInfo(Cerberus::cerberusVersion()); }
+TEST(cerberusTest, cerberusVersion)
+{
+    auto v = Cerberus::cerberusVersion();
+    logInfo("Version test:");
+    logInfo("%s", v.text.c_str());
+
+    const char* t = "";
+
+    switch (v.type)
+    {
+        case CerbVersion::Alpha:
+            t = "ALPHA";
+            break;
+        case CerbVersion::Beta:
+            t = "BETA";
+            break;
+        case CerbVersion::Release:
+            t = "RELEASE";
+            break;
+    }
+
+    logInfo("Components: %u %u %u %s", v.major, v.minor, v.patch, t);
+}
 
 TEST(cerberusTest, hostTest)
 {

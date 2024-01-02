@@ -101,6 +101,22 @@ namespace cerberus
         bool isValid() { return func != nullptr; };
     };
 
+    struct CerbVersion
+    {
+        enum VersionType
+        {
+            Alpha,
+            Beta,
+            Release,
+        };
+
+        uint16_t major;
+        uint16_t minor;
+        uint16_t patch;
+        VersionType type;
+        std::string text;
+    };
+
     enum WordMatch
     {
         WM_CaseSensitive,

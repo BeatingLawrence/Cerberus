@@ -136,7 +136,7 @@ namespace cerberus
         static CerberusInitParms cerberusDefaultParms();
 
         // Return the version of the cerberus framework
-        static std::string cerberusVersion();
+        static CerbVersion cerberusVersion();
 
         // Log method
         static void log(const std::string& str, LogLevel logLevel = LL_Info, const std::string& author = std::string(), bool application = true);

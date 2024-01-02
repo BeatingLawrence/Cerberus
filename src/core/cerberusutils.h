@@ -101,16 +101,19 @@ namespace cerberus
             static std::string truncStr(const std::string& str, SIZE size);
 
             // Return a substring of str that starts at pos 0 and ends at token pos (token excluded)
-            // If token was not found, the returned string will be equal to the str parameter
+            // If token was not found, the returned string will be equal to the str parameter.
+            // The token is searched from the start of the string
             static std::string substrUntil(const std::string& str, const std::string& token);
 
             // Return a substring of str that starts at token pos (token excluded) and ends at str end.
-            // If toke was not found, the returned string will be empty
+            // If token was not found, the returned string will be empty.
+            // The token is searched from the start of the string
             static std::string substrFrom(const std::string& str, const std::string& token);
 
             // Splits the given str in two pieces at the given token (that is excluded from both).
             // If token was not found, all str will be placed in the left string returned, and the
-            // right string will be empty
+            // right string will be empty.
+            // The token is searched from the start of the string
             static DoubleString split(const std::string& str, const std::string& token);
 
             // Clean the number contained inside str (floating or decimal) removing

@@ -28,7 +28,7 @@ class DatabaseTest : public ::testing::Test
 
 TEST_F(DatabaseTest, connection)
 {
-    return;
+    GTEST_SKIP();
     if (db->isFailed())
     {
         // logInfo(db->failureReason());
@@ -38,7 +38,7 @@ TEST_F(DatabaseTest, connection)
 
 TEST_F(DatabaseTest, createTable)
 {
-    return;
+    GTEST_SKIP();
     if (db->isFailed())
     {
         // logInfo(db->failureReason());
@@ -56,7 +56,7 @@ TEST_F(DatabaseTest, createTable)
 
 TEST_F(DatabaseTest, insertInto)
 {
-    return;
+    GTEST_SKIP();
     if (db->isFailed())
     {
         // logInfo(db->failureReason());
@@ -100,7 +100,7 @@ TEST_F(DatabaseTest, insertInto)
 
 TEST_F(DatabaseTest, queryResult)
 {
-    return;
+    GTEST_SKIP();
     if (db->isFailed())
     {
         // logInfo("test started with a failed database: ", db->failureReason().c_str());
@@ -139,7 +139,7 @@ TEST_F(DatabaseTest, queryResult)
 
 TEST_F(DatabaseTest, dropTable)
 {
-    return;
+    GTEST_SKIP();
     if (db->isFailed())
     {
         // logInfo(db->failureReason());

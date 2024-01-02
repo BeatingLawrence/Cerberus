@@ -17,6 +17,10 @@
 
 #define CANNOT_USE "cannot use the framework before the init() call"
 
+#if ((CERBERUS_VERSION_TWEAK != 0) && (CERBERUS_VERSION_TWEAK != 1) && (CERBERUS_VERSION_TWEAK != 99))
+#error "WRONG VERSION TYPE"
+#endif
+
 using namespace cerberus;
 using namespace cerberus::core;
 
@@ -263,7 +267,43 @@ CerberusInitParms Cerberus::cerberusDefaultParms()
     return toReturn;
 }
 //=============================================================================
-std::string Cerberus::cerberusVersion() { return CERBERUS_VERSION; }
+CerbVersion Cerberus::cerberusVersion()
+{
+    CerbVersion ret;
+    std::string ver = CERBERUS_VERSION;
+    std::string typ;
+
+    auto splitted = CerberusUtils::split(ver, ".");
+    ret.major     = CerberusUtils::stringToInt(splitted.left);
+    splitted      = CerberusUtils::split(splitted.right, ".");
+    ret.minor     = CerberusUtils::stringToInt(splitted.left);
+    splitted      = CerberusUtils::split(splitted.right, ".");
+    ret.patch     = CerberusUtils::stringToInt(splitted.left);
+
+    switch (CerberusUtils::stringToInt(splitted.right))
+    {
+        case 0:
+            ret.type = CerbVersion::Alpha;
+            typ      = "a";
+            break;
+
+        case 1:
+            ret.type = CerbVersion::Beta;
+            typ      = "b";
+            break;
+
+        case 99:
+            ret.type = CerbVersion::Release;
+            break;
+
+        default:
+            throw cerberusImplMissExc("Version type mismatch");
+    }
+
+    ret.text = CerberusUtils::strPrint("%u.%u.%u%s", ret.major, ret.minor, ret.patch, typ.c_str());
+
+    return ret;
+}
 //=============================================================================
 void Cerberus::log(const std::string &str, LogLevel logLevel, const std::string &author, bool application) { Cerberus::singularCerbData.getLog()->log(str, logLevel, author, application); }
 //=============================================================================

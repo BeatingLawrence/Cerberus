@@ -12,6 +12,9 @@ int main(int argc, char* argv[])
     cerberus::Cerberus::init(parms);
     // cerberus::core::LibLoader::fastload("libtestobject.dylib");
     //   start testing
+    logInfo("=================================");
+    logInfo("  START TESTING CERBERUS %s", cerberus::Cerberus::cerberusVersion().text.c_str());
+    logInfo("=================================");
     ::testing::InitGoogleTest(&argc, argv);
     int ret = RUN_ALL_TESTS();
     cerberus::Cerberus::deinit();

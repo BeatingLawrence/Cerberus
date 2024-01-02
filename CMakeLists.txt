@@ -1,6 +1,28 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(Cerberus LANGUAGES CXX VERSION 0.9.0)
+#[[ Cerberus versioning system:
+
+    MAJOR.MINOR.PATCH.TYPE
+
+    MAJOR:  Substantial breaking changes
+    MINOR:  Substantial non-breaking changes
+    PATCH:  Bug fixes, optimization changes
+    TYPE:   Version type. This number is mapped to the
+            following values when the Cerberus::cerberusVersion()
+            function is called:
+            0:  Alpha
+            1:  Beta
+            99: Release
+            Using a different number will cause a build failure
+
+            Code cleaning must not change the version in any of its numbers
+
+                                        Version
+                                          ||
+#]]#                                      V
+
+project(Cerberus LANGUAGES CXX VERSION 2.0.0.1)
+message(STATUS ${CMAKE_PROJECT_VERSION})
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 17)
@@ -12,6 +34,8 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX "../Dist" CACHE PATH "..." FORCE)
 endif()
 
+# =======================Cerberus library=========================
+
 file(GLOB_RECURSE src_files CONFIGURE_DEPENDS
     "src/*.cpp"
 )
@@ -20,31 +44,34 @@ file(GLOB_RECURSE header_files CONFIGURE_DEPENDS
     "src/*.h"
 )
 
-file(GLOB_RECURSE test_files CONFIGURE_DEPENDS
-    "test/*"
-)
-
 add_library(Cerberus SHARED
   ${src_files}
   ${header_files}
+)
+
+set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
+
+target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY PRIVATE _CRT_SECURE_NO_WARNINGS PRIVATE CERBERUS_VERSION="${CMAKE_PROJECT_VERSION}")
+target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY PRIVATE _CRT_SECURE_NO_WARNINGS PRIVATE CERBERUS_VERSION_TWEAK=${CMAKE_PROJECT_VERSION_TWEAK})
+
+install(TARGETS Cerberus DESTINATION lib)
+install(DIRECTORY src/ DESTINATION include/cerberus FILES_MATCHING PATTERN "*.h")
+
+# =======================test executable==========================
+
+file(GLOB_RECURSE test_files CONFIGURE_DEPENDS
+    "test/*"
 )
 
 add_executable(test EXCLUDE_FROM_ALL
   ${test_files}
 )
 
-set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
-
-target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY PRIVATE _CRT_SECURE_NO_WARNINGS PRIVATE CERBERUS_VERSION="${CMAKE_PROJECT_VERSION}")
-
-message(STATUS ${CMAKE_PROJECT_VERSION})
-
-install(TARGETS Cerberus DESTINATION lib)
-install(DIRECTORY src/ DESTINATION include/cerberus FILES_MATCHING PATTERN "*.h")
-
 target_include_directories(test PUBLIC
     "../Dist/include"
 )
+
+# ================================================================
 
 if(MSVC)
 
@@ -59,10 +86,6 @@ if(MSVC)
     target_include_directories(test PUBLIC
         "./gtest/include"
     )
-
-    if(NOT EXISTS "../Dist/lib/libCerberus-d.lib")
-        message(STATUS "Cerberus debug library NOT found!")
-    endif()
 
     find_library(GTEST_LIBRARY NAMES gtest PATHS "./gtest/lib" PATH_SUFFIXES lib)
     find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "./gtest/lib" PATH_SUFFIXES lib)
@@ -90,28 +113,21 @@ elseif(UNIX)
 
     target_include_directories(Cerberus PUBLIC
         "/usr/include"
+        "/opt/homebrew/include"
     )
 
     target_include_directories(test PUBLIC
         "/usr/include"
     )
 
-    if(NOT EXISTS "../Dist/lib/libCerberus-d.so")
-        message(STATUS "Cerberus debug library NOT found!")
-    endif()
-
     find_library(GTEST_LIBRARY NAMES gtest PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
     find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
 
     #OPEN-SSL
-
-    target_include_directories(Cerberus PUBLIC "/opt/homebrew/include")
     target_link_directories(Cerberus PUBLIC "/opt/homebrew/lib")
 
     target_link_libraries(Cerberus LINK_PUBLIC ssl)
     target_link_libraries(Cerberus LINK_PUBLIC crypto)
-    #target_link_libraries(test LINK_PUBLIC ssl)
-    #target_link_libraries(test LINK_PUBLIC crypto)
 
 endif()
 
