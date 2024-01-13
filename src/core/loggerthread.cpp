@@ -16,6 +16,7 @@ int LoggerThread::tick()
     {
         m_failed.test_and_set();
         discardMessageQueue();
+        m_logFile.close();
     }
 
     return 0;
@@ -25,10 +26,14 @@ void LoggerThread::warmUp() {}
 //=============================================================================
 void LoggerThread::coolDown()
 {
-    m_logFile.writeLine("---LOG-END---");
-    m_logFile.close();
-    m_failed.test_and_set();  // prevent logger file usage
-    logInfo("Closing log file");
+    if (!m_failed.test())
+    {
+        logInfo("Closing Log file");
+        m_logFile.writeLine("---LOG-END---");
+        m_logFile.close();
+    }
+
+    logInfo("Stopping Logger Thread");
 }
 //=============================================================================
 LoggerThread::LoggerThread()
@@ -52,7 +57,7 @@ void LoggerThread::open()
 {
     if (m_logFile.open().ok())
     {
-        logInfo("LogFile open succeeded");
+        logInfo("LogFile ready");
         m_failed.clear();
     }
     else

@@ -70,8 +70,9 @@ namespace cerberus
 
                 OperationResult syncFile();  // rewrites the file reading from memory
 
-               public:
                 void printDebug();
+
+               public:
                 // Construct an IniDataFile object with a file name
                 IniDataFile(const std::string& fileName = std::string(""));
 

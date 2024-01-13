@@ -78,18 +78,14 @@ TEST(iniDataFileTest, modifySections)
 {
     cerberus::data::filesystem::IniDataFile file("temp.ini");
     EXPECT_TRUE(file.load().ok(true));
-    file.printDebug();
     EXPECT_TRUE(file.read_bool("bool_value", "section 1").expect("Read failure").isTrue());
     EXPECT_TRUE(file.write_bool("bool_value", false, "section 1").ok(true));
-    file.printDebug();
     EXPECT_FALSE(file.read_bool("bool_value", "section 1").expect("Read failure 2").isTrue());
 }
 
 TEST(iniDataFileTest, readSections2)
 {
     cerberus::data::filesystem::IniDataFile file("temp.ini");
-    file.printDebug();
     EXPECT_TRUE(file.load().ok(true));
-    file.printDebug();
     EXPECT_FALSE(file.read_bool("bool_value", "section 1").expect().isTrue());
 }

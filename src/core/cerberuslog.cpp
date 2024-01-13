@@ -271,16 +271,17 @@ void CerberusLog::setup(const CerberusLogSetup& parms)
 //=============================================================================
 void CerberusLog::start()
 {
-    if (m_setupParms.logOnFile)
-    {
-        m_logger = new LoggerThread;
-        m_logger->setup(m_setupParms.logFileName, m_setupParms.logFileMaximumSize);
-        m_logger->start();
-    }
+    if (!m_setupParms.logOnFile) return;
+
+    m_logger = new LoggerThread;
+    m_logger->setup(m_setupParms.logFileName, m_setupParms.logFileMaximumSize);
+    m_logger->start();
 }
 //=============================================================================
 void CerberusLog::stop()
 {
+    if (!m_setupParms.logOnFile) return;
+
     m_logger->join(true);
     delete m_logger;
     m_logger = nullptr;

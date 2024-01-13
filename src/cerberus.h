@@ -41,9 +41,9 @@ namespace cerberus
             : logWorking(false),
               regWorking(false),
               coreWorking(false),
-              core(nullptr),
+              log(nullptr),
               reg(nullptr),
-              log(nullptr){};
+              core(nullptr){};
 
         void constructLog();
         void constructReg();
