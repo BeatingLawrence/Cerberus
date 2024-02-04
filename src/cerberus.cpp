@@ -210,13 +210,13 @@ CerbVersion Cerberus::cerberusVersion()
     std::string typ;
 
     auto splitted = CerberusUtils::split(ver, ".");
-    ret.major     = CerberusUtils::stringToInt(splitted.left);
+    ret.major     = CerberusUtils::stringToInt(splitted.left).i;
     splitted      = CerberusUtils::split(splitted.right, ".");
-    ret.minor     = CerberusUtils::stringToInt(splitted.left);
+    ret.minor     = CerberusUtils::stringToInt(splitted.left).i;
     splitted      = CerberusUtils::split(splitted.right, ".");
-    ret.patch     = CerberusUtils::stringToInt(splitted.left);
+    ret.patch     = CerberusUtils::stringToInt(splitted.left).i;
 
-    switch (CerberusUtils::stringToInt(splitted.right))
+    switch (CerberusUtils::stringToInt(splitted.right).i)
     {
         case 0:
             ret.type = CerbVersion::Alpha;

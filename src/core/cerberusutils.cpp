@@ -134,9 +134,9 @@ cerberus::OperationResult CerberusUtils::environmentVariable(const std::string& 
     return std::string(val);
 }
 //=============================================================================
-long long int CerberusUtils::stringToInt(const std::string& str, Radix r)
+cerberus::OperationResult CerberusUtils::stringToInt(const std::string& str, Radix r)
 {
-    long long int ret = 0;
+    int64_t ret = 0;
 
     try
     {
@@ -144,12 +144,13 @@ long long int CerberusUtils::stringToInt(const std::string& str, Radix r)
     }
     catch (...)
     {
+        return OR_WrongArgument;
     }
 
     return ret;
 }
 //=============================================================================
-long double CerberusUtils::stringToDouble(const std::string& str)
+cerberus::OperationResult CerberusUtils::stringToDouble(const std::string& str)
 {
     long double ret = 0.0f;
 
@@ -159,6 +160,7 @@ long double CerberusUtils::stringToDouble(const std::string& str)
     }
     catch (...)
     {
+        return OR_WrongArgument;
     }
 
     return ret;

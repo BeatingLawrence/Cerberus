@@ -113,8 +113,11 @@ namespace cerberus
             // Also try to set correct types (only for array and object) if possible
             OperationResult checkFix();
 
-            // Convert the object to a numeric value
+            // Convert the object to a numeric value (floating point)
             OperationResult toNumber() const;
+
+            // Convert the object to an integer numeric value
+            OperationResult toIntNumber() const;
 
             // Convert the object to a string value
             // Initial and final " will be removed

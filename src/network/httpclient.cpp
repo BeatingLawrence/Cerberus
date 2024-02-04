@@ -65,7 +65,7 @@ cerberus::OperationResult HTTPClient::getStatus(const data::ByteBuffer &statusLi
         return {OR_Failure, "Unrecognized HTTP version received"};
     }
 
-    response.statusCode = core::CerberusUtils::stringToInt(str.substr(space1 + 1, space2));
+    response.statusCode = core::CerberusUtils::stringToInt(str.substr(space1 + 1, space2)).i;
     response.message    = str.substr(space2 + 1, std::string::npos);
 
     return OR_OK;
@@ -79,7 +79,7 @@ void HTTPClient::decodeChunkedData(data::ByteBuffer &data)
     while (true)
     {
         auto str = data.getLine();  // get until \r\n
-        int size = cerberus::core::CerberusUtils::stringToInt(str, Radix::Hexadecimal);
+        int size = cerberus::core::CerberusUtils::stringToInt(str, Radix::Hexadecimal).i;
 
         if (size == 0)
         {

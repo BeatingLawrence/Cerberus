@@ -150,11 +150,18 @@ namespace cerberus
 
             // Close the socket
             // This method must be called at most one time,
-            // the subsequent calls will return OR_FailedInstance
+            // the subsequent calls will return OR_FailedInstance.
+            // This method closes the system socket but it does not de-initialize the TLS layer,
+            // so it can be reused later after a reset() call.
+            // If the TLS layer is present, this method will send the close_notify alert to the peer before
+            // closing the socket.
             OperationResult close();
 
             // Close the socket and create a new one bound to the same interface if any.
-            // The SSL layer status will be lost, and eventually must be restored with SSL_Init()
+            // The SSL layer is kept and re-associated to the new socket file descriptor.
+            // NOTE: the SSL status is cleared but not totally reset,
+            // see https://www.openssl.org/docs/manmaster/man3/SSL_clear.html
+            // The behavior will be corrected in the future
             OperationResult reset();
 
             // TLS-enabled sockets (stream):

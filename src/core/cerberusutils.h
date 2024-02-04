@@ -58,10 +58,10 @@ namespace cerberus
             static OperationResult environmentVariable(const std::string& variableName);
 
             // Convert a given string to an int (64 bit)
-            static long long int stringToInt(const std::string& str, Radix r = Radix::Decimal);
+            static OperationResult stringToInt(const std::string& str, Radix r = Radix::Decimal);
 
             // Convert a given string to a long double
-            static long double stringToDouble(const std::string& str);
+            static OperationResult stringToDouble(const std::string& str);
 
             // Tell if the string contains at least one alphabet character [a-z][A-Z]
             static bool isAlpha(const std::string& str);

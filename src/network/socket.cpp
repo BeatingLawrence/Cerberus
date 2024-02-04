@@ -90,31 +90,6 @@ void cerberus::network::Socket::createTcpSocket()
     }
 }
 //=============================================================================
-cerberus::OperationResult cerberus::network::Socket::reset()
-{
-    ::close(m_fd);
-    m_fd        = -1;
-    m_connected = false;
-
-    createTcpSocket();  // recreate the socket
-
-    if (m_fd == -1) return OR_Failure;
-
-    if (m_bind.isValid())
-        if (bind(m_bind).fail()) return OR_Failure;
-
-    if (isTLS())
-        if (SSL_set_fd(m_ssl, m_fd) != 1)
-        {
-            // TODO check the error
-            logError("SSL association with kernel fd failed");
-            printSSLErrors();
-            return OR_Failure;
-        }
-
-    return OR_OK;
-}
-//=============================================================================
 void cerberus::network::Socket::flushSocket(data::ByteBuffer &buffer)
 {
     data::ByteBuffer b;
@@ -412,16 +387,15 @@ cerberus::network::Socket::Socket(SocketType type, const std::string &name)
 //=============================================================================
 cerberus::network::Socket::~Socket()
 {
+    // discard return values
     close();
+    TLS_deinit();
     checkOut();
 }
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::bind(const Host &iface)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
@@ -443,10 +417,7 @@ cerberus::OperationResult cerberus::network::Socket::bind(const Host &iface)
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::connect(const Host &dest)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
     Host h = dest;
 
@@ -580,16 +551,15 @@ void cerberus::network::Socket::setRecvBufferSize(size_t size) { m_recvBuffer.re
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::waitRead(const time::TimeFrame &timeout)
 {
+    if (isFailed()) return OR_FailedInstance;
+
     pollfd set{};
     set.fd     = m_fd;
     set.events = POLLIN;
 
     int ret = poll(&set, 1, timeout.isValid() ? timeout.toMilliseconds() : -1);
 
-    if (ret == 0)  // timeout
-    {
-        return OR_TimedOut;
-    }
+    if (ret == 0) return OR_TimedOut;  // timeout
 
     if (ret == -1)
     {
@@ -597,41 +567,28 @@ cerberus::OperationResult cerberus::network::Socket::waitRead(const time::TimeFr
         return OR_SystemFailure;
     }
 
-    if (set.revents & POLLERR)
-    {
-        return OR_Failure;
-    }
+    if (set.revents & POLLERR) return OR_Failure;
 
-    if (set.revents & POLLHUP)
-    {
-        return OR_Hangup;
-    }
+    if (set.revents & POLLHUP) return OR_Hangup;
 
-    if (set.revents & POLLNVAL)
-    {
-        return OR_BadConditions;
-    }
+    if (set.revents & POLLNVAL) return OR_BadConditions;
 
-    if (set.revents & POLLIN)
-    {
-        return OR_OK;
-    }
+    if (set.revents & POLLIN) return OR_OK;
 
     return OR_Failure;
 }
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::waitWrite(const time::TimeFrame &timeout)
 {
+    if (isFailed()) return OR_FailedInstance;
+
     pollfd set{};
     set.fd     = m_fd;
     set.events = POLLOUT;
 
     int ret = poll(&set, 1, timeout.isValid() ? timeout.toMilliseconds() : -1);
 
-    if (ret == 0)  // timeout
-    {
-        return OR_TimedOut;
-    }
+    if (ret == 0) return OR_TimedOut;  // timeout
 
     if (ret == -1)
     {
@@ -639,39 +596,24 @@ cerberus::OperationResult cerberus::network::Socket::waitWrite(const time::TimeF
         return OR_SystemFailure;
     }
 
-    if (set.revents & POLLERR)
-    {
-        return OR_Failure;
-    }
+    if (set.revents & POLLERR) return OR_Failure;
 
-    if (set.revents & POLLHUP)
-    {
-        return OR_Hangup;
-    }
+    if (set.revents & POLLHUP) return OR_Hangup;
 
-    if (set.revents & POLLNVAL)
-    {
-        return OR_BadConditions;
-    }
+    if (set.revents & POLLNVAL) return OR_BadConditions;
 
-    if (set.revents & POLLOUT)
-    {
-        return OR_OK;
-    }
+    if (set.revents & POLLOUT) return OR_OK;
 
     return OR_Failure;
 }
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::close()
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
-    TLS_deinit();  // discard return value
+    if (isTLS()) TLS_shutdown();  // send close_notify alert to the peer
 
-    shutdown(m_fd, SHUT_WR);  // discard return value
+    ::shutdown(m_fd, SHUT_WR);  // discard return value
 
     Result res = OR_OK;
 
@@ -685,6 +627,41 @@ cerberus::OperationResult cerberus::network::Socket::close()
     m_connected = false;
 
     return res;
+}
+//=============================================================================
+cerberus::OperationResult cerberus::network::Socket::reset()
+{
+    ::close(m_fd);
+    m_fd        = -1;
+    m_connected = false;
+
+    createTcpSocket();  // recreate the socket
+
+    if (m_fd == -1) return OR_Failure;
+
+    if (m_bind.isValid())
+        if (bind(m_bind).fail()) return OR_Failure;
+
+    if (isTLS())
+    {
+        if (SSL_set_fd(m_ssl, m_fd) != 1)
+        {
+            // TODO check the error
+            logError("SSL association with kernel fd failed");
+            printSSLErrors();
+            return OR_Failure;
+        }
+
+        if (SSL_clear(m_ssl) != 1)
+        {
+            // TODO check the error
+            logError("SSL_clear failed");
+            printSSLErrors();
+            return OR_Failure;
+        }
+    }
+
+    return OR_OK;
 }
 //=============================================================================
 bool cerberus::network::Socket::isTLS() { return (m_sslCtx) && (m_ssl); }

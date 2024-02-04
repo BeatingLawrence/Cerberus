@@ -255,6 +255,7 @@ JsonData::JsonData(const std::string &name, int value)
       m_elements(),
       m_type(JDT_Number)
 {
+    setNumber(value);
 }
 //=============================================================================
 JsonData::JsonData(const std::string &name, bool value)
@@ -380,7 +381,13 @@ cerberus::OperationResult JsonData::checkFix()
 cerberus::OperationResult JsonData::toNumber() const
 {
     if (m_type != JDT_Number) return OR_Unavailable;
-    return OperationResult(CerberusUtils::stringToDouble(m_value));
+    return CerberusUtils::stringToDouble(m_value);
+}
+//=============================================================================
+cerberus::OperationResult JsonData::toIntNumber() const
+{
+    if (m_type != JDT_Number) return OR_Unavailable;
+    return CerberusUtils::stringToInt(m_value);
 }
 //=============================================================================
 cerberus::OperationResult JsonData::toString() const

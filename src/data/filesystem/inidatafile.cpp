@@ -409,7 +409,7 @@ cerberus::OperationResult IniDataFile::read_integer(const std::string& key, cons
 
     if (!isInteger(res.str)) return OR_WrongType;
 
-    return (int64_t)CerberusUtils::stringToInt(res.str);
+    return CerberusUtils::stringToInt(res.str);
 }
 //=============================================================================
 cerberus::OperationResult IniDataFile::read_double(const std::string& key, const std::string& section)
