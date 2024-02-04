@@ -72,32 +72,31 @@ void CerberusRegister::registerObj(CerberusObject* object)
     {
         for (auto& el : m_objects)
         {
-            if (CerberusUtils::areEqual(object->name(), el->name()))
-            {
-                return;
-            }
+            if (CerberusUtils::areEqual(object->name(), el->name())) return;
         }
     }
 
     object->m_id = findAvailableId();
 
-    if (object->type() == CerberusObject::Thread)
+    switch (object->type())
     {
-        m_objects.push_back(object);
+        case CerberusObject::Thread:
+        case CerberusObject::Socket:
+            m_objects.push_back(object);
+            break;
+
+        case CerberusObject::MessageTemplate:
+        {
+            auto mt = new MessageTemplate(*(object->to_p<MessageTemplate>()));  // copy
+            m_objects.push_back(mt);
+        }
+        break;
+
+        default:
+            throw cerberusIllegalArgExc("given object has no type");
     }
-    else if (object->type() == CerberusObject::MessageTemplate)
-    {
-        auto mt = new MessageTemplate(*(object->to_p<MessageTemplate>()));  // copy
-        m_objects.push_back(mt);
-    }
-    else if (object->type() == CerberusObject::Socket)
-    {
-        m_objects.push_back(object);
-    }
-    else
-    {
-        throw cerberusIllegalArgExc("given object has no type");
-    }
+
+    logDebug("New %s", object->toObjStr().c_str());
 }
 //=============================================================================
 void CerberusRegister::unregisterObj(uint32_t id)
@@ -302,7 +301,7 @@ MessageTemplate CerberusRegister::msgTemplateById(uint32_t id)
     }
 }
 //=============================================================================
-void CerberusRegister::sendMsgToObj(uint32_t id, message::cerberus_message msg)
+void CerberusRegister::sendMsgToObj(uint32_t id, cerberus_message msg)
 {
     mutex::MutexLocker locker(m_mutex);
     CerberusObject* found = objById(id);

@@ -14,7 +14,7 @@
 
 // This is the Cerberus Socket class. It defines a socket usable in all circumstances.
 // This class implements stream socket as well as datagram, HTTP, FTP, ICMP sockets and so on.
-// The socket type mus be specified in the constructor
+// The socket type must be specified in the constructor
 
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_st SSL;
@@ -44,11 +44,8 @@ namespace cerberus
             // Check is the socket isFailed() after this call
             void createTcpSocket();
 
-            // Close the socket and create a new one bound to the same interface if any.
-            // This method returns true if the complete reopen process succeeded
-            bool reopen();
-
-            void recvUntilEOF(data::ByteBuffer& buffer);
+            // Receive until EOF
+            void flushSocket(data::ByteBuffer& buffer);
 
             enum TransportType
             {
@@ -70,13 +67,21 @@ namespace cerberus
 
             OperationResult TLS_accept();
 
+            OperationResult TLS_send(const data::ByteBuffer& buffer);
+
+            OperationResult TLS_sendFile(const data::filesystem::File& file);
+
+            OperationResult TLS_recv(data::ByteBuffer& buffer);
+
             bool m_extern;  // used for acceptable sockets
 
             size_t m_maxConnections;  // used for acceptable sockets
 
             int m_fd;
 
-            bool m_tlsServer;
+            bool m_forceTLSServer;
+
+            bool m_connected;
 
             data::ByteBuffer m_recvBuffer;
 
@@ -129,6 +134,9 @@ namespace cerberus
             // Check if the socket is a failed socket
             bool isFailed() const;
 
+            // Check if the socket connection is established
+            bool isConnected() const;
+
             // Set the buffer size used for recv calls, default is 512 bytes
             void setRecvBufferSize(size_t size);
 
@@ -141,8 +149,13 @@ namespace cerberus
             OperationResult waitWrite(const time::TimeFrame& timeout = time::TimeFrame());
 
             // Close the socket
-            // This method must be called at most one time. The subsequent calls will return OR_FailedInstance
+            // This method must be called at most one time,
+            // the subsequent calls will return OR_FailedInstance
             OperationResult close();
+
+            // Close the socket and create a new one bound to the same interface if any.
+            // The SSL layer status will be lost, and eventually must be restored with SSL_Init()
+            OperationResult reset();
 
             // TLS-enabled sockets (stream):
 
@@ -154,7 +167,8 @@ namespace cerberus
             // Set the socket to be a TLS socket. The socket will negotiate the highest version possible
             // with the peer. This method creates a new SSL context and a new SSL object.
             // Future sockets obtained with the accept() on this instance will inherit its context (cert file and key file).
-            // If forceServer is set, the Socket will be configured as a TLS server socket. Otherwise, the handshake will decide the type
+            // If forceServer is set, the Socket will be configured as a TLS server socket. Otherwise, the handshake will decide the type.
+            // Also, the state of forceServer will be crucial for connectP2P() call in TLS mode (see below).
             OperationResult TLS_init(const std::string& certfile = "", const std::string& keyfile = "", bool forceServer = false);
 
             // Free all the allocated resources for the TLS features, thus, a call to initTLS() is necessary

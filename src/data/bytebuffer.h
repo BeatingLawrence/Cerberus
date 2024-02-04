@@ -29,10 +29,10 @@ namespace cerberus
 
            public:
             // Construct a ByteBuffer allocating size bytes. The buffer is not initialized and may contain garbage
-            ByteBuffer(SIZE size);
+            explicit ByteBuffer(SIZE size);
 
             // Construct a ByteBuffer allocating size bytes. The buffer is initialized using val value
-            ByteBuffer(SIZE size, uint8_t val);
+            ByteBuffer(SIZE size, BYTE val);
 
             // Construct an invalid ByteBuffer, no buffer memory allocation performed
             ByteBuffer();

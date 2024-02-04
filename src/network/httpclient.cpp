@@ -7,13 +7,14 @@ using namespace cerberus::network;
 using namespace cerberus::core;
 
 //=============================================================================
-HTTPClient::DictResult HTTPClient::getDictFromHeader(const data::ByteBuffer &header)
+cerberus::OperationResult HTTPClient::getDictFromHeader(const data::ByteBuffer &header, Dictionary &dict)
 {
     // debug("%s", header.toNormalizedString().c_str());
 
-    Dictionary ret;
-
     header.resetCursor();
+    dict.clear();
+
+    OperationResult failed(OR_Failure, "Broken line found in HTTP header");
 
     while (true)
     {
@@ -23,30 +24,29 @@ HTTPClient::DictResult HTTPClient::getDictFromHeader(const data::ByteBuffer &hea
 
         if (str.empty())
         {
-            return {header.isEnd() ? OR_OK : OR_Failure, ret};
+            return header.isEnd() ? OR_OK : failed;
         }
 
         auto p = str.find(": ");
 
         if (p == std::string::npos)
         {
-            logDebug("Broken line found in the HTTP header");
-            logDebug("%s", str.c_str());
-            return {OR_Failure, ret};
+            failed.str.append("\n");
+            failed.str.append(str);
+            return failed;
         }
 
         auto key = str.substr(0, p);
         auto val = str.substr(p + 2, std::string::npos);
 
-        ret.push_back({key, val});
+        dict.push_back({key, val});
     }
 }
 //=============================================================================
-HTTPClient::StatusResult HTTPClient::getStatus(const data::ByteBuffer &statusLine)
+cerberus::OperationResult HTTPClient::getStatus(const data::ByteBuffer &statusLine, data::HTTPResponse &response)
 {
     auto str = statusLine.toString();
     core::CerberusUtils::removeBlankAfter(str);
-    data::HTTPStatus ret{};  // version, statuscode, message
 
     auto space1 = str.find_first_of(' ');
     auto space2 = str.find_first_of(' ', space1 + 1);
@@ -55,20 +55,20 @@ HTTPClient::StatusResult HTTPClient::getStatus(const data::ByteBuffer &statusLin
     core::CerberusUtils::toUpper(ver);
 
     if (core::CerberusUtils::areEqual(ver, "HTTP/1.0"))
-        ret.version = data::HTTP_1_0;
+        response.version = HTTP_1_0;
     else if (core::CerberusUtils::areEqual(ver, "HTTP/1.1"))
-        ret.version = data::HTTP_1_1;
+        response.version = HTTP_1_1;
     else if (core::CerberusUtils::areEqual(ver, "HTTP/2"))
-        ret.version = data::HTTP_2;
+        response.version = HTTP_2;
     else
     {
-        return StatusResult{OR_Failure, ret};
+        return {OR_Failure, "Unrecognized HTTP version received"};
     }
 
-    ret.statusCode = core::CerberusUtils::stringToInt(str.substr(space1 + 1, space2));
-    ret.message    = str.substr(space2 + 1, std::string::npos);
+    response.statusCode = core::CerberusUtils::stringToInt(str.substr(space1 + 1, space2));
+    response.message    = str.substr(space2 + 1, std::string::npos);
 
-    return StatusResult{OR_OK, ret};
+    return OR_OK;
 }
 //=============================================================================
 void HTTPClient::decodeChunkedData(data::ByteBuffer &data)
@@ -95,133 +95,99 @@ void HTTPClient::decodeChunkedData(data::ByteBuffer &data)
 }
 //=============================================================================
 HTTPClient::HTTPClient(const std::string &name)
-    : m_name(name),
-      m_socket(nullptr),
-      m_useTLS(false),
-      m_certFile(),
-      m_keyFile()
+    : m_socket(CerberusObject::Socket_TCP, core::CerberusUtils::strPrint("Socket of \"%s\"", name.c_str()))
 {
+    m_socket.setRecvBufferSize(4096);  // 4K buffer size
 }
 //=============================================================================
 HTTPClient::~HTTPClient() { disconnect(); }
 //=============================================================================
-void HTTPClient::useTLS(bool use, const std::string &certfile, const std::string &keyfile)
+void HTTPClient::setupTLS(bool use, const std::string &certfile, const std::string &keyfile)
 {
-    m_useTLS   = use;
-    m_certFile = certfile;
-    m_keyFile  = keyfile;
+    if (!use)
+    {
+        m_socket.TLS_deinit();
+        return;
+    }
+
+    m_socket.TLS_init(certfile, keyfile);
+    m_socket.TLS_ignoreHangup();
 }
 //=============================================================================
 cerberus::OperationResult HTTPClient::connectTo(const Host &host)
 {
-    if (m_socket)
-    {
-        disconnect();
-    }
+    auto res = m_socket.reset();
 
-    m_socket = new Socket(CerberusObject::Socket_TCP, core::CerberusUtils::strPrint("Socket of \"%s\"", m_name.c_str()));
+    if (res.fail()) return res;
 
-    if (m_useTLS)
-    {
-        auto res = m_socket->TLS_init(m_certFile, m_keyFile);
+    res = m_socket.connect(host);
 
-        if (res.fail())
-        {
-            disconnect();
-            return OR_Failure;
-        }
-
-        m_socket->TLS_ignoreHangup(false);
-    }
-
-    m_socket->setRecvBufferSize(8192);
-
-    auto res = m_socket->connect(host);
-
-    if (res.fail())
-    {
-        disconnect();
-        return res;
-    }
+    if (res.fail()) return res;
 
     return OR_OK;
 }
 //=============================================================================
-void HTTPClient::disconnect()
-{
-    if (m_socket)
-    {
-        m_socket->close();
-        delete m_socket;
-        m_socket = nullptr;
-    }
-}
+void HTTPClient::disconnect() { m_socket.close(); }
 //=============================================================================
-cerberus::OperationResult HTTPClient::makeRequest(const data::HTTPData &data)
+cerberus::OperationResult HTTPClient::makeRequest(const data::HTTPRequest &data)
 {
-    if (!m_socket)
+    if (!m_socket.isConnected())
     {
         return OR_BadConditions;
     }
 
-    return m_socket->send(data.getData());
+    return m_socket.send(data.data());
 }
 //=============================================================================
-cerberus::OperationResult HTTPClient::getResponse(data::HTTPData &data, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
+cerberus::OperationResult HTTPClient::getResponse(data::HTTPResponse &data, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
 {
-    if (!m_socket)
-    {
-        return OR_BadConditions;
-    }
+    if (!m_socket.isConnected()) return OR_BadConditions;
 
     data.clear();
 
     data::ByteBuffer buf;
     OperationResult res;
 
-    res = m_socket->recv(buf, timeout, cycTimeout);
+    res = m_socket.recv(buf, timeout, cycTimeout);
 
-    if (res.fail())
-    {
-        return res;
-    }
+    if (res.fail()) return res;
 
     res = buf.search("\r\n\r\n");  // find the gap between header and payload
-    if (res.fail()) return OR_Failure;
+    if (res.fail()) return res;
     SIZE gap = res.i;
 
     res = buf.search("\r\n");  // find the status line end
-    if (res.fail()) return OR_Failure;
+    if (res.fail()) return res;
     SIZE sle = res.i;
 
     data.setPayload(buf.subBuffer(gap + 4));
 
     // get status line
-    auto gs = getStatus(buf.subBuffer(0, sle));
-    if (gs.result.fail()) return OR_Failure;
-
-    data.setStatus(gs.status);
+    res = getStatus(buf.subBuffer(0, sle), data);
+    if (res.fail()) return res;
 
     // get header
-    auto dfe = getDictFromHeader(buf.subBuffer(sle + 2, gap + 2 - sle));
+    Dictionary dict;
+    res = getDictFromHeader(buf.subBuffer(sle + 2, gap + 2 - sle), dict);
 
-    if (dfe.result.fail()) return OR_Failure;
+    if (res.fail()) return OR_Failure;
 
-    for (auto &&el : dfe.dict)
+    for (auto &&el : dict)
     {
         data.addHeaderField(el.key, el.val);
     }
+
     res = data.getHeaderMatch("transfer-encoding", "chunked");
 
     if (res.ok() && res.i)
     {
         // chunked encoding
         logDebug("processing chunked data...");
-        decodeChunkedData(data.getPayload());
+        decodeChunkedData(data.payload());
     }
 
     return OR_OK;
 }
 //=============================================================================
-Socket *HTTPClient::getSocket() { return m_socket; }
+Socket *HTTPClient::getSocket() { return &m_socket; }
 //=============================================================================

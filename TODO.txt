@@ -1,7 +1,10 @@
 TODO list for Cerberus:
 
-[TO FIX - High priority]
--none
+[Corrections - High priority]
+
+- None
+
+[New Functionalities]
 
 [Network]
 -Improve the HTTPClient class
@@ -11,10 +14,7 @@ TODO list for Cerberus:
 -Write a test suite for every socket type
 
 [Database]
--Implement a custom thread that takes ownership of an sql database and processes a queue of transactions from other threads on the db 
-
-[Memory]
--Implement a system to link external libraries at runtime (aka plugins)
+-Implement a custom thread that takes an sql database and processes a queue of transactions from other threads on the db 
 
 [Threads]
 -Implement the ThreadPool class

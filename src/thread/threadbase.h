@@ -12,15 +12,6 @@ namespace cerberus
     {
         class ThreadBase
         {
-           public:
-            enum ThreadPeriodicity
-            {
-                TP_NonPeriodic,
-                TP_Periodic,
-                TP_PeriodicQueue,
-                TP_OneShot,
-            };
-
            private:
             mutable mutex::Mutex m_mutex;
 
@@ -46,16 +37,16 @@ namespace cerberus
 
             bool getTerminateFlag() const;
 
-            message::cerberus_message nextMessage();
+            cerberus_message nextMessage();
 
-            message::cerberus_message nextMessageKeep() const;
+            cerberus_message nextMessageKeep() const;
 
             void discardMessageQueue();
 
             bool isQueueEmpty() const;
 
            public:
-            void addMessage(message::cerberus_message message);
+            void addMessage(cerberus_message message);
 
             size_t messageCount() const;
 
@@ -64,6 +55,8 @@ namespace cerberus
             void stop();
 
             void terminate();
+
+            inline ThreadPeriodicity getPeriodicity() const { return m_periodicity; };
         };
     }  // namespace thread
 }  // namespace cerberus

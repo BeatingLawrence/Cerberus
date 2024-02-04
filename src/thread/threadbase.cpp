@@ -69,7 +69,7 @@ bool ThreadBase::getTerminateFlag() const
     return m_terminateFlag;
 }
 //=============================================================================
-cerberus::message::cerberus_message ThreadBase::nextMessage()
+cerberus::cerberus_message ThreadBase::nextMessage()
 {
     MutexLocker locker(&m_mutex);
 
@@ -81,7 +81,7 @@ cerberus::message::cerberus_message ThreadBase::nextMessage()
     return m_queue.next();
 }
 //=============================================================================
-cerberus::message::cerberus_message ThreadBase::nextMessageKeep() const
+cerberus::cerberus_message ThreadBase::nextMessageKeep() const
 {
     MutexLocker locker(&m_mutex);
     return m_queue.nextKeep();
@@ -99,7 +99,7 @@ bool ThreadBase::isQueueEmpty() const
     return m_queue.isEmpty();
 }
 //=============================================================================
-void ThreadBase::addMessage(message::cerberus_message message)
+void ThreadBase::addMessage(cerberus_message message)
 {
     MutexLocker locker(&m_mutex);
     m_queue.add(message);

@@ -62,7 +62,7 @@ ByteBuffer::ByteBuffer(SIZE size)
     }
 }
 //=============================================================================
-ByteBuffer::ByteBuffer(SIZE size, uint8_t val)
+ByteBuffer::ByteBuffer(SIZE size, BYTE val)
     : m_bytes(nullptr),
       m_size(size),
       m_pos(0)
@@ -305,7 +305,7 @@ ByteBuffer& ByteBuffer::appendChar(char c)
 
     _resize(s);
 
-    if (m_bytes) *(m_bytes + s - 1) = c;
+    *(m_bytes + s - 1) = c;
 
     return *this;
 }

@@ -2,6 +2,7 @@
 
 #include "src/cerberus.h"
 #include "src/define.h"
+#include "src/thread/thread.h"
 
 using namespace cerberus::core;
 
@@ -72,13 +73,41 @@ std::string CerberusObject::toStr(const CerberusObject& obj)
         ret.append(obj.m_name);
     }
 
+    if (obj.m_type == Thread)
+    {
+        ret.append(", ");
+        ret.append(toThreadStr(obj));
+    }
+
     return ret;
 }
 //=============================================================================
 std::string CerberusObject::toObjStr() { return CerberusObject::toStr(*this); }
 //=============================================================================
+std::string CerberusObject::toThreadStr(const CerberusObject& obj)
+{
+    const thread::Thread* thr = obj.to_p<cerberus::thread::Thread>();
+    auto time                 = thr->getTime();
+
+    switch (thr->getPeriodicity())
+    {
+        case TP_NonPeriodic:
+            return "Configuration: Non periodic";
+        case TP_Periodic:
+            return CerberusUtils::strPrint("Configuration: Periodic, %us %uns", time.seconds, time.nanoseconds);
+        case TP_PeriodicQueue:
+            return CerberusUtils::strPrint("Configuration: Periodic queue, %us %uns", time.seconds, time.nanoseconds);
+        case TP_OneShot:
+            return "Configuration: One shot";
+        case TP_Continuos:
+            return "Configuration: Continuos";
+    }
+
+    return "";
+}
+//=============================================================================
 CerberusObject::CerberusObject(ObjectType type, const std::string& name)
-    : m_id(Socket_None),
+    : m_id(CERBERUS_INVALID_ID),
       m_type(type),
       m_name(name),
       m_socketType(Socket_None)
@@ -93,13 +122,13 @@ CerberusObject::CerberusObject(SocketType type, const std::string& name)
 {
 }
 //=============================================================================
-void CerberusObject::registerThis() { cerberus::Cerberus::registerObj(this); }
-//=============================================================================
-void CerberusObject::unregisterThis() { cerberus::Cerberus::unregisterObj(m_id); }
-//=============================================================================
 CerberusObject::~CerberusObject() {}
 //=============================================================================
-bool CerberusObject::isObjValid() { return (m_id != CERBERUS_INVALID_ID); }
+void CerberusObject::checkIn() { cerberus::Cerberus::registerObj(this); }
+//=============================================================================
+void CerberusObject::checkOut() { cerberus::Cerberus::unregisterObj(m_id); }
+//=============================================================================
+bool CerberusObject::isObjValid() const { return (m_id != CERBERUS_INVALID_ID); }
 //=============================================================================
 uint32_t CerberusObject::id() const { return m_id; }
 //=============================================================================

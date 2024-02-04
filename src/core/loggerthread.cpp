@@ -8,7 +8,7 @@ using namespace cerberus::core;
 //=============================================================================
 int LoggerThread::tick()
 {
-    message::cerberus_message message = nextMessage();
+    cerberus_message message = nextMessage();
 
     if (message->id() != CERBERUS_MESSAGE_LOG_ID || m_failed.test()) return 0;
 

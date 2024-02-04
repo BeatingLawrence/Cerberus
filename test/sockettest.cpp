@@ -9,7 +9,7 @@
 #define THREAD_ERROR 1
 #define THREAD_SUCCESS 304050
 
-static int testCallback_UDP(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
+static int testCallback_UDP(cerberus::cerberus_message msg, cerberus::thread::Thread* thread)
 {
     logDebug("receiver thread routine entered");
     auto socket = UDPSocket("UDP receiver");
@@ -31,7 +31,7 @@ static int testCallback_UDP(cerberus::message::cerberus_message msg, cerberus::t
     }
 }
 
-static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
+static int testCallback_TCP(cerberus::cerberus_message msg, cerberus::thread::Thread* thread)
 {
     logDebug("receiver thread routine entered");
     auto socket = TCPSocket("TCP receiver");
@@ -72,7 +72,7 @@ static int testCallback_TCP(cerberus::message::cerberus_message msg, cerberus::t
     }
 }
 
-static int testCallback_TCP_P2P(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
+static int testCallback_TCP_P2P(cerberus::cerberus_message msg, cerberus::thread::Thread* thread)
 {
     logDebug("receiver thread routine entered");
     auto socket = TCPP2PSocket("TCPP2P receiver");
@@ -106,7 +106,7 @@ static int testCallback_TCP_P2P(cerberus::message::cerberus_message msg, cerberu
     }
 }
 
-static int testCallback_FTP(cerberus::message::cerberus_message msg, cerberus::thread::Thread* thread)
+static int testCallback_FTP(cerberus::cerberus_message msg, cerberus::thread::Thread* thread)
 {
     logDebug("receiver thread routine entered");
     auto socket = TCPSocket("FTP receiver");
@@ -146,7 +146,7 @@ static int testCallback_FTP(cerberus::message::cerberus_message msg, cerberus::t
 TEST(socketTest, UDP)
 {
     // creating receiver thread
-    cerberus::thread::Thread receiver(cerberus::thread::Thread::TP_OneShot, "receiverTestThread");
+    cerberus::thread::Thread receiver(cerberus::TP_OneShot, "receiverTestThread");
     receiver.provideTickCallback(&testCallback_UDP);
     receiver.start();
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
@@ -161,7 +161,7 @@ TEST(socketTest, UDP)
 TEST(socketTest, TCP)
 {
     // creating receiver thread
-    cerberus::thread::Thread receiver(cerberus::thread::Thread::TP_OneShot, "receiverTestThread");
+    cerberus::thread::Thread receiver(cerberus::TP_OneShot, "receiverTestThread");
     receiver.provideTickCallback(&testCallback_TCP);
     receiver.start();
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
@@ -179,7 +179,7 @@ TEST(socketTest, TCP)
 TEST(socketTest, TCP_P2P)
 {
     // creating receiver thread
-    cerberus::thread::Thread receiver(cerberus::thread::Thread::TP_OneShot, "receiverTestThread");
+    cerberus::thread::Thread receiver(cerberus::TP_OneShot, "receiverTestThread");
     receiver.provideTickCallback(&testCallback_TCP_P2P);
     receiver.start();
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
@@ -197,7 +197,7 @@ TEST(socketTest, TCP_P2P)
 TEST(socketTest, FTP)
 {
     // creating receiver thread
-    cerberus::thread::Thread receiver(cerberus::thread::Thread::TP_OneShot, "receiverTestThread");
+    cerberus::thread::Thread receiver(cerberus::TP_OneShot, "receiverTestThread");
     receiver.provideTickCallback(&testCallback_FTP);
     receiver.start();
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
@@ -267,117 +267,40 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
 TEST(socketTest, HTTPClient)
 {
     cerberus::network::HTTPClient client("HTTP Client test");
-    client.useTLS();
+    client.setupTLS(true);
     ASSERT_TRUE(client.connectTo("www.google.com:443").ok(true));
     logDebug("connected");
-    cerberus::data::HTTPData data;
-    data.setRequest({cerberus::data::HTTP_GET, "/", cerberus::data::HTTP_1_1});
-    data.addHeaderField("Host", "www.google.com");
-    data.addHeaderField("Accept-Language", "en-US,en;q=0.5");
-    data.addHeaderField("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0");
-    data.addHeaderField("Accept", "text/html");
-    data.addHeaderField("Connection", "keep-alive");
-    data.addHeaderField("Cache-Control", "max-age=0");
+    cerberus::data::HTTPRequest req;
+    req.setup(cerberus::HTTP_GET, "/", cerberus::HTTP_1_1)
+        .addHeaderField("Host", "www.google.com")
+        .addHeaderField("Accept-Language", "en-US,en;q=0.5")
+        .addHeaderField("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0")
+        .addHeaderField("Accept", "text/html")
+        .addHeaderField("Connection", "keep-alive")
+        .addHeaderField("Cache-Control", "max-age=0");
     //
     logDebug("data to be sent:");
-    logDebug(data.getData().toNormalizedString().str.c_str());
+    logDebug(req.data().toNormalizedString().str.c_str());
     //
-    EXPECT_TRUE(client.makeRequest(data).ok(true));
+    EXPECT_TRUE(client.makeRequest(req).ok(true));
     logDebug("request sent");
-    EXPECT_TRUE(client.getResponse(data, 1000, 200).ok(true));
+    cerberus::data::HTTPResponse res;
+    EXPECT_TRUE(client.getResponse(res, 1000, 200).ok(true));
 
     client.disconnect();
 
-    EXPECT_EQ(data.getStatus().statusCode, 200);  // 200 OK
+    EXPECT_TRUE(res.isOk());
 
-    logDebug("received header:");
-    for (int i = 0; i < data.getHeaderSize(); i++)
+    logDebug("received header lines:");
+    for (int i = 0; i < res.getHeaderSize(); i++)
     {
-        logDebug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
+        logDebug("%s: %s", res.getHeaderFieldName(i).c_str(), res.getHeaderFieldValue(i).c_str());
     }
 
     // save the payload in a file
     cerberus::data::filesystem::File f("received_payload.txt", cerberus::FOM_ReadWriteTrunc);
     f.open();
-    f.write(data.getPayload());
-    f.close();
-
-    logDebug("payload written on disk");
-}
-
-#define BOT_TOKEN "6612599694:AAG2zBEEBYViDPTQZDyhIu3bbMa4aRVxSTI"
-
-TEST(socketTest, TelegramBot)
-{
-    return;  // disable test
-
-    cerberus::network::HTTPClient client("HTTP Bot Client");
-    client.useTLS();
-    cerberus::Host h("api.telegram.org:443");
-    EXPECT_EQ(client.connectTo(h).res, cerberus::OR_OK);
-    logDebug("connected!");
-    cerberus::data::HTTPData data;
-    data.setRequest({cerberus::data::HTTP_GET, "/bot" BOT_TOKEN "/getMe", cerberus::data::HTTP_1_1});
-    data.addHeaderField("Host", "api.telegram.org");
-    // data.addHeaderField("Connection", "keep-alive");
-    EXPECT_FALSE(client.makeRequest(data).fail(true));
-    logDebug("request sent");
-    data.clear();
-    EXPECT_FALSE(client.getResponse(data, 1000).fail(true));
-
-    client.disconnect();
-    EXPECT_EQ(data.getStatus().statusCode, 200);  // 200 OK
-
-    logDebug("received header:");
-    for (int i = 0; i < data.getHeaderSize(); i++)
-    {
-        logDebug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
-    }
-
-    // save the payload in a file
-    cerberus::data::filesystem::File f("received_payload_telegram.txt", cerberus::FOM_ReadWriteTrunc);
-    f.open();
-    f.write(data.getPayload());
-    f.close();
-
-    logDebug("payload written on disk");
-}
-
-TEST(socketTest, TelegramBotSendMessage)
-{
-    return;  // disable test
-
-    cerberus::network::HTTPClient client("HTTP Bot Client");
-    client.useTLS();
-    cerberus::Host h("api.telegram.org:443");
-    EXPECT_EQ(client.connectTo(h).res, cerberus::OR_OK);
-    logDebug("connected!");
-    cerberus::data::HTTPData data;
-    data.setRequest({cerberus::data::HTTP_POST, "/bot" BOT_TOKEN "/sendMessage", cerberus::data::HTTP_1_1});
-    data.addHeaderField("Host", "api.telegram.org");
-    data.addHeaderField("Content-Type", "application/json");
-    data.addHeaderField("Content-Length", "103");
-    // data.addHeaderField("Connection", "keep-alive");
-    cerberus::data::ByteBuffer payload("{\"chat_id\":-1001964113365,\"text\":\"Signore e signori, questo messaggio e' stato inviato con codice C++\"}");
-    data.setPayload(payload);
-    EXPECT_FALSE(client.makeRequest(data).fail(true));
-    logDebug("request sent");
-    data.clear();
-    EXPECT_FALSE(client.getResponse(data, 30000, 200).fail(true));
-
-    client.disconnect();
-    EXPECT_EQ(data.getStatus().statusCode, 200);  // 200 OK
-
-    logDebug("received header:");
-    for (int i = 0; i < data.getHeaderSize(); i++)
-    {
-        logDebug("%s: %s", data.getHeaderFieldName(i).c_str(), data.getHeaderFieldValue(i).c_str());
-    }
-
-    // save the payload in a file
-    cerberus::data::filesystem::File f("received_payload_telegram3.txt", cerberus::FOM_ReadWriteTrunc);
-    f.open();
-    f.write(data.getPayload());
+    f.write(res.payload());
     f.close();
 
     logDebug("payload written on disk");

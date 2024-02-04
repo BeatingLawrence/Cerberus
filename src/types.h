@@ -132,6 +132,15 @@ namespace cerberus
                               // All the write operations happen at the end of the file
     };
 
+    enum ThreadPeriodicity
+    {
+        TP_NonPeriodic,
+        TP_Periodic,
+        TP_PeriodicQueue,
+        TP_OneShot,
+        TP_Continuos,
+    };
+
     enum StandardMessage
     {
         SM_LogMsg,
@@ -182,23 +191,52 @@ namespace cerberus
         // add more configuration members here..
     };
 
+    enum HTTPVersion
+    {
+        HTTP_1_0,
+        HTTP_1_1,
+        HTTP_2,
+    };
+
+    enum HTTPMethod
+    {
+        HTTP_GET,
+        HTTP_POST,
+        HTTP_HEAD,
+        HTTP_PUT,
+        HTTP_DELETE,
+        HTTP_PATCH,
+        HTTP_TRACE,
+        HTTP_OPTIONS,
+        HTTP_CONNECT,
+    };
+
     enum SlotType
     {
-        ST_UCHAR,       // 1 byte
-        ST_CHAR,        // 1 byte
-        ST_USHORT,      // 2 byte
-        ST_SHORT,       // 2 byte
-        ST_ULONG,       // 4 byte
-        ST_LONG,        // 4 byte
-        ST_ULONGLONG,   // 8 byte
-        ST_LONGLONG,    // 8 byte
-        ST_FLOAT,       // 4 byte
-        ST_DOUBLE,      // 8 byte
-        ST_BOOL,        // 1 byte
-        ST_VOIDP,       // pointer
-        ST_STDSTRINGP,  // pointer
-        ST_BYTEBUFFER,  // ByteBuffer object
+        ST_BYTE,
+        ST_INT32,
+        ST_INT64,
+        ST_FLOAT,
+        ST_DOUBLE,
+        ST_BOOL,
+        ST_VOIDP,
+        ST_STRING,
+        ST_BYTEBUFFER,
     };
+
+    namespace message
+    {
+        class Message;
+
+        namespace slot
+        {
+            class BaseSlot;
+        };
+    }  // namespace message
+
+    typedef std::shared_ptr<class cerberus::message::slot::BaseSlot> cerberus_slot;
+    typedef std::shared_ptr<class cerberus::message::Message> cerberus_message;
+    typedef std::shared_ptr<const class cerberus::message::Message> cerberus_const_message;
 
     enum IniDataType : uint8_t
     {

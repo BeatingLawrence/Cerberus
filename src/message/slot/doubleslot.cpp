@@ -1,20 +1,20 @@
-#include "stringslot.h"
+#include "doubleslot.h"
 
 using namespace cerberus::message::slot;
 
 //=============================================================================
-cerberus::cerberus_slot StringSlot::create(const std::string& string) { return cerberus_slot(new StringSlot(string)); }
+cerberus::cerberus_slot DoubleSlot::create(double value) { return cerberus_slot(new DoubleSlot(value)); }
 //=============================================================================
-cerberus::cerberus_slot StringSlot::create(const StringSlot& other) { return cerberus_slot(new StringSlot(other)); }
+cerberus::cerberus_slot DoubleSlot::create(const DoubleSlot& other) { return cerberus_slot(new DoubleSlot(other)); }
 //=============================================================================
-StringSlot::StringSlot(const std::string& string)
-    : BaseSlot(ST_STRING),
-      m_value(string)
+DoubleSlot::DoubleSlot(double value)
+    : BaseSlot(ST_DOUBLE),
+      m_value(value)
 {
     // noop
 }
 //=============================================================================
-std::string StringSlot::value() const { return m_value; }
+double DoubleSlot::value() const { return m_value; }
 //=============================================================================
-void StringSlot::value(const std::string& value) { m_value.assign(value); }
+void DoubleSlot::value(double value) { m_value = value; }
 //=============================================================================

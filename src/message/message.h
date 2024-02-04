@@ -3,52 +3,48 @@
 
 #include <memory>
 #include <vector>
+
+#include "../Cerberus_global.h"
 #include "../define.h"
 #include "./slot/baseslot.h"
-#include "../Cerberus_global.h"
 
 namespace cerberus
 {
     namespace message
     {
-        typedef std::shared_ptr<class Message> cerberus_message;
-        typedef std::shared_ptr<const class Message> cerberus_const_message;
-
         class CERBERUS_EXPORT Message
         {
-            private:
-                std::vector<slot::cerberus_slot> m_slots;
+           private:
+            std::vector<cerberus_slot> m_slots;
 
-                uint32_t m_id;
+            uint32_t m_id;
 
-                uint32_t m_destinationId;
+            uint32_t m_destinationId;
 
-            public:
-                static cerberus_message create(uint32_t id = CERBERUS_INVALID_ID);
+           public:
+            static cerberus_message create(uint32_t id = CERBERUS_INVALID_ID);
 
-                static cerberus_message createFrom(const Message& other);
+            static cerberus_message createFrom(const Message& other);
 
-                Message(uint32_t id = CERBERUS_INVALID_ID);
+            Message(uint32_t id = CERBERUS_INVALID_ID);
 
-                Message(const Message& other);
+            size_t count() const;
 
-                size_t count() const;
+            void addSlot(cerberus_slot slot);
 
-                void addSlot(slot::cerberus_slot slot);
+            cerberus_slot getSlotAt(size_t index) const;
 
-                slot::cerberus_slot getSlotAt(size_t index) const;
+            cerberus_slot getSlot(const std::string& name) const;
 
-                slot::cerberus_slot getSlotById(uint32_t id) const;
+            uint32_t id() const;
 
-                uint32_t id() const;
+            uint32_t destination() const;
 
-                uint32_t destinationId() const;
+            void setDestination(uint32_t id);
 
-                void setDestinationId(uint32_t id);
-
-                bool isValid() const;
+            bool isValid() const;
         };
-    }
-}
+    }  // namespace message
+}  // namespace cerberus
 
-#endif // CERBERUS_MESSAGE_MESSAGE_H
+#endif  // CERBERUS_MESSAGE_MESSAGE_H

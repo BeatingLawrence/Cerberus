@@ -121,6 +121,9 @@ namespace cerberus
             // The method also removes the dot if the decimal part is null.
             // This method fails if the supplied string is not a number
             static OperationResult cleanNumber(std::string& str);
+
+            // Construct a new Slot
+            static cerberus_slot newSlot(SlotType type);
         };
     }  // namespace core
 }  // namespace cerberus

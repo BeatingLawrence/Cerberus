@@ -43,7 +43,7 @@ namespace cerberus
             // like "Thread ID:123456" or "Socket TCP ID:123456"
             static std::string toStr(const CerberusObject& obj);
 
-            // Same as above but non static version
+            // Same as above
             std::string toObjStr();
 
            private:
@@ -55,20 +55,24 @@ namespace cerberus
 
             SocketType m_socketType;
 
+            static std::string toThreadStr(const CerberusObject& obj);
+
            protected:
             CerberusObject(ObjectType type, const std::string& name = std::string());
 
             CerberusObject(SocketType type, const std::string& name = std::string());
 
-            void registerThis();
-
-            void unregisterThis();
-
            public:
+            CerberusObject() = delete;
+
             virtual ~CerberusObject();
 
+            void checkIn();
+
+            void checkOut();
+
             // Checks if the object is valid
-            bool isObjValid();
+            bool isObjValid() const;
 
             // Returns the object ID
             uint32_t id() const;
@@ -97,12 +101,36 @@ namespace cerberus
                 return casted;
             }
 
-            // Performs a dynamic cast of this object into T. Throws an exception if the cast is not possible
-            // Checking the object type() before casting is a good practice
             template <class T>
             T& to()
             {
                 T* casted = dynamic_cast<T*>(this);
+
+                if (casted == nullptr)
+                {
+                    throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
+                }
+
+                return *casted;
+            }
+
+            template <class T>
+            const T* to_p() const
+            {
+                const T* casted = dynamic_cast<const T*>(this);
+
+                if (casted == nullptr)
+                {
+                    throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
+                }
+
+                return casted;
+            }
+
+            template <class T>
+            const T& to() const
+            {
+                const T* casted = dynamic_cast<const T*>(this);
 
                 if (casted == nullptr)
                 {

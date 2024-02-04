@@ -6,27 +6,24 @@ using namespace cerberus;
 
 //=============================================================================
 data::HTTPData::HTTPData()
-    : m_type(HDT_Invalid),
-      m_request({}),
-      m_status({})
+    : m_header(),
+      m_payload()
 {
 }
 //=============================================================================
-void data::HTTPData::setRequest(const HTTPRequest &request)
+data::HTTPData &data::HTTPData::addHeaderField(const std::string &name, const std::string &value)
 {
-    m_request = request;
-    m_type    = HDT_Request;
+    m_header.push_back({core::CerberusUtils::toLower(name), value});
+    return *this;
 }
 //=============================================================================
-void data::HTTPData::setStatus(const HTTPStatus &status)
+data::HTTPData &data::HTTPData::setHeaderDict(const Dictionary &dict)
 {
-    m_status = status;
-    m_type   = HDT_Response;
+    m_header = dict;
+    return *this;
 }
 //=============================================================================
-void data::HTTPData::addHeaderField(const std::string &name, const std::string &value) { m_header.push_back({core::CerberusUtils::toLower(name), value}); }
-//=============================================================================
-void data::HTTPData::removeHeaderField(const std::string &name)
+data::HTTPData &data::HTTPData::removeHeaderField(const std::string &name)
 {
     auto str = core::CerberusUtils::toLower(name);
 
@@ -35,31 +32,35 @@ void data::HTTPData::removeHeaderField(const std::string &name)
         if (cerberus::core::CerberusUtils::areEqual((*it).key, str))
         {
             m_header.erase(it);
-            return;
+            break;
         }
     }
+
+    return *this;
 }
 //=============================================================================
-void data::HTTPData::setPayload(const data::ByteBuffer &payload) { m_payload = payload; }
-//=============================================================================
-void data::HTTPData::clear()
+data::HTTPData &data::HTTPData::setPayload(const data::ByteBuffer &payload)
 {
-    m_type    = HDT_Invalid;
-    m_request = {};
-    m_status  = {};
+    m_payload = payload;
+    return *this;
+}
+//=============================================================================
+const cerberus::data::ByteBuffer &data::HTTPData::payload() const { return m_payload; }
+//=============================================================================
+data::ByteBuffer &data::HTTPData::payload() { return m_payload; }
+//=============================================================================
+data::HTTPData &data::HTTPData::clear()
+{
     m_header.clear();
     m_payload.clear();
+    return *this;
 }
 //=============================================================================
-bool data::HTTPData::isValid() const { return m_type == HDT_Invalid; }
-//=============================================================================
-bool data::HTTPData::isRequest() const { return m_type == HDT_Request; }
-//=============================================================================
-bool data::HTTPData::isResponse() const { return m_type == HDT_Response; }
-//=============================================================================
-data::HTTPRequest data::HTTPData::getRequest() const { return m_request; }
-//=============================================================================
-data::HTTPStatus data::HTTPData::getStatus() const { return m_status; }
+data::HTTPData &data::HTTPData::clearHeader()
+{
+    m_header.clear();
+    return *this;
+}
 //=============================================================================
 cerberus::SIZE data::HTTPData::getHeaderSize() const { return m_header.size(); }
 //=============================================================================
@@ -103,53 +104,68 @@ std::string data::HTTPData::getHeaderFieldValue(SIZE index) const
     return m_header[index].val;
 }
 //=============================================================================
-data::ByteBuffer data::HTTPData::getHeader() const
+data::HTTPRequest::HTTPRequest()
+    : method(HTTP_GET),
+      url("/"),
+      version(HTTP_1_1)
+{
+}
+//=============================================================================
+data::HTTPRequest &data::HTTPRequest::setup(HTTPMethod m, const std::string &u, HTTPVersion v)
+{
+    method  = m;
+    url     = u;
+    version = v;
+    return *this;
+}
+//=============================================================================
+data::ByteBuffer data::HTTPRequest::data() const
 {
     data::ByteBuffer buf;
 
-    switch (getRequest().method)
+    switch (method)
     {
-        case data::HTTP_GET:
+        case HTTP_GET:
             buf.appendString("GET ");
             break;
-        case data::HTTP_POST:
+        case HTTP_POST:
             buf.appendString("POST ");
             break;
-        case data::HTTP_HEAD:
+        case HTTP_HEAD:
             buf.appendString("HEAD ");
             break;
-        case data::HTTP_PUT:
+        case HTTP_PUT:
             buf.appendString("PUT ");
             break;
-        case data::HTTP_DELETE:
+        case HTTP_DELETE:
             buf.appendString("DELETE ");
             break;
-        case data::HTTP_PATCH:
+        case HTTP_PATCH:
             buf.appendString("PATCH ");
             break;
-        case data::HTTP_TRACE:
+        case HTTP_TRACE:
             buf.appendString("TRACE ");
             break;
-        case data::HTTP_OPTIONS:
+        case HTTP_OPTIONS:
             buf.appendString("OPTIONS ");
             break;
-        case data::HTTP_CONNECT:
+        case HTTP_CONNECT:
             buf.appendString("CONNECT ");
             break;
     }
 
-    buf.appendString(getRequest().url.c_str());
-    buf.appendString(" ");
+    buf.appendString(url.c_str());
+    buf.appendChar(' ');
 
-    switch (getRequest().version)
+    switch (version)
     {
-        case data::HTTP_1_0:
+        case HTTP_1_0:
             buf.appendString("HTTP/1.0\r\n");
             break;
-        case data::HTTP_1_1:
+        case HTTP_1_1:
             buf.appendString("HTTP/1.1\r\n");
             break;
-        case data::HTTP_2:
+        case HTTP_2:
             buf.appendString("HTTP/2\r\n");
             break;
     }
@@ -159,19 +175,59 @@ data::ByteBuffer data::HTTPData::getHeader() const
         buf.appendString(core::CerberusUtils::strPrint("%s: %s\r\n", getHeaderFieldName(i).c_str(), getHeaderFieldValue(i).c_str()).c_str());
     }
 
-    buf.append("\r\n");
+    buf.appendString("\r\n");
+    buf.append(payload());
 
     return buf;
 }
 //=============================================================================
-data::ByteBuffer data::HTTPData::getData() const
+data::HTTPResponse::HTTPResponse()
+    : version(HTTP_1_1),
+      statusCode(200),
+      message("OK")
+
 {
-    data::ByteBuffer buf = getHeader();
-    buf.append(getPayload());
+}
+//=============================================================================
+data::HTTPResponse &data::HTTPResponse::setup(HTTPVersion v, uint16_t sc, const std::string &msg)
+{
+    version    = v;
+    statusCode = sc;
+    message    = msg;
+    return *this;
+}
+//=============================================================================
+data::ByteBuffer data::HTTPResponse::data() const
+{
+    data::ByteBuffer buf;
+
+    switch (version)
+    {
+        case HTTP_1_0:
+            buf.appendString("HTTP/1.0");
+            break;
+        case HTTP_1_1:
+            buf.appendString("HTTP/1.1");
+            break;
+        case HTTP_2:
+            buf.appendString("HTTP/2");
+            break;
+    }
+
+    buf.appendString(core::CerberusUtils::strPrint(" %u ", statusCode).c_str());
+    buf.appendString(message.c_str());
+    buf.append("\r\n");
+
+    for (SIZE i = 0; i < getHeaderSize(); i++)
+    {
+        buf.appendString(core::CerberusUtils::strPrint("%s: %s\r\n", getHeaderFieldName(i).c_str(), getHeaderFieldValue(i).c_str()).c_str());
+    }
+
+    buf.append("\r\n");
+    buf.append(payload());
+
     return buf;
 }
 //=============================================================================
-const cerberus::data::ByteBuffer &data::HTTPData::getPayload() const { return m_payload; }
-//=============================================================================
-data::ByteBuffer &data::HTTPData::getPayload() { return m_payload; }
+bool data::HTTPResponse::isOk() { return statusCode < 400; }
 //=============================================================================

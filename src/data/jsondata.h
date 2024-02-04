@@ -53,6 +53,7 @@ namespace cerberus
             // Construct a number JsonData
             JsonData(const std::string& name, long double value);
             JsonData(const std::string& name, float value);
+            JsonData(const std::string& name, int value);
 
             // Construct a boolean JsonData
             JsonData(const std::string& name, bool value);
@@ -128,6 +129,8 @@ namespace cerberus
             // Set the value of the object, discarding the previous one
             JsonData& setString(const std::string& value);
             JsonData& setNumber(long double value);
+            JsonData& setNumber(float value);
+            JsonData& setNumber(int value);
             JsonData& setBoolean(bool value);
 
             // Add an object to this object.
@@ -137,9 +140,10 @@ namespace cerberus
             // This methods may change the type
             JsonData& add(const std::string& value);
             JsonData& add(const char* value);
-            JsonData& add(const long double value);
-            JsonData& add(const float value);
-            JsonData& add(const bool value);
+            JsonData& add(long double value);
+            JsonData& add(float value);
+            JsonData& add(int value);
+            JsonData& add(bool value);
 
             // Remove all the nested object only
             JsonData& clear();

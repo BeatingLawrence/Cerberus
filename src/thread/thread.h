@@ -67,7 +67,7 @@ namespace cerberus
 
             int m_retValue;
 
-            typedef int (*customTickCallback)(message::cerberus_message, Thread*);
+            typedef int (*customTickCallback)(cerberus_message, Thread*);
 
             typedef void (*customCallback)();
 
@@ -77,7 +77,7 @@ namespace cerberus
 
             customCallback m_coolDownCallback;
 
-            static int defaultTickCallback(message::cerberus_message msg, Thread* thread);
+            static int defaultTickCallback(cerberus_message msg, Thread* thread);
 
             static void defaultWarmUpCallback();
 
@@ -110,6 +110,8 @@ namespace cerberus
             Thread(Thread&& other) = delete;
 
             virtual ~Thread();
+
+            time::SplittedTime getTime() const;
 
             // Put the calling thread in sleep state for a given time
             static void sleep(const time::TimeFrame& time);

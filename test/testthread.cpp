@@ -13,7 +13,7 @@ void TestThread::warmUp() { thrlogInfo("Warm-up"); }
 void TestThread::coolDown() { thrlogInfo("Cool-down"); }
 
 TestThread::TestThread(const char* name)
-    : cerberus::thread::Thread(Thread::ThreadPeriodicity::TP_Periodic, 500, name)
+    : cerberus::thread::Thread(cerberus::ThreadPeriodicity::TP_Periodic, 500, name)
 {
     // noop
 }

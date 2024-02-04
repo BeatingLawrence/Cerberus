@@ -54,6 +54,14 @@ namespace cerberus
 
             mutex::Mutex m_mutex;
 
+            // Give a cerberus object from its ID, or nullptr if it does not exist
+            // This method does not lock the mutex!
+            CerberusObject* objById(uint32_t id);
+
+            // Give a cerberus object from its name, or nullptr if it does not exist
+            // This method does not lock the mutex!
+            CerberusObject* objByName(const std::string& name);
+
            public:
             CerberusRegister();
 
@@ -84,14 +92,6 @@ namespace cerberus
             // Replaces data of an existing plugin. Returns false if id does not exist, true otherwise
             bool updatePlugin(uint32_t id, const std::string& path, void* handle);
 
-            // Give a cerberus object from its ID, or nullptr if it does not exist
-            // This method does not lock the mutex!
-            CerberusObject* objById(uint32_t id);
-
-            // Give a cerberus object from its name, or nullptr if it does not exist
-            // This method does not lock the mutex!
-            CerberusObject* objByName(const std::string& name);
-
             // Retrieves an object ID by its name
             uint32_t objIdByName(const std::string& name);
 
@@ -103,7 +103,7 @@ namespace cerberus
 
             // Send a message to a cerberus object.
             // If the id is not valid or the message cannot be sent, nothing happens
-            void sendMsgToObj(uint32_t id, message::cerberus_message msg);
+            void sendMsgToObj(uint32_t id, cerberus_message msg);
         };
     }  // namespace core
 }  // namespace cerberus

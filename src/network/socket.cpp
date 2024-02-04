@@ -29,9 +29,12 @@ cerberus::network::Socket::Socket(SocketType type, int fd, SSL_CTX *ctx)
       m_extern(true),
       m_maxConnections(DEFAULT_MAX_CONNECTIONS),
       m_fd(fd),
+      m_forceTLSServer(false),
+      m_connected(true),
       m_recvBuffer(DEFAULT_RECV_BUFFER_SIZE),
       m_sslCtx(ctx),
-      m_ssl(nullptr)
+      m_ssl(nullptr),
+      m_bind()
 {
     if (ctx != nullptr)
     {
@@ -57,8 +60,6 @@ cerberus::network::Socket::Socket(SocketType type, int fd, SSL_CTX *ctx)
             throw cerberusSystemExc("SSL association with kernel fd failed");
         }
     }
-
-    registerThis();
 }
 //=============================================================================
 void cerberus::network::Socket::createUdpSocket()
@@ -89,30 +90,54 @@ void cerberus::network::Socket::createTcpSocket()
     }
 }
 //=============================================================================
-bool cerberus::network::Socket::reopen()
+cerberus::OperationResult cerberus::network::Socket::reset()
 {
-    close();
+    ::close(m_fd);
+    m_fd        = -1;
+    m_connected = false;
+
     createTcpSocket();  // recreate the socket
 
-    if (m_bind.isValid())
-    {
-        // re-bind
-        return bind(m_bind).ok();
-    }
+    if (m_fd == -1) return OR_Failure;
 
-    return m_fd != -1;
+    if (m_bind.isValid())
+        if (bind(m_bind).fail()) return OR_Failure;
+
+    if (isTLS())
+        if (SSL_set_fd(m_ssl, m_fd) != 1)
+        {
+            // TODO check the error
+            logError("SSL association with kernel fd failed");
+            printSSLErrors();
+            return OR_Failure;
+        }
+
+    return OR_OK;
 }
 //=============================================================================
-void cerberus::network::Socket::recvUntilEOF(data::ByteBuffer &buffer)
+void cerberus::network::Socket::flushSocket(data::ByteBuffer &buffer)
 {
     data::ByteBuffer b;
 
+    if (isTLS())
+    {
+        while (TLS_pending().i != 0)
+        {
+            if (Socket::_recv(b, true).ok())
+                buffer += b;
+            else
+                break;
+        }
+
+        return;
+    }
+
     while (true)
     {
-        if (Socket::_recv(b, true).res == OR_OK)
+        if (Socket::_recv(b, true).ok())
             buffer += b;
         else
-            return;
+            break;
     }
 }
 //=============================================================================
@@ -194,60 +219,32 @@ void cerberus::network::Socket::printSSLErrors()
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::_recv(data::ByteBuffer &buffer, bool donotblock)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
     buffer.clear();
 
     if (isTLS())  // TLS mode
     {
-        ERR_clear_error();
-
-        size_t readB = 0;
-        int ret      = SSL_read_ex(m_ssl, m_recvBuffer.data(), m_recvBuffer.size(), &readB);
-
-        if (ret != 1)
-        {
-            auto err = SSL_get_error(m_ssl, ret);
-
-            if (err == SSL_ERROR_ZERO_RETURN)  // EOF, shutdown
-            {
-                return OR_RecvZero;
-            }
-            else if (err == SSL_ERROR_WANT_READ)
-            {
-                return OR_TemporaryUnavailable;
-            }
-
-            // TODO check the error
-            logError("SSL socket recv error");
-            printSSLErrors();
-            return OR_Failure;
-        }
-        buffer.assign(m_recvBuffer, readB);
-        return OR_OK;
+        return TLS_recv(buffer);
     }
 
     int flags = 0;
 
-    if (donotblock)
-    {
-        flags |= MSG_DONTWAIT;
-    }
+    if (donotblock) flags |= MSG_DONTWAIT;
 
     auto ret = ::recv(m_fd, m_recvBuffer.data(), m_recvBuffer.size(), flags);
 
     if (ret == -1)
     {
         if (errno == EAGAIN || errno == EWOULDBLOCK) return OR_WouldBlock;  // no data available at the moment
+        if (errno == ENOTCONN || errno == ECONNREFUSED) m_connected = false;
         logDebug("socket recv error, %s", strerror(errno));
         return OR_Failure;  // improve error handling
     }
 
     if (ret == 0)
     {
+        m_connected = false;
         return OR_RecvZero;  // EOF, stream closed in case of a stream socket, or zero length datagram in case of a datagram socket
     }
 
@@ -284,14 +281,117 @@ cerberus::OperationResult cerberus::network::Socket::TLS_accept()
     return OR_OK;
 }
 //=============================================================================
+cerberus::OperationResult cerberus::network::Socket::TLS_send(const data::ByteBuffer &buffer)
+{
+    ERR_clear_error();
+
+    int ret = SSL_write(m_ssl, buffer.data(), buffer.size());
+
+    if (ret <= 0 || ret != buffer.size())
+    {
+        auto err = SSL_get_error(m_ssl, ret);
+
+        logError("SSL socket send error");
+        printSSLErrors();
+
+        if (err == SSL_ERROR_ZERO_RETURN || err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
+        {
+            m_connected = false;
+        }
+        else if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+        {
+            return OR_TemporaryUnavailable;
+        }
+
+        return OR_Failure;
+    }
+
+    return OR_OK;
+}
+//=============================================================================
+cerberus::OperationResult cerberus::network::Socket::TLS_sendFile(const data::filesystem::File &file)
+{
+    auto res = file.size();
+    if (res.fail()) return res;
+
+    auto ret = SSL_sendfile(m_ssl, file.m_fd, 0, res.sz, 0);
+
+    if (ret < 0)
+    {
+        auto err = SSL_get_error(m_ssl, ret);
+
+        logError("SSL socket sendfile error");
+        printSSLErrors();
+
+        if (err == SSL_ERROR_ZERO_RETURN || err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
+        {
+            m_connected = false;
+        }
+        else if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+        {
+            return OR_TemporaryUnavailable;
+        }
+
+        return OR_Failure;
+    }
+    else if (ret != res.sz)
+    {
+        logError("SSL socket sendfile size mismatch");
+        return OR_Failure;
+    }
+
+    return OR_OK;
+}
+//=============================================================================
+cerberus::OperationResult cerberus::network::Socket::TLS_recv(data::ByteBuffer &buffer)
+{
+    ERR_clear_error();
+
+    size_t readB = 0;
+    int ret      = SSL_read_ex(m_ssl, m_recvBuffer.data(), m_recvBuffer.size(), &readB);
+
+    if (ret != 1)
+    {
+        auto err = SSL_get_error(m_ssl, ret);
+
+        if (err == SSL_ERROR_ZERO_RETURN)
+        {
+            m_connected = false;
+            return OR_RecvZero;
+        }
+
+        logError("SSL socket recv error: %i", err);
+        printSSLErrors();
+
+        if (err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
+        {
+            m_connected = false;
+            return OR_RecvZero;
+        }
+
+        if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+        {
+            return OR_TemporaryUnavailable;
+        }
+
+        return OR_Failure;
+    }
+
+    buffer.assign(m_recvBuffer, readB);
+    return OR_OK;
+}
+//=============================================================================
 cerberus::network::Socket::Socket(SocketType type, const std::string &name)
     : CerberusObject(type, name),
       m_extern(false),
       m_maxConnections(DEFAULT_MAX_CONNECTIONS),
       m_fd(-1),
+      m_forceTLSServer(false),
+      m_connected(false),
       m_recvBuffer(DEFAULT_RECV_BUFFER_SIZE),
       m_sslCtx(nullptr),
-      m_ssl(nullptr)
+      m_ssl(nullptr),
+      m_bind()
 {
     switch (transportType())
     {
@@ -308,27 +408,12 @@ cerberus::network::Socket::Socket(SocketType type, const std::string &name)
             throw cerberusImplMissExc("IPC sockets not implemented yet");
             break;
     }
-
-    registerThis();
-
-    if (!isFailed()) logDebug("New %s", toObjStr().c_str());
 }
 //=============================================================================
 cerberus::network::Socket::~Socket()
 {
-    unregisterThis();
-
-    if (m_ssl)
-    {
-        SSL_free(m_ssl);
-    }
-
     close();
-
-    if (m_sslCtx)
-    {
-        SSL_CTX_free(m_sslCtx);
-    }
+    checkOut();
 }
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::bind(const Host &iface)
@@ -389,17 +474,17 @@ cerberus::OperationResult cerberus::network::Socket::connect(const Host &dest)
     {
         logError("error in socket connect: %s", strerror(errno));
 
-        if (transportType() == TCP)
-        {
-            close();  // the socket will not be usable anymore
-        }
+        if (transportType() == TCP) close();  // the socket will not be usable anymore
 
+        m_connected = false;
         return OR_Failure;
     }
 
+    if (TransportType() == TCP) m_connected = true;
+
     if (isTLS())  // TLS mode
     {
-        return TLS_connect();
+        if (TLS_connect().fail()) m_connected = false;
     }
 
     return OR_OK;
@@ -407,40 +492,23 @@ cerberus::OperationResult cerberus::network::Socket::connect(const Host &dest)
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::send(const data::ByteBuffer &buffer, bool donotblock)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
     if (isTLS())  // TLS mode
     {
-        ERR_clear_error();
-
-        int ret = SSL_write(m_ssl, buffer.data(), buffer.size());
-
-        if (ret <= 0 || ret != buffer.size())
-        {
-            // TODO check the error
-            logError("SSL socket send error");
-            printSSLErrors();
-            return OR_Failure;
-        }
-
-        return OR_OK;
+        return TLS_send(buffer);
     }
 
     int flags = 0;
 
-    if (donotblock)
-    {
-        flags |= MSG_DONTWAIT;
-    }
+    if (donotblock) flags |= MSG_DONTWAIT;
 
     auto ret = ::send(m_fd, buffer.data(), buffer.size(), flags);
 
     if (ret == -1)
     {
         logError("socket send error, %s", strerror(errno));
+        if (errno == ENOTCONN || errno == ECONNRESET) m_connected = false;
         return OR_Failure;
     }
 
@@ -449,10 +517,7 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::ByteBuffer
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buffer, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
     if (!timeout.isValid())
     {
@@ -470,22 +535,15 @@ cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buff
 
         if (waitRes.res == OR_Hangup)  // maybe there's still some data to read
         {
-            recvUntilEOF(buffer);
+            flushSocket(buffer);
             break;
         }
         else if (waitRes.res == OR_TimedOut)
         {
-            if (isTLS())  // maybe there's still some data remained in the TLS layer
+            if (isTLS())
             {
-                while (TLS_pending().i != 0)
-                {
-                    if (Socket::_recv(b, false).ok())
-                    {
-                        buffer += b;
-                    }
-                    // else
-                    //     break;    //maybe needed, maybe not
-                }
+                // maybe there's still some data remained in the TLS layer
+                flushSocket(buffer);
             }
 
             break;
@@ -505,7 +563,6 @@ cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buff
             return ret;
     }
 
-    // enough..
     if (buffer.size() == 0) return OR_TimedOut;
 
     return OR_OK;
@@ -516,6 +573,8 @@ cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buff
 void cerberus::network::Socket::setMaxConnections(size_t maxconn) { m_maxConnections = maxconn; }
 //=============================================================================
 bool cerberus::network::Socket::isFailed() const { return (m_fd == -1) || (socketType() == Socket_None); }
+//=============================================================================
+bool cerberus::network::Socket::isConnected() const { return m_connected; }
 //=============================================================================
 void cerberus::network::Socket::setRecvBufferSize(size_t size) { m_recvBuffer.resize(size); }
 //=============================================================================
@@ -622,7 +681,8 @@ cerberus::OperationResult cerberus::network::Socket::close()
         res = OR_Failure;
     }
 
-    m_fd = -1;
+    m_fd        = -1;
+    m_connected = false;
 
     return res;
 }
@@ -631,28 +691,12 @@ bool cerberus::network::Socket::isTLS() { return (m_sslCtx) && (m_ssl); }
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::TLS_init(const std::string &certfile, const std::string &keyfile, bool forceServer)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
-    if (transportType() != TCP)
-    {
-        return OR_Unavailable;
-    }
+    if (transportType() != TCP || isTLS()) return OR_Unavailable;
 
     ERR_clear_error();
-
-    if (m_ssl)
-    {
-        SSL_free(m_ssl);
-        m_ssl = nullptr;
-    }
-
-    if (m_sslCtx)
-    {
-        SSL_CTX_free(m_sslCtx);
-    }
+    m_connected = false;
 
     m_sslCtx = SSL_CTX_new(forceServer ? TLS_server_method() : TLS_method());
 
@@ -720,6 +764,9 @@ cerberus::OperationResult cerberus::network::Socket::TLS_init(const std::string 
         printSSLErrors();
         return OR_Failure;
     }
+
+    m_forceTLSServer = forceServer;
+    m_connected      = true;
 
     return OR_OK;
 }
@@ -889,15 +936,9 @@ cerberus::OperationResult cerberus::network::Socket::sendTo(const data::ByteBuff
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::connectP2P(const Host &dest, const time::TimeFrame &timeout)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
-    if (socketType() != Socket_TCPP2P)
-    {
-        return OR_Unavailable;
-    }
+    if (socketType() != Socket_TCPP2P) return OR_Unavailable;
 
     Host h = dest;
 
@@ -905,35 +946,20 @@ cerberus::OperationResult cerberus::network::Socket::connectP2P(const Host &dest
     addr.sin_family = AF_INET;
     addr.sin_port   = htons(h.port);
 
-    if (!h.hostname.empty() && !h.resolved)
-    {
-        h.resolve();
-    }
+    if (!h.hostname.empty() && !h.resolved) h.resolve();
 
     if (h.octet_networkOrder == 0)
-    {
         addr.sin_addr.s_addr = INADDR_ANY;
-    }
     else
-    {
         addr.sin_addr.s_addr = h.octet_networkOrder;
-    }
 
-    bool overrideFlag = false;
     time::Timer timer(timeout);
 
-    if (timeout.isValid())
-    {
-        timer.start();
-    }
-    else
-    {
-        overrideFlag = true;
-    }
+    if (timeout.isValid()) timer.start();
 
     int ret = 0;
 
-    while (timer.isRunning() || overrideFlag)
+    while (timer.isRunning() || !timeout.isValid())
     {
         ret = ::connect(m_fd, (sockaddr *)&addr, sizeof(sockaddr_in));
 
@@ -941,10 +967,8 @@ cerberus::OperationResult cerberus::network::Socket::connectP2P(const Host &dest
         {
             if (errno == ECONNREFUSED)  // refused, retry
             {
-                if (reopen())
-                {
-                    continue;
-                }
+                if (reset().fail()) break;
+                continue;
             }
             else if (errno == EISCONN)  // already connected
                 ret = 0;
@@ -955,18 +979,25 @@ cerberus::OperationResult cerberus::network::Socket::connectP2P(const Host &dest
 
     if (ret == -1)
     {
-        logError("error in socket connect: %s", strerror(errno));
+        logError("error in socket connectP2P: %s", strerror(errno));
+        m_connected = false;
         return OR_Failure;
     }
+
+    m_connected = true;
 
     // connect succeeded
 
     if (isTLS())  // TLS mode
     {
-        if (m_tlsServer)
-            return TLS_accept();
+        OperationResult opr;
+
+        if (m_forceTLSServer)
+            opr = TLS_accept();
         else
-            return TLS_connect();
+            opr = TLS_connect();
+
+        if (opr.fail()) m_connected = false;
     }
 
     return OR_OK;
@@ -1169,37 +1200,14 @@ cerberus::OperationResult cerberus::network::Socket::useKeepAlive(bool use)
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem::File &file)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
-    if (transportType() != TCP)
-    {
-        return OR_Unavailable;
-    }
+    if (transportType() != TCP) return OR_Unavailable;
+
+    if (isTLS()) return TLS_sendFile(file);
 
     auto res = file.size();
     if (res.fail()) return res;
-
-    if (isTLS())
-    {
-        auto ret = SSL_sendfile(m_ssl, file.m_fd, 0, res.sz, 0);
-
-        if (ret < 0)
-        {
-            logError("SSL socket sendfile error");
-            printSSLErrors();
-            return OR_Failure;
-        }
-        else if (ret != res.sz)
-        {
-            logError("SSL socket sendfile size mismatch");
-            return OR_Failure;
-        }
-
-        return OR_OK;
-    }
 
 #ifdef LINUX_SYSTEM
     off_t offset  = 0;
@@ -1236,23 +1244,14 @@ cerberus::OperationResult cerberus::network::Socket::send(const data::filesystem
 //=============================================================================
 cerberus::OperationResult cerberus::network::Socket::recv(data::filesystem::File &file, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
-    if (transportType() != TCP)
-    {
-        return OR_Unavailable;
-    }
+    if (transportType() != TCP) return OR_Unavailable;
 
     data::ByteBuffer buffer;
     OperationResult ret = recv(buffer, timeout, cycTimeout);
 
-    if (ret.fail())
-    {
-        return ret;
-    }
+    if (ret.fail()) return ret;
 
     if (file.write(buffer).fail()) return OR_InvalidFile;
 

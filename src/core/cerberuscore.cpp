@@ -8,7 +8,7 @@ using namespace cerberus::core;
 //=============================================================================
 int CerberusCore::tick()
 {
-    message::cerberus_message message = nextMessage();
+    cerberus_message message = nextMessage();
 
     if (!(message->isValid()))
     {
@@ -16,7 +16,7 @@ int CerberusCore::tick()
     }
 
     // Process message queue..
-    uint32_t destination = message->destinationId();
+    uint32_t destination = message->destination();
 
     if (destination == CERBERUS_INVALID_ID)
     {

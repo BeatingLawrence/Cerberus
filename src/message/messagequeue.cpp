@@ -10,7 +10,7 @@ MessageQueue::MessageQueue()
 //=============================================================================
 void MessageQueue::add(cerberus_message message) { m_queue.push_back(message); }
 //=============================================================================
-cerberus_message MessageQueue::next()
+cerberus::cerberus_message MessageQueue::next()
 {
     if (m_queue.empty())
     {
@@ -22,7 +22,7 @@ cerberus_message MessageQueue::next()
     return next;
 }
 //=============================================================================
-cerberus_message MessageQueue::nextKeep() const
+cerberus::cerberus_message MessageQueue::nextKeep() const
 {
     if (m_queue.empty())
     {

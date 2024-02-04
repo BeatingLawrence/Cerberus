@@ -80,7 +80,7 @@ namespace cerberus
         static void unregisterObj(uint32_t id);
 
         // Directly send a message to a cerberus object
-        static void sendMsgToObj(uint32_t id, message::cerberus_message msg);
+        static void sendMsgToObj(uint32_t id, cerberus_message msg);
 
         // =======================Plugin manager============================
 
@@ -124,18 +124,18 @@ namespace cerberus
         static void deinit();
 
         // Send a message
-        static void send(message::cerberus_message message);
+        static void send(cerberus_message message);
 
         // Send a message ignoring the destination of message and using id instead
-        static void send(message::cerberus_message message, uint32_t id);
+        static void send(cerberus_message message, uint32_t id);
 
         // Send a message ignoring the destination of message and using the id of the named object instead
-        static void send(message::cerberus_message message, const std::string& name);
+        static void send(cerberus_message message, const std::string& name);
 
         // Return a working default set of init parameters
         static CerberusInitParms cerberusDefaultParms();
 
-        // Return the version of the cerberus framework
+        // Return the version of the Cerberus framework
         static CerbVersion cerberusVersion();
 
         // Log method
@@ -154,22 +154,21 @@ namespace cerberus
         // Retrieves a MessageTemplate by its name
         static message::MessageTemplate msgTemplateByName(const std::string& name);
 
-        // Constructs a slot with the correct constructor according to the given type
-        static message::slot::cerberus_slot slotConstruct(SlotType type);
-
         // Adds a template of the given message to the register, returning the chosen typeID
         static uint32_t registerMessage(const message::Message& message, const std::string& name = std::string());
 
         // Factory of messages. A call to this method will return an empty but structured message.
-        // Will return an invalid message if typeID was not found, or if it's not a Message typeID.
-        static message::cerberus_message messageConstruct(uint32_t id);
+        // This method will return an invalid message if ID was not found,
+        // or if it's not a Message ID.
+        static cerberus_message messageConstruct(uint32_t id);
 
         // Factory of messages. A call to this method will return an empty but structured message.
-        // Will return an invalid message if typeID was not found, or if it's not a Message typeID.
-        static message::cerberus_message messageConstruct(const std::string& name);
+        // This method will return an invalid message if name was not found,
+        // or if it's not a Message name.
+        static cerberus_message messageConstruct(const std::string& name);
 
         // Construct a standard message. See the StandardMessage enum
-        static message::cerberus_message standardMessageConstruct(StandardMessage type);
+        static cerberus_message standardMessageConstruct(StandardMessage type);
     };
 }  // namespace cerberus
 

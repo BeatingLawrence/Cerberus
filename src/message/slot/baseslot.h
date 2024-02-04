@@ -22,37 +22,29 @@ namespace cerberus
     {
         namespace slot
         {
-            typedef std::shared_ptr<class BaseSlot> cerberus_slot;
 
             class CERBERUS_EXPORT BaseSlot
             {
                private:
-                SlotType m_dataType;
+                SlotType m_type;
 
-                uint32_t m_id;
+                std::string m_name;
 
                protected:
-                // Constructs a BaseSlot with a given type
-                BaseSlot(SlotType type);
-
-                // Copy-constructs another BaseSlot
-                BaseSlot(const BaseSlot& other);
+                BaseSlot(SlotType type, const std::string& name = std::string());
 
                public:
                 BaseSlot() = delete;
 
                 virtual ~BaseSlot();
 
-                // Gets the type
+                // Get the type
                 SlotType type() const;
 
-                // Gets the ID, useful for dispatching
-                uint32_t id() const;
+                // Get the name
+                std::string name() const;
 
-                // Sets an ID
-                void setId(uint32_t id);
-
-                // Performs a dynamic cast of this object into T. An exception will be thrown if cast is invalid.
+                // Perform a dynamic cast of this object into T. An exception will be thrown if cast is invalid.
                 template <class T>
                 T* to()
                 {
@@ -66,14 +58,14 @@ namespace cerberus
                     return casted;
                 }
 
-                // Performs a dynamic cast of from into a shared_ptr of type T, caring for the instance counter.
+                // Perform a dynamic cast of from into a shared_ptr of type T, caring for the instance counter.
                 // An exception will be thrown if cast is invalid.
                 template <class T>
                 static std::shared_ptr<T> toShared(const cerberus_slot& from)
                 {
                     std::shared_ptr<T> casted = std::dynamic_pointer_cast<T, BaseSlot>(from);
 
-                    if (*casted == nullptr)
+                    if (casted == nullptr)
                     {
                         throw cerberusIllegalArgExc(core::CerberusUtils::strPrint("Unable co cast to shared_ptr of %s", typeid(T).name()).c_str());
                     }

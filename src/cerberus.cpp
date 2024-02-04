@@ -31,84 +31,20 @@ void Cerberus::registerObj(CerberusObject *object) { return Cerberus::singularCe
 //=============================================================================
 void Cerberus::unregisterObj(uint32_t id) { return Cerberus::singularCerbData.getReg()->unregisterObj(id); }
 //=============================================================================
-void Cerberus::sendMsgToObj(uint32_t id, message::cerberus_message msg) { return Cerberus::singularCerbData.getReg()->sendMsgToObj(id, msg); }
+void Cerberus::sendMsgToObj(uint32_t id, cerberus_message msg) { return Cerberus::singularCerbData.getReg()->sendMsgToObj(id, msg); }
 //=============================================================================
 message::MessageTemplate Cerberus::msgTemplateById(uint32_t id) { return Cerberus::singularCerbData.getReg()->msgTemplateById(id); }
 //=============================================================================
 message::MessageTemplate Cerberus::msgTemplateByName(const std::string &name) { return Cerberus::singularCerbData.getReg()->msgTemplateByName(name); }
 //=============================================================================
-message::slot::cerberus_slot Cerberus::slotConstruct(SlotType type)
-{
-    switch (type)
-    {
-        case ST_UCHAR:
-            // TODO to implement
-            break;
-
-        case ST_CHAR:
-            return message::slot::CharSlot::create();
-            break;
-
-        case ST_USHORT:
-            // TODO to implement
-            break;
-
-        case ST_SHORT:
-            // TODO to implement
-            break;
-
-        case ST_ULONG:
-            // TODO to implement
-            break;
-
-        case ST_LONG:
-            // TODO to implement
-            break;
-
-        case ST_ULONGLONG:
-            // TODO to implement
-            break;
-
-        case ST_LONGLONG:
-            // TODO to implement
-            break;
-
-        case ST_FLOAT:
-            // TODO to implement
-            break;
-
-        case ST_DOUBLE:
-            // TODO to implement
-            break;
-
-        case ST_BOOL:
-            // TODO to implement
-            break;
-
-        case ST_VOIDP:
-            // TODO to implement
-            break;
-
-        case ST_STDSTRINGP:
-            return message::slot::StringSlot::create();
-            break;
-
-        case ST_BYTEBUFFER:
-            // TODO to implement
-            break;
-    }
-
-    throw cerberusImplMissExc("Missing creation for the given slot type");
-}
-//=============================================================================
 uint32_t Cerberus::registerMessage(const message::Message &message, const std::string &name)
 {
     auto tmplt = cerberus::message::MessageTemplate(message, name);
-    tmplt.registerThis();
+    tmplt.checkIn();
     return tmplt.id();
 }
 //=============================================================================
-message::cerberus_message Cerberus::messageConstruct(uint32_t id)
+cerberus_message Cerberus::messageConstruct(uint32_t id)
 {
     if (id == CERBERUS_INVALID_ID)
     {
@@ -129,17 +65,17 @@ message::cerberus_message Cerberus::messageConstruct(uint32_t id)
         return message::Message::create();
     }
 
-    message::cerberus_message message = message::Message::create(id);
+    cerberus_message message = message::Message::create(id);
 
     for (size_t i = 0; i < tmplt.count(); i++)
     {
-        message->addSlot(slotConstruct(tmplt.getSlotTypeAt(i)));
+        message->addSlot(CerberusUtils::newSlot(tmplt.getSlotTypeAt(i)));
     }
 
     return message;
 }
 //=============================================================================
-message::cerberus_message Cerberus::messageConstruct(const std::string &name)
+cerberus_message Cerberus::messageConstruct(const std::string &name)
 {
     auto tmplt = Cerberus::msgTemplateByName(name);
 
@@ -148,19 +84,19 @@ message::cerberus_message Cerberus::messageConstruct(const std::string &name)
         return message::Message::create();
     }
 
-    message::cerberus_message message = message::Message::create(tmplt.id());
+    cerberus_message message = message::Message::create(tmplt.id());
 
     for (size_t i = 0; i < tmplt.count(); i++)
     {
-        message->addSlot(slotConstruct(tmplt.getSlotTypeAt(i)));
+        message->addSlot(CerberusUtils::newSlot(tmplt.getSlotTypeAt(i)));
     }
 
     return message;
 }
 //=============================================================================
-message::cerberus_message Cerberus::standardMessageConstruct(StandardMessage type)
+cerberus_message Cerberus::standardMessageConstruct(StandardMessage type)
 {
-    message::cerberus_message msg;
+    cerberus_message msg;
 
     switch (type)
     {
@@ -309,17 +245,17 @@ void Cerberus::log(const std::string &str, LogLevel logLevel, const std::string 
 //=============================================================================
 uint32_t Cerberus::objIdByName(const std::string &name) { return Cerberus::singularCerbData.getReg()->objIdByName(name); }
 //=============================================================================
-void Cerberus::send(message::cerberus_message message) { Cerberus::singularCerbData.getCore()->addMessage(message); }
+void Cerberus::send(cerberus_message message) { Cerberus::singularCerbData.getCore()->addMessage(message); }
 //=============================================================================
-void Cerberus::send(message::cerberus_message message, uint32_t id)
+void Cerberus::send(cerberus_message message, uint32_t id)
 {
-    message->setDestinationId(id);
+    message->setDestination(id);
     Cerberus::singularCerbData.getCore()->addMessage(message);
 }
 //=============================================================================
-void Cerberus::send(message::cerberus_message message, const std::string &name)
+void Cerberus::send(cerberus_message message, const std::string &name)
 {
-    message->setDestinationId(objIdByName(name));
+    message->setDestination(objIdByName(name));
     Cerberus::singularCerbData.getCore()->addMessage(message);
 }
 //=============================================================================

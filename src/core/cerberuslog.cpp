@@ -21,8 +21,10 @@ const uint8_t CerberusLog::EndOfFormatting_Windows = TERMINAL_FOREGROUND_BLUE | 
 
 #ifdef WINDOWS_SYSTEM
 #include <windows.h>
+#define NEWLINE "\r\n"
 #else
 #include <unistd.h>
+#define NEWLINE "\n"
 #endif
 
 //=============================================================================
@@ -100,10 +102,7 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
     std::string s = str;
 
     // multiline
-    if (isMultiLine(s))
-    {
-        align(s, logLevel, logAuthor.size());
-    }
+    if (isMultiLine(s)) align(s, logLevel, logAuthor.size());
 
     std::string rawLog;
     std::string timestamp = time::DateTime::current().toTimeStampString();
@@ -132,40 +131,22 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
         if (!m_logger->isFailed())
         {
             // Log on file
-            message::cerberus_message logMessage = Cerberus::standardMessageConstruct(SM_LogMsg);
-            logMessage->getSlotAt(0)->to<message::slot::StringSlot>()->setValue(rawLog);
+            cerberus_message logMessage = Cerberus::standardMessageConstruct(SM_LogMsg);
+            logMessage->getSlotAt(0)->to<message::slot::StringSlot>()->value(rawLog);
             m_logger->addMessage(logMessage);
         }
     }
 
+    rawLog.append(NEWLINE);
+
     if (!m_setupParms.colorFormatting)
     {
-        std::cout << rawLog.c_str() << std::endl;
+        std::cout << rawLog;
         return;
     }
 
-#if defined(LINUX_SYSTEM) || defined(APPLE_SYSTEM)
-
-    switch (logLevel)
-    {
-        case LL_Info:  // writes on stdout
-            std::cout << CerberusUtils::strPrint("%s%s [%sINFO%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), m_infoLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), s.c_str()) << std::endl;
-            break;
-
-        case LL_Warning:  // writes on stdout
-            std::cout << CerberusUtils::strPrint("%s%s [%sWARNING%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), m_warningLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), s.c_str()) << std::endl;
-            break;
-
-        case LL_Error:  // writes on stderr
-            std::cerr << CerberusUtils::strPrint("%s%s [%sERROR%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), m_errorLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), s.c_str()) << std::endl;
-            break;
-
-        case LL_Debug:  // writes on stderr
-            std::cerr << CerberusUtils::strPrint("%s%s [%sDEBUG%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), m_debugLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), s.c_str()) << std::endl;
-            break;
-    }
-
-#else
+#ifdef WINDOWS_SYSTEM
+    // remake this part. using "cout << text << endl" is not thread safe
 
     switch (logLevel)
     {
@@ -209,6 +190,35 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
             std::cerr << std::endl;
             break;
     }
+#else
+
+    std::string logstr;
+
+    switch (logLevel)
+    {
+        case LL_Info:  // writes on stdout
+            logstr = CerberusUtils::strPrint("%s%s [%sINFO%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), m_infoLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), s.c_str());
+            break;
+
+        case LL_Warning:  // writes on stdout
+            logstr = CerberusUtils::strPrint("%s%s [%sWARNING%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), m_warningLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), s.c_str());
+            break;
+
+        case LL_Error:  // writes on stderr
+            logstr = CerberusUtils::strPrint("%s%s [%sERROR%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), m_errorLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), s.c_str());
+            break;
+
+        case LL_Debug:  // writes on stderr
+            logstr = CerberusUtils::strPrint("%s%s [%sDEBUG%s] %s%s", EndOfFormatting_Linux, timestamp.c_str(), m_debugLogTerminalFormatting_Linux.c_str(), EndOfFormatting_Linux, logAuthor.c_str(), s.c_str());
+            break;
+    }
+
+    logstr.append(NEWLINE);
+
+    if (logLevel == LL_Info || logLevel == LL_Warning)
+        std::cout << logstr;
+    else
+        std::cerr << logstr;
 
 #endif
 }

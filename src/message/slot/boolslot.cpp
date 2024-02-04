@@ -1,20 +1,20 @@
-#include "stringslot.h"
+#include "boolslot.h"
 
 using namespace cerberus::message::slot;
 
 //=============================================================================
-cerberus::cerberus_slot StringSlot::create(const std::string& string) { return cerberus_slot(new StringSlot(string)); }
+cerberus::cerberus_slot BoolSlot::create(bool value) { return cerberus_slot(new BoolSlot(value)); }
 //=============================================================================
-cerberus::cerberus_slot StringSlot::create(const StringSlot& other) { return cerberus_slot(new StringSlot(other)); }
+cerberus::cerberus_slot BoolSlot::create(const BoolSlot& other) { return cerberus_slot(new BoolSlot(other)); }
 //=============================================================================
-StringSlot::StringSlot(const std::string& string)
-    : BaseSlot(ST_STRING),
-      m_value(string)
+BoolSlot::BoolSlot(bool value)
+    : BaseSlot(ST_BOOL),
+      m_value(value)
 {
     // noop
 }
 //=============================================================================
-std::string StringSlot::value() const { return m_value; }
+bool BoolSlot::value() const { return m_value; }
 //=============================================================================
-void StringSlot::value(const std::string& value) { m_value.assign(value); }
+void BoolSlot::value(bool value) { m_value = value; }
 //=============================================================================

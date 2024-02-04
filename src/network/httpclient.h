@@ -11,38 +11,21 @@ namespace cerberus
         class HTTPClient
         {
            private:
-            std::string m_name;
-            Socket *m_socket;
+            Socket m_socket;
 
-            bool m_useTLS;
-            std::string m_certFile;
-            std::string m_keyFile;
+            static OperationResult getDictFromHeader(const data::ByteBuffer &header, Dictionary &dict);
 
-            struct DictResult
-            {
-                OperationResult result;
-                Dictionary dict;
-            };
+            static OperationResult getStatus(const data::ByteBuffer &statusLine, data::HTTPResponse &response);
 
-            struct StatusResult
-            {
-                OperationResult result;
-                data::HTTPStatus status;
-            };
-
-            DictResult getDictFromHeader(const data::ByteBuffer &header);
-
-            StatusResult getStatus(const data::ByteBuffer &statusLine);
-
-            void decodeChunkedData(data::ByteBuffer &data);
+            static void decodeChunkedData(data::ByteBuffer &data);
 
            public:
             HTTPClient(const std::string &name = std::string());
 
             ~HTTPClient();
 
-            // Specify wether the instance should use a TLS connection or not
-            void useTLS(bool use = true, const std::string &certfile = std::string(), const std::string &keyfile = std::string());
+            // Setup the TLS layer
+            void setupTLS(bool use = false, const std::string &certfile = "", const std::string &keyfile = "");
 
             // Connect to a remote host
             cerberus::OperationResult connectTo(const Host &host);
@@ -51,10 +34,10 @@ namespace cerberus
             void disconnect();
 
             // Perform an HTTP request using the given data
-            cerberus::OperationResult makeRequest(const data::HTTPData &data);
+            cerberus::OperationResult makeRequest(const data::HTTPRequest &data);
 
             // Block until a response is available to be read
-            cerberus::OperationResult getResponse(data::HTTPData &data, const time::TimeFrame &timeout = time::TimeFrame(1000), const time::TimeFrame &cycTimeout = time::TimeFrame());
+            cerberus::OperationResult getResponse(data::HTTPResponse &data, const time::TimeFrame &timeout = time::TimeFrame(1000), const time::TimeFrame &cycTimeout = time::TimeFrame());
 
             // Get the internal socket (use for debugging purposes)
             cerberus::network::Socket *getSocket();

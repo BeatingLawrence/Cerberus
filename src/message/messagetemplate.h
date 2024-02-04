@@ -43,9 +43,6 @@ namespace cerberus
 
             // Returns the number of slots contained in this template
             size_t count() const;
-
-            using CerberusObject::registerThis;
-            using CerberusObject::unregisterThis;
         };
     }  // namespace message
 }  // namespace cerberus

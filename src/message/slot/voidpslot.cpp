@@ -1,20 +1,20 @@
-#include "stringslot.h"
+#include "voidpslot.h"
 
 using namespace cerberus::message::slot;
 
 //=============================================================================
-cerberus::cerberus_slot StringSlot::create(const std::string& string) { return cerberus_slot(new StringSlot(string)); }
+cerberus::cerberus_slot VoidPSlot::create(void* value) { return cerberus_slot(new VoidPSlot(value)); }
 //=============================================================================
-cerberus::cerberus_slot StringSlot::create(const StringSlot& other) { return cerberus_slot(new StringSlot(other)); }
+cerberus::cerberus_slot VoidPSlot::create(const VoidPSlot& other) { return cerberus_slot(new VoidPSlot(other)); }
 //=============================================================================
-StringSlot::StringSlot(const std::string& string)
-    : BaseSlot(ST_STRING),
-      m_value(string)
+VoidPSlot::VoidPSlot(void* value)
+    : BaseSlot(ST_VOIDP),
+      m_value(value)
 {
     // noop
 }
 //=============================================================================
-std::string StringSlot::value() const { return m_value; }
+void* VoidPSlot::value() const { return m_value; }
 //=============================================================================
-void StringSlot::value(const std::string& value) { m_value.assign(value); }
+void VoidPSlot::value(void* value) { m_value = value; }
 //=============================================================================

@@ -62,13 +62,18 @@ void cerberus::thread::Thread::_thread()
                 terminate();
             }
             break;
+            case TP_Continuos:
+            {
+                m_retValue = tick();
+            }
+            break;
         }
     }
 
     coolDown();
 }
 //=============================================================================
-int cerberus::thread::Thread::defaultTickCallback(message::cerberus_message msg, Thread* thread) { return 0; }
+int cerberus::thread::Thread::defaultTickCallback(cerberus_message msg, Thread* thread) { return 0; }
 //=============================================================================
 void cerberus::thread::Thread::defaultWarmUpCallback()
 {
@@ -90,35 +95,17 @@ void cerberus::thread::Thread::wait()
 //=============================================================================
 void cerberus::thread::Thread::construct(ThreadPeriodicity periodicity, const time::TimeFrame& time, const std::string& name)
 {
-    registerThis();
+    if (periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicQueue)
+    {
+        if (!time.isValid()) throw cerberusIllegalArgExc("Invalid time in Thread creation");
 
-    if (periodicity == ThreadPeriodicity::TP_NonPeriodic)
-    {
-        logDebug("New non-periodic %s", toObjStr().c_str());
-    }
-    else if (periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicQueue)
-    {
-        if (time.isValid())
-        {
-            m_time = time.splittedTime();
-            logDebug("New periodic %s, PERIOD:%ums", toObjStr().c_str(), time.milliseconds());
-        }
-        else
-        {
-            unregisterThis();
-            throw cerberusIllegalArgExc("Invalid time in Thread creation");
-        }
-    }
-    else if (periodicity == ThreadPeriodicity::TP_OneShot)
-    {
-        logDebug("New one-shot %s", toObjStr().c_str());
+        m_time = time.splittedTime();
     }
 
     pthread_attr_t attr{};
 
     if (pthread_attr_init(&attr))  // default attributes
     {
-        unregisterThis();
         throw cerberusSystemExc("pthread_attr_init function failed");
     }
 
@@ -126,7 +113,6 @@ void cerberus::thread::Thread::construct(ThreadPeriodicity periodicity, const ti
 
     if (ret)
     {
-        unregisterThis();
         throw cerberusSystemExc("pthread_create function failed: %s", strerror(ret));
     }
 
@@ -190,7 +176,9 @@ cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const std::strin
     construct(periodicity, time::TimeFrame(), name);
 }
 //=============================================================================
-cerberus::thread::Thread::~Thread() { unregisterThis(); }
+cerberus::thread::Thread::~Thread() { checkOut(); }
+//=============================================================================
+cerberus::time::SplittedTime cerberus::thread::Thread::getTime() const { return m_time; }
 //=============================================================================
 cerberus::OperationResult cerberus::thread::Thread::join(bool stop)
 {

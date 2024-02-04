@@ -1,6 +1,5 @@
 #include <cerberus/cerberus.h>
 #include <cerberus/core/libloader.h>
-#include <cerberus/message/slot/charslot.h>
 #include <gtest/gtest.h>
 
 int main(int argc, char* argv[])

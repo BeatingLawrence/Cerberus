@@ -249,6 +249,14 @@ JsonData::JsonData(const std::string &name, float value)
     setNumber(value);
 }
 //=============================================================================
+JsonData::JsonData(const std::string &name, int value)
+    : m_name(name),
+      m_value(),
+      m_elements(),
+      m_type(JDT_Number)
+{
+}
+//=============================================================================
 JsonData::JsonData(const std::string &name, bool value)
     : m_name(name),
       m_value(),
@@ -403,6 +411,24 @@ JsonData &JsonData::setNumber(long double value)
     return *this;
 }
 //=============================================================================
+JsonData &JsonData::setNumber(float value)
+{
+    m_elements.clear();
+    m_value = CerberusUtils::strPrint("%f", value);
+    CerberusUtils::cleanNumber(m_value);
+    m_type = JDT_Number;
+    return *this;
+}
+//=============================================================================
+JsonData &JsonData::setNumber(int value)
+{
+    m_elements.clear();
+    m_value = CerberusUtils::strPrint("%i", value);
+    CerberusUtils::cleanNumber(m_value);
+    m_type = JDT_Number;
+    return *this;
+}
+//=============================================================================
 JsonData &JsonData::setString(const std::string &value)
 {
     m_elements.clear();
@@ -455,11 +481,13 @@ JsonData &JsonData::add(const std::string &value) { return add(JsonData("", valu
 //=============================================================================
 JsonData &JsonData::add(const char *value) { return add(JsonData("", value)); }
 //=============================================================================
-JsonData &JsonData::add(const long double value) { return add(JsonData("", value)); }
+JsonData &JsonData::add(long double value) { return add(JsonData("", value)); }
 //=============================================================================
-JsonData &JsonData::add(const float value) { return add(JsonData("", value)); }
+JsonData &JsonData::add(float value) { return add(JsonData("", value)); }
 //=============================================================================
-JsonData &JsonData::add(const bool value) { return add(JsonData("", value)); }
+JsonData &JsonData::add(int value) { return add(JsonData("", value)); }
+//=============================================================================
+JsonData &JsonData::add(bool value) { return add(JsonData("", value)); }
 //=============================================================================
 JsonData &JsonData::clear()
 {
