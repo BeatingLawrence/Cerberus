@@ -3,6 +3,8 @@
 #include <cerrno>
 #include <cstring>
 
+#include "src/cerberus.h"
+
 using namespace cerberus::time;
 
 //=============================================================================
@@ -33,7 +35,7 @@ SysTimer::SysTimer()
 
     if (timer_create(CLOCK_MONOTONIC, &event, &m_timerId) == -1)
     {
-        debug("error in timer_create: %s", strerror(errno));
+        logDebug("error in timer_create: %s", strerror(errno));
         m_failed = true;
     }
 }
@@ -42,11 +44,11 @@ SysTimer::~SysTimer()
 {
     if (timer_delete(m_timerId) == -1)
     {
-        debug("error in timer_delete: %s", strerror(errno));
+        logDebug("error in timer_delete: %s", strerror(errno));
     }
 }
 //=============================================================================
-SysTimer::SysTimer(const Time &time, bool periodic)
+SysTimer::SysTimer(const TimeFrame &time, bool periodic)
     : m_callback(&defaultTimeoutCallback),
       m_running(false),
       m_timerId(0),
@@ -62,12 +64,12 @@ SysTimer::SysTimer(const Time &time, bool periodic)
 
     if (timer_create(CLOCK_MONOTONIC, &event, &m_timerId) == -1)
     {
-        debug("error in timer_create: %s", strerror(errno));
+        logDebug("error in timer_create: %s", strerror(errno));
         m_failed = true;
     }
 }
 //=============================================================================
-void SysTimer::setTime(const Time &time) { m_time = time; }
+void SysTimer::setTime(const TimeFrame &time) { m_time = time; }
 //=============================================================================
 void SysTimer::start()
 {
@@ -84,7 +86,7 @@ void SysTimer::start()
 
     if (timer_settime(m_timerId, 0, &spec, nullptr) == -1)
     {
-        debug("error in timer_settime: %s", strerror(errno));
+        logDebug("error in timer_settime: %s", strerror(errno));
         m_failed = true;
     }
     else
@@ -99,7 +101,7 @@ void SysTimer::stop()
 
     if (timer_settime(m_timerId, 0, &spec, nullptr) == -1)
     {
-        debug("error in timer_settime: %s", strerror(errno));
+        logDebug("error in timer_settime: %s", strerror(errno));
         m_failed = true;
     }
     else

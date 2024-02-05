@@ -1,5 +1,7 @@
 #include "datetime.h"
 
+#include <string.h>
+
 #include "src/cerberus.h"
 #include "src/core/cerberusutils.h"
 #include "src/exception/exception.h"
@@ -41,7 +43,10 @@ DateTime::DateTime(uint32_t seconds, uint32_t nanoseconds)
     fromTimespec(seconds, nanoseconds);
 }
 //=============================================================================
-bool DateTime::isValid() const { return m_offset.isValid() || (m_time.tm_sec || m_time.tm_min || m_time.tm_hour || m_time.tm_mday || m_time.tm_mon || m_time.tm_year); }
+bool DateTime::isValid() const
+{
+    return m_offset.isValid() || (m_time.tm_sec || m_time.tm_min || m_time.tm_hour || m_time.tm_mday || m_time.tm_mon || m_time.tm_year);
+}
 //=============================================================================
 bool DateTime::usingDst() const { return m_time.tm_isdst > 0; }
 //=============================================================================
@@ -243,7 +248,10 @@ bool DateTime::operator>=(const DateTime &other)
     return thisTime > otherTime;
 }
 //=============================================================================
-std::string DateTime::toString() const { return core::CerberusUtils::strPrint("%.4u/%.2u/%.2u %.2u:%.2u:%.2u", years(), months(), days(), hours(), minutes(), seconds()); }
+std::string DateTime::toString() const
+{
+    return core::CerberusUtils::strPrint("%.4u/%.2u/%.2u %.2u:%.2u:%.2u", years(), months(), days(), hours(), minutes(), seconds());
+}
 //=============================================================================
 std::string DateTime::toTimeStampString() const
 {

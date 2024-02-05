@@ -356,6 +356,38 @@ cerberus::OperationResult cerberus::network::Socket::TLS_recv(data::ByteBuffer &
     return OR_OK;
 }
 //=============================================================================
+cerberus::OperationResult cerberus::network::Socket::TLS_create()
+{
+    ERR_clear_error();
+
+    m_ssl = SSL_new(m_sslCtx);
+
+    if (m_ssl == NULL)
+    {
+        // TODO check the error
+        logError("SSL object creation failed");
+        printSSLErrors();
+        return OR_SystemFailure;
+    }
+
+    return OR_OK;
+}
+//=============================================================================
+cerberus::OperationResult cerberus::network::Socket::TLS_associate()
+{
+    ERR_clear_error();
+
+    if (SSL_set_fd(m_ssl, m_fd) != 1)
+    {
+        // TODO check the error
+        logError("SSL association with kernel fd failed");
+        printSSLErrors();
+        return OR_Failure;
+    }
+
+    return OR_OK;
+}
+//=============================================================================
 cerberus::network::Socket::Socket(SocketType type, const std::string &name)
     : CerberusObject(type, name),
       m_extern(false),
@@ -644,13 +676,7 @@ cerberus::OperationResult cerberus::network::Socket::reset()
 
     if (isTLS())
     {
-        if (SSL_set_fd(m_ssl, m_fd) != 1)
-        {
-            // TODO check the error
-            logError("SSL association with kernel fd failed");
-            printSSLErrors();
-            return OR_Failure;
-        }
+        if (TLS_associate().fail()) return OR_Failure;
 
         if (SSL_clear(m_ssl) != 1)
         {
@@ -719,31 +745,20 @@ cerberus::OperationResult cerberus::network::Socket::TLS_init(const std::string 
         }
     }
 
-    ERR_clear_error();
-
-    m_ssl = SSL_new(m_sslCtx);
-
-    if (m_ssl == NULL)
+    if (TLS_create().fail())
     {
         SSL_CTX_free(m_sslCtx);
-        // TODO check the error
-        logError("SSL object creation failed");
-        printSSLErrors();
         return OR_SystemFailure;
     }
 
-    if (SSL_set_fd(m_ssl, m_fd) != 1)
+    if (TLS_associate().fail())
     {
         SSL_free(m_ssl);
         SSL_CTX_free(m_sslCtx);
-        // TODO check the error
-        logError("SSL association with kernel fd failed");
-        printSSLErrors();
         return OR_Failure;
     }
 
     m_forceTLSServer = forceServer;
-    m_connected      = true;
 
     return OR_OK;
 }
@@ -756,6 +771,31 @@ cerberus::OperationResult cerberus::network::Socket::TLS_deinit()
     SSL_CTX_free(m_sslCtx);  // decrement reference counter
     m_ssl    = nullptr;
     m_sslCtx = nullptr;
+
+    return OR_OK;
+}
+//=============================================================================
+cerberus::OperationResult cerberus::network::Socket::TLS_reset()
+{
+    if (!isTLS()) return OR_Unavailable;
+
+    SSL_CTX *context = m_sslCtx;
+    if (SSL_CTX_up_ref(context) == 0) return OR_Failure;
+
+    TLS_deinit();
+
+    if (TLS_create().fail())
+    {
+        SSL_CTX_free(m_sslCtx);
+        return OR_SystemFailure;
+    }
+
+    if (TLS_associate().fail())
+    {
+        SSL_free(m_ssl);
+        SSL_CTX_free(m_sslCtx);
+        return OR_Failure;
+    }
 
     return OR_OK;
 }
@@ -1039,7 +1079,7 @@ cerberus::OperationResult cerberus::network::Socket::setCork(bool cork)
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_CORK, &val, sizeof(val)) == -1)
     {
-        debug("error in setCork function: %s", strerror(errno));
+        logDebug("error in setCork function: %s", strerror(errno));
         return OR_Failure;  // improve error handling
     }
 

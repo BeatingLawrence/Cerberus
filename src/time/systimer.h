@@ -8,8 +8,8 @@
 
 #include <atomic>
 
-#include "src/time/time.h"
-#include "src/types.h"
+#include "../types.h"
+#include "./timeframe.h"
 
 namespace cerberus
 {
@@ -30,18 +30,18 @@ namespace cerberus
 
             bool m_failed, m_periodic;
 
-            Time m_time;
+            TimeFrame m_time;
 
            public:
             SysTimer();
 
-            SysTimer(const Time& time, bool periodic = false);
+            SysTimer(const TimeFrame& time, bool periodic = false);
 
             SysTimer(const SysTimer& other) = delete;
 
             ~SysTimer();
 
-            void setTime(const Time& time);
+            void setTime(const TimeFrame& time);
 
             void start();
 

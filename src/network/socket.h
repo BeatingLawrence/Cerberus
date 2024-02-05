@@ -73,6 +73,10 @@ namespace cerberus
 
             OperationResult TLS_recv(data::ByteBuffer& buffer);
 
+            OperationResult TLS_create();
+
+            OperationResult TLS_associate();
+
             bool m_extern;  // used for acceptable sockets
 
             size_t m_maxConnections;  // used for acceptable sockets
@@ -161,7 +165,7 @@ namespace cerberus
             // The SSL layer is kept and re-associated to the new socket file descriptor.
             // NOTE: the SSL status is cleared but not totally reset,
             // see https://www.openssl.org/docs/manmaster/man3/SSL_clear.html
-            // The behavior will be corrected in the future
+            // To get a total TLS reset, call TLS_reset() after this call.
             OperationResult reset();
 
             // TLS-enabled sockets (stream):
@@ -181,6 +185,9 @@ namespace cerberus
             // Free all the allocated resources for the TLS features, thus, a call to initTLS() is necessary
             // for the socket to send and receive on the secure layer again.
             OperationResult TLS_deinit();
+
+            // Free and rebuild the TLS object, effectively and completely resetting all the TLS connection state
+            OperationResult TLS_reset();
 
             // Shutdown the TLS connection.
             // In case of success, the bool value contained in the returned
@@ -284,7 +291,8 @@ namespace cerberus
             // This method blocks until a file is received or timeout is reached.
             // -If timeout is not specified and no data are ready to be received, this call could block for ever
             // -If timeout (or/and cycTimeout) is specified, the behavior is the same as the recv() call
-            OperationResult recv(data::filesystem::File& file, const time::TimeFrame& timeout = time::TimeFrame(), const time::TimeFrame& cycTimeout = time::TimeFrame());
+            OperationResult recv(data::filesystem::File& file, const time::TimeFrame& timeout = time::TimeFrame(),
+                                 const time::TimeFrame& cycTimeout = time::TimeFrame());
         };
     }  // namespace network
 }  // namespace cerberus
