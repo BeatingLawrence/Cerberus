@@ -380,7 +380,54 @@ std::string cerberus::OperationResult::errorString()
             return "Thread not joinable";
         case OR_Empty:
             return "Item is empty";
+        case OR_Mismatch:
+            return "Item mismatch";
     }
 
     return "Undefined";
 }
+//=============================================================================
+cerberus::OperationResult cerberus::Dictionary::getFieldValue(const std::string &key, WordMatch match) const
+{
+    for (auto it = begin(); it < end(); it++)
+    {
+        if (cerberus::core::CerberusUtils::areEqual((*it).key, key, match)) return (*it).val;
+    }
+    return OR_NotFound;
+}
+//=============================================================================
+cerberus::OperationResult cerberus::Dictionary::getFieldMatch(const std::string &key, const std::string &value, WordMatch keymatch, WordMatch valmatch) const
+{
+    auto res = getFieldValue(key, keymatch);
+
+    if (res.fail()) return res;
+
+    if (core::CerberusUtils::areEqual(value, res.str, valmatch)) return OR_OK;
+
+    return OR_Mismatch;
+}
+//=============================================================================
+std::string cerberus::Dictionary::getNameAt(SIZE index) const
+{
+    if (index >= size()) throw cerberusIllegalArgExc("Index out of bounds");
+    return at(index).key;
+}
+//=============================================================================
+std::string cerberus::Dictionary::getValueAt(SIZE index) const
+{
+    if (index >= size()) throw cerberusIllegalArgExc("Index out of bounds");
+    return at(index).val;
+}
+//=============================================================================
+cerberus::Dictionary &cerberus::Dictionary::addKey(const std::string &key, const std::string &value)
+{
+    push_back({key, value});
+    return *this;
+}
+//=============================================================================
+cerberus::DictLine &cerberus::Dictionary::get(SIZE index)
+{
+    if (index >= size()) throw cerberusIllegalArgExc("Index out of bounds");
+    return at(index);
+}
+//=============================================================================

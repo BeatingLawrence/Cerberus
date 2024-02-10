@@ -64,45 +64,13 @@ data::HTTPData &data::HTTPData::clearHeader()
 //=============================================================================
 cerberus::SIZE data::HTTPData::getHeaderSize() const { return m_header.size(); }
 //=============================================================================
-cerberus::OperationResult data::HTTPData::getHeaderField(const std::string &key) const
-{
-    auto str = core::CerberusUtils::toLower(key);
-
-    for (auto it = m_header.begin(); it < m_header.end(); it++)
-    {
-        if (cerberus::core::CerberusUtils::areEqual((*it).key, str))
-        {
-            return (*it).val;
-        }
-    }
-    return OR_NotFound;
-}
+cerberus::OperationResult data::HTTPData::getHeaderField(const std::string &key) const { return m_header.getFieldValue(key, WM_CaseInsensitive); }
 //=============================================================================
-OperationResult data::HTTPData::getHeaderMatch(const std::string &key, const std::string &value) const
-{
-    auto res = getHeaderField(key);
-
-    if (res.fail())
-    {
-        return res;
-    }
-
-    return (int64_t)(core::CerberusUtils::areEqual(value, res.str));
-}
+OperationResult data::HTTPData::getHeaderMatch(const std::string &key, const std::string &value) const { return m_header.getFieldMatch(key, value, WM_CaseInsensitive, WM_CaseSensitive); }
 //=============================================================================
-std::string data::HTTPData::getHeaderFieldName(SIZE index) const
-{
-    if (index >= getHeaderSize()) throw cerberusIllegalArgExc("index out of range");
-
-    return m_header[index].key;
-}
+std::string data::HTTPData::getHeaderFieldName(SIZE index) const { return m_header.getNameAt(index); }
 //=============================================================================
-std::string data::HTTPData::getHeaderFieldValue(SIZE index) const
-{
-    if (index >= getHeaderSize()) throw cerberusIllegalArgExc("index out of range");
-
-    return m_header[index].val;
-}
+std::string data::HTTPData::getHeaderFieldValue(SIZE index) const { return m_header.getValueAt(index); }
 //=============================================================================
 data::HTTPRequest::HTTPRequest()
     : method(HTTP_GET),

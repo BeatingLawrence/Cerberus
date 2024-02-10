@@ -41,9 +41,8 @@ namespace cerberus
             Integrity checkIntegrity() const;
 
            public:
-            JsonData();
-
             // Construct a null JsonData
+            JsonData();
             JsonData(const std::string& name);
 
             // Construct a string JsonData
@@ -77,18 +76,18 @@ namespace cerberus
 
             // Search an element of the object.
             // If no item is found, nullptr will be returned
-            JsonData* search(const std::string& name);
+            JsonData search(const std::string& name);
 
             // Search an element in this object and all its children recursively.
             // If no item is found, nullptr will be returned.
-            // NOTE: this method will return the only the first occurrence even if
+            // NOTE: this method will return only the first occurrence even if
             // there are more than one
-            JsonData* deepSearch(const std::string& name);
+            JsonData deepSearch(const std::string& name);
 
             // Get the type of the object
             JsonDataType type() const;
 
-            // Check if the object contains no value or null
+            // Check if the object is null
             bool isNull() const;
 
             // Check if the object is an array

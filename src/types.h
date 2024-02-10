@@ -81,18 +81,11 @@ namespace cerberus
 
     typedef void (*timerCallback)();
 
-    struct DictLine
-    {
-        std::string key, val;
-    };
-
     struct DoubleString
     {
         std::string left;
         std::string right;
     };
-
-    typedef std::vector<DictLine> Dictionary;
 
     struct LoaderFunc
     {
@@ -223,6 +216,8 @@ namespace cerberus
         ST_VOIDP,
         ST_STRING,
         ST_BYTEBUFFER,
+        ST_DICTIONARY,
+        ST_JSON,
     };
 
     namespace message
@@ -278,6 +273,7 @@ namespace cerberus
         OR_WrongType,                 // [general] the item type is wrong
         OR_NotEmpty,                  // [general] the item is not empty
         OR_Empty,                     // [general] the item is empty
+        OR_Mismatch,                  // [general] the item does not match
                                       //
         OR_EOF,                       // [file] EOF reached
                                       //
@@ -361,6 +357,41 @@ namespace cerberus
 
         // Used for bool value
         bool isTrue() { return i != 0; };
+    };
+
+    struct DictLine
+    {
+        std::string key, val;
+    };
+
+    class Dictionary : public std::vector<DictLine>
+    {
+       public:
+        // Get the value of a field as text.
+        // This method will return OR_NotFound if the requested field name was not found.
+        OperationResult getFieldValue(const std::string& key, WordMatch match = WM_CaseSensitive) const;
+
+        // Check if a field value matches with value
+        // This method will return OR_OK if the key value of the dictionary matches against
+        // the provided value argument (the match policy is specified in the valmatch argument),
+        // OR_NotFound if the requested field name was not found,
+        // OR_Mismatch if the field name was found but it does not match with the specified value.
+        OperationResult getFieldMatch(const std::string& key, const std::string& value, WordMatch keymatch = WM_CaseSensitive, WordMatch valmatch = WM_CaseSensitive) const;
+
+        // Get the name of the field at the index position.
+        // An exception is thrown if index is out of bounds
+        std::string getNameAt(SIZE index) const;
+
+        // Get the value of the field at the index position.
+        // An exception is thrown if index is out of bounds
+        std::string getValueAt(SIZE index) const;
+
+        // Add a key at the end of the dictionary
+        Dictionary& addKey(const std::string& key, const std::string& value);
+
+        // Get a line by reference
+        // An exception is thrown if index is out of bounds
+        DictLine& get(SIZE index);
     };
 
     struct Host

@@ -306,26 +306,28 @@ JsonData &JsonData::get(SIZE index)
     return m_elements[index];
 }
 //=============================================================================
-JsonData *JsonData::search(const std::string &name)
+JsonData JsonData::search(const std::string &name)
 {
     for (auto &el : m_elements)
-        if (core::CerberusUtils::areEqual(el.m_name, name)) return &el;
+        if (core::CerberusUtils::areEqual(el.m_name, name)) return el;
 
-    return nullptr;
+    return JsonData();
 }
 //=============================================================================
-JsonData *JsonData::deepSearch(const std::string &name)
+JsonData JsonData::deepSearch(const std::string &name)
 {
-    JsonData *found = search(name);
-    if (found) return found;
+    if (isNull()) return JsonData();
+
+    auto found = search(name);
+    if (!found.isNull()) return found;
 
     for (auto &el : m_elements)
     {
         found = el.deepSearch(name);
-        if (found) return found;
+        if (!found.isNull()) return found;
     }
 
-    return nullptr;
+    return JsonData();
 }
 //=============================================================================
 cerberus::JsonDataType JsonData::type() const { return m_type; }

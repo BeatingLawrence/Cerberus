@@ -362,6 +362,10 @@ cerberus::cerberus_slot CerberusUtils::newSlot(SlotType type)
             return StringSlot::create();
         case ST_BYTEBUFFER:
             return ByteBufferSlot::create();
+        case ST_DICTIONARY:
+            return DictionarySlot::create();
+        case ST_JSON:
+            return JsonSlot::create();
     }
 
     throw cerberusIllegalArgExc("Unknown slot type");

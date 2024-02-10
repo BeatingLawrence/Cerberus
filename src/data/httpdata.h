@@ -14,7 +14,7 @@ namespace cerberus
             data::ByteBuffer m_payload;  // may become a vector of Bytebuffer to support multipart in the future
 
            protected:
-            // Construct an invalid HTTPData instance
+            // Construct an empty HTTPData instance
             HTTPData();
 
            public:
@@ -45,12 +45,15 @@ namespace cerberus
             SIZE getHeaderSize() const;
 
             // Get the value of a field in the str member of the result.
-            // This method will return OR_NotFound if the requested field name was not found
+            // This method will return OR_NotFound if the requested field name was not found.
+            // The search is case insensitive.
             OperationResult getHeaderField(const std::string& key) const;
 
             // Get the matching result of a value corresponding to a key in the int member of the result
-            // This method will return true if the key value of the header matches against the provided value argument.
-            // This method will return OR_NotFound if the requested field name was not found
+            // This method will return OR_OK if the key value of the header matches against
+            // the provided value argument (case sensitive),
+            // OR_NotFound if the requested field name was not found,
+            // OR_Mismatch if the field name was found but it does not match with the specified value.
             OperationResult getHeaderMatch(const std::string& key, const std::string& value) const;
 
             // Get the name of the field at the index position.

@@ -335,18 +335,17 @@ cerberus::OperationResult cerberus::network::Socket::TLS_recv(data::ByteBuffer &
             return OR_RecvZero;
         }
 
+        if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+        {
+            return OR_TemporaryUnavailable;
+        }
+
         logError("SSL socket recv error: %i", err);
         printSSLErrors();
 
         if (err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
         {
             m_connected = false;
-            return OR_RecvZero;
-        }
-
-        if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
-        {
-            return OR_TemporaryUnavailable;
         }
 
         return OR_Failure;
@@ -533,28 +532,23 @@ cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buff
 
     while (true)
     {
-        auto waitRes = waitRead((first || !cycTimeout.isValid()) ? timeout : cycTimeout);  // for TLS must call read() to make stuff be ready
-        first        = false;
+        auto waitRes = waitRead((first || !cycTimeout.isValid()) ? timeout : cycTimeout);
 
-        if (waitRes.res == OR_Hangup)  // maybe there's still some data to read
+        if (waitRes.res == OR_Hangup)  // maybe there are still some data to read
         {
             flushSocket(buffer);
             break;
         }
         else if (waitRes.res == OR_TimedOut)
         {
-            if (isTLS())
-            {
-                // maybe there's still some data remained in the TLS layer
-                flushSocket(buffer);
-            }
-
+            // maybe there are still some data remained in the TLS layer
+            if (isTLS()) flushSocket(buffer);
             break;
         }
         else if (waitRes.fail())
             return OR_Failure;
 
-        // wait is OK, data is available
+        // wait is OK, data are available
 
         auto ret = Socket::_recv(b, false).res;
 
@@ -562,8 +556,12 @@ cerberus::OperationResult cerberus::network::Socket::recv(data::ByteBuffer &buff
             buffer += b;
         else if (ret == OR_RecvZero)  // HUP or zero lenght datagram
             return OR_OK;
+        else if (ret == OR_TemporaryUnavailable && isTLS())
+            continue;
         else
             return ret;
+
+        first = false;
     }
 
     if (buffer.size() == 0) return OR_TimedOut;
@@ -744,6 +742,8 @@ cerberus::OperationResult cerberus::network::Socket::TLS_init(const std::string 
             printSSLErrors();
         }
     }
+
+    SSL_CTX_clear_mode(m_sslCtx, SSL_MODE_AUTO_RETRY);
 
     if (TLS_create().fail())
     {

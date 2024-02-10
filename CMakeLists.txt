@@ -47,7 +47,6 @@ file(GLOB_RECURSE header_files CONFIGURE_DEPENDS
 add_library(Cerberus SHARED
   ${src_files}
   ${header_files}
-  src/cerberus
 )
 
 set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
