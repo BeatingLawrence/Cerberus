@@ -8,7 +8,7 @@
 using namespace cerberus::core;
 
 //=============================================================================
-cerberus::OperationResult LibLoader::close(void* handle)
+cerberus::OpRes LibLoader::close(void* handle)
 {
     if (dlclose(handle) != 0)
     {
@@ -20,7 +20,7 @@ cerberus::OperationResult LibLoader::close(void* handle)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult LibLoader::open(const std::string& path)
+cerberus::OpRes LibLoader::open(const std::string& path)
 {
     void* p = dlopen(path.c_str(), RTLD_LOCAL | RTLD_NOW);
 
@@ -58,9 +58,9 @@ LibLoader::LibLoader()
 //=============================================================================
 LibLoader::~LibLoader() { unload(); }
 //=============================================================================
-cerberus::OperationResult LibLoader::load(const std::string& path, bool noreg)
+cerberus::OpRes LibLoader::load(const std::string& path, bool noreg)
 {
-    OperationResult ret;
+    OpRes ret;
     void* p;
 
     if (m_handle && m_noreg)  // handle the current loaded library (unload)
@@ -117,7 +117,7 @@ cerberus::OperationResult LibLoader::load(const std::string& path, bool noreg)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult LibLoader::unload()
+cerberus::OpRes LibLoader::unload()
 {
     if (!m_noreg) return OR_Unavailable;
     if (!m_handle) return OR_BadConditions;
@@ -134,7 +134,7 @@ cerberus::OperationResult LibLoader::unload()
     return OR_Failure;
 }
 //=============================================================================
-cerberus::OperationResult LibLoader::swap(const std::string& path)
+cerberus::OpRes LibLoader::swap(const std::string& path)
 {
     if (m_noreg) return OR_Unavailable;
 
@@ -147,7 +147,7 @@ cerberus::OperationResult LibLoader::swap(const std::string& path)
 
     if (m_handle != Cerberus::checkPlugin(m_id)) return OR_NotFound;
 
-    OperationResult ret;
+    OpRes ret;
 
     ret = close(m_handle);
 
@@ -171,7 +171,7 @@ cerberus::OperationResult LibLoader::swap(const std::string& path)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult LibLoader::reload() { return swap(m_path); }
+cerberus::OpRes LibLoader::reload() { return swap(m_path); }
 //=============================================================================
 cerberus::LoaderFunc LibLoader::get(const std::string& symbol)
 {
@@ -195,7 +195,7 @@ cerberus::LoaderFunc LibLoader::get(const std::string& symbol)
 //=============================================================================
 bool LibLoader::isLoaded() const { return isLoaded(m_path); }
 //=============================================================================
-cerberus::OperationResult LibLoader::fastload(const std::string& path)
+cerberus::OpRes LibLoader::fastload(const std::string& path)
 {
     LibLoader loader;
     return loader.load(path);

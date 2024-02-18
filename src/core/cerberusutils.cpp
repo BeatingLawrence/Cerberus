@@ -122,7 +122,7 @@ bool CerberusUtils::areEqual(const std::string& str1, const std::string& str2, W
     return false;
 }
 //=============================================================================
-cerberus::OperationResult CerberusUtils::environmentVariable(const std::string& variableName)
+StringOpRes CerberusUtils::environmentVariable(const std::string& variableName)
 {
     char* val = getenv(variableName.c_str());
 
@@ -134,7 +134,7 @@ cerberus::OperationResult CerberusUtils::environmentVariable(const std::string& 
     return std::string(val);
 }
 //=============================================================================
-cerberus::OperationResult CerberusUtils::stringToInt(const std::string& str, Radix r)
+IntOpRes CerberusUtils::stringToInt(const std::string& str, Radix r)
 {
     int64_t ret = 0;
 
@@ -150,7 +150,7 @@ cerberus::OperationResult CerberusUtils::stringToInt(const std::string& str, Rad
     return ret;
 }
 //=============================================================================
-cerberus::OperationResult CerberusUtils::stringToDouble(const std::string& str)
+FloatOpRes CerberusUtils::stringToDouble(const std::string& str)
 {
     long double ret = 0.0f;
 
@@ -287,7 +287,7 @@ std::string CerberusUtils::substrFrom(const std::string& str, const std::string&
 //=============================================================================
 cerberus::DoubleString CerberusUtils::split(const std::string& str, const std::string& token) { return {substrUntil(str, token), substrFrom(str, token)}; }
 //=============================================================================
-cerberus::OperationResult CerberusUtils::cleanNumber(std::string& str)
+cerberus::OpRes CerberusUtils::cleanNumber(std::string& str)
 {
     if (!isNumber(str)) return {OR_WrongArgument, strPrint("Given %s is not a number", str.c_str())};
 

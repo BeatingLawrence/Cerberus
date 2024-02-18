@@ -13,9 +13,9 @@ namespace cerberus
            private:
             Socket m_socket;
 
-            static OperationResult getDictFromHeader(const data::ByteBuffer &header, Dictionary &dict);
+            static OpRes getDictFromHeader(const data::ByteBuffer &header, Dictionary &dict);
 
-            static OperationResult getStatus(const data::ByteBuffer &statusLine, data::HTTPResponse &response);
+            static OpRes getStatus(const data::ByteBuffer &statusLine, data::HTTPResponse &response);
 
             static void decodeChunkedData(data::ByteBuffer &data);
 
@@ -28,16 +28,16 @@ namespace cerberus
             void setupTLS(bool use = false, const std::string &certfile = "", const std::string &keyfile = "");
 
             // Connect to a remote host
-            cerberus::OperationResult connectTo(const Host &host);
+            cerberus::OpRes connectTo(const Host &host);
 
             // Disconnect from host
             void disconnect();
 
             // Perform an HTTP request using the given data
-            cerberus::OperationResult makeRequest(const data::HTTPRequest &data);
+            cerberus::OpRes makeRequest(const data::HTTPRequest &data);
 
             // Block until a response is available to be read
-            cerberus::OperationResult getResponse(data::HTTPResponse &data, const time::TimeFrame &timeout = time::TimeFrame(1000), const time::TimeFrame &cycTimeout = time::TimeFrame());
+            cerberus::OpRes getResponse(data::HTTPResponse &data, const time::TimeFrame &timeout = time::TimeFrame(1000), const time::TimeFrame &cycTimeout = time::TimeFrame());
 
             // Get the internal socket (use for debugging purposes)
             cerberus::network::Socket *getSocket();

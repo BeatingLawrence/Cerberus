@@ -68,7 +68,7 @@ namespace cerberus
                  *
                  *  The given block is an unstructured block
                  */
-                OperationResult queryBlock(const std::string& query, SQLBlock& output);
+                OpRes queryBlock(const std::string& query, SQLBlock& output);
 
                 /*  This method performs a query and returns a result.
                  *  This method also alters the given prototype to match the correct one of the queried table
@@ -79,7 +79,7 @@ namespace cerberus
                  *        The failure information are obtainable through failureReason()
                  *      > OR_NotFound if the query was successfully completed but no such table exists
                  */
-                OperationResult queryPrototype(SQLTablePrototype& prototype);
+                OpRes queryPrototype(SQLTablePrototype& prototype);
 
                 /*  This method executes a command and returns a result.
                  *  The result can be:
@@ -88,7 +88,7 @@ namespace cerberus
                  *      > OR_DBFailure if the database encounters a problem and the command failed.
                  *        The failure information are obtainable through failureReason()
                  */
-                OperationResult command(const std::string& query);
+                OpRes command(const std::string& query);
 
                 /*  This method creates a table in the database.
                  *  The result can be:
@@ -98,7 +98,7 @@ namespace cerberus
                  *        The failure information are obtainable through failureReason()
                  *      > OR_TableAlreadyPresent if the specified table already exists and could not be created
                  */
-                OperationResult createTable(SQLTablePrototype& prototype);
+                OpRes createTable(SQLTablePrototype& prototype);
 
                 /*  This method inserts a block of rows in the table specified by prototype.
                  *  Please note that all the information present in the prototype of the block must be correct, even the data types.
@@ -109,7 +109,7 @@ namespace cerberus
                  *      > OR_DBFailure if the database encounters a problem and the command failed.
                  *        The failure information are obtainable through failureReason()
                  */
-                OperationResult insertBlock(const SQLBlock& block);
+                OpRes insertBlock(const SQLBlock& block);
 
                 /*  This method drops a table.
                  *  The result can be:
@@ -118,7 +118,7 @@ namespace cerberus
                  *      > OR_DBFailure if the database encounters a problem and the command failed.
                  *        The failure information are obtainable through failureReason()
                  */
-                OperationResult dropTable(const std::string& table);
+                OpRes dropTable(const std::string& table);
 
                 /*  This method performs a query and returns an entire table.
                  *  Be careful with this method, because if the requested table is huge, an insane amount of memory will be allocated
@@ -131,7 +131,7 @@ namespace cerberus
                  *
                  *  The given block is a structured block
                  */
-                OperationResult querytable(const std::string& tableName, SQLBlock& output);
+                OpRes querytable(const std::string& tableName, SQLBlock& output);
             };
         }  // namespace database
     }      // namespace data

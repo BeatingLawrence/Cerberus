@@ -48,8 +48,8 @@ namespace cerberus
             bool m_noreg;
             std::string m_path;
 
-            static OperationResult close(void* handle);
-            OperationResult open(const std::string& path);
+            static OpRes close(void* handle);
+            OpRes open(const std::string& path);
             bool isLoaded(const std::string& path) const;
 
            public:
@@ -64,19 +64,19 @@ namespace cerberus
             // If noreg is true, the object is not noted in the Cerberus registers so
             // the user must call unload() when the object it's not necessary anymore.
             // This call can also be used to setup a LibLoader instance for an already loaded object
-            OperationResult load(const std::string& path, bool noreg = false);
+            OpRes load(const std::string& path, bool noreg = false);
 
             // Unload a dynamic shared object.
             // This method only works in standalone mode
-            OperationResult unload();
+            OpRes unload();
 
             // Swap the loaded library with the image provided at the given path.
             // The operation is thread-safe and may be done while other threads are using the image
             // This method only works in shared mode
-            OperationResult swap(const std::string& path);
+            OpRes swap(const std::string& path);
 
             // Reload the plugin. This method is equal to swpa(), just without changing path
-            OperationResult reload();
+            OpRes reload();
 
             // Get the pointer to an object contained in the plugin.
             // If an error occurs, an invalid LoaderFunc is returned.
@@ -89,7 +89,7 @@ namespace cerberus
 
             // Load a shared object into the Cerberus framework domain, avoiding
             // to manually create a LibLoader instance
-            static OperationResult fastload(const std::string& path);
+            static OpRes fastload(const std::string& path);
         };
     }  // namespace core
 }  // namespace cerberus

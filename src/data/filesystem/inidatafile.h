@@ -68,7 +68,7 @@ namespace cerberus
 
                 void insertLine(const Line& line);
 
-                OperationResult syncFile();  // rewrites the file reading from memory
+                OpRes syncFile();  // rewrites the file reading from memory
 
                 void printDebug();
 
@@ -89,7 +89,7 @@ namespace cerberus
                 // but some data was not correctly written and has been discarded.
                 // If a not ignoreable error has been encountered, OR_Failure is returned.
                 // If the given path is not valid, OR_InvalidFile is returned.
-                OperationResult load();
+                BoolOpRes load();
 
                 // Checks if a key exists in the memory
                 bool exists(const std::string& key, const std::string& section = MAIN_SECTION);
@@ -102,7 +102,7 @@ namespace cerberus
                 bool isType(const std::string& key, IniDataType type);
 
                 // Force the re-write of the entire file
-                OperationResult rewrite();
+                OpRes rewrite();
 
                 // Write methods:
                 // These methods synchronously add or modifiy a
@@ -112,20 +112,20 @@ namespace cerberus
                 // When the main section is specified, the key=value pair is written
                 // at the top of the file instead.
                 // If provided key or value is empty, the method will return OR_WrongArgument
-                OperationResult write_string(const std::string& key, const std::string& value, const std::string& section = MAIN_SECTION);
-                OperationResult write_integer(const std::string& key, int64_t value, const std::string& section = MAIN_SECTION);
-                OperationResult write_double(const std::string& key, double value, const std::string& section = MAIN_SECTION);
-                OperationResult write_bool(const std::string& key, bool value, const std::string& section = MAIN_SECTION);
+                OpRes write_string(const std::string& key, const std::string& value, const std::string& section = MAIN_SECTION);
+                OpRes write_integer(const std::string& key, int64_t value, const std::string& section = MAIN_SECTION);
+                OpRes write_double(const std::string& key, double value, const std::string& section = MAIN_SECTION);
+                OpRes write_bool(const std::string& key, bool value, const std::string& section = MAIN_SECTION);
 
                 // Read methods:
                 // These methods return the requested data reading from the keys loaded with load().
                 // If the value does not exist, OR_NotFound is returned.
                 // If the value is of a different type, OR_WrongType is returned.
                 // read_string() does not check for the type because all values are strings
-                OperationResult read_string(const std::string& key, const std::string& section = MAIN_SECTION);
-                OperationResult read_integer(const std::string& key, const std::string& section = MAIN_SECTION);
-                OperationResult read_double(const std::string& key, const std::string& section = MAIN_SECTION);
-                OperationResult read_bool(const std::string& key, const std::string& section = MAIN_SECTION);
+                StringOpRes read_string(const std::string& key, const std::string& section = MAIN_SECTION);
+                IntOpRes read_integer(const std::string& key, const std::string& section = MAIN_SECTION);
+                FloatOpRes read_double(const std::string& key, const std::string& section = MAIN_SECTION);
+                BoolOpRes read_bool(const std::string& key, const std::string& section = MAIN_SECTION);
             };
         }  // namespace filesystem
     }      // namespace data

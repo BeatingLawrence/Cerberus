@@ -182,7 +182,7 @@ cerberus::thread::Thread::~Thread() { checkOut(); }
 //=============================================================================
 cerberus::time::SplittedTime cerberus::thread::Thread::getTime() const { return m_time; }
 //=============================================================================
-cerberus::OperationResult cerberus::thread::Thread::join(bool stop)
+IntOpRes cerberus::thread::Thread::join(bool stop)
 {
     if (stop)
     {
@@ -200,8 +200,8 @@ cerberus::OperationResult cerberus::thread::Thread::join(bool stop)
         }
         else if (ret != ESRCH)  // ESRCH = not executing anymore
         {
-            OperationResult toReturn(OR_Failure);
-            toReturn.str = strerror(ret);
+            IntOpRes toReturn(OR_Failure);
+            toReturn.reason = strerror(ret);
             return toReturn;
         }
     }
@@ -209,14 +209,14 @@ cerberus::OperationResult cerberus::thread::Thread::join(bool stop)
     return (int64_t)m_retValue;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::thread::Thread::detach()
+cerberus::OpRes cerberus::thread::Thread::detach()
 {
     int ret = pthread_detach(m_pthread);
 
     if (ret)
     {
-        OperationResult toReturn(OR_Failure);
-        toReturn.str = strerror(ret);
+        OpRes toReturn(OR_Failure);
+        toReturn.reason = strerror(ret);
         return toReturn;
     }
 

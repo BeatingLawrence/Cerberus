@@ -154,9 +154,8 @@ namespace cerberus
 
             // Return the buffer content as a normalized string (it contains alpha-numeric,
             // symbols, and cr lf and crlf are substituted by "\r" "\n" and "\r\n").
-            // This method uses CerberusUtils::normalize() and if some non-textual character
-            // is found, the returned result will be true
-            OperationResult toNormalizedString() const;
+            // This method uses CerberusUtils::normalize()
+            StringOpRes toNormalizedString() const;
 
             // Return the buffer content as a HEX binary data string
             // The align argument specifies the number of bytes written per raw.
@@ -167,7 +166,7 @@ namespace cerberus
             // If the given string is empty or if its size is larger than the buffer size,
             // this method returns OR_WrongArgument.
             // If str is not contained inside the buffer, this method returns OR_NotFound
-            OperationResult search(const char* str) const;
+            IntOpRes search(const char* str) const;
 
             // Check if the buffer starts with the given buffer
             bool startsWith(const ByteBuffer& buffer) const;

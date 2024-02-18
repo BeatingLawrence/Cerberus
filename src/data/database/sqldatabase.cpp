@@ -22,25 +22,25 @@ bool SQLDatabase::isFailed() const { return m_failed; }
 //=============================================================================
 std::string SQLDatabase::failureReason() const { return m_failureReason; }
 //=============================================================================
-cerberus::OperationResult SQLDatabase::queryBlock(const std::string& query, SQLBlock& output)
+cerberus::OpRes SQLDatabase::queryBlock(const std::string& query, SQLBlock& output)
 {
     // Query a single block
     return OR_Undefined;
 }
 //=============================================================================
-cerberus::OperationResult SQLDatabase::queryPrototype(SQLTablePrototype& prototype)
+cerberus::OpRes SQLDatabase::queryPrototype(SQLTablePrototype& prototype)
 {
     // Query a prototype
     return OR_Undefined;
 }
 //=============================================================================
-cerberus::OperationResult SQLDatabase::command(const std::string& query)
+cerberus::OpRes SQLDatabase::command(const std::string& query)
 {
     // Send a command
     return OR_Undefined;
 }
 //=============================================================================
-cerberus::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototype)
+cerberus::OpRes SQLDatabase::createTable(SQLTablePrototype& prototype)
 {
     if (prototype.name().empty())
     {
@@ -87,7 +87,7 @@ cerberus::OperationResult SQLDatabase::createTable(SQLTablePrototype& prototype)
     return command(cmd);
 }
 //=============================================================================
-cerberus::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
+cerberus::OpRes SQLDatabase::insertBlock(const SQLBlock& block)
 {
     if (block.m_prototype.name().empty())
     {
@@ -132,9 +132,9 @@ cerberus::OperationResult SQLDatabase::insertBlock(const SQLBlock& block)
     return command(cmd);
 }
 //=============================================================================
-cerberus::OperationResult SQLDatabase::dropTable(const std::string& table) { return command(cerberus::core::CerberusUtils::strPrint("DROP TABLE %s;", table.c_str())); }
+cerberus::OpRes SQLDatabase::dropTable(const std::string& table) { return command(cerberus::core::CerberusUtils::strPrint("DROP TABLE %s;", table.c_str())); }
 //=============================================================================
-cerberus::OperationResult SQLDatabase::querytable(const std::string& tableName, SQLBlock& output)
+cerberus::OpRes SQLDatabase::querytable(const std::string& tableName, SQLBlock& output)
 {
     SQLTablePrototype prototype(tableName);
 

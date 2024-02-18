@@ -167,7 +167,7 @@ bool cerberus::Host::isTextual() { return !hostname.empty(); }
 //=============================================================================
 bool cerberus::Host::hasPort() { return port != 0; }
 //=============================================================================
-cerberus::OperationResult cerberus::Host::resolve()
+cerberus::OpRes cerberus::Host::resolve()
 {
     addrinfo *res = nullptr;
     addrinfo info;
@@ -222,71 +222,45 @@ cerberus::OperationResult cerberus::Host::resolve()
     }
 }
 //=============================================================================
-cerberus::OperationResult::OperationResult()
-    : res(OR_Undefined),
-      i(0)
+cerberus::OpRes::OpRes()
+    : res(OR_Undefined)
 {
 }
 //=============================================================================
-cerberus::OperationResult::OperationResult(Result r, const std::string &reason)
+cerberus::OpRes::OpRes(Result r, const std::string &reason)
     : res(r),
-      i(0),
-      str(reason)
+      reason(reason)
 {
 }
 //=============================================================================
-cerberus::OperationResult::OperationResult(int64_t i)
-    : res(OR_OK),
-      i(i)
-{
-}
+bool cerberus::OpRes::operator==(Result r) { return (res == r); }
 //=============================================================================
-cerberus::OperationResult::OperationResult(long double f)
-    : res(OR_OK),
-      f(f)
-{
-}
+bool cerberus::OpRes::operator!=(Result r) { return (res != r); }
 //=============================================================================
-cerberus::OperationResult::OperationResult(LSIZE sz)
-    : res(OR_OK),
-      sz(sz)
-{
-}
-//=============================================================================
-cerberus::OperationResult::OperationResult(const std::string &str)
-    : res(OR_OK),
-      str(str)
-{
-}
-//=============================================================================
-bool cerberus::OperationResult::operator==(Result r) { return (res == r); }
-//=============================================================================
-bool cerberus::OperationResult::operator!=(Result r) { return (res != r); }
-//=============================================================================
-cerberus::OperationResult &cerberus::OperationResult::expect(const std::string &str)
+cerberus::OpRes &cerberus::OpRes::expect(const std::string &str)
 {
     if (fail()) throw cerberus::exception::Exception(str.c_str());
 
     return *this;
 }
 //=============================================================================
-cerberus::OperationResult &cerberus::OperationResult::expect(Result reason, const std::string &str)
+cerberus::OpRes &cerberus::OpRes::expect(Result reason, const std::string &str)
 {
     if (fail() && res == reason) throw cerberus::exception::Exception(str.c_str());
 
     return *this;
 }
 //=============================================================================
-cerberus::OperationResult &cerberus::OperationResult::expect()
+cerberus::OpRes &cerberus::OpRes::expect()
 {
     if (fail())
     {
         std::string errorstr = errorString();
 
-        if (!str.empty())
+        if (!reason.empty())
         {
             errorstr.append(", ");
-            errorstr.append(str);
+            errorstr.append(reason);
         }
 
         throw cerberus::exception::Exception(errorstr.c_str());
@@ -295,7 +269,7 @@ cerberus::OperationResult &cerberus::OperationResult::expect()
     return *this;
 }
 //=============================================================================
-bool cerberus::OperationResult::ok(bool print)
+bool cerberus::OpRes::ok(bool print)
 {
     if (res == Result::OR_OK)
     {
@@ -304,7 +278,7 @@ bool cerberus::OperationResult::ok(bool print)
     else if (print)
     {
         std::string err = errorString();
-        if (!str.empty()) err.append("\n").append(str);
+        if (!reason.empty()) err.append("\n").append(reason);
 
         logError("Operation failed: %s", err.c_str());
     }
@@ -312,9 +286,9 @@ bool cerberus::OperationResult::ok(bool print)
     return false;
 }
 //=============================================================================
-bool cerberus::OperationResult::fail(bool print) { return !ok(print); }
+bool cerberus::OpRes::fail(bool print) { return !ok(print); }
 //=============================================================================
-std::string cerberus::OperationResult::errorString()
+std::string cerberus::OpRes::errorString()
 {
     switch (res)
     {
@@ -387,7 +361,7 @@ std::string cerberus::OperationResult::errorString()
     return "Undefined";
 }
 //=============================================================================
-cerberus::OperationResult cerberus::Dictionary::getFieldValue(const std::string &key, WordMatch match) const
+StringOpRes cerberus::Dictionary::getFieldValue(const std::string &key, WordMatch match) const
 {
     for (auto it = begin(); it < end(); it++)
     {
@@ -396,13 +370,13 @@ cerberus::OperationResult cerberus::Dictionary::getFieldValue(const std::string 
     return OR_NotFound;
 }
 //=============================================================================
-cerberus::OperationResult cerberus::Dictionary::getFieldMatch(const std::string &key, const std::string &value, WordMatch keymatch, WordMatch valmatch) const
+cerberus::OpRes cerberus::Dictionary::getFieldMatch(const std::string &key, const std::string &value, WordMatch keymatch, WordMatch valmatch) const
 {
     auto res = getFieldValue(key, keymatch);
 
     if (res.fail()) return res;
 
-    if (core::CerberusUtils::areEqual(value, res.str, valmatch)) return OR_OK;
+    if (core::CerberusUtils::areEqual(value, res.value, valmatch)) return OR_OK;
 
     return OR_Mismatch;
 }

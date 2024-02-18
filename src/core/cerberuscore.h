@@ -28,8 +28,6 @@ namespace cerberus
             EventScheduler m_eventScheduler;
 
             CerberusCore();
-
-            virtual ~CerberusCore();
         };
     }  // namespace core
 }  // namespace cerberus

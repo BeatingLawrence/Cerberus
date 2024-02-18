@@ -35,7 +35,7 @@ void Cerberus::registerObj(CerberusObject *object)
 //=============================================================================
 void Cerberus::unregisterObj(uint32_t id)
 {
-    Cerberus::framework.checkInit();
+    // avoid check init flag
     Cerberus::framework.begin();
     Cerberus::framework.reg->unregisterObj(id);
     Cerberus::framework.end();
@@ -308,13 +308,13 @@ CerbVersion Cerberus::cerberusVersion()
     std::string typ;
 
     auto splitted = CerberusUtils::split(ver, ".");
-    ret.major     = CerberusUtils::stringToInt(splitted.left).i;
+    ret.major     = CerberusUtils::stringToInt(splitted.left).value;
     splitted      = CerberusUtils::split(splitted.right, ".");
-    ret.minor     = CerberusUtils::stringToInt(splitted.left).i;
+    ret.minor     = CerberusUtils::stringToInt(splitted.left).value;
     splitted      = CerberusUtils::split(splitted.right, ".");
-    ret.patch     = CerberusUtils::stringToInt(splitted.left).i;
+    ret.patch     = CerberusUtils::stringToInt(splitted.left).value;
 
-    switch (CerberusUtils::stringToInt(splitted.right).i)
+    switch (CerberusUtils::stringToInt(splitted.right).value)
     {
         case 0:
             ret.type = CerbVersion::Alpha;

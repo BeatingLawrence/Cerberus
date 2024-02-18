@@ -55,13 +55,13 @@ namespace cerberus
             static bool areEqual(const std::string& str1, const std::string& str2, WordMatch match = WM_CaseSensitive);
 
             // Retrieve the value of specified environment variable
-            static OperationResult environmentVariable(const std::string& variableName);
+            static StringOpRes environmentVariable(const std::string& variableName);
 
             // Convert a given string to an int (64 bit)
-            static OperationResult stringToInt(const std::string& str, Radix r = Radix::Decimal);
+            static IntOpRes stringToInt(const std::string& str, Radix r = Radix::Decimal);
 
             // Convert a given string to a long double
-            static OperationResult stringToDouble(const std::string& str);
+            static FloatOpRes stringToDouble(const std::string& str);
 
             // Tell if the string contains at least one alphabet character [a-z][A-Z]
             static bool isAlpha(const std::string& str);
@@ -120,7 +120,7 @@ namespace cerberus
             // trailing or leading zeros (without altering the value of course).
             // The method also removes the dot if the decimal part is null.
             // This method fails if the supplied string is not a number
-            static OperationResult cleanNumber(std::string& str);
+            static OpRes cleanNumber(std::string& str);
 
             // Construct a new Slot
             static cerberus_slot newSlot(SlotType type);

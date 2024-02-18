@@ -118,10 +118,10 @@ namespace cerberus
 
             // Block until thread terminates and return the last tick() exit value.
             // If stop is true, the Thread is also started and terminated.
-            OperationResult join(bool stop = false);
+            IntOpRes join(bool stop = false);
 
             // Detach the Thread from the owner Thread
-            OperationResult detach();
+            OpRes detach();
 
             // Set a custom callback to be executed as tick()
             void provideTickCallback(customTickCallback callback);

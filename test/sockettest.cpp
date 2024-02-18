@@ -155,7 +155,7 @@ TEST(socketTest, UDP)
     cerberus::data::ByteBuffer buf("Hello, World!");
     socket.sendTo(buf, "localhost:22012");
     socket.close();
-    EXPECT_EQ(receiver.join().expect().i, THREAD_SUCCESS);
+    EXPECT_EQ(receiver.join().expect().value, THREAD_SUCCESS);
 }
 
 TEST(socketTest, TCP)
@@ -173,7 +173,7 @@ TEST(socketTest, TCP)
     cerberus::data::ByteBuffer buf("Hello, World!");
     ASSERT_EQ(socket.send(buf).res, cerberus::OR_OK);
     socket.close();
-    EXPECT_EQ(receiver.join().expect().i, THREAD_SUCCESS);
+    EXPECT_EQ(receiver.join().expect().value, THREAD_SUCCESS);
 }
 
 TEST(socketTest, TCP_P2P)
@@ -191,7 +191,7 @@ TEST(socketTest, TCP_P2P)
     ASSERT_EQ(socket.send(buf).res, cerberus::OR_OK);
 
     socket.close();
-    EXPECT_EQ(receiver.join().expect().i, THREAD_SUCCESS);
+    EXPECT_EQ(receiver.join().expect().value, THREAD_SUCCESS);
 }
 
 TEST(socketTest, FTP)
@@ -217,10 +217,10 @@ TEST(socketTest, FTP)
     ASSERT_EQ(socket.send(f).res, cerberus::OR_OK);
     logDebug("FILE SENT");
     socket.close();
-    EXPECT_EQ(receiver.join().expect().i, THREAD_SUCCESS);
+    EXPECT_EQ(receiver.join().expect().value, THREAD_SUCCESS);
     cerberus::data::filesystem::File rf("ftp_socket_test_file_received.file");
     ASSERT_TRUE(rf.open().ok(true));
-    EXPECT_TRUE(rf.isEqual(f).isTrue());
+    EXPECT_TRUE(rf.isEqual(f).value);
 
     rf.close();
     f.close();
@@ -280,7 +280,7 @@ TEST(socketTest, HTTPClient)
         .addHeaderField("Cache-Control", "max-age=0");
     //
     logDebug("data to be sent:");
-    logDebug(req.data().toNormalizedString().str.c_str());
+    logDebug(req.data().toNormalizedString().value.c_str());
     //
     EXPECT_TRUE(client.makeRequest(req).ok(true));
     logDebug("request sent");

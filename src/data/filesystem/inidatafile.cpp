@@ -175,7 +175,7 @@ void IniDataFile::insertLine(const Line& line)
     }
 }
 //=============================================================================
-cerberus::OperationResult IniDataFile::syncFile()
+cerberus::OpRes IniDataFile::syncFile()
 {
     m_file.setOpenMode(FOM_ReadWriteTrunc);
 
@@ -249,7 +249,7 @@ IniDataFile::~IniDataFile()
 //=============================================================================
 void IniDataFile::setFileName(const std::string& fileName) { m_file.setFileName(fileName); }
 //=============================================================================
-cerberus::OperationResult IniDataFile::load()
+BoolOpRes IniDataFile::load()
 {
     m_file.setOpenMode(FOM_Read);
 
@@ -277,10 +277,10 @@ cerberus::OperationResult IniDataFile::load()
                 return OR_Failure;
             }
 
-            return (int64_t)ok;  // EOF is ok
+            return ok;  // EOF is ok
         }
 
-        std::string line = res.str;
+        std::string line = res.value;
 
         CerberusUtils::removeBlank(line);
 
@@ -351,9 +351,9 @@ cerberus::IniDataType IniDataFile::type(const std::string& key, const std::strin
     return valueType(found->value);
 }
 //=============================================================================
-cerberus::OperationResult IniDataFile::rewrite() { return syncFile(); }
+cerberus::OpRes IniDataFile::rewrite() { return syncFile(); }
 //=============================================================================
-cerberus::OperationResult IniDataFile::write_string(const std::string& key, const std::string& value, const std::string& section)
+cerberus::OpRes IniDataFile::write_string(const std::string& key, const std::string& value, const std::string& section)
 {
     std::string k = core::CerberusUtils::removeBlank_copy(key);
     std::string v = core::CerberusUtils::removeBlank_copy(value);
@@ -383,13 +383,13 @@ cerberus::OperationResult IniDataFile::write_string(const std::string& key, cons
     return syncFile();
 }
 //=============================================================================
-cerberus::OperationResult IniDataFile::write_integer(const std::string& key, int64_t value, const std::string& section) { return write_string(key, CerberusUtils::strPrint("%lli", value), section); }
+cerberus::OpRes IniDataFile::write_integer(const std::string& key, int64_t value, const std::string& section) { return write_string(key, CerberusUtils::strPrint("%lli", value), section); }
 //=============================================================================
-cerberus::OperationResult IniDataFile::write_double(const std::string& key, double value, const std::string& section) { return write_string(key, CerberusUtils::strPrint("%f", value), section); }
+cerberus::OpRes IniDataFile::write_double(const std::string& key, double value, const std::string& section) { return write_string(key, CerberusUtils::strPrint("%f", value), section); }
 //=============================================================================
-cerberus::OperationResult IniDataFile::write_bool(const std::string& key, bool value, const std::string& section) { return write_string(key, value ? "true" : "false", section); }
+cerberus::OpRes IniDataFile::write_bool(const std::string& key, bool value, const std::string& section) { return write_string(key, value ? "true" : "false", section); }
 //=============================================================================
-cerberus::OperationResult IniDataFile::read_string(const std::string& key, const std::string& section)
+StringOpRes IniDataFile::read_string(const std::string& key, const std::string& section)
 {
     auto found = search(key, section);
 
@@ -401,38 +401,38 @@ cerberus::OperationResult IniDataFile::read_string(const std::string& key, const
     return found->value;
 }
 //=============================================================================
-cerberus::OperationResult IniDataFile::read_integer(const std::string& key, const std::string& section)
+IntOpRes IniDataFile::read_integer(const std::string& key, const std::string& section)
 {
     auto res = read_string(key, section);
 
     if (res.fail()) return res;
 
-    if (!isInteger(res.str)) return OR_WrongType;
+    if (!isInteger(res.value)) return OR_WrongType;
 
-    return CerberusUtils::stringToInt(res.str);
+    return CerberusUtils::stringToInt(res.value);
 }
 //=============================================================================
-cerberus::OperationResult IniDataFile::read_double(const std::string& key, const std::string& section)
+FloatOpRes IniDataFile::read_double(const std::string& key, const std::string& section)
 {
     auto res = read_string(key, section);
 
     if (res.fail()) return res;
 
-    if (!isDouble(res.str)) return OR_WrongType;
+    if (!isDouble(res.value)) return OR_WrongType;
 
-    return CerberusUtils::stringToDouble(res.str);
+    return CerberusUtils::stringToDouble(res.value);
 }
 //=============================================================================
-cerberus::OperationResult IniDataFile::read_bool(const std::string& key, const std::string& section)
+BoolOpRes IniDataFile::read_bool(const std::string& key, const std::string& section)
 {
     auto res = read_string(key, section);
 
     if (res.fail()) return res;
 
-    if (!isBool(res.str)) return OR_WrongType;
+    if (!isBool(res.value)) return OR_WrongType;
 
-    if (CerberusUtils::areEqual(CerberusUtils::toLower(res.str), "true")) return (int64_t)1;
+    if (CerberusUtils::areEqual(CerberusUtils::toLower(res.value), "true")) return true;
 
-    return (int64_t)0;
+    return false;
 }
 //=============================================================================

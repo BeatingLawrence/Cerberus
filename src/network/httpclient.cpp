@@ -7,14 +7,14 @@ using namespace cerberus::network;
 using namespace cerberus::core;
 
 //=============================================================================
-cerberus::OperationResult HTTPClient::getDictFromHeader(const data::ByteBuffer &header, Dictionary &dict)
+cerberus::OpRes HTTPClient::getDictFromHeader(const data::ByteBuffer &header, Dictionary &dict)
 {
     // debug("%s", header.toNormalizedString().c_str());
 
     header.resetCursor();
     dict.clear();
 
-    OperationResult failed(OR_Failure, "Broken line found in HTTP header");
+    OpRes failed(OR_Failure, "Broken line found in HTTP header");
 
     while (true)
     {
@@ -31,8 +31,8 @@ cerberus::OperationResult HTTPClient::getDictFromHeader(const data::ByteBuffer &
 
         if (p == std::string::npos)
         {
-            failed.str.append("\n");
-            failed.str.append(str);
+            failed.reason.append("\n");
+            failed.reason.append(str);
             return failed;
         }
 
@@ -43,7 +43,7 @@ cerberus::OperationResult HTTPClient::getDictFromHeader(const data::ByteBuffer &
     }
 }
 //=============================================================================
-cerberus::OperationResult HTTPClient::getStatus(const data::ByteBuffer &statusLine, data::HTTPResponse &response)
+cerberus::OpRes HTTPClient::getStatus(const data::ByteBuffer &statusLine, data::HTTPResponse &response)
 {
     auto str = statusLine.toString();
     core::CerberusUtils::removeBlankAfter(str);
@@ -65,7 +65,7 @@ cerberus::OperationResult HTTPClient::getStatus(const data::ByteBuffer &statusLi
         return {OR_Failure, "Unrecognized HTTP version received"};
     }
 
-    response.statusCode = core::CerberusUtils::stringToInt(str.substr(space1 + 1, space2)).i;
+    response.statusCode = core::CerberusUtils::stringToInt(str.substr(space1 + 1, space2)).value;
     response.message    = str.substr(space2 + 1, std::string::npos);
 
     return OR_OK;
@@ -79,7 +79,7 @@ void HTTPClient::decodeChunkedData(data::ByteBuffer &data)
     while (true)
     {
         auto str = data.getLine();  // get until \r\n
-        int size = cerberus::core::CerberusUtils::stringToInt(str, Radix::Hexadecimal).i;
+        int size = cerberus::core::CerberusUtils::stringToInt(str, Radix::Hexadecimal).value;
 
         if (size == 0)
         {
@@ -114,7 +114,7 @@ void HTTPClient::setupTLS(bool use, const std::string &certfile, const std::stri
     m_socket.TLS_ignoreHangup();
 }
 //=============================================================================
-cerberus::OperationResult HTTPClient::connectTo(const Host &host)
+cerberus::OpRes HTTPClient::connectTo(const Host &host)
 {
     auto res = m_socket.reset();
 
@@ -129,7 +129,7 @@ cerberus::OperationResult HTTPClient::connectTo(const Host &host)
 //=============================================================================
 void HTTPClient::disconnect() { m_socket.close(); }
 //=============================================================================
-cerberus::OperationResult HTTPClient::makeRequest(const data::HTTPRequest &data)
+cerberus::OpRes HTTPClient::makeRequest(const data::HTTPRequest &data)
 {
     if (!m_socket.isConnected())
     {
@@ -139,26 +139,26 @@ cerberus::OperationResult HTTPClient::makeRequest(const data::HTTPRequest &data)
     return m_socket.send(data.data());
 }
 //=============================================================================
-cerberus::OperationResult HTTPClient::getResponse(data::HTTPResponse &data, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
+cerberus::OpRes HTTPClient::getResponse(data::HTTPResponse &data, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
 {
     if (!m_socket.isConnected()) return OR_BadConditions;
 
     data.clear();
 
     data::ByteBuffer buf;
-    OperationResult res;
 
-    res = m_socket.recv(buf, timeout, cycTimeout);
+    {
+        auto res = m_socket.recv(buf, timeout, cycTimeout);
+        if (res.fail()) return res;
+    }
 
+    auto res = buf.search("\r\n\r\n");  // find the gap between header and payload
     if (res.fail()) return res;
-
-    res = buf.search("\r\n\r\n");  // find the gap between header and payload
-    if (res.fail()) return res;
-    SIZE gap = res.i;
+    SIZE gap = res.value;
 
     res = buf.search("\r\n");  // find the status line end
     if (res.fail()) return res;
-    SIZE sle = res.i;
+    SIZE sle = res.value;
 
     data.setPayload(buf.subBuffer(gap + 4));
 
@@ -179,7 +179,7 @@ cerberus::OperationResult HTTPClient::getResponse(data::HTTPResponse &data, cons
 
     res = data.getHeaderMatch("transfer-encoding", "chunked");
 
-    if (res.ok() && res.i)
+    if (res.ok() && res.value)
     {
         // chunked encoding
         logDebug("processing chunked data...");

@@ -6,7 +6,7 @@ using namespace cerberus::data;
 using namespace cerberus::core;
 
 //=============================================================================
-cerberus::OperationResult JsonData::_parse(const ByteBuffer &buffer, ParseMode mode)
+BoolOpRes JsonData::_parse(const ByteBuffer &buffer, ParseMode mode)
 {
     m_type     = JDT_Null;
     bool value = false;
@@ -42,7 +42,7 @@ cerberus::OperationResult JsonData::_parse(const ByteBuffer &buffer, ParseMode m
                     JsonData data;
                     auto res = data._parse(buffer, currentMode);
                     if (res.fail()) return res;
-                    flag = res.isTrue();
+                    flag = res.value;
                     m_elements.push_back(data);
                 }
             }
@@ -54,7 +54,7 @@ cerberus::OperationResult JsonData::_parse(const ByteBuffer &buffer, ParseMode m
                     case Unspecified:
                         return {OR_WrongArgument, CerberusUtils::strPrint("Unexpected bracket at char %u", buffer.prev().pos())};
                     case ParsingObject:
-                        return (int64_t)0;
+                        return false;
                     case ParsingArray:
                         return {OR_WrongArgument, CerberusUtils::strPrint("Block terminated by wrong bracket at char %u", buffer.prev().pos())};
                 }
@@ -67,7 +67,7 @@ cerberus::OperationResult JsonData::_parse(const ByteBuffer &buffer, ParseMode m
                     case ParsingObject:
                         return {OR_WrongArgument, CerberusUtils::strPrint("Block terminated by wrong bracket at char %u", buffer.prev().pos())};
                     case ParsingArray:
-                        return (int64_t)0;
+                        return false;
                 }
 
             case '"':
@@ -75,19 +75,19 @@ cerberus::OperationResult JsonData::_parse(const ByteBuffer &buffer, ParseMode m
                 // start of a string
                 auto res = buffer.consumeUntil("\"").toNormalizedString();
                 // logDebug("Captured: %s", res.str.c_str());
-                if (res.isTrue()) return {OR_WrongArgument, "Non textual data found"};
+
                 buffer.next();  // consume the "
 
                 if (mode == ParsingArray)
                 {
-                    setString(res.str);
+                    setString(res.value);
                 }
                 else
                 {
                     if (value)
-                        setString(res.str);
+                        setString(res.value);
                     else
-                        m_name = res.str;
+                        m_name = res.value;
                 }
             }
             break;
@@ -108,27 +108,26 @@ cerberus::OperationResult JsonData::_parse(const ByteBuffer &buffer, ParseMode m
                 bb.append(buffer.consumeUntil(" ,[]{}\n\r\"'<>?/!"));
                 auto res = bb.toNormalizedString();
                 // logDebug("Captured non-string: %s", res.str.c_str());
-                if (res.isTrue()) return {OR_WrongArgument, "Non textual data found"};
                 if (!value && mode == ParsingObject) return {OR_WrongArgument, CerberusUtils::strPrint("No column before value at char %u", buffer.pos())};
 
-                if (CerberusUtils::isNumber(res.str))
+                if (CerberusUtils::isNumber(res.value))
                 {
                     m_type  = JDT_Number;
-                    m_value = res.str;
+                    m_value = res.value;
                 }
-                else if (CerberusUtils::isBool(res.str))
+                else if (CerberusUtils::isBool(res.value))
                 {
                     m_type  = JDT_Boolean;
-                    m_value = res.str;
+                    m_value = res.value;
                 }
-                else if (CerberusUtils::areEqual(res.str, "null", WM_CaseInsensitive))
+                else if (CerberusUtils::areEqual(res.value, "null", WM_CaseInsensitive))
                 {
                     m_type = JDT_Null;
                     m_value.clear();
                 }
                 else
                 {
-                    return {OR_WrongArgument, CerberusUtils::strPrint("Invalid token: '%s' at %u", res.str.c_str(), buffer.pos())};
+                    return {OR_WrongArgument, CerberusUtils::strPrint("Invalid token: '%s' at %u", res.value.c_str(), buffer.pos())};
                 }
             }
         }
@@ -366,7 +365,7 @@ bool JsonData::check() const
     return true;
 }
 //=============================================================================
-cerberus::OperationResult JsonData::checkFix()
+cerberus::OpRes JsonData::checkFix()
 {
     if (m_type == JDT_Array || m_type == JDT_Object)
     {
@@ -388,25 +387,25 @@ cerberus::OperationResult JsonData::checkFix()
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult JsonData::toNumber() const
+FloatOpRes JsonData::toNumber() const
 {
     if (m_type != JDT_Number) return OR_Unavailable;
     return CerberusUtils::stringToDouble(m_value);
 }
 //=============================================================================
-cerberus::OperationResult JsonData::toIntNumber() const
+IntOpRes JsonData::toIntNumber() const
 {
     if (m_type != JDT_Number) return OR_Unavailable;
     return CerberusUtils::stringToInt(m_value);
 }
 //=============================================================================
-cerberus::OperationResult JsonData::toString() const
+StringOpRes JsonData::toString() const
 {
     if (m_type != JDT_String) return OR_Unavailable;
     return m_value;
 }
 //=============================================================================
-cerberus::OperationResult JsonData::toBool() const
+BoolOpRes JsonData::toBool() const
 {
     if (m_type != JDT_Boolean) return OR_Unavailable;
     if (CerberusUtils::areEqual(m_value, "true", WM_CaseInsensitive)) return (int64_t)1;
@@ -513,7 +512,7 @@ JsonData &JsonData::clear()
     return *this;
 }
 //=============================================================================
-cerberus::OperationResult JsonData::parse(const ByteBuffer &buffer)
+cerberus::OpRes JsonData::parse(const ByteBuffer &buffer)
 {
     m_elements.clear();
     m_name.clear();
@@ -524,7 +523,7 @@ cerberus::OperationResult JsonData::parse(const ByteBuffer &buffer)
     return res;
 }
 //=============================================================================
-cerberus::OperationResult JsonData::parse(const filesystem::File &file)
+cerberus::OpRes JsonData::parse(const filesystem::File &file)
 {
     ByteBuffer buffer;
     auto res = file.read(buffer);
@@ -534,7 +533,7 @@ cerberus::OperationResult JsonData::parse(const filesystem::File &file)
     return parse(buffer);
 }
 //=============================================================================
-cerberus::OperationResult JsonData::generate(ByteBuffer &buffer)
+cerberus::OpRes JsonData::generate(ByteBuffer &buffer)
 {
     buffer.clear();
     if (m_elements.empty()) return OR_Empty;
@@ -543,7 +542,7 @@ cerberus::OperationResult JsonData::generate(ByteBuffer &buffer)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OperationResult JsonData::generate(filesystem::File &file)
+cerberus::OpRes JsonData::generate(filesystem::File &file)
 {
     ByteBuffer buffer;
     auto res = generate(buffer);

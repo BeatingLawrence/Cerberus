@@ -52,6 +52,8 @@ void ThreadBase::pause()
 {
     MutexLocker locker(&m_mutex);
 
+    if (m_terminateFlag) return;  // skip pause if the termination is requested
+
     while (m_pausedFlag)
     {
         int ret = pthread_cond_wait(&m_cond, &m_mutex.m_pmutex);  // this call internally unlocks the mutex

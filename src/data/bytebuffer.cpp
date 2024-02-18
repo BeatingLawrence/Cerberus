@@ -417,13 +417,11 @@ std::string ByteBuffer::toString() const
     return ret;
 }
 //=============================================================================
-cerberus::OperationResult ByteBuffer::toNormalizedString() const
+StringOpRes ByteBuffer::toNormalizedString() const
 {
     auto str = toString();
-    OperationResult res(OR_OK);
-    res.i   = core::CerberusUtils::normalize(str);
-    res.str = str;
-    return res;
+    core::CerberusUtils::normalize(str);
+    return str;
 }
 //=============================================================================
 std::string ByteBuffer::toBinaryDumpString(uint32_t align) const
@@ -447,7 +445,7 @@ std::string ByteBuffer::toBinaryDumpString(uint32_t align) const
     return ret;
 }
 //=============================================================================
-cerberus::OperationResult ByteBuffer::search(const char* str) const
+IntOpRes ByteBuffer::search(const char* str) const
 {
     const char* c = str;
 

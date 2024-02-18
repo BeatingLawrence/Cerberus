@@ -25,7 +25,7 @@ TEST(threadTest, derived_thread_creation)
     cerberus::thread::Thread::sleep(2000);
     thread2.join(true);
     logDebug("t1 joined");
-    EXPECT_EQ(thread1.join(true).expect().i, 10);
+    EXPECT_EQ(thread1.join(true).expect().value, 10);
 }
 
 static int testCallback(cerberus_message msg, cerberus::thread::Thread* thread)
@@ -48,7 +48,7 @@ TEST(threadTest, thread_callback)
     thread3.start();
     // debug("2");
     cerberus::thread::Thread::sleep(1000);
-    EXPECT_EQ(thread3.join(true).expect().i, 20);
+    EXPECT_EQ(thread3.join(true).expect().value, 20);
 }
 
 static int pingTestCallback(cerberus_message msg, cerberus::thread::Thread* thread)

@@ -8,6 +8,12 @@
 
 #include "mutex/mutexlocker.h"
 
+#define StringOpRes ::cerberus::OpResData<std::string>
+#define BoolOpRes ::cerberus::OpResData<bool>
+#define IntOpRes ::cerberus::OpResData<int64_t>
+#define FloatOpRes ::cerberus::OpResData<long double>
+#define SizeOpRes ::cerberus::OpResData<::cerberus::LSIZE>
+
 namespace cerberus
 {
     typedef uint32_t SIZE;
@@ -157,6 +163,14 @@ namespace cerberus
         LL_Debug   = 3,
     };
 
+    enum SSLShutdownState
+    {
+        SSLSH_None,
+        SSLSH_Sent,
+        SSLSH_Received,
+        SSLSH_SentReceived,
+    };
+
     struct CerberusLogRole
     {
         uint8_t textFormatting[3];  // up to 3 formatting specifiers, 0 will be ignored, see define.h
@@ -304,49 +318,32 @@ namespace cerberus
         Recursive,  // RECURSIVE mutex
     };
 
-    // The OperationResult object contains a Result member and some data.
-    struct OperationResult
+    // The basic Operation Result object contains a Result member and some data.
+    struct OpRes
     {
         Result res;
 
-        union  // save space. Access one member only
-        {
-            int64_t i;
-            long double f;
-            LSIZE sz;
-        };
+        std::string reason;
 
-        std::string str;
+        OpRes();
 
-        OperationResult();  // construct undefined result
+        OpRes(Result r, const std::string& reason = std::string());
 
-        // construct defined result
-        OperationResult(Result r, const std::string& reason = std::string());
-
-        OperationResult(int64_t i);
-
-        explicit OperationResult(long double f);
-
-        explicit OperationResult(LSIZE sz);
-
-        OperationResult(const std::string& str);
-
-        bool operator==(const OperationResult& other) = delete;
-        bool operator!=(const OperationResult& other) = delete;
+        bool operator==(const OpRes& other) = delete;
+        bool operator!=(const OpRes& other) = delete;
 
         bool operator==(Result r);
-
         bool operator!=(Result r);
 
         // Throw a generic exception with the given text only if the result is failed
-        OperationResult& expect(const std::string& str);
+        OpRes& expect(const std::string& str);
 
         // Throw a generic exception with the given text only if the result fails and
         // only if it fails with the given reason
-        OperationResult& expect(Result reason, const std::string& str);
+        OpRes& expect(Result reason, const std::string& str);
 
         // Throw a generic exception with the result status text only if the result fails
-        OperationResult& expect();
+        OpRes& expect();
 
         // Return true if the Result is OR_OK, false otherwise.
         // If print is true, the error will be printer with logError
@@ -358,9 +355,43 @@ namespace cerberus
 
         // Translate the Result
         std::string errorString();
+    };
 
-        // Used for bool value
-        bool isTrue() { return i != 0; };
+    // The OpResData template class is useful to exchange some custom data alongside with the result
+    template <class T>
+    struct OpResData : OpRes
+    {
+        T value;
+
+        OpResData(Result r, const std::string& reason = std::string())
+            : OpRes(r, reason),
+              value(){};
+
+        OpResData(const T& value)
+            : OpRes(OR_OK),
+              value(value){};
+
+        OpResData(const OpRes& res)
+            : OpRes(res),
+              value(){};
+
+        OpResData<T>& expect(const std::string& str)
+        {
+            OpRes::expect(str);
+            return *this;
+        };
+
+        OpResData<T>& expect(Result reason, const std::string& str)
+        {
+            OpRes::expect(reason, str);
+            return *this;
+        };
+
+        OpResData<T>& expect()
+        {
+            OpRes::expect();
+            return *this;
+        };
     };
 
     struct DictLine
@@ -373,14 +404,14 @@ namespace cerberus
        public:
         // Get the value of a field as text.
         // This method will return OR_NotFound if the requested field name was not found.
-        OperationResult getFieldValue(const std::string& key, WordMatch match = WM_CaseSensitive) const;
+        StringOpRes getFieldValue(const std::string& key, WordMatch match = WM_CaseSensitive) const;
 
         // Check if a field value matches with value
         // This method will return OR_OK if the key value of the dictionary matches against
         // the provided value argument (the match policy is specified in the valmatch argument),
         // OR_NotFound if the requested field name was not found,
         // OR_Mismatch if the field name was found but it does not match with the specified value.
-        OperationResult getFieldMatch(const std::string& key, const std::string& value, WordMatch keymatch = WM_CaseSensitive, WordMatch valmatch = WM_CaseSensitive) const;
+        OpRes getFieldMatch(const std::string& key, const std::string& value, WordMatch keymatch = WM_CaseSensitive, WordMatch valmatch = WM_CaseSensitive) const;
 
         // Get the name of the field at the index position.
         // An exception is thrown if index is out of bounds
@@ -464,7 +495,7 @@ namespace cerberus
 
         // Resolve the given Host using the hostname member.
         // The resulting numeric IP address is written in the ip parameter
-        OperationResult resolve();
+        OpRes resolve();
     };
 
 }  // namespace cerberus

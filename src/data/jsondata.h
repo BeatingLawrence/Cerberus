@@ -34,7 +34,7 @@ namespace cerberus
 
             JsonDataType m_type;
 
-            OperationResult _parse(const ByteBuffer& buffer, ParseMode mode = Unspecified);
+            BoolOpRes _parse(const ByteBuffer& buffer, ParseMode mode = Unspecified);
 
             void _generate(ByteBuffer& buffer);
 
@@ -120,20 +120,20 @@ namespace cerberus
 
             // Recursively check if the data contained inside the instance is good
             // Also try to set correct types (only for array and object) if possible
-            OperationResult checkFix();
+            OpRes checkFix();
 
             // Convert the object to a floating point numeric value
-            OperationResult toNumber() const;
+            FloatOpRes toNumber() const;
 
             // Convert the object to an integer numeric value
-            OperationResult toIntNumber() const;
+            IntOpRes toIntNumber() const;
 
             // Convert the object to a string value
             // The string will not contain initial and final "
-            OperationResult toString() const;
+            StringOpRes toString() const;
 
             // Convert the object to a bool value (true, false)
-            OperationResult toBool() const;
+            BoolOpRes toBool() const;
 
             // Set the name of the object
             JsonData& setName(const std::string& name);
@@ -161,14 +161,14 @@ namespace cerberus
             JsonData& clear();
 
             // parser section
-            OperationResult parse(const ByteBuffer& buffer);
+            OpRes parse(const ByteBuffer& buffer);
 
-            OperationResult parse(const filesystem::File& file);
+            OpRes parse(const filesystem::File& file);
 
             // generator section
-            OperationResult generate(ByteBuffer& buffer);
+            OpRes generate(ByteBuffer& buffer);
 
-            OperationResult generate(filesystem::File& file);
+            OpRes generate(filesystem::File& file);
 
             void toStr(std::string& str, uint8_t level = 0) const;
         };

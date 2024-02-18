@@ -62,15 +62,15 @@ TEST(jsonDataTest, search)
     filesystem::File f("jsontest.json");
     ASSERT_TRUE(f.open().ok(true));
     ASSERT_TRUE(data.parse(f).ok(true));
-    auto found = data.deepSearch("address");
+    auto found = data.search("address");
 
-    ASSERT_NE(found, nullptr);
+    ASSERT_TRUE(found.isValid());
 
     std::string s;
-    found->toStr(s);
+    found.toStr(s);
     logInfo("JSON DATA: %s", s.c_str());
     //
     ByteBuffer bb;
-    EXPECT_TRUE(found->generate(bb).ok(true));
+    EXPECT_TRUE(found.generate(bb).ok(true));
     logInfo("GENERATED JSON:\n%s", bb.toString().c_str());
 }

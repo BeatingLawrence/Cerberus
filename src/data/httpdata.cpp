@@ -64,9 +64,9 @@ data::HTTPData &data::HTTPData::clearHeader()
 //=============================================================================
 cerberus::SIZE data::HTTPData::getHeaderSize() const { return m_header.size(); }
 //=============================================================================
-cerberus::OperationResult data::HTTPData::getHeaderField(const std::string &key) const { return m_header.getFieldValue(key, WM_CaseInsensitive); }
+StringOpRes data::HTTPData::getHeaderField(const std::string &key) const { return m_header.getFieldValue(key, WM_CaseInsensitive); }
 //=============================================================================
-OperationResult data::HTTPData::getHeaderMatch(const std::string &key, const std::string &value) const { return m_header.getFieldMatch(key, value, WM_CaseInsensitive, WM_CaseSensitive); }
+OpRes data::HTTPData::getHeaderMatch(const std::string &key, const std::string &value) const { return m_header.getFieldMatch(key, value, WM_CaseInsensitive, WM_CaseSensitive); }
 //=============================================================================
 std::string data::HTTPData::getHeaderFieldName(SIZE index) const { return m_header.getNameAt(index); }
 //=============================================================================

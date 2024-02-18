@@ -41,29 +41,29 @@ namespace cerberus
                 // Check wether a file exists on filesystem
                 // This method returns OR_OK if the file exists, OR_NotFount if it does not exist or
                 // another error if an error occurred
-                static OperationResult existsAsFile(const std::string& path);
+                static OpRes existsAsFile(const std::string& path);
 
                 // Check wether a directory exists on filesystem
                 // This method returns OR_OK if the file exists, OR_NotFount if it does not exist or
                 // another error if an error occurred
-                static OperationResult existsAsDirectory(const std::string& path);
+                static OpRes existsAsDirectory(const std::string& path);
 
                 // Create a directory
-                static OperationResult createDirectory(const std::string& path);
+                static OpRes createDirectory(const std::string& path);
 
                 // Delete a file or directory. If path is a directory, it must be empty
-                static OperationResult remove(const std::string& path);
+                static OpRes remove(const std::string& path);
 
                 // Move a file referenced by oldPath to newPath
-                static OperationResult move(const std::string& oldPath, const std::string& newPath);
+                static OpRes move(const std::string& oldPath, const std::string& newPath);
 
                 // Check if a given directory is empty
                 // This method returns OR_OK if the directory is empty,
                 // OR_NotEmpty if the directory is not empty, or other values to signal system errors
-                static OperationResult isEmptyDirectory(const std::string& path);
+                static OpRes isEmptyDirectory(const std::string& path);
 
                 // Get the size of the file in the integer field of the return value
-                static OperationResult sizeOf(const std::string& path);
+                static SizeOpRes sizeOf(const std::string& path);
 
                 // Create a File instance
                 File(FileOpenMode openMode = FOM_Read, bool binaryMode = false);
@@ -90,56 +90,54 @@ namespace cerberus
                 // If the path is empty, OR_InvalidPath is returned.
                 // If the open fails, OR_Failure is returned, and info about the error
                 // are written inside str.
-                OperationResult open();
+                OpRes open();
 
                 // Close the file if open
                 void close();
 
                 // Close the file if open, and remove it from filesystem
-                OperationResult deleteFromDisk();
+                OpRes deleteFromDisk();
 
                 // Move the current file to another path name
-                OperationResult move(const std::string& newName);
+                OpRes move(const std::string& newName);
 
                 // Get the file size. Cursor position will not be altered
-                // The value will be inserted in the size field sz of the result
-                OperationResult size() const;
+                SizeOpRes size() const;
 
                 // Write buffer to file
-                OperationResult write(const cerberus::data::ByteBuffer& bytes);
+                OpRes write(const cerberus::data::ByteBuffer& bytes);
 
                 // Write a single line of text on file
-                OperationResult writeLine(const std::string& line = "");
+                OpRes writeLine(const std::string& line = "");
 
                 // Read the file starting from start pos till the end of file
-                OperationResult read(ByteBuffer& bytes, LSIZE start = 0) const;
+                OpRes read(ByteBuffer& bytes, LSIZE start = 0) const;
 
                 // Read span bytes from file starting from start pos
-                OperationResult read(ByteBuffer& bytes, LSIZE start, LSIZE span) const;
+                OpRes read(ByteBuffer& bytes, LSIZE start, LSIZE span) const;
 
                 // Read a chunk of data from the current cursor position
-                OperationResult readChunk(ByteBuffer& bytes, SIZE chunksize) const;
+                OpRes readChunk(ByteBuffer& bytes, SIZE chunksize) const;
 
                 // Read a single line till \n or EOF
                 // If the EOF is reached and the bytes read are zero, OR_EOF is returned
                 // If an error occurs during read, OR_Failure is returned
-                OperationResult readLine() const;
+                StringOpRes readLine() const;
 
                 // Move the cursor to the absolute position pos
-                OperationResult seek(LSIZE pos) const;
+                OpRes seek(LSIZE pos) const;
 
                 // Move the cursor back or forth according to the sign of the parameter pos
-                OperationResult seekOffset(int64_t pos) const;
+                OpRes seekOffset(int64_t pos) const;
 
                 // Reset the cursor moving it to the beginning of the file
                 void resetCursor() const;
 
                 // Get the cursor position.
-                // The value will be inserted in the size field sz of the result
-                OperationResult getCursor() const;
+                SizeOpRes getCursor() const;
 
                 // Check if this file and other file are equal (same size, same content)
-                OperationResult isEqual(File& other) const;
+                BoolOpRes isEqual(File& other) const;
             };
         }  // namespace filesystem
     }      // namespace data

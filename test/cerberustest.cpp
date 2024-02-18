@@ -16,7 +16,7 @@ TEST(cerberusTest, logTest)
 
 TEST(cerberusTest, environmentVariable)
 {
-    logInfo(core::CerberusUtils::environmentVariable("APPDATA").str.c_str());  // works only on windows
+    logInfo(core::CerberusUtils::environmentVariable("APPDATA").value.c_str());  // works only on windows
 }
 
 TEST(cerberusTest, cerberusVersion)
