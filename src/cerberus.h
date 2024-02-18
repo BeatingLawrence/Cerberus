@@ -3,9 +3,11 @@
 
 #include "Cerberus_global.h"
 #include "core/cerberuslog.h"
+#include "data/data.h"
 #include "log.h"
 #include "message/message.h"
 #include "message/messagetemplate.h"
+#include "message/slot/slots.h"
 #include "time/datetime.h"
 #include "time/timeframe.h"
 #include "types.h"
@@ -27,35 +29,26 @@ namespace cerberus
         class Timer;
     }
 
-    struct SingularCerberusData
+    struct FrameworkData
     {
-       private:
-        std::atomic_flag logWorking, regWorking, coreWorking;  // init order
+        std::atomic_flag init;
+        std::atomic<int> use;
 
         core::CerberusLog* log;
         core::CerberusRegister* reg;
         core::CerberusCore* core;
 
-       public:
-        SingularCerberusData()
-            : logWorking(false),
-              regWorking(false),
-              coreWorking(false),
+        FrameworkData()
+            : init(false),
+              use(0),
               log(nullptr),
               reg(nullptr),
               core(nullptr){};
 
-        void constructLog();
-        void constructReg();
-        void constructCore();
-
-        void destroyLog();
-        void destroyReg();
-        void destroyCore();
-
-        core::CerberusLog* getLog();
-        core::CerberusRegister* getReg();
-        core::CerberusCore* getCore();
+        void begin() { use++; };
+        void end() { use--; };
+        bool wait();
+        void checkInit();
     };
 
     class CERBERUS_EXPORT Cerberus
@@ -68,7 +61,7 @@ namespace cerberus
         friend class ::cerberus::time::Timer;
 
        private:
-        static SingularCerberusData singularCerbData;
+        static FrameworkData framework;
 
         // ======================Private Register===========================
 
@@ -158,8 +151,8 @@ namespace cerberus
         static uint32_t registerMessage(const message::Message& message, const std::string& name = std::string());
 
         // Factory of messages. A call to this method will return an empty but structured message.
-        // This method will return an invalid message if ID was not found,
-        // or if it's not a Message ID.
+        // This method will return an invalid message if ID was not found, or it will
+        // throw an exception if the provided ID is not valid (invalid id or in reserved range)
         static cerberus_message messageConstruct(uint32_t id);
 
         // Factory of messages. A call to this method will return an empty but structured message.

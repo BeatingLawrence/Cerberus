@@ -151,8 +151,8 @@ data::ByteBuffer data::HTTPRequest::data() const
 //=============================================================================
 data::HTTPResponse::HTTPResponse()
     : version(HTTP_1_1),
-      statusCode(200),
-      message("OK")
+      statusCode(0),
+      message("UNDEFINED")
 
 {
 }
@@ -197,5 +197,5 @@ data::ByteBuffer data::HTTPResponse::data() const
     return buf;
 }
 //=============================================================================
-bool data::HTTPResponse::isOk() { return statusCode < 400; }
+bool data::HTTPResponse::isOk() { return statusCode != 0 && statusCode < 400; }
 //=============================================================================

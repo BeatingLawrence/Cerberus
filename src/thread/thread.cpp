@@ -16,9 +16,11 @@ void cerberus::thread::Thread::_thread()
 {
     bool firstRun = true;
 
-    while (!getTerminateFlag())
+    while (true)
     {
         pause();
+
+        if (getTerminateFlag()) break;
 
         if (firstRun)
         {
@@ -70,7 +72,7 @@ void cerberus::thread::Thread::_thread()
         }
     }
 
-    coolDown();
+    if (!firstRun) coolDown();  // cool down only if warmUp() was called
 }
 //=============================================================================
 int cerberus::thread::Thread::defaultTickCallback(cerberus_message msg, Thread* thread) { return 0; }

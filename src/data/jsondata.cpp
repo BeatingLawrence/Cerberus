@@ -148,6 +148,7 @@ void JsonData::_generate(ByteBuffer &buffer)
 
     switch (m_type)
     {
+        case JDT_Undefined:
         case JDT_Null:
             buffer += "null";
             return;
@@ -203,7 +204,7 @@ JsonData::JsonData()
     : m_name(),
       m_value(),
       m_elements(),
-      m_type(JDT_Null)
+      m_type(JDT_Undefined)
 {
 }
 //=============================================================================
@@ -273,7 +274,6 @@ JsonData::JsonData(const std::string &name, const JsonData &data)
       m_elements(1, data),
       m_type(JDT_Object)
 {
-    if (isArray()) m_type = JDT_Array;
 }
 //=============================================================================
 cerberus::Iterator<JsonData> JsonData::begin()
@@ -300,13 +300,13 @@ cerberus::ConstIterator<JsonData> JsonData::end() const
     return ((&m_elements.back()) + 1);
 }
 //=============================================================================
-JsonData &JsonData::get(SIZE index)
+JsonData &JsonData::getAt(SIZE index)
 {
     if (index >= size()) throw cerberusIllegalArgExc("index out of bounds");
     return m_elements[index];
 }
 //=============================================================================
-JsonData JsonData::search(const std::string &name)
+JsonData JsonData::get(const std::string &name)
 {
     for (auto &el : m_elements)
         if (core::CerberusUtils::areEqual(el.m_name, name)) return el;
@@ -314,16 +314,16 @@ JsonData JsonData::search(const std::string &name)
     return JsonData();
 }
 //=============================================================================
-JsonData JsonData::deepSearch(const std::string &name)
+JsonData JsonData::search(const std::string &name)
 {
     if (isNull()) return JsonData();
 
-    auto found = search(name);
+    auto found = get(name);
     if (!found.isNull()) return found;
 
     for (auto &el : m_elements)
     {
-        found = el.deepSearch(name);
+        found = el.search(name);
         if (!found.isNull()) return found;
     }
 
@@ -332,7 +332,15 @@ JsonData JsonData::deepSearch(const std::string &name)
 //=============================================================================
 cerberus::JsonDataType JsonData::type() const { return m_type; }
 //=============================================================================
+bool JsonData::isValid() const { return m_type != JDT_Undefined; }
+//=============================================================================
 bool JsonData::isNull() const { return m_type == JDT_Null; }
+//=============================================================================
+bool JsonData::isNumber() const { return m_type == JDT_Number; }
+//=============================================================================
+bool JsonData::isString() const { return m_type == JDT_String; }
+//=============================================================================
+bool JsonData::isBoolean() const { return m_type == JDT_Boolean; }
 //=============================================================================
 bool JsonData::isArray() const { return m_type == JDT_Array; }
 //=============================================================================
@@ -466,6 +474,7 @@ JsonData &JsonData::add(const JsonData &object)
 
     switch (m_type)
     {
+        case JDT_Undefined:
         case JDT_Null:
         case JDT_Number:
         case JDT_String:
@@ -551,6 +560,9 @@ void JsonData::toStr(std::string &str, uint8_t level) const
 
     switch (m_type)
     {
+        case JDT_Undefined:
+            str.append("UNDEFINED");
+            break;
         case JDT_Null:
             str.append("Type: null");
             break;

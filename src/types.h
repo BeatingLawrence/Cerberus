@@ -244,7 +244,11 @@ namespace cerberus
 
     enum JsonDataType : uint8_t
     {
-        JDT_Null = 0,
+        // invalid Json:
+        JDT_Undefined = 0,
+
+        // valid Json:
+        JDT_Null,
         JDT_Number,
         JDT_String,
         JDT_Boolean,

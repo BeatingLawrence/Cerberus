@@ -2,12 +2,9 @@ TODO list for Cerberus:
 
 [Corrections - High priority]
 
-- None
-
 [New Functionalities]
 
 [Network]
--Improve the HTTPClient class
 -Implement WebSocket
 -Implement ICMP socket (or a ping functionality)
 -Implement IPC socket
@@ -17,4 +14,4 @@ TODO list for Cerberus:
 -Implement a custom thread that takes an sql database and processes a queue of transactions from other threads on the db 
 
 [Threads]
--Implement the ThreadPool class
+-Implement the ThreadPool system

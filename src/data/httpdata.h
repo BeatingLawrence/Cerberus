@@ -99,7 +99,7 @@ namespace cerberus
             // Construct and return all the data as text(header+payload)
             data::ByteBuffer data() const;
 
-            // Check if the request has returned a good result
+            // Check if the request has returned a non-error result
             bool isOk();
         };
 

@@ -41,23 +41,25 @@ namespace cerberus
             Integrity checkIntegrity() const;
 
            public:
-            // Construct a null JsonData
+            // Construct an invalid JsonData
             JsonData();
+
+            // Construct a valid JsonData that contains a Json null
             JsonData(const std::string& name);
 
-            // Construct a string JsonData
+            // Construct a valid JsonData that contains a Json string
             JsonData(const std::string& name, const std::string& value);
             JsonData(const std::string& name, const char* value);
 
-            // Construct a number JsonData
+            // Construct a valid JsonData that contains a Json number
             JsonData(const std::string& name, long double value);
             JsonData(const std::string& name, float value);
             JsonData(const std::string& name, int value);
 
-            // Construct a boolean JsonData
+            // Construct a valid JsonData that contains a Json boolean
             JsonData(const std::string& name, bool value);
 
-            // Construct a nested JsonData
+            // Construct a valid JsonData object that contains another JsonData (nesting)
             JsonData(const std::string& name, const JsonData& data);
 
             // Iterators
@@ -68,36 +70,44 @@ namespace cerberus
 
             // Get an element of the object.
             // If index is out of bounds, an exception will be thrown
-            JsonData& get(SIZE index = 0);
+            JsonData& getAt(SIZE index = 0);
 
-            // Same as calling get(0).
-            // This method returns the first value.
-            JsonData& value();
-
-            // Search an element of the object.
-            // If no item is found, nullptr will be returned
-            JsonData search(const std::string& name);
+            // Get an element of the object.
+            // If no item is found, an invalid JsonData will be returned
+            JsonData get(const std::string& name);
 
             // Search an element in this object and all its children recursively.
-            // If no item is found, nullptr will be returned.
+            // If no item is found, an invalid JsonData will be returned.
             // NOTE: this method will return only the first occurrence even if
             // there are more than one
-            JsonData deepSearch(const std::string& name);
+            JsonData search(const std::string& name);
 
             // Get the type of the object
             JsonDataType type() const;
 
-            // Check if the object is null
+            // Check if the object is valid
+            bool isValid() const;
+
+            // Check if the object is a Json null
             bool isNull() const;
 
-            // Check if the object is an array
+            // Check if the object is a Json number
+            bool isNumber() const;
+
+            // Check if the object is a Json string
+            bool isString() const;
+
+            // Check if the object is a Json boolean
+            bool isBoolean() const;
+
+            // Check if the object is a Json array
             bool isArray() const;
 
-            // Check if the object is JSON object
+            // Check if the object is a Json object
             bool isObject() const;
 
             // Get the number of elements contained.
-            // If the object is a single value, this method will return 1.
+            // If the object is a single value, this method will return 0.
             // If the object is an array or a JSON object, this method
             // will return the number of elements contained
             SIZE size() const;
@@ -112,17 +122,17 @@ namespace cerberus
             // Also try to set correct types (only for array and object) if possible
             OperationResult checkFix();
 
-            // Convert the object to a numeric value (floating point)
+            // Convert the object to a floating point numeric value
             OperationResult toNumber() const;
 
             // Convert the object to an integer numeric value
             OperationResult toIntNumber() const;
 
             // Convert the object to a string value
-            // Initial and final " will be removed
+            // The string will not contain initial and final "
             OperationResult toString() const;
 
-            // Convert the object to a numeric value (true, false)
+            // Convert the object to a bool value (true, false)
             OperationResult toBool() const;
 
             // Set the name of the object
