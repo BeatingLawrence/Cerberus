@@ -252,16 +252,18 @@ void Cerberus::deinit()
 {
     if (!Cerberus::framework.wait()) throw cerberusUsageErrorExc("cannot call deinit() when the framework is not initialized");
 
+    // stop core thread
+    Cerberus::framework.core->join(true).expect("Unable to join the core Thread");
+
+    // stop log thread
+    Cerberus::framework.log->stop();
+
     // clear the init flag
     Cerberus::framework.init.clear();
 
     // destroy core
-    Cerberus::framework.core->join(true).expect("Unable to join the core Thread");
     delete Cerberus::framework.core;
     Cerberus::framework.core = nullptr;
-
-    // stop log thread
-    Cerberus::framework.log->stop();
 
     // destroy register
     Cerberus::framework.reg->cleanupPlugins();
