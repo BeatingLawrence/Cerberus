@@ -326,8 +326,6 @@ std::string cerberus::OpRes::errorString()
             return "System error";
         case OR_ResolveFailure:
             return "Generic resolve failure";
-        case OR_RecvZero:
-            return "Zero was received";
         case OR_Hangup:
             return "Hangup";
         case OR_NotFound:

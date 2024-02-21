@@ -302,8 +302,7 @@ namespace cerberus
         OR_ResolveSystemFailure,      // [DNS lookup] resolve method error
         OR_ResolveFailure,            // [DNS lookup] resolve method error
                                       //
-        OR_RecvZero,                  // [socket] a recv call returned zero
-        OR_Hangup,                    // [socket] hangup condition (stream closed by the peer)
+        OR_Hangup,                    // [socket] hangup condition (stream closed by the peer) or recv zero
                                       //
         OR_QueryFailure,              // [database] query error
         OR_DBFailure,                 // [database] DB error

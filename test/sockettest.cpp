@@ -130,7 +130,7 @@ static int testCallback_FTP(cerberus::cerberus_message msg, cerberus::thread::Th
     }
     auto ret = s.recv(file, 500);  // 0.5 seconds timeout
 
-    if (ret.fail(true))
+    if (ret.fail() && ret.res != cerberus::OR_Hangup)
     {
         socket.close();
         return THREAD_ERROR;
@@ -216,7 +216,7 @@ TEST(socketTest, FTP)
     f.resetCursor();
     ASSERT_EQ(socket.send(f).res, cerberus::OR_OK);
     logDebug("FILE SENT");
-    socket.close();
+    socket.close();  // it causes hangup on the other side
     EXPECT_EQ(receiver.join().expect().value, THREAD_SUCCESS);
     cerberus::data::filesystem::File rf("ftp_socket_test_file_received.file");
     ASSERT_TRUE(rf.open().ok(true));
@@ -267,7 +267,7 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
 TEST(socketTest, HTTPClient)
 {
     cerberus::network::HTTPClient client("HTTP Client test");
-    client.setupTLS(true);
+    client.TLS_init();
     ASSERT_TRUE(client.connectTo("www.google.com:443").ok(true));
     logDebug("connected");
     cerberus::data::HTTPRequest req;
@@ -284,23 +284,21 @@ TEST(socketTest, HTTPClient)
     //
     EXPECT_TRUE(client.makeRequest(req).ok(true));
     logDebug("request sent");
-    cerberus::data::HTTPResponse res;
-    EXPECT_TRUE(client.getResponse(res, 1000, 200).ok(true));
-
+    auto response = client.getResponse(1000, 200);
     client.disconnect();
 
-    EXPECT_TRUE(res.isOk());
+    EXPECT_TRUE(response.value.isOk());
 
     logDebug("received header lines:");
-    for (int i = 0; i < res.getHeaderSize(); i++)
+    for (int i = 0; i < response.value.getHeaderSize(); i++)
     {
-        logDebug("%s: %s", res.getHeaderFieldName(i).c_str(), res.getHeaderFieldValue(i).c_str());
+        logDebug("%s: %s", response.value.getHeaderFieldName(i).c_str(), response.value.getHeaderFieldValue(i).c_str());
     }
 
     // save the payload in a file
     cerberus::data::filesystem::File f("received_payload.txt", cerberus::FOM_ReadWriteTrunc);
     f.open();
-    f.write(res.payload());
+    f.write(response.value.payload());
     f.close();
 
     logDebug("payload written on disk");

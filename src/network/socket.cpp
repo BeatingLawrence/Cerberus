@@ -219,8 +219,9 @@ cerberus::OpRes cerberus::network::Socket::_recv(data::ByteBuffer &buffer, bool 
 
     if (ret == 0)
     {
+        // socket closed in case of a stream socket, zero length datagram in case of a datagram socket
         m_connected = false;
-        return OR_RecvZero;  // EOF, stream closed in case of a stream socket, or zero length datagram in case of a datagram socket
+        return OR_Hangup;
     }
 
     buffer.assign(m_recvBuffer, ret);
@@ -266,10 +267,16 @@ cerberus::OpRes cerberus::network::Socket::TLS_send(const data::ByteBuffer &buff
     {
         auto err = SSL_get_error(m_ssl, ret);
 
-        logError("SSL socket send error");
+        logError("SSL socket send error %i", err);
+
         printSSLErrors();
 
-        if (err == SSL_ERROR_ZERO_RETURN || err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
+        if (err == SSL_ERROR_SYSCALL)
+        {
+            if (errno == EPIPE) m_connected = false;
+            logError("SSL_ERROR_SYSCALL errno: %i", errno);
+        }
+        else if (err == SSL_ERROR_ZERO_RETURN || err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
         {
             m_connected = false;
         }
@@ -295,10 +302,16 @@ cerberus::OpRes cerberus::network::Socket::TLS_sendFile(const data::filesystem::
     {
         auto err = SSL_get_error(m_ssl, ret);
 
-        logError("SSL socket sendfile error");
+        logError("SSL socket send error %i", err);
+
         printSSLErrors();
 
-        if (err == SSL_ERROR_ZERO_RETURN || err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
+        if (err == SSL_ERROR_SYSCALL)
+        {
+            if (errno == EPIPE) m_connected = false;
+            logError("SSL_ERROR_SYSCALL errno: %i", errno);
+        }
+        else if (err == SSL_ERROR_ZERO_RETURN || err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
         {
             m_connected = false;
         }
@@ -332,7 +345,7 @@ cerberus::OpRes cerberus::network::Socket::TLS_recv(data::ByteBuffer &buffer)
         if (err == SSL_ERROR_ZERO_RETURN)
         {
             m_connected = false;
-            return OR_RecvZero;
+            return OR_Hangup;
         }
 
         if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
@@ -340,7 +353,7 @@ cerberus::OpRes cerberus::network::Socket::TLS_recv(data::ByteBuffer &buffer)
             return OR_TemporaryUnavailable;
         }
 
-        logError("SSL socket recv error: %i", err);
+        logError("SSL socket recv error: %i, errno: %i", err, errno);
         printSSLErrors();
 
         if (err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
@@ -510,7 +523,7 @@ cerberus::OpRes cerberus::network::Socket::send(const data::ByteBuffer &buffer, 
     if (ret == -1)
     {
         logError("socket send error, %s", strerror(errno));
-        if (errno == ENOTCONN || errno == ECONNRESET) m_connected = false;
+        if (errno == ENOTCONN || errno == ECONNRESET || errno == EPIPE) m_connected = false;
         return OR_Failure;
     }
 
@@ -521,10 +534,7 @@ cerberus::OpRes cerberus::network::Socket::recv(data::ByteBuffer &buffer, const 
 {
     if (isFailed()) return OR_FailedInstance;
 
-    if (!timeout.isValid())
-    {
-        return _recv(buffer, true);
-    }
+    if (!timeout.isValid()) return _recv(buffer, true);
 
     data::ByteBuffer b;
     buffer.clear();
@@ -532,41 +542,45 @@ cerberus::OpRes cerberus::network::Socket::recv(data::ByteBuffer &buffer, const 
 
     while (true)
     {
-        auto waitRes = waitRead((first || !cycTimeout.isValid()) ? timeout : cycTimeout);
+        auto res = waitRead((first || !cycTimeout.isValid()) ? timeout : cycTimeout);
 
-        if (waitRes.res == OR_Hangup)  // maybe there are still some data to read
+        switch (res.res)
         {
-            flushSocket(buffer);
-            break;
-        }
-        else if (waitRes.res == OR_TimedOut)
+            case OR_OK:
+                break;  // continue execution
+
+            case OR_TimedOut:
+                if (isTLS()) flushSocket(buffer);
+                if (buffer.size() == 0) return OR_TimedOut;
+                return OR_OK;
+
+            case OR_Hangup:
+                flushSocket(buffer);
+                return OR_Hangup;
+
+            default:
+                return res;
+        };
+
+        res = Socket::_recv(b, false);
+
+        switch (res.res)
         {
-            // maybe there are still some data remained in the TLS layer
-            if (isTLS()) flushSocket(buffer);
-            break;
-        }
-        else if (waitRes.fail())
-            return OR_Failure;
+            case OR_OK:
+                first = false;
+                buffer += b;
+                break;
 
-        // wait is OK, data are available
+            case OR_Hangup:
+                return OR_Hangup;
 
-        auto ret = Socket::_recv(b, false).res;
+            case OR_TemporaryUnavailable:
+                continue;
 
-        if (ret == OR_OK)
-            buffer += b;
-        else if (ret == OR_RecvZero)  // HUP or zero lenght datagram
-            return OR_OK;
-        else if (ret == OR_TemporaryUnavailable && isTLS())
-            continue;
-        else
-            return ret;
-
-        first = false;
+            default:
+                return res;
+        };
     }
-
-    if (buffer.size() == 0) return OR_TimedOut;
-
-    return OR_OK;
 }
 //=============================================================================
 cerberus::OpRes cerberus::network::Socket::recv(data::ByteBuffer &buffer) { return _recv(buffer, false); }
@@ -597,13 +611,13 @@ cerberus::OpRes cerberus::network::Socket::waitRead(const time::TimeFrame &timeo
         return OR_SystemFailure;
     }
 
+    if (set.revents & POLLIN) return OR_OK;
+
     if (set.revents & POLLERR) return OR_Failure;
 
     if (set.revents & POLLHUP) return OR_Hangup;
 
     if (set.revents & POLLNVAL) return OR_BadConditions;
-
-    if (set.revents & POLLIN) return OR_OK;
 
     return OR_Failure;
 }
@@ -626,13 +640,13 @@ cerberus::OpRes cerberus::network::Socket::waitWrite(const time::TimeFrame &time
         return OR_SystemFailure;
     }
 
+    if (set.revents & POLLOUT) return OR_OK;
+
     if (set.revents & POLLERR) return OR_Failure;
 
     if (set.revents & POLLHUP) return OR_Hangup;
 
     if (set.revents & POLLNVAL) return OR_BadConditions;
-
-    if (set.revents & POLLOUT) return OR_OK;
 
     return OR_Failure;
 }
@@ -1268,10 +1282,11 @@ cerberus::OpRes cerberus::network::Socket::recv(data::filesystem::File &file, co
     data::ByteBuffer buffer;
     OpRes ret = recv(buffer, timeout, cycTimeout);
 
-    if (ret.fail()) return ret;
+    if (!buffer.isEmpty())
+    {
+        if (file.write(buffer).fail()) return OR_InvalidFile;
+    }
 
-    if (file.write(buffer).fail()) return OR_InvalidFile;
-
-    return OR_OK;
+    return ret;
 }
 //=============================================================================

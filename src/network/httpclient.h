@@ -24,8 +24,12 @@ namespace cerberus
 
             ~HTTPClient();
 
-            // Setup the TLS layer
-            void setupTLS(bool use = false, const std::string &certfile = "", const std::string &keyfile = "");
+            // Set the socket to be a TLS socket
+            OpRes TLS_init(const std::string &certfile = "", const std::string &keyfile = "");
+
+            // Free all the allocated resources for the TLS features, thus, a call to initTLS() is necessary
+            // for the socket to send and receive on the secure layer again.
+            OpRes TLS_deinit();
 
             // Connect to a remote host
             cerberus::OpRes connectTo(const Host &host);
@@ -37,7 +41,7 @@ namespace cerberus
             cerberus::OpRes makeRequest(const data::HTTPRequest &data);
 
             // Block until a response is available to be read
-            cerberus::OpRes getResponse(data::HTTPResponse &data, const time::TimeFrame &timeout = time::TimeFrame(1000), const time::TimeFrame &cycTimeout = time::TimeFrame());
+            cerberus::OpResData<data::HTTPResponse> getResponse(const time::TimeFrame &timeout = time::TimeFrame(1000), const time::TimeFrame &cycTimeout = time::TimeFrame());
 
             // Get the internal socket (use for debugging purposes)
             cerberus::network::Socket *getSocket();

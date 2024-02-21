@@ -5,6 +5,7 @@ TODO list for Cerberus:
 [New Functionalities]
 
 [Network]
+-Add persistent mode to HTTPClient that reconnects to the host when the connection drops and the application wants to make a request
 -Implement WebSocket
 -Implement ICMP socket (or a ping functionality)
 -Implement IPC socket

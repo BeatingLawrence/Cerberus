@@ -22,10 +22,7 @@ cerberus::OpRes HTTPClient::getDictFromHeader(const data::ByteBuffer &header, Di
 
         // debug("parsing line(%u): %s", str.length(), str.c_str());
 
-        if (str.empty())
-        {
-            return header.isEnd() ? OR_OK : failed;
-        }
+        if (str.empty()) return header.isEnd() ? OR_OK : failed;
 
         auto p = str.find(": ");
 
@@ -81,10 +78,7 @@ void HTTPClient::decodeChunkedData(data::ByteBuffer &data)
         auto str = data.getLine();  // get until \r\n
         int size = cerberus::core::CerberusUtils::stringToInt(str, Radix::Hexadecimal).value;
 
-        if (size == 0)
-        {
-            break;
-        }
+        if (size == 0) break;
 
         tmp.append(data.read(size));
         data.seek(data.pos() + 2);
@@ -102,17 +96,14 @@ HTTPClient::HTTPClient(const std::string &name)
 //=============================================================================
 HTTPClient::~HTTPClient() { disconnect(); }
 //=============================================================================
-void HTTPClient::setupTLS(bool use, const std::string &certfile, const std::string &keyfile)
+cerberus::OpRes HTTPClient::TLS_init(const std::string &certfile, const std::string &keyfile)
 {
-    if (!use)
-    {
-        m_socket.TLS_deinit();
-        return;
-    }
-
-    m_socket.TLS_init(certfile, keyfile);
+    auto res = m_socket.TLS_init(certfile, keyfile);
     m_socket.TLS_ignoreHangup();
+    return res;
 }
+//=============================================================================
+cerberus::OpRes HTTPClient::TLS_deinit() { return m_socket.TLS_deinit(); }
 //=============================================================================
 cerberus::OpRes HTTPClient::connectTo(const Host &host)
 {
@@ -131,19 +122,14 @@ void HTTPClient::disconnect() { m_socket.close(); }
 //=============================================================================
 cerberus::OpRes HTTPClient::makeRequest(const data::HTTPRequest &data)
 {
-    if (!m_socket.isConnected())
-    {
-        return OR_BadConditions;
-    }
+    if (!m_socket.isConnected()) return OR_BadConditions;
 
     return m_socket.send(data.data());
 }
 //=============================================================================
-cerberus::OpRes HTTPClient::getResponse(data::HTTPResponse &data, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
+cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
 {
     if (!m_socket.isConnected()) return OR_BadConditions;
-
-    data.clear();
 
     data::ByteBuffer buf;
 
@@ -153,13 +139,14 @@ cerberus::OpRes HTTPClient::getResponse(data::HTTPResponse &data, const time::Ti
     }
 
     auto res = buf.search("\r\n\r\n");  // find the gap between header and payload
-    if (res.fail()) return res;
+    if (res.fail()) return OR_Failure;
     SIZE gap = res.value;
 
     res = buf.search("\r\n");  // find the status line end
-    if (res.fail()) return res;
+    if (res.fail()) return OR_Failure;
     SIZE sle = res.value;
 
+    data::HTTPResponse data;
     data.setPayload(buf.subBuffer(gap + 4));
 
     // get status line
@@ -168,25 +155,19 @@ cerberus::OpRes HTTPClient::getResponse(data::HTTPResponse &data, const time::Ti
 
     // get header
     Dictionary dict;
-    res = getDictFromHeader(buf.subBuffer(sle + 2, gap + 2 - sle), dict);
 
-    if (res.fail()) return OR_Failure;
+    if (getDictFromHeader(buf.subBuffer(sle + 2, gap + 2 - sle), dict).fail()) return OR_Failure;
 
-    for (auto &&el : dict)
-    {
-        data.addHeaderField(el.key, el.val);
-    }
+    data.setHeaderDict(dict);
 
-    res = data.getHeaderMatch("transfer-encoding", "chunked");
-
-    if (res.ok() && res.value)
+    if (data.getHeaderMatch("transfer-encoding", "chunked").ok())
     {
         // chunked encoding
         logDebug("processing chunked data...");
         decodeChunkedData(data.payload());
     }
 
-    return OR_OK;
+    return data;
 }
 //=============================================================================
 Socket *HTTPClient::getSocket() { return &m_socket; }
