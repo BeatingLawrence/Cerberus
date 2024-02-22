@@ -475,7 +475,7 @@ namespace cerberus
         // Print the numeric IP address and port (not the hostname) to string.
         std::string toString();
 
-        // Tells if the Host is not valid for any usage
+        // Tells if the Host is valid
         bool isValid();
 
         // Tell if the Host is valid for remote usage, e.g. connect() or sendTo().

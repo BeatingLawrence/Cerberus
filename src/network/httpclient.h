@@ -13,6 +13,12 @@ namespace cerberus
            private:
             Socket m_socket;
 
+            bool m_persistent;
+
+            Host m_server;
+
+            cerberus::OpRes _connect();
+
             static OpRes getDictFromHeader(const data::ByteBuffer &header, Dictionary &dict);
 
             static OpRes getStatus(const data::ByteBuffer &statusLine, data::HTTPResponse &response);
@@ -32,16 +38,24 @@ namespace cerberus
             OpRes TLS_deinit();
 
             // Connect to a remote host
-            cerberus::OpRes connectTo(const Host &host);
+            cerberus::OpRes connect(const Host &host);
 
             // Disconnect from host
             void disconnect();
 
+            // Make the client persistent.
+            // A persistent client automatically reconnects to the server if the connection
+            // drops, when the application makes a request.
+            void persistent(bool persistent = true);
+
             // Perform an HTTP request using the given data
-            cerberus::OpRes makeRequest(const data::HTTPRequest &data);
+            cerberus::OpRes makeRequest(const data::HTTPRequest &request);
 
             // Block until a response is available to be read
             cerberus::OpResData<data::HTTPResponse> getResponse(const time::TimeFrame &timeout = time::TimeFrame(1000), const time::TimeFrame &cycTimeout = time::TimeFrame());
+
+            // Get HTTP data. This method is a combination of makeRequest and getResponse
+            cerberus::OpResData<data::HTTPResponse> get(const data::HTTPRequest &request, const time::TimeFrame &timeout = time::TimeFrame(1000), const time::TimeFrame &cycTimeout = time::TimeFrame());
 
             // Get the internal socket (use for debugging purposes)
             cerberus::network::Socket *getSocket();

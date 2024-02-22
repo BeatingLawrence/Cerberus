@@ -7,6 +7,19 @@ using namespace cerberus::network;
 using namespace cerberus::core;
 
 //=============================================================================
+cerberus::OpRes HTTPClient::_connect()
+{
+    auto res = m_socket.reset();
+
+    if (res.fail()) return res;
+
+    res = m_socket.connect(m_server);
+
+    if (res.fail()) return res;
+
+    return OR_OK;
+}
+//=============================================================================
 cerberus::OpRes HTTPClient::getDictFromHeader(const data::ByteBuffer &header, Dictionary &dict)
 {
     // debug("%s", header.toNormalizedString().c_str());
@@ -89,7 +102,9 @@ void HTTPClient::decodeChunkedData(data::ByteBuffer &data)
 }
 //=============================================================================
 HTTPClient::HTTPClient(const std::string &name)
-    : m_socket(CerberusObject::Socket_TCP, core::CerberusUtils::strPrint("Socket of \"%s\"", name.c_str()))
+    : m_socket(CerberusObject::Socket_TCP, core::CerberusUtils::strPrint("Socket of \"%s\"", name.c_str())),
+      m_persistent(false),
+      m_server()
 {
     m_socket.setRecvBufferSize(4096);  // 4K buffer size
 }
@@ -105,26 +120,30 @@ cerberus::OpRes HTTPClient::TLS_init(const std::string &certfile, const std::str
 //=============================================================================
 cerberus::OpRes HTTPClient::TLS_deinit() { return m_socket.TLS_deinit(); }
 //=============================================================================
-cerberus::OpRes HTTPClient::connectTo(const Host &host)
+cerberus::OpRes HTTPClient::connect(const Host &host)
 {
-    auto res = m_socket.reset();
-
-    if (res.fail()) return res;
-
-    res = m_socket.connect(host);
-
-    if (res.fail()) return res;
-
-    return OR_OK;
+    m_server = host;
+    return _connect();
 }
 //=============================================================================
 void HTTPClient::disconnect() { m_socket.close(); }
 //=============================================================================
-cerberus::OpRes HTTPClient::makeRequest(const data::HTTPRequest &data)
+void HTTPClient::persistent(bool persistent) { m_persistent = persistent; }
+//=============================================================================
+cerberus::OpRes HTTPClient::makeRequest(const data::HTTPRequest &request)
 {
-    if (!m_socket.isConnected()) return OR_BadConditions;
+    if (!m_socket.isConnected())
+    {
+        if (m_persistent)
+        {
+            auto r = _connect();
+            if (r.fail()) return r;
+        }
+        else
+            return OR_BadConditions;
+    }
 
-    return m_socket.send(data.data());
+    return m_socket.send(request.data());
 }
 //=============================================================================
 cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
@@ -168,6 +187,15 @@ cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const 
     }
 
     return data;
+}
+//=============================================================================
+cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::get(const data::HTTPRequest &request, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
+{
+    auto r = makeRequest(request);
+
+    if (r.fail()) return r;
+
+    return getResponse(timeout, cycTimeout);
 }
 //=============================================================================
 Socket *HTTPClient::getSocket() { return &m_socket; }

@@ -6,10 +6,8 @@ TODO list for Cerberus:
 
 [Network]
 -Add persistent mode to HTTPClient that reconnects to the host when the connection drops and the application wants to make a request
--Implement WebSocket
 -Implement ICMP socket (or a ping functionality)
 -Implement IPC socket
--Write a test suite for every socket type
 
 [Database]
 -Implement a custom thread that takes an sql database and processes a queue of transactions from other threads on the db 
