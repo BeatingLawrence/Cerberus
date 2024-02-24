@@ -268,7 +268,7 @@ TEST(socketTest, HTTPClient)
 {
     cerberus::network::HTTPClient client("HTTP Client test");
     client.TLS_init();
-    ASSERT_TRUE(client.connectTo("www.google.com:443").ok(true));
+    ASSERT_TRUE(client.connect("www.google.com:443").ok(true));
     logDebug("connected");
     cerberus::data::HTTPRequest req;
     req.setup(cerberus::HTTP_GET, "/", cerberus::HTTP_1_1)

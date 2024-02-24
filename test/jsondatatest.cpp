@@ -62,7 +62,7 @@ TEST(jsonDataTest, search)
     filesystem::File f("jsontest.json");
     ASSERT_TRUE(f.open().ok(true));
     ASSERT_TRUE(data.parse(f).ok(true));
-    auto found = data.search("address");
+    auto found = data.search("street_address");
 
     ASSERT_TRUE(found.isValid());
 

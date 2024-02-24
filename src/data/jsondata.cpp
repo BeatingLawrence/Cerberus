@@ -315,15 +315,15 @@ JsonData JsonData::get(const std::string &name)
 //=============================================================================
 JsonData JsonData::search(const std::string &name)
 {
-    if (isNull()) return JsonData();
+    if (!isValid()) return JsonData();
 
     auto found = get(name);
-    if (!found.isNull()) return found;
+    if (found.isValid()) return found;
 
     for (auto &el : m_elements)
     {
         found = el.search(name);
-        if (!found.isNull()) return found;
+        if (found.isValid()) return found;
     }
 
     return JsonData();
@@ -536,7 +536,6 @@ cerberus::OpRes JsonData::parse(const filesystem::File &file)
 cerberus::OpRes JsonData::generate(ByteBuffer &buffer)
 {
     buffer.clear();
-    if (m_elements.empty()) return OR_Empty;
     _generate(buffer);
 
     return OR_OK;
