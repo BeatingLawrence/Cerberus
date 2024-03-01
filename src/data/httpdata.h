@@ -2,6 +2,7 @@
 #define CERBERUS_DATA_HTTPDATA_H
 
 #include "bytebuffer.h"
+#include "jsondata.h"
 
 namespace cerberus
 {
@@ -31,9 +32,18 @@ namespace cerberus
             // Set the HTTP payload
             HTTPData& setPayload(const ByteBuffer& payload);
 
+            // Perform a JSON generation and set the payload to the generated text.
+            // The result of the generation will be returned.
+            // If the generation fails, this instance will contain inconsistent data,
+            // so it's recommended not to use it in a HTTP request
+            OpRes setJsonPayload(const JsonData& payload);
+
             // Get the HTTP payload
             const data::ByteBuffer& payload() const;
             data::ByteBuffer& payload();
+
+            // Parse the payload to a JsonData object and return it
+            OpResData<JsonData> JsonPayload() const;
 
             // Clear all stored data
             HTTPData& clear();

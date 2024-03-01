@@ -136,7 +136,7 @@ BoolOpRes JsonData::_parse(const ByteBuffer &buffer, ParseMode mode)
     return OR_OK;
 }
 //=============================================================================
-void JsonData::_generate(ByteBuffer &buffer)
+void JsonData::_generate(ByteBuffer &buffer) const
 {
     if (!m_name.empty())
     {
@@ -533,7 +533,7 @@ cerberus::OpRes JsonData::parse(const filesystem::File &file)
     return parse(buffer);
 }
 //=============================================================================
-cerberus::OpRes JsonData::generate(ByteBuffer &buffer)
+cerberus::OpRes JsonData::generate(ByteBuffer &buffer) const
 {
     buffer.clear();
     _generate(buffer);
@@ -541,7 +541,7 @@ cerberus::OpRes JsonData::generate(ByteBuffer &buffer)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes JsonData::generate(filesystem::File &file)
+cerberus::OpRes JsonData::generate(filesystem::File &file) const
 {
     ByteBuffer buffer;
     auto res = generate(buffer);

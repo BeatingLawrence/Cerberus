@@ -36,7 +36,7 @@ namespace cerberus
 
             BoolOpRes _parse(const ByteBuffer& buffer, ParseMode mode = Unspecified);
 
-            void _generate(ByteBuffer& buffer);
+            void _generate(ByteBuffer& buffer) const;
 
             Integrity checkIntegrity() const;
 
@@ -166,9 +166,9 @@ namespace cerberus
             OpRes parse(const filesystem::File& file);
 
             // generator section
-            OpRes generate(ByteBuffer& buffer);
+            OpRes generate(ByteBuffer& buffer) const;
 
-            OpRes generate(filesystem::File& file);
+            OpRes generate(filesystem::File& file) const;
 
             void toStr(std::string& str, uint8_t level = 0) const;
         };

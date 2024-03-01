@@ -3,9 +3,9 @@ TODO list for Cerberus:
 [Corrections - High priority]
 
 [New Functionalities]
+-Add the Task class. this class will store a task (block of code) and will be given to Threads that will be able to execute it
 
 [Network]
--Add persistent mode to HTTPClient that reconnects to the host when the connection drops and the application wants to make a request
 -Implement ICMP socket (or a ping functionality)
 -Implement IPC socket
 

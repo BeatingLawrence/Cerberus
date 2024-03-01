@@ -45,9 +45,20 @@ data::HTTPData &data::HTTPData::setPayload(const data::ByteBuffer &payload)
     return *this;
 }
 //=============================================================================
+OpRes data::HTTPData::setJsonPayload(const JsonData &payload) { return payload.generate(m_payload); }
+//=============================================================================
 const cerberus::data::ByteBuffer &data::HTTPData::payload() const { return m_payload; }
 //=============================================================================
 data::ByteBuffer &data::HTTPData::payload() { return m_payload; }
+//=============================================================================
+OpResData<data::JsonData> data::HTTPData::JsonPayload() const
+{
+    JsonData jd;
+    auto r = jd.parse(m_payload);
+    if (r.fail()) return r;
+
+    return jd;
+}
 //=============================================================================
 data::HTTPData &data::HTTPData::clear()
 {
