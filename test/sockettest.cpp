@@ -112,7 +112,8 @@ static int testCallback_FTP(cerberus::cerberus_message msg, cerberus::thread::Th
     auto socket = TCPSocket("FTP receiver");
     socket.bind("localhost:54321");
     socket.listen(3);
-    cerberus::data::filesystem::File file("ftp_socket_test_file_received.file", cerberus::FOM_ReadWriteTrunc);
+    cerberus::data::filesystem::File file("ftp_socket_test_file_received.file",
+                                          cerberus::FOM_ReadWriteTrunc);
     if (file.open().fail(true))
     {
         logDebug("file open error");
@@ -203,7 +204,8 @@ TEST(socketTest, FTP)
     cerberus::thread::Thread::sleep(10);  // sleep THIS thread
     //
     // file creation
-    cerberus::data::filesystem::File f("ftp_socket_test_file_sent.file", cerberus::FOM_ReadWriteTrunc);
+    cerberus::data::filesystem::File f("ftp_socket_test_file_sent.file",
+                                       cerberus::FOM_ReadWriteTrunc);
     ASSERT_TRUE(f.open().ok(true));
     for (int i = 0; i < 500; i++)
     {
@@ -230,11 +232,12 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
 {
     auto socket = TCPSocket("TLS socket");
     ASSERT_EQ(socket.TLS_init().res, cerberus::OR_OK);  // mark the socket as TLS
-    socket.TLS_ignoreHangup(false).fail(true);
+    socket.TLS_ignoreHangup(true).fail(true);
     logDebug("connecting..");
     cerberus::Host h("www.google.com:443");
     ASSERT_EQ(socket.connect(h).res, cerberus::OR_OK);
-    logDebug("connected with encryption: PROTO: %s CIPHER: %s", socket.TLS_getProtocolName().c_str(), socket.TLS_getCipherName().c_str());
+    logDebug("connected with encryption: PROTO: %s CIPHER: %s",
+             socket.TLS_getProtocolName().value.c_str(), socket.TLS_getCipherName().value.c_str());
     logDebug("sending get request");
     EXPECT_EQ(socket
                   .send("GET / HTTP/1.1\r\n"
@@ -242,7 +245,8 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
                         //"Accept-Encoding: identity"
                         //"Content-Length: 2048"
                         "Accept-Language: en-US,en;q=0.5\r\n"
-                        "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0\r\n"
+                        "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:47.0) Gecko/20100101 "
+                        "Firefox/47.0\r\n"
                         "Accept: text/html\r\n"
                         "Connection: keep-alive\r\n"
                         "Cache-Control: max-age=0\r\n\r\n")
@@ -274,7 +278,8 @@ TEST(socketTest, HTTPClient)
     req.setup(cerberus::HTTP_GET, "/", cerberus::HTTP_1_1)
         .addHeaderField("Host", "www.google.com")
         .addHeaderField("Accept-Language", "en-US,en;q=0.5")
-        .addHeaderField("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0")
+        .addHeaderField("User-Agent",
+                        "Mozilla/5.0 (X11; Linux x86_64; rv:47.0) Gecko/20100101 Firefox/47.0")
         .addHeaderField("Accept", "text/html")
         .addHeaderField("Connection", "keep-alive")
         .addHeaderField("Cache-Control", "max-age=0");
@@ -292,7 +297,8 @@ TEST(socketTest, HTTPClient)
     logDebug("received header lines:");
     for (int i = 0; i < response.value.getHeaderSize(); i++)
     {
-        logDebug("%s: %s", response.value.getHeaderFieldName(i).c_str(), response.value.getHeaderFieldValue(i).c_str());
+        logDebug("%s: %s", response.value.getHeaderFieldName(i).c_str(),
+                 response.value.getHeaderFieldValue(i).c_str());
     }
 
     // save the payload in a file
@@ -302,4 +308,23 @@ TEST(socketTest, HTTPClient)
     f.close();
 
     logDebug("payload written on disk");
+}
+
+// This code test the client authentication capabilities
+TEST(socketTest, TLS_clientAuth)
+{
+    auto socket = TCPSocket("TLS socket");
+    ASSERT_TRUE(socket
+                    .TLS_init("/Users/lory/ssl/com.apple.systemdefault.pem",
+                              "/Users/lory/ssl/com.apple.systemdefault.key.pem",
+                              "/Users/lory/ssl/cert.pem")
+                    .ok(true));
+    socket.TLS_ignoreHangup(true);
+    logDebug("connecting..");
+    cerberus::Host h("api.openai.com:443");
+    ASSERT_TRUE(socket.connect(h).ok(true));
+    logDebug("connected with encryption: PROTO: %s CIPHER: %s",
+             socket.TLS_getProtocolName().value.c_str(), socket.TLS_getCipherName().value.c_str());
+    cerberus::thread::Thread::sleep(500);
+    socket.close();
 }

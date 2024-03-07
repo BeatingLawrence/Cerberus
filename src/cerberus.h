@@ -29,26 +29,62 @@ namespace cerberus
         class Timer;
     }
 
+    template <class T>
+    struct FrameworkLock
+    {
+        std::atomic_flag ready;
+        std::atomic<int> usage;
+        T* data;
+
+        FrameworkLock()
+            : ready(false),
+              usage(0),
+              data(nullptr){};
+
+        void begin() { usage.fetch_add(1); };
+        void end() { usage.fetch_sub(1); };
+
+        void wait()
+        {
+            while (usage.load() != 0)
+            {
+                asm("nop");
+            }
+        }
+
+        void construct()
+        {
+            if (!data) data = new T;
+            ready.test_and_set();
+        }
+
+        void destroy()
+        {
+            ready.clear();
+            wait();
+            delete data;
+            data = nullptr;
+        }
+
+        bool isReady() { return ready.test(); };
+
+        void isReadySevere()
+        {
+            if (!ready.test()) throw cerberusUsageErrorExc("bad init usage");
+        };
+    };
+
     struct FrameworkData
     {
-        std::atomic_flag init;
-        std::atomic<int> use;
+        FrameworkLock<core::CerberusLog> log;
+        FrameworkLock<core::CerberusRegister> reg;
+        FrameworkLock<core::CerberusCore> core;
 
-        core::CerberusLog* log;
-        core::CerberusRegister* reg;
-        core::CerberusCore* core;
+        void construct(const CerberusLogSetup& logSetup);
+        void destroy();
 
-        FrameworkData()
-            : init(false),
-              use(0),
-              log(nullptr),
-              reg(nullptr),
-              core(nullptr){};
-
-        void begin() { use++; };
-        void end() { use--; };
-        bool wait();
-        void checkInit();
+        void start();
+        void stop();
     };
 
     class CERBERUS_EXPORT Cerberus
@@ -96,10 +132,11 @@ namespace cerberus
         static void startTimer(std::atomic_bool& bit, time::TimeFrame t, timerCallback callback);
 
         // Start a new periodic timer that will fire at d (the first time) and then, every t time
-        static void startTimer(std::atomic_bool& bit, time::DateTime d, time::TimeFrame t, timerCallback callback);
+        static void startTimer(std::atomic_bool& bit, time::DateTime d, time::TimeFrame t,
+                               timerCallback callback);
 
-        // Start a new one-shot timer that will fire at d and then it will be removed from the references
-        // as stopTimer() were called
+        // Start a new one-shot timer that will fire at d and then it will be removed from the
+        // references as stopTimer() were called
         static void startTimer(std::atomic_bool& bit, time::DateTime d, timerCallback callback);
 
         // Stop a timer and remove it from references
@@ -122,7 +159,8 @@ namespace cerberus
         // Send a message ignoring the destination of message and using id instead
         static void send(cerberus_message message, uint32_t id);
 
-        // Send a message ignoring the destination of message and using the id of the named object instead
+        // Send a message ignoring the destination of message and using the id of the named object
+        // instead
         static void send(cerberus_message message, const std::string& name);
 
         // Return a working default set of init parameters
@@ -132,7 +170,8 @@ namespace cerberus
         static CerbVersion cerberusVersion();
 
         // Log method
-        static void log(const std::string& str, LogLevel logLevel = LL_Info, const std::string& author = std::string(), bool application = true);
+        static void log(const std::string& str, LogLevel logLevel = LL_Info,
+                        const std::string& author = std::string(), bool application = true);
 
         // ======================Public Register===========================
 
@@ -148,7 +187,8 @@ namespace cerberus
         static message::MessageTemplate msgTemplateByName(const std::string& name);
 
         // Adds a template of the given message to the register, returning the chosen typeID
-        static uint32_t registerMessage(const message::Message& message, const std::string& name = std::string());
+        static uint32_t registerMessage(const message::Message& message,
+                                        const std::string& name = std::string());
 
         // Factory of messages. A call to this method will return an empty but structured message.
         // This method will return an invalid message if ID was not found, or it will

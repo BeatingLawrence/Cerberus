@@ -27,43 +27,43 @@ FrameworkData Cerberus::framework;
 //=============================================================================
 void Cerberus::registerObj(CerberusObject *object)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    Cerberus::framework.reg->registerObj(object);
-    Cerberus::framework.end();
+    Cerberus::framework.reg.isReadySevere();
+    Cerberus::framework.reg.begin();
+    Cerberus::framework.reg.data->registerObj(object);
+    Cerberus::framework.reg.end();
 }
 //=============================================================================
 void Cerberus::unregisterObj(uint32_t id)
 {
-    // avoid check init flag
-    Cerberus::framework.begin();
-    Cerberus::framework.reg->unregisterObj(id);
-    Cerberus::framework.end();
+    if (!Cerberus::framework.reg.isReady()) return;
+    Cerberus::framework.reg.begin();
+    Cerberus::framework.reg.data->unregisterObj(id);
+    Cerberus::framework.reg.end();
 }
 //=============================================================================
 void Cerberus::sendMsgToObj(uint32_t id, cerberus_message msg)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    Cerberus::framework.reg->sendMsgToObj(id, msg);
-    Cerberus::framework.end();
+    Cerberus::framework.reg.isReadySevere();
+    Cerberus::framework.reg.begin();
+    Cerberus::framework.reg.data->sendMsgToObj(id, msg);
+    Cerberus::framework.reg.end();
 }
 //=============================================================================
 message::MessageTemplate Cerberus::msgTemplateById(uint32_t id)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    auto ret = Cerberus::framework.reg->msgTemplateById(id);
-    Cerberus::framework.end();
+    Cerberus::framework.reg.isReadySevere();
+    Cerberus::framework.reg.begin();
+    auto ret = Cerberus::framework.reg.data->msgTemplateById(id);
+    Cerberus::framework.reg.end();
     return ret;
 }
 //=============================================================================
 message::MessageTemplate Cerberus::msgTemplateByName(const std::string &name)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    auto ret = Cerberus::framework.reg->msgTemplateByName(name);
-    Cerberus::framework.end();
+    Cerberus::framework.reg.isReadySevere();
+    Cerberus::framework.reg.begin();
+    auto ret = Cerberus::framework.reg.data->msgTemplateByName(name);
+    Cerberus::framework.reg.end();
     return ret;
 }
 //=============================================================================
@@ -145,84 +145,77 @@ cerberus_message Cerberus::standardMessageConstruct(StandardMessage type)
 //=============================================================================
 uint32_t Cerberus::addPlugin(void *handle, const std::string &path, bool &exists)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    auto ret = Cerberus::framework.reg->addPlugin(handle, path, exists);
-    Cerberus::framework.end();
+    Cerberus::framework.reg.isReadySevere();
+    Cerberus::framework.reg.begin();
+    auto ret = Cerberus::framework.reg.data->addPlugin(handle, path, exists);
+    Cerberus::framework.reg.end();
     return ret;
 }
 //=============================================================================
 mutex::MutexLocker Cerberus::getPluginMutex(uint32_t id)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    auto ret = Cerberus::framework.reg->getPluginMutex(id);
-    Cerberus::framework.end();
+    Cerberus::framework.reg.isReadySevere();
+    Cerberus::framework.reg.begin();
+    auto ret = Cerberus::framework.reg.data->getPluginMutex(id);
+    Cerberus::framework.reg.end();
     return ret;
 }
 //=============================================================================
 void *Cerberus::checkPlugin(uint32_t id)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    auto ret = Cerberus::framework.reg->checkPlugin(id);
-    Cerberus::framework.end();
+    Cerberus::framework.reg.isReadySevere();
+    Cerberus::framework.reg.begin();
+    auto ret = Cerberus::framework.reg.data->checkPlugin(id);
+    Cerberus::framework.reg.end();
     return ret;
 }
 //=============================================================================
 bool Cerberus::updatePlugin(uint32_t id, const std::string &path, void *handle)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    auto ret = Cerberus::framework.reg->updatePlugin(id, path, handle);
-    Cerberus::framework.end();
+    Cerberus::framework.reg.isReadySevere();
+    Cerberus::framework.reg.begin();
+    auto ret = Cerberus::framework.reg.data->updatePlugin(id, path, handle);
+    Cerberus::framework.reg.end();
     return ret;
 }
 //=============================================================================
 void Cerberus::startTimer(std::atomic_bool &bit, time::TimeFrame t, timerCallback callback)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    Cerberus::framework.core->m_eventScheduler.startTimer(bit, t, callback);
-    Cerberus::framework.end();
+    Cerberus::framework.core.isReadySevere();
+    Cerberus::framework.core.begin();
+    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, t, callback);
+    Cerberus::framework.core.end();
 }
 //=============================================================================
 void Cerberus::startTimer(std::atomic_bool &bit, time::DateTime d, time::TimeFrame t, timerCallback callback)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    Cerberus::framework.core->m_eventScheduler.startTimer(bit, d, t, callback);
-    Cerberus::framework.end();
+    Cerberus::framework.core.isReadySevere();
+    Cerberus::framework.core.begin();
+    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, d, t, callback);
+    Cerberus::framework.core.end();
 }
 //=============================================================================
 void Cerberus::startTimer(std::atomic_bool &bit, time::DateTime d, timerCallback callback)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    Cerberus::framework.core->m_eventScheduler.startTimer(bit, d, callback);
-    Cerberus::framework.end();
+    Cerberus::framework.core.isReadySevere();
+    Cerberus::framework.core.begin();
+    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, d, callback);
+    Cerberus::framework.core.end();
 }
 //=============================================================================
 void Cerberus::stopTimer(std::atomic_bool &bit)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    Cerberus::framework.core->m_eventScheduler.stopTimer(bit);
-    Cerberus::framework.end();
+    Cerberus::framework.core.isReadySevere();
+    Cerberus::framework.core.begin();
+    Cerberus::framework.core.data->m_eventScheduler.stopTimer(bit);
+    Cerberus::framework.core.end();
 }
 //=============================================================================
 void Cerberus::init(const CerberusInitParms &parms)
 {
-    if (Cerberus::framework.init.test()) throw cerberusUsageErrorExc("cannot call init() multiple times");
+    Cerberus::framework.construct(parms.logSetup);
 
-    Cerberus::framework.log = new CerberusLog;
-    Cerberus::framework.log->setup(parms.logSetup);
-
-    Cerberus::framework.reg  = new CerberusRegister;
-    Cerberus::framework.core = new CerberusCore;
-
-    Cerberus::framework.log->start();
-    Cerberus::framework.core->start();
+    Cerberus::framework.start();
 
     logInfo("Cerberus init completed");
 
@@ -243,36 +236,12 @@ void Cerberus::init(const CerberusInitParms &parms)
     }
 
 #endif
-
-    // set init flag
-    Cerberus::framework.init.test_and_set();
 }
 //=============================================================================
 void Cerberus::deinit()
 {
-    if (!Cerberus::framework.wait()) throw cerberusUsageErrorExc("cannot call deinit() when the framework is not initialized");
-
-    // stop core thread
-    Cerberus::framework.core->join(true).expect("Unable to join the core Thread");
-
-    // stop log thread
-    Cerberus::framework.log->stop();
-
-    // clear the init flag
-    Cerberus::framework.init.clear();
-
-    // destroy core
-    delete Cerberus::framework.core;
-    Cerberus::framework.core = nullptr;
-
-    // destroy register
-    Cerberus::framework.reg->cleanupPlugins();
-    delete Cerberus::framework.reg;
-    Cerberus::framework.reg = nullptr;
-
-    // destroy log
-    delete Cerberus::framework.log;
-    Cerberus::framework.log = nullptr;
+    Cerberus::framework.stop();
+    Cerberus::framework.destroy();
 }
 //=============================================================================
 CerberusInitParms Cerberus::cerberusDefaultParms()
@@ -343,58 +312,77 @@ CerbVersion Cerberus::cerberusVersion()
 //=============================================================================
 void Cerberus::log(const std::string &str, LogLevel logLevel, const std::string &author, bool application)
 {
-    if (!Cerberus::framework.init.test()) return;  // abort log
-    Cerberus::framework.begin();
-    Cerberus::framework.log->log(str, logLevel, author, application);
-    Cerberus::framework.end();
+    if (!Cerberus::framework.log.isReady()) return;  // abort log
+    Cerberus::framework.log.begin();
+    Cerberus::framework.log.data->log(str, logLevel, author, application);
+    Cerberus::framework.log.end();
 }
 //=============================================================================
 uint32_t Cerberus::objIdByName(const std::string &name)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    auto ret = Cerberus::framework.reg->objIdByName(name);
-    Cerberus::framework.end();
+    Cerberus::framework.reg.isReadySevere();
+    Cerberus::framework.reg.begin();
+    auto ret = Cerberus::framework.reg.data->objIdByName(name);
+    Cerberus::framework.reg.end();
     return ret;
 }
 //=============================================================================
 void Cerberus::send(cerberus_message message)
 {
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    Cerberus::framework.core->addMessage(message);
-    Cerberus::framework.end();
+    Cerberus::framework.core.isReadySevere();
+    Cerberus::framework.core.begin();
+    Cerberus::framework.core.data->addMessage(message);
+    Cerberus::framework.core.end();
 }
 //=============================================================================
 void Cerberus::send(cerberus_message message, uint32_t id)
 {
     message->setDestination(id);
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    Cerberus::framework.core->addMessage(message);
-    Cerberus::framework.end();
+    Cerberus::framework.core.isReadySevere();
+    Cerberus::framework.core.begin();
+    Cerberus::framework.core.data->addMessage(message);
+    Cerberus::framework.core.end();
 }
 //=============================================================================
 void Cerberus::send(cerberus_message message, const std::string &name)
 {
     message->setDestination(objIdByName(name));
-    Cerberus::framework.checkInit();
-    Cerberus::framework.begin();
-    Cerberus::framework.core->addMessage(message);
-    Cerberus::framework.end();
+    Cerberus::framework.core.isReadySevere();
+    Cerberus::framework.core.begin();
+    Cerberus::framework.core.data->addMessage(message);
+    Cerberus::framework.core.end();
 }
 //=============================================================================
-bool FrameworkData::wait()
+void FrameworkData::construct(const CerberusLogSetup &logSetup)
 {
-    while (use.load() != 0)
-    {
-    }
+    if (core.isReady()) throw cerberusUsageErrorExc("attempt to construct the framework multiple times");
 
-    return init.test();
+    log.construct();
+    log.data->setup(logSetup);
+
+    reg.construct();
+    core.construct();
 }
 //=============================================================================
-void FrameworkData::checkInit()
+void FrameworkData::destroy()
 {
-    if (!init.test()) throw cerberusUsageErrorExc("cannot use the framework before the init() call");
+    if (!core.isReady()) throw cerberusUsageErrorExc("attempt to destroy the framework multiple times");
+
+    core.destroy();
+    reg.destroy();
+    log.destroy();
+}
+//=============================================================================
+void FrameworkData::start()
+{
+    log.data->start();
+    core.data->start();
+}
+//=============================================================================
+void FrameworkData::stop()
+{
+    reg.data->cleanupPlugins();
+    core.data->join(true).expect("Unable to join the core Thread");
+    log.data->stop();
 }
 //=============================================================================

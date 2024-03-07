@@ -12,7 +12,11 @@ namespace cerberus
         {
            private:
             Dictionary m_header;
-            data::ByteBuffer m_payload;  // may become a vector of Bytebuffer to support multipart in the future
+
+            // may become a vector of Bytebuffer to support multipart in the future
+            data::ByteBuffer m_payload;
+
+            void setPayloadSize(SIZE s);
 
            protected:
             // Construct an empty HTTPData instance

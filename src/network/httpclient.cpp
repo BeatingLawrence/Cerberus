@@ -111,12 +111,13 @@ HTTPClient::HTTPClient(const std::string &name)
 //=============================================================================
 HTTPClient::~HTTPClient() { disconnect(); }
 //=============================================================================
-cerberus::OpRes HTTPClient::TLS_init(const std::string &certfile, const std::string &keyfile)
+cerberus::OpRes HTTPClient::TLS_init(const std::string &ca_file, const std::string &certfile,
+                                     const std::string &keyfile)
 {
-    auto res = m_socket.TLS_init(certfile, keyfile);
-    m_socket.TLS_ignoreHangup();
-    return res;
+    return m_socket.TLS_init(certfile, keyfile, ca_file);
 }
+//=============================================================================
+cerberus::OpRes HTTPClient::TLS_ignoreHangup(bool ignore) { return m_socket.TLS_ignoreHangup(ignore); }
 //=============================================================================
 cerberus::OpRes HTTPClient::TLS_deinit() { return m_socket.TLS_deinit(); }
 //=============================================================================
@@ -146,7 +147,8 @@ cerberus::OpRes HTTPClient::makeRequest(const data::HTTPRequest &request)
     return m_socket.send(request.data());
 }
 //=============================================================================
-cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
+cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const time::TimeFrame &timeout,
+                                                                          const time::TimeFrame &cycTimeout)
 {
     if (!m_socket.isConnected()) return OR_BadConditions;
 
@@ -154,15 +156,20 @@ cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const 
 
     {
         auto res = m_socket.recv(buf, timeout, cycTimeout);
-        if (res.fail()) return res;
+        if (res.fail())
+        {
+            if (res.res != OR_Hangup || buf.isEmpty()) return res;
+        }
     }
 
-    auto res = buf.search("\r\n\r\n");  // find the gap between header and payload
-    if (res.fail()) return OR_Failure;
+    // find the gap between header and payload
+    auto res = buf.search("\r\n\r\n");
+    if (res.fail()) return OR_WrongData;
     SIZE gap = res.value;
 
-    res = buf.search("\r\n");  // find the status line end
-    if (res.fail()) return OR_Failure;
+    // find the status line end
+    res = buf.search("\r\n");
+    if (res.fail()) return OR_WrongData;
     SIZE sle = res.value;
 
     data::HTTPResponse data;
@@ -175,7 +182,7 @@ cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const 
     // get header
     Dictionary dict;
 
-    if (getDictFromHeader(buf.subBuffer(sle + 2, gap + 2 - sle), dict).fail()) return OR_Failure;
+    if (getDictFromHeader(buf.subBuffer(sle + 2, gap + 2 - sle), dict).fail()) return OR_WrongData;
 
     data.setHeaderDict(dict);
 
@@ -189,7 +196,9 @@ cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const 
     return data;
 }
 //=============================================================================
-cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::get(const data::HTTPRequest &request, const time::TimeFrame &timeout, const time::TimeFrame &cycTimeout)
+cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::get(const data::HTTPRequest &request,
+                                                                  const time::TimeFrame &timeout,
+                                                                  const time::TimeFrame &cycTimeout)
 {
     auto r = makeRequest(request);
 
@@ -198,5 +207,5 @@ cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::get(const data::HT
     return getResponse(timeout, cycTimeout);
 }
 //=============================================================================
-Socket *HTTPClient::getSocket() { return &m_socket; }
+Socket &HTTPClient::getSocket() { return m_socket; }
 //=============================================================================

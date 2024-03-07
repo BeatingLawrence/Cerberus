@@ -155,17 +155,21 @@ bool cerberus::Host::fromString(const std::string &str)
     return false;
 }
 //=============================================================================
-std::string cerberus::Host::toString() { return cerberus::core::CerberusUtils::strPrint("%u.%u.%u.%u:%u", octect[0], octect[1], octect[2], octect[3], port); }
+std::string cerberus::Host::toString() const
+{
+    return cerberus::core::CerberusUtils::strPrint("%u.%u.%u.%u:%u", octect[0], octect[1], octect[2],
+                                                   octect[3], port);
+}
 //=============================================================================
-bool cerberus::Host::isValid() { return (isNumeric() || isTextual() || hasPort()); }
+bool cerberus::Host::isValid() const { return (isNumeric() || isTextual() || hasPort()); }
 //=============================================================================
-bool cerberus::Host::isValidRemote() { return (isNumeric() || isTextual()) && hasPort(); }
+bool cerberus::Host::isValidRemote() const { return (isNumeric() || isTextual()) && hasPort(); }
 //=============================================================================
-bool cerberus::Host::isNumeric() { return octet_networkOrder != 0; }
+bool cerberus::Host::isNumeric() const { return octet_networkOrder != 0; }
 //=============================================================================
-bool cerberus::Host::isTextual() { return !hostname.empty(); }
+bool cerberus::Host::isTextual() const { return !hostname.empty(); }
 //=============================================================================
-bool cerberus::Host::hasPort() { return port != 0; }
+bool cerberus::Host::hasPort() const { return port != 0; }
 //=============================================================================
 cerberus::OpRes cerberus::Host::resolve()
 {
@@ -239,14 +243,14 @@ bool cerberus::OpRes::operator!=(Result r) { return (res != r); }
 //=============================================================================
 cerberus::OpRes &cerberus::OpRes::expect(const std::string &str)
 {
-    if (fail()) throw cerberus::exception::Exception(str.c_str());
+    if (fail()) throw cerberusOpResExc(str.c_str());
 
     return *this;
 }
 //=============================================================================
 cerberus::OpRes &cerberus::OpRes::expect(Result reason, const std::string &str)
 {
-    if (fail() && res == reason) throw cerberus::exception::Exception(str.c_str());
+    if (fail() && res == reason) throw cerberusOpResExc(str.c_str());
 
     return *this;
 }
@@ -263,7 +267,7 @@ cerberus::OpRes &cerberus::OpRes::expect()
             errorstr.append(reason);
         }
 
-        throw cerberus::exception::Exception(errorstr.c_str());
+        throw cerberusOpResExc(errorstr.c_str());
     }
 
     return *this;
@@ -313,13 +317,13 @@ std::string cerberus::OpRes::errorString()
         case OR_SystemFailure:
             return "A system error occurred";
         case OR_BadConditions:
-            return "Operation cannot be executed due to bad conditions";
+            return "Bad conditions";
         case OR_ResolveServerTempFailure:
             return "The name server returned a temporary failure indication";
         case OR_ResolveServerFailure:
-            return "he name server returned a permanent failure indication";
+            return "The name server returned a failure indication";
         case OR_ResolveNoData:
-            return "The specified network host exists, but does not have any network addresses defined";
+            return "The host exists, but does not have any network addresses defined";
         case OR_ResolveNotFound:
             return "The node or service is not known";
         case OR_ResolveSystemFailure:
@@ -354,6 +358,10 @@ std::string cerberus::OpRes::errorString()
             return "Item is empty";
         case OR_Mismatch:
             return "Item mismatch";
+        case OR_TLSKeysCheckFail:
+            return "TLS key check failure";
+        case OR_WrongData:
+            return "Wrong data";
     }
 
     return "Undefined";
@@ -368,7 +376,8 @@ StringOpRes cerberus::Dictionary::getFieldValue(const std::string &key, WordMatc
     return OR_NotFound;
 }
 //=============================================================================
-cerberus::OpRes cerberus::Dictionary::getFieldMatch(const std::string &key, const std::string &value, WordMatch keymatch, WordMatch valmatch) const
+cerberus::OpRes cerberus::Dictionary::getFieldMatch(const std::string &key, const std::string &value,
+                                                    WordMatch keymatch, WordMatch valmatch) const
 {
     auto res = getFieldValue(key, keymatch);
 
@@ -401,5 +410,25 @@ cerberus::DictLine &cerberus::Dictionary::get(SIZE index)
 {
     if (index >= size()) throw cerberusIllegalArgExc("Index out of bounds");
     return at(index);
+}
+//=============================================================================
+cerberus::DictLine &cerberus::Dictionary::get(const std::string &key, WordMatch match)
+{
+    for (auto it = begin(); it < end(); it++)
+    {
+        if (cerberus::core::CerberusUtils::areEqual((*it).key, key, match)) return (*it);
+    }
+
+    throw cerberusIllegalArgExc("Name not found");
+}
+//=============================================================================
+bool cerberus::Dictionary::exists(const std::string &key, WordMatch match)
+{
+    for (auto it = begin(); it < end(); it++)
+    {
+        if (cerberus::core::CerberusUtils::areEqual((*it).key, key, match)) return true;
+    }
+
+    return false;
 }
 //=============================================================================

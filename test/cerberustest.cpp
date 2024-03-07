@@ -4,7 +4,10 @@
 
 using namespace cerberus;
 
-TEST(cerberusTest, strPrint) { EXPECT_STREQ(core::CerberusUtils::strPrint("%s %u", "test", 20u).c_str(), "test 20"); }
+TEST(cerberusTest, strPrint)
+{
+    EXPECT_STREQ(core::CerberusUtils::strPrint("%s %u", "test", 20u).c_str(), "test 20");
+}
 
 TEST(cerberusTest, logTest)
 {
@@ -16,7 +19,8 @@ TEST(cerberusTest, logTest)
 
 TEST(cerberusTest, environmentVariable)
 {
-    logInfo(core::CerberusUtils::environmentVariable("APPDATA").value.c_str());  // works only on windows
+    logInfo(core::CerberusUtils::environmentVariable("APPDATA")
+                .value.c_str());  // works only on windows
 }
 
 TEST(cerberusTest, cerberusVersion)
@@ -25,7 +29,7 @@ TEST(cerberusTest, cerberusVersion)
     logInfo("Version test:");
     logInfo("%s", v.text.c_str());
 
-    const char* t = "";
+    const char* t;
 
     switch (v.type)
     {
@@ -98,5 +102,16 @@ TEST(cerberusTest, hostTest)
         EXPECT_EQ(h.octect[2], 0);
         EXPECT_EQ(h.octect[3], 0);
         EXPECT_EQ(h.port, 0);
+    }
+    //
+    {
+        cerberus::Host h("www.google.com:4444");
+        EXPECT_TRUE(h.isValidRemote());
+        EXPECT_EQ(h.octect[0], 0);
+        EXPECT_EQ(h.octect[1], 0);
+        EXPECT_EQ(h.octect[2], 0);
+        EXPECT_EQ(h.octect[3], 0);
+        EXPECT_EQ(h.port, 4444);
+        logInfo("hostname is: %s", h.hostname.c_str());
     }
 }

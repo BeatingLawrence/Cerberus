@@ -127,9 +127,11 @@ namespace cerberus
     {
         FOM_Read = 0,         // Open the file for reading only; the file must exist
         FOM_ReadWrite,        // Open the file for reading and writing; the file must exist
-        FOM_ReadWriteTrunc,   // Open the file for reading and writing; if the file exists the content is discarded, otherwise, the file is created
-        FOM_ReadWriteAppend,  // Open the file for reading and writing; if the file does not esist, it is created.
-                              // All the write operations happen at the end of the file
+        FOM_ReadWriteTrunc,   // Open the file for reading and writing; if the file exists the
+                              // content is discarded, otherwise, the file is created
+        FOM_ReadWriteAppend,  // Open the file for reading and writing; if the file does not esist,
+                              // it is created. All the write operations happen at the end of the
+                              // file
     };
 
     enum ThreadPeriodicity
@@ -181,7 +183,8 @@ namespace cerberus
     struct CerberusLogSetup
     {
         LogLevel applicationLogLevel;  // set the application log level. Minor levels will be silenced
-        LogLevel cerberusLogLevel;     // set the Cerberus framework log level. Minor levels will be silenced
+        LogLevel cerberusLogLevel;     // set the Cerberus framework log level. Minor levels will be
+                                       // silenced
         bool colorFormatting;          // enable the color formatting of the output terminal
         bool logOnFile;                // enable the log on file
         std::string logFileName;       // set the log file name
@@ -273,19 +276,22 @@ namespace cerberus
     // The Result enum contains all the possible results of operation requested to the framework.
     enum Result : uint8_t
     {
-        OR_Undefined,                 // [general] this result should never be given (used for unimplemented methods)
+        OR_Undefined,                 // [general] this result should never be given (used for unimplemented
+                                      // methods)
         OR_OK,                        // [general] no errors
         OR_Failure,                   // [general] generic failure
         OR_FailedInstance,            // [general] attempt to use a failed instance
         OR_WouldBlock,                // [general] attempt to run a blocking operation on a non-blocking call
         OR_TimedOut,                  // [general] operation timeout
         OR_Unavailable,               // [general] the requested operation is not available for the object
-        OR_WrongArgument,             // [general] at least one wrong argument
+        OR_WrongArgument,             // [general] at least one wrong argument has been given to the method
+        OR_WrongData,                 // [general] wrong data has been provided/retrieved
         OR_InvalidPath,               // [general] the file does not exist or the given path is not valid
         OR_SystemFailure,             // [general] a system error occurred
         OR_BadConditions,             // [general] bad conditions encountered when processing the operation
         OR_NotFound,                  // [general] the item was not found
-        OR_TemporaryUnavailable,      // [general] the requested operation is not available at the moment, retry later
+        OR_TemporaryUnavailable,      // [general] the requested operation is not available at the
+                                      // moment, retry later
         OR_InvalidFile,               // [general] the provided file instance is not valid
         OR_Duplicate,                 // [general] the item is a duplicate
         OR_WrongType,                 // [general] the item type is wrong
@@ -303,6 +309,7 @@ namespace cerberus
         OR_ResolveFailure,            // [DNS lookup] resolve method error
                                       //
         OR_Hangup,                    // [socket] hangup condition (stream closed by the peer) or recv zero
+        OR_TLSKeysCheckFail,          // [socket] the check procedure of the TLS keys has failed
                                       //
         OR_QueryFailure,              // [database] query error
         OR_DBFailure,                 // [database] DB error
@@ -410,7 +417,9 @@ namespace cerberus
         // the provided value argument (the match policy is specified in the valmatch argument),
         // OR_NotFound if the requested field name was not found,
         // OR_Mismatch if the field name was found but it does not match with the specified value.
-        OpRes getFieldMatch(const std::string& key, const std::string& value, WordMatch keymatch = WM_CaseSensitive, WordMatch valmatch = WM_CaseSensitive) const;
+        OpRes getFieldMatch(const std::string& key, const std::string& value,
+                            WordMatch keymatch = WM_CaseSensitive,
+                            WordMatch valmatch = WM_CaseSensitive) const;
 
         // Get the name of the field at the index position.
         // An exception is thrown if index is out of bounds
@@ -426,6 +435,13 @@ namespace cerberus
         // Get a line by reference
         // An exception is thrown if index is out of bounds
         DictLine& get(SIZE index);
+
+        // Get a line by reference
+        // An exception is thrown if key does not exist
+        DictLine& get(const std::string& key, WordMatch match = WM_CaseSensitive);
+
+        // Tell if a key is present in the dictionary
+        bool exists(const std::string& key, WordMatch match = WM_CaseSensitive);
     };
 
     struct Host
@@ -473,24 +489,24 @@ namespace cerberus
         bool fromString(const std::string& str);
 
         // Print the numeric IP address and port (not the hostname) to string.
-        std::string toString();
+        std::string toString() const;
 
         // Tells if the Host is valid
-        bool isValid();
+        bool isValid() const;
 
         // Tell if the Host is valid for remote usage, e.g. connect() or sendTo().
         // For this method to return true, the Host must have a valid port
         // and either an hostname OR a numerical IP address
-        bool isValidRemote();
+        bool isValidRemote() const;
 
         // Tell if the Host has a valid numerical IP
-        bool isNumeric();
+        bool isNumeric() const;
 
         // Tell if the Host has an hostname
-        bool isTextual();
+        bool isTextual() const;
 
         // Tell if the Host has a valid port (port != 0)
-        bool hasPort();
+        bool hasPort() const;
 
         // Resolve the given Host using the hostname member.
         // The resulting numeric IP address is written in the ip parameter

@@ -42,8 +42,12 @@ Exception::Exception(const char* text, uint32_t line, const char* fileName, Exce
             m_error = "Usage error exception";
             break;
 
-        default:
-            m_error = "Exception";
+        case ET_OperationResult:
+            m_error = "Operation exception";
+            break;
+
+        case ET_Exception:
+            m_error = "Generic exception";
             break;
     }
 

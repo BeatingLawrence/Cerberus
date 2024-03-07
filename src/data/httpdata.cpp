@@ -4,6 +4,24 @@
 
 using namespace cerberus;
 
+static constexpr const char *contentlen = "Content-Length";
+
+//=============================================================================
+void data::HTTPData::setPayloadSize(SIZE s)
+{
+    auto str = core::CerberusUtils::strPrint("%u", s);
+
+    if (m_header.exists(contentlen, WM_CaseInsensitive))
+    {
+        // update it
+        m_header.get(contentlen, WM_CaseInsensitive).val = str;
+    }
+    else
+    {
+        // create it
+        m_header.addKey(contentlen, str);
+    }
+}
 //=============================================================================
 data::HTTPData::HTTPData()
     : m_header(),
@@ -42,10 +60,16 @@ data::HTTPData &data::HTTPData::removeHeaderField(const std::string &name)
 data::HTTPData &data::HTTPData::setPayload(const data::ByteBuffer &payload)
 {
     m_payload = payload;
+    setPayloadSize(m_payload.size());
     return *this;
 }
 //=============================================================================
-OpRes data::HTTPData::setJsonPayload(const JsonData &payload) { return payload.generate(m_payload); }
+OpRes data::HTTPData::setJsonPayload(const JsonData &payload)
+{
+    auto r = payload.generate(m_payload);
+    setPayloadSize(m_payload.size());
+    return r;
+}
 //=============================================================================
 const cerberus::data::ByteBuffer &data::HTTPData::payload() const { return m_payload; }
 //=============================================================================
@@ -75,9 +99,15 @@ data::HTTPData &data::HTTPData::clearHeader()
 //=============================================================================
 cerberus::SIZE data::HTTPData::getHeaderSize() const { return m_header.size(); }
 //=============================================================================
-StringOpRes data::HTTPData::getHeaderField(const std::string &key) const { return m_header.getFieldValue(key, WM_CaseInsensitive); }
+StringOpRes data::HTTPData::getHeaderField(const std::string &key) const
+{
+    return m_header.getFieldValue(key, WM_CaseInsensitive);
+}
 //=============================================================================
-OpRes data::HTTPData::getHeaderMatch(const std::string &key, const std::string &value) const { return m_header.getFieldMatch(key, value, WM_CaseInsensitive, WM_CaseSensitive); }
+OpRes data::HTTPData::getHeaderMatch(const std::string &key, const std::string &value) const
+{
+    return m_header.getFieldMatch(key, value, WM_CaseInsensitive, WM_CaseSensitive);
+}
 //=============================================================================
 std::string data::HTTPData::getHeaderFieldName(SIZE index) const { return m_header.getNameAt(index); }
 //=============================================================================
@@ -151,7 +181,9 @@ data::ByteBuffer data::HTTPRequest::data() const
 
     for (SIZE i = 0; i < getHeaderSize(); i++)
     {
-        buf.appendString(core::CerberusUtils::strPrint("%s: %s\r\n", getHeaderFieldName(i).c_str(), getHeaderFieldValue(i).c_str()).c_str());
+        buf.appendString(core::CerberusUtils::strPrint("%s: %s\r\n", getHeaderFieldName(i).c_str(),
+                                                       getHeaderFieldValue(i).c_str())
+                             .c_str());
     }
 
     buf.appendString("\r\n");
@@ -199,7 +231,9 @@ data::ByteBuffer data::HTTPResponse::data() const
 
     for (SIZE i = 0; i < getHeaderSize(); i++)
     {
-        buf.appendString(core::CerberusUtils::strPrint("%s: %s\r\n", getHeaderFieldName(i).c_str(), getHeaderFieldValue(i).c_str()).c_str());
+        buf.appendString(core::CerberusUtils::strPrint("%s: %s\r\n", getHeaderFieldName(i).c_str(),
+                                                       getHeaderFieldValue(i).c_str())
+                             .c_str());
     }
 
     buf.append("\r\n");

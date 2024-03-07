@@ -27,6 +27,7 @@ namespace cerberus
                 ET_MissingImplementation,  // exception thrown when a requested piece of code has not been implemented yet
                 ET_InvalidCast,            // exception thrown for invalid cast operations
                 ET_UsageError,             // exception thrown for a bad usage of the framework
+                ET_OperationResult,        // exception type used by OpRes class
             };
 
             Exception() noexcept;
