@@ -702,7 +702,7 @@ bool cerberus::network::Socket::isFailed() const { return (m_fd == -1) || (socke
 //=============================================================================
 bool cerberus::network::Socket::isConnected() const
 {
-    if (isTLS()) return TLS_hasSession();
+    if (isTLS()) return (TLS_hasSession() && m_streamConnected);
 
     return m_streamConnected;
 }

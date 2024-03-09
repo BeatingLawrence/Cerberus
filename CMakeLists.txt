@@ -36,6 +36,8 @@ endif()
 
 # =======================Cerberus library=========================
 
+#add_subdirectory("compile-time-regular-expressions" EXCLUDE_FROM_ALL) #maybe used in the future
+
 file(GLOB_RECURSE src_files CONFIGURE_DEPENDS
     "src/*.cpp"
 )
@@ -48,6 +50,8 @@ add_library(Cerberus SHARED
   ${src_files}
   ${header_files}
 )
+
+#target_link_libraries(Cerberus LINK_PUBLIC ctre)
 
 set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
 

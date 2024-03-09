@@ -11,7 +11,9 @@
 using namespace cerberus::core;
 using namespace cerberus::message::slot;
 
-std::regex CerberusUtils::isNumberRegex("\\-?[0-9]+(?:\\.[0-9]+)?", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase);
+std::regex CerberusUtils::isNumberRegex("\\-?[0-9]+(?:\\.[0-9]+)?", std::regex_constants::ECMAScript |
+                                                                        std::regex_constants::optimize |
+                                                                        std::regex_constants::icase);
 
 //=============================================================================
 std::string CerberusUtils::strPrint(std::string format, ...)
@@ -73,7 +75,10 @@ std::string CerberusUtils::removeBlankAfter(const std::string& str)
     return str.substr(0, len);
 }
 //=============================================================================
-std::string CerberusUtils::removeBlank_copy(const std::string& str) { return removeBlankAfter(removeBlankBefore(str)); }
+std::string CerberusUtils::removeBlank_copy(const std::string& str)
+{
+    return removeBlankAfter(removeBlankBefore(str));
+}
 //=============================================================================
 void CerberusUtils::removeBlank(std::string& str)
 {
@@ -107,10 +112,8 @@ bool CerberusUtils::areEqual(const std::string& str1, const std::string& str2, W
             break;
 
         case WM_CaseInsensitive:
-            auto s1 = str1;
-            auto s2 = str2;
-            toLower(s1);
-            toLower(s2);
+            auto s1 = toLower(str1);
+            auto s2 = toLower(str2);
 
             if (s1.compare(s2) == 0)
             {
@@ -140,7 +143,11 @@ IntOpRes CerberusUtils::stringToInt(const std::string& str, Radix r)
 
     try
     {
-        ret = std::stoll(str, nullptr, r == Radix::Binary ? 2 : r == Radix::Decimal ? 10 : r == Radix::Hexadecimal ? 16 : 0);
+        ret = std::stoll(str, nullptr,
+                         r == Radix::Binary        ? 2
+                         : r == Radix::Decimal     ? 10
+                         : r == Radix::Hexadecimal ? 16
+                                                   : 0);
     }
     catch (...)
     {
@@ -181,7 +188,10 @@ bool CerberusUtils::isAlpha(const std::string& str)
 //=============================================================================
 bool CerberusUtils::isNumber(const std::string& str) { return std::regex_match(str, isNumberRegex); }
 //=============================================================================
-bool CerberusUtils::isBool(const std::string& str, WordMatch match) { return (CerberusUtils::areEqual(str, "true", match) || CerberusUtils::areEqual(str, "false", match)); }
+bool CerberusUtils::isBool(const std::string& str, WordMatch match)
+{
+    return (CerberusUtils::areEqual(str, "true", match) || CerberusUtils::areEqual(str, "false", match));
+}
 //=============================================================================
 bool CerberusUtils::startsWith(const std::string& str1, const std::string& str2)
 {
@@ -285,7 +295,10 @@ std::string CerberusUtils::substrFrom(const std::string& str, const std::string&
     return str.substr(found + token.size());
 }
 //=============================================================================
-cerberus::DoubleString CerberusUtils::split(const std::string& str, const std::string& token) { return {substrUntil(str, token), substrFrom(str, token)}; }
+cerberus::DoubleString CerberusUtils::split(const std::string& str, const std::string& token)
+{
+    return {substrUntil(str, token), substrFrom(str, token)};
+}
 //=============================================================================
 cerberus::OpRes CerberusUtils::cleanNumber(std::string& str)
 {

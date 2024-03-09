@@ -162,14 +162,16 @@ cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const 
         }
     }
 
+    // fix the parsing, HTTP may have not a body
+
     // find the gap between header and payload
     auto res = buf.search("\r\n\r\n");
-    if (res.fail()) return OR_WrongData;
+    if (res.fail()) return {OR_WrongData, core::CerberusUtils::truncStr(buf.toString(), 1000)};
     SIZE gap = res.value;
 
     // find the status line end
     res = buf.search("\r\n");
-    if (res.fail()) return OR_WrongData;
+    if (res.fail()) return {OR_WrongData, core::CerberusUtils::truncStr(buf.toString(), 1000)};
     SIZE sle = res.value;
 
     data::HTTPResponse data;
@@ -182,7 +184,8 @@ cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const 
     // get header
     Dictionary dict;
 
-    if (getDictFromHeader(buf.subBuffer(sle + 2, gap + 2 - sle), dict).fail()) return OR_WrongData;
+    if (getDictFromHeader(buf.subBuffer(sle + 2, gap + 2 - sle), dict).fail())
+        return {OR_WrongData, core::CerberusUtils::truncStr(buf.toString(), 1000)};
 
     data.setHeaderDict(dict);
 

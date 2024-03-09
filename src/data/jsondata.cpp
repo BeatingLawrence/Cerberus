@@ -52,49 +52,54 @@ BoolOpRes JsonData::_parse(const ByteBuffer &buffer, ParseMode mode)
                 switch (mode)
                 {
                     case Unspecified:
-                        return {OR_WrongArgument, CerberusUtils::strPrint("Unexpected bracket at char %u", buffer.prev().pos())};
+                        return {OR_WrongArgument, CerberusUtils::strPrint("Unexpected bracket at char %u",
+                                                                          buffer.prev().pos())};
                     case ParsingObject:
                         return false;
                     case ParsingArray:
-                        return {OR_WrongArgument, CerberusUtils::strPrint("Block terminated by wrong bracket at char %u", buffer.prev().pos())};
+                        return {OR_WrongArgument,
+                                CerberusUtils::strPrint("Block terminated by wrong bracket at char %u",
+                                                        buffer.prev().pos())};
                 }
 
             case ']':
                 switch (mode)
                 {
                     case Unspecified:
-                        return {OR_WrongArgument, CerberusUtils::strPrint("Unexpected bracket at char %u", buffer.prev().pos())};
+                        return {OR_WrongArgument, CerberusUtils::strPrint("Unexpected bracket at char %u",
+                                                                          buffer.prev().pos())};
                     case ParsingObject:
-                        return {OR_WrongArgument, CerberusUtils::strPrint("Block terminated by wrong bracket at char %u", buffer.prev().pos())};
+                        return {OR_WrongArgument,
+                                CerberusUtils::strPrint("Block terminated by wrong bracket at char %u",
+                                                        buffer.prev().pos())};
                     case ParsingArray:
                         return false;
                 }
 
             case '"':
             {
-                // start of a string
-                auto res = buffer.consumeUntil("\"").toNormalizedString();
-                // logDebug("Captured: %s", res.str.c_str());
-
-                buffer.next();  // consume the "
+                auto str = buffer.consumeUntil("(?<!\\\\)\\\"").expect().value.toString();
+                buffer.next();  // consume the next "
 
                 if (mode == ParsingArray)
                 {
-                    setString(res.value);
+                    setString(str);
                 }
                 else
                 {
                     if (value)
-                        setString(res.value);
+                        setString(str);
                     else
-                        m_name = res.value;
+                        m_name = str;
                 }
             }
             break;
 
             case ':':
             {
-                if (value || mode == ParsingArray) return {OR_WrongArgument, CerberusUtils::strPrint("Unexpected column at char %u", buffer.prev().pos())};
+                if (value || mode == ParsingArray)
+                    return {OR_WrongArgument,
+                            CerberusUtils::strPrint("Unexpected column at char %u", buffer.prev().pos())};
                 value = true;
             }
             break;
@@ -105,10 +110,13 @@ BoolOpRes JsonData::_parse(const ByteBuffer &buffer, ParseMode mode)
             default:
             {
                 ByteBuffer bb(1, b);
-                bb.append(buffer.consumeUntil(" ,[]{}\n\r\"'<>?/!"));
+                bb.append(
+                    buffer.consumeUntil("[ \\,\\[\\]\\{\\}\\n\\r\\\"\\'\\<\\>\\?\\/\\!\\\\]").expect().value);
                 auto res = bb.toNormalizedString();
                 // logDebug("Captured non-string: %s", res.str.c_str());
-                if (!value && mode == ParsingObject) return {OR_WrongArgument, CerberusUtils::strPrint("No column before value at char %u", buffer.pos())};
+                if (!value && mode == ParsingObject)
+                    return {OR_WrongArgument,
+                            CerberusUtils::strPrint("No column before value at char %u", buffer.pos())};
 
                 if (CerberusUtils::isNumber(res.value))
                 {
@@ -127,7 +135,8 @@ BoolOpRes JsonData::_parse(const ByteBuffer &buffer, ParseMode mode)
                 }
                 else
                 {
-                    return {OR_WrongArgument, CerberusUtils::strPrint("Invalid token: '%s' at %u", res.value.c_str(), buffer.pos())};
+                    return {OR_WrongArgument, CerberusUtils::strPrint("Invalid token: '%s' at %u",
+                                                                      res.value.c_str(), buffer.pos())};
                 }
             }
         }
@@ -249,7 +258,7 @@ JsonData::JsonData(const std::string &name, float value)
     setNumber(value);
 }
 //=============================================================================
-JsonData::JsonData(const std::string &name, int value)
+JsonData::JsonData(const std::string &name, int64_t value)
     : m_name(name),
       m_value(),
       m_elements(),
@@ -299,9 +308,9 @@ cerberus::ConstIterator<JsonData> JsonData::end() const
     return ((&m_elements.back()) + 1);
 }
 //=============================================================================
-JsonData &JsonData::getAt(SIZE index)
+JsonData JsonData::getAt(SIZE index)
 {
-    if (index >= size()) throw cerberusIllegalArgExc("index out of bounds");
+    if (index >= size()) return JsonData();
     return m_elements[index];
 }
 //=============================================================================
@@ -436,10 +445,10 @@ JsonData &JsonData::setNumber(float value)
     return *this;
 }
 //=============================================================================
-JsonData &JsonData::setNumber(int value)
+JsonData &JsonData::setNumber(int64_t value)
 {
     m_elements.clear();
-    m_value = CerberusUtils::strPrint("%i", value);
+    m_value = CerberusUtils::strPrint("%lli", value);
     CerberusUtils::cleanNumber(m_value);
     m_type = JDT_Number;
     return *this;
@@ -502,7 +511,7 @@ JsonData &JsonData::add(long double value) { return add(JsonData("", value)); }
 //=============================================================================
 JsonData &JsonData::add(float value) { return add(JsonData("", value)); }
 //=============================================================================
-JsonData &JsonData::add(int value) { return add(JsonData("", value)); }
+JsonData &JsonData::add(int64_t value) { return add(JsonData("", value)); }
 //=============================================================================
 JsonData &JsonData::add(bool value) { return add(JsonData("", value)); }
 //=============================================================================

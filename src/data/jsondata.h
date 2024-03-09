@@ -54,7 +54,7 @@ namespace cerberus
             // Construct a valid JsonData that contains a Json number
             JsonData(const std::string& name, long double value);
             JsonData(const std::string& name, float value);
-            JsonData(const std::string& name, int value);
+            JsonData(const std::string& name, int64_t value);
 
             // Construct a valid JsonData that contains a Json boolean
             JsonData(const std::string& name, bool value);
@@ -69,8 +69,8 @@ namespace cerberus
             ConstIterator<JsonData> end() const;
 
             // Get an element of the object.
-            // If index is out of bounds, an exception will be thrown
-            JsonData& getAt(SIZE index = 0);
+            // If index is out of bounds, an invalid JsonData will be returned
+            JsonData getAt(SIZE index = 0);
 
             // Get an element of the object.
             // If no item is found, an invalid JsonData will be returned
@@ -142,7 +142,7 @@ namespace cerberus
             JsonData& setString(const std::string& value);
             JsonData& setNumber(long double value);
             JsonData& setNumber(float value);
-            JsonData& setNumber(int value);
+            JsonData& setNumber(int64_t value);
             JsonData& setBoolean(bool value);
 
             // Add an object to this object.
@@ -154,7 +154,7 @@ namespace cerberus
             JsonData& add(const char* value);
             JsonData& add(long double value);
             JsonData& add(float value);
-            JsonData& add(int value);
+            JsonData& add(int64_t value);
             JsonData& add(bool value);
 
             // Remove all the nested object only

@@ -1,6 +1,10 @@
 # Cerberus
 This is the Cerberus Framework
 
+####Dependencies:
+-Boost
+-OpenSSL
+
 #### Development Environment Build
 1. Open the Cerberus project using CMakeList.txt file
 2. Select a NON-QT toolchain and use only "Debug" and "Release" configurations

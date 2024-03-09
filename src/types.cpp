@@ -369,9 +369,9 @@ std::string cerberus::OpRes::errorString()
 //=============================================================================
 StringOpRes cerberus::Dictionary::getFieldValue(const std::string &key, WordMatch match) const
 {
-    for (auto it = begin(); it < end(); it++)
+    for (auto &el : (*this))
     {
-        if (cerberus::core::CerberusUtils::areEqual((*it).key, key, match)) return (*it).val;
+        if (cerberus::core::CerberusUtils::areEqual(el.key, key, match)) return el.val;
     }
     return OR_NotFound;
 }

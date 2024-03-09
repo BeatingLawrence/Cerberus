@@ -1,8 +1,10 @@
 #include "bytebuffer.h"
 
+#include <boost/regex.hpp>
 #include <cstdlib>
 #include <cstring>
 
+#include "src/cerberus.h"
 #include "src/exception/exception.h"
 
 using namespace cerberus::data;
@@ -17,16 +19,18 @@ void ByteBuffer::_resize(SIZE size)
         return;
     }
 
-    BYTE* newbuf = (BYTE*)realloc(m_bytes, size);
+    BYTE* newbuf = (BYTE*)realloc(m_bytes, size + 1);
 
     if (newbuf == nullptr)
     {
-        throw cerberusSystemExc("could not reallocate ByteBuffer memory");
+        throw cerberusSystemExc("could not allocate ByteBuffer memory");
     }
 
     m_bytes = newbuf;
     m_size  = size;
     m_pos   = 0;
+
+    memset((m_bytes + size), 0, 1);  // the last byte is zero (string safety)
 }
 //=============================================================================
 void ByteBuffer::_clear()
@@ -51,15 +55,7 @@ ByteBuffer::ByteBuffer(SIZE size)
       m_size(size),
       m_pos(0)
 {
-    if (size != 0)
-    {
-        m_bytes = (BYTE*)malloc(size);
-
-        if (m_bytes == nullptr)
-        {
-            throw cerberusSystemExc("could not allocate ByteBuffer memory");
-        }
-    }
+    _resize(size);
 }
 //=============================================================================
 ByteBuffer::ByteBuffer(SIZE size, BYTE val)
@@ -69,16 +65,8 @@ ByteBuffer::ByteBuffer(SIZE size, BYTE val)
 {
     if (size != 0)
     {
-        m_bytes = (BYTE*)malloc(size);
-
-        if (m_bytes == nullptr)
-        {
-            throw cerberusSystemExc("could not allocate ByteBuffer memory");
-        }
-        else
-        {
-            memset(m_bytes, val, size);
-        }
+        _resize(size);
+        memset(m_bytes, val, size);
     }
 }
 //=============================================================================
@@ -113,21 +101,14 @@ ByteBuffer::ByteBuffer(const char* str)
 {
     const char* c = str;
 
-    while (*c)
-    {
-        c++;
-    }
+    while (*c) c++;
 
     SIZE s = c - str;
 
     if (s != 0)
     {
-        m_bytes = (BYTE*)malloc(s);
-        if (m_bytes)
-        {
-            memmove(m_bytes, str, s);
-            m_size = s;
-        }
+        _resize(s);
+        memmove(m_bytes, str, s);
     }
 }
 //=============================================================================
@@ -138,13 +119,11 @@ ByteBuffer::ByteBuffer(const std::string& str)
 {
     if (str.empty()) return;
 
-    SIZE s  = str.size();
-    m_bytes = (BYTE*)malloc(s);
-    if (m_bytes)
-    {
-        memmove(m_bytes, str.data(), s);
-        m_size = s;
-    }
+    SIZE s = str.size();
+
+    _resize(s);
+
+    if (s) memmove(m_bytes, str.data(), s);
 }
 //=============================================================================
 ByteBuffer::~ByteBuffer() { _clear(); }
@@ -299,13 +278,9 @@ ByteBuffer& ByteBuffer::appendString(const char* str)
 //=============================================================================
 ByteBuffer& ByteBuffer::appendChar(char c)
 {
-    SIZE s = m_size;
+    _resize(m_size + 1);
 
-    s++;
-
-    _resize(s);
-
-    *(m_bytes + s - 1) = c;
+    if (m_size) memset((m_bytes + m_size - 1), c, 1);
 
     return *this;
 }
@@ -360,12 +335,8 @@ ByteBuffer& ByteBuffer::assign(const char* str)
 
     if (s != 0)
     {
-        m_bytes = (uint8_t*)malloc(s);
-        if (m_bytes)
-        {
-            memmove(m_bytes, str, s);
-            m_size = s;
-        }
+        _resize(s);
+        memmove(m_bytes, str, s);
     }
 
     return *this;
@@ -447,6 +418,8 @@ std::string ByteBuffer::toBinaryDumpString(uint32_t align) const
 //=============================================================================
 IntOpRes ByteBuffer::search(const char* str) const
 {
+    if (m_size == 0) return OR_BadConditions;
+
     const char* c = str;
 
     while (*c) c++;
@@ -502,13 +475,8 @@ std::string ByteBuffer::getLine() const
     char c    = 0;
     char prev = 0;
 
-    while (true)
+    while (m_pos != m_size)
     {
-        if (m_pos == m_size)  // end
-        {
-            return ret;
-        }
-
         c = *(m_bytes + m_pos);
 
         if (c == '\n')
@@ -519,13 +487,15 @@ std::string ByteBuffer::getLine() const
             }
 
             m_pos++;
-            return ret;
+            break;
         }
 
         ret.push_back(c);
         m_pos++;
         prev = c;
     }
+
+    return ret;
 }
 //=============================================================================
 const ByteBuffer& ByteBuffer::consumeBlank() const
@@ -545,19 +515,36 @@ const ByteBuffer& ByteBuffer::consumeBlank() const
     return *this;
 }
 //=============================================================================
-ByteBuffer ByteBuffer::consumeUntil(const ByteBuffer& tokenSet) const
+OpResData<ByteBuffer> ByteBuffer::consumeUntil(const std::string& regex) const
 {
+    if (m_size == 0) return ByteBuffer();
+
     ByteBuffer ret;
 
-    while (!isEnd())
+    try
     {
-        BYTE b = getat(m_pos);
+        boost::regex r(regex);
+        boost::cmatch m;
+        std::string s;
 
-        for (auto& el : tokenSet)
-            if (b == el) return ret;
-
-        m_pos++;
-        ret += b;
+        try
+        {
+            if (boost::regex_search((const char*)(m_bytes + m_pos), m, r))
+            {
+                ret   = subBuffer(m_pos, m.position());
+                m_pos = m_pos + m.position();
+            }
+            else
+                return OR_NotFound;
+        }
+        catch (std::regex_error& e)
+        {
+            return {OR_Failure, e.what()};
+        }
+    }
+    catch (std::regex_error& e)
+    {
+        return {OR_WrongArgument, e.what()};
     }
 
     return ret;

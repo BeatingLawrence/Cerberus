@@ -28,7 +28,8 @@ namespace cerberus
             ByteBuffer(BYTE* buf, SIZE size);
 
            public:
-            // Construct a ByteBuffer allocating size bytes. The buffer is not initialized and may contain garbage
+            // Construct a ByteBuffer allocating size bytes. The buffer is not initialized and may contain
+            // garbage
             explicit ByteBuffer(SIZE size);
 
             // Construct a ByteBuffer allocating size bytes. The buffer is initialized using val value
@@ -49,7 +50,8 @@ namespace cerberus
             // Construct a ByteBuffer from an std::string
             ByteBuffer(const std::string& str);
 
-            // Destroy the ByteBuffer instance and deallocate the memory ONLY if not used by another ByteBuffer
+            // Destroy the ByteBuffer instance and deallocate the memory ONLY if not used by another
+            // ByteBuffer
             virtual ~ByteBuffer();
 
             // Iterator implementation
@@ -79,8 +81,8 @@ namespace cerberus
             // Assigns the content of the given buffer to this ByteBuffer. Existing content will be discarded.
             ByteBuffer& assignFrom(const BYTE* buffer, SIZE len);
 
-            // Copy the content of this ByteBuffer to the given buffer. No more than maxLen bytes will be copied.
-            // If maxLen is 0, all the content of this ByteBuffer will be copied
+            // Copy the content of this ByteBuffer to the given buffer. No more than maxLen bytes will be
+            // copied. If maxLen is 0, all the content of this ByteBuffer will be copied
             const ByteBuffer& copyTo(BYTE* buffer, SIZE maxLen = 0) const;
 
             // Checks if this ByteBuffer instance is equal to other
@@ -107,8 +109,9 @@ namespace cerberus
             // If specified len is too large, the operation will copy the buffer till the end.
             ByteBuffer subBuffer(SIZE pos, SIZE len) const;
 
-            // Obtain another ByteBuffer instance that contains bytes copied from position pos till the end of the buffer
-            // If the pos is greater than or equal to the size, this call will return an empty buffer.
+            // Obtain another ByteBuffer instance that contains bytes copied from position pos till the end of
+            // the buffer If the pos is greater than or equal to the size, this call will return an empty
+            // buffer.
             ByteBuffer subBuffer(SIZE pos) const;
 
             // Append the given c-string str to the end of this buffer.
@@ -185,9 +188,10 @@ namespace cerberus
             // Increment the cursor until a non blank char is found (space | TAB)
             const ByteBuffer& consumeBlank() const;
 
-            // Increment the cursor until a token contained in tokenSet is found
-            // and return the subBuffer. The found token is not appended to the returnd buffer
-            ByteBuffer consumeUntil(const ByteBuffer& tokenSet) const;
+            // Increment the cursor until a sequence specified by regex is found.
+            // The regex uses the ECMAScript grammar, and the found sequence is not
+            // copied to the returned buffer.
+            OpResData<ByteBuffer> consumeUntil(const std::string& regex) const;
 
             // Read len bytes copied from current cursor position.
             // The cursor position is incremented by len.

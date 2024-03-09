@@ -19,8 +19,7 @@ TEST(cerberusTest, logTest)
 
 TEST(cerberusTest, environmentVariable)
 {
-    logInfo(core::CerberusUtils::environmentVariable("APPDATA")
-                .value.c_str());  // works only on windows
+    logInfo(core::CerberusUtils::environmentVariable("APPDATA").value.c_str());  // works only on windows
 }
 
 TEST(cerberusTest, cerberusVersion)
@@ -114,4 +113,27 @@ TEST(cerberusTest, hostTest)
         EXPECT_EQ(h.port, 4444);
         logInfo("hostname is: %s", h.hostname.c_str());
     }
+}
+
+TEST(cerberusTest, dictionaryTest)
+{
+    cerberus::Dictionary dict;
+    dict.addKey("Transfer-Encoding", "chunked");
+    EXPECT_TRUE(dict.getFieldMatch("transfer-encoding", "chunked", cerberus::WM_CaseInsensitive,
+                                   cerberus::WM_CaseSensitive)
+                    .ok(true));
+}
+
+TEST(cerberusTest, cerbUtilsTest)
+{
+    logInfo("%s", cerberus::core::CerberusUtils::toLower("Hello").c_str());
+    logInfo("%s", cerberus::core::CerberusUtils::toUpper("Hello").c_str());
+
+    EXPECT_TRUE(cerberus::core::CerberusUtils::areEqual("Hello", "Hello", cerberus::WM_CaseSensitive));
+    EXPECT_FALSE(cerberus::core::CerberusUtils::areEqual("Hello", "hello", cerberus::WM_CaseSensitive));
+    EXPECT_TRUE(cerberus::core::CerberusUtils::areEqual("Hello", "hello", cerberus::WM_CaseInsensitive));
+    EXPECT_TRUE(cerberus::core::CerberusUtils::areEqual("hello", "hello", cerberus::WM_CaseInsensitive));
+
+    EXPECT_FALSE(cerberus::core::CerberusUtils::areEqual("hello", "hey", cerberus::WM_CaseInsensitive));
+    EXPECT_FALSE(cerberus::core::CerberusUtils::areEqual("hello", "hey", cerberus::WM_CaseSensitive));
 }
