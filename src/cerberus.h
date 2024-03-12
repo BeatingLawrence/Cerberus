@@ -57,9 +57,11 @@ namespace cerberus
 
         FrameworkLock(const FrameworkLock& other) = delete;
 
+       private:
         void begin() { usage.fetch_add(1); }
         void end() { usage.fetch_sub(1); }
 
+       public:
         FrameworkLocker getLocker()
         {
             begin();
