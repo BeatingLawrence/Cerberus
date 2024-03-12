@@ -59,14 +59,16 @@ static int pingTestCallback(cerberus_message msg, cerberus::thread::Thread* thre
 
     if (msg->isValid())
     {
-        logInfo(core::CerberusUtils::strPrint("PONG! %u %u %u", msg->getSlotAt(0)->to<cerberus::message::slot::ByteSlot>()->value(), msg->getSlotAt(1)->to<cerberus::message::slot::ByteSlot>()->value(),
-                                              msg->getSlotAt(2)->to<cerberus::message::slot::ByteSlot>()->value()));
+        logInfo(core::CerberusUtils::strPrint(
+            "PONG! %u %u %u", msg->getSlotAt(0)->to<cerberus::message::slot::ByteSlot>()->value(),
+            msg->getSlotAt(1)->to<cerberus::message::slot::ByteSlot>()->value(),
+            msg->getSlotAt(2)->to<cerberus::message::slot::ByteSlot>()->value()));
     }
     else  // tick
     {
         if (a == 10)
         {
-            auto message = Cerberus::standardMessageConstruct(cerberus::SM_TerminationMsg);
+            auto message = Cerberus::messageConstruct(CERBERUS_MESSAGE_TERM_ID);
             cerberus::Cerberus::send(message, "pongThread");
             thread->terminate();
             return 0;

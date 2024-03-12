@@ -14,10 +14,9 @@ TEST(messageFactoryTest, registering_message)
 
 TEST(messageFactoryTest, probing_message)
 {
-    auto tmplt = cerberus::Cerberus::msgTemplateByName("UNKNOWN_MESSAGE");
-    EXPECT_EQ(tmplt.id(), CERBERUS_INVALID_ID);
-    EXPECT_FALSE(tmplt.isObjValid());
-    tmplt = cerberus::Cerberus::msgTemplateByName("Test-Message");
+    EXPECT_THROW(cerberus::Cerberus::msgTemplateByName("UNKNOWN_MESSAGE"), std::exception);
+
+    auto tmplt = cerberus::Cerberus::msgTemplateByName("Test-Message");
     EXPECT_NE(tmplt.id(), CERBERUS_INVALID_ID);
     EXPECT_TRUE(tmplt.isObjValid());
 }

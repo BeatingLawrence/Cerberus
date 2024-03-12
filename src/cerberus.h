@@ -32,6 +32,18 @@ namespace cerberus
     template <class T>
     struct FrameworkLock
     {
+        struct FrameworkLocker
+        {
+            FrameworkLock& lock;
+
+            FrameworkLocker(FrameworkLock& lock)
+                : lock(lock){};
+
+            ~FrameworkLocker() { lock.end(); };
+        };
+
+        friend FrameworkLocker;
+
         std::atomic_flag ready;
         std::atomic<int> usage;
         T* data;
@@ -41,8 +53,18 @@ namespace cerberus
               usage(0),
               data(nullptr){};
 
-        void begin() { usage.fetch_add(1); };
-        void end() { usage.fetch_sub(1); };
+        ~FrameworkLock() { lldebug("destructor called"); }  // to be removed
+
+        FrameworkLock(const FrameworkLock& other) = delete;
+
+        void begin() { usage.fetch_add(1); }
+        void end() { usage.fetch_sub(1); }
+
+        FrameworkLocker getLocker()
+        {
+            begin();
+            return FrameworkLocker(*this);
+        }
 
         void wait()
         {
@@ -106,25 +128,25 @@ namespace cerberus
         static void registerObj(core::CerberusObject* object);
 
         // Unregister an object by its id
-        static void unregisterObj(uint32_t id);
+        static void unregisterObj(HASH32 id);
 
         // Directly send a message to a cerberus object
-        static void sendMsgToObj(uint32_t id, cerberus_message msg);
+        static void sendMsgToObj(HASH32 id, cerberus_message msg);
 
         // =======================Plugin manager============================
 
         // Add a plugin handle to the register. If the handle already exixst, exists is true
         // The new (or found) ID is returned
-        static uint32_t addPlugin(void* handle, const std::string& path, bool& exists);
+        static HASH32 addPlugin(void* handle, const std::string& path, bool& exists);
 
         // Get the mutexlocker of a loaded shared object. The mutex is locked before return
-        static mutex::MutexLocker getPluginMutex(uint32_t id);
+        static mutex::MutexLocker getPluginMutex(HASH32 id);
 
         // Return the requested handle if it is registered, otherwise nullptr
-        static void* checkPlugin(uint32_t id);
+        static void* checkPlugin(HASH32 id);
 
         // Replaces data of an existing plugin. Returns false if id does not exist, true otherwise
-        static bool updatePlugin(uint32_t id, const std::string& path, void* handle);
+        static bool updatePlugin(HASH32 id, const std::string& path, void* handle);
 
         // =======================Event scheduler===========================
 
@@ -157,7 +179,7 @@ namespace cerberus
         static void send(cerberus_message message);
 
         // Send a message ignoring the destination of message and using id instead
-        static void send(cerberus_message message, uint32_t id);
+        static void send(cerberus_message message, HASH32 id);
 
         // Send a message ignoring the destination of message and using the id of the named object
         // instead
@@ -176,32 +198,29 @@ namespace cerberus
         // ======================Public Register===========================
 
         // Retrieves an object ID by its name
-        static uint32_t objIdByName(const std::string& name);
+        static HASH32 objIdByName(const std::string& name);
 
         // ===========================Factory==============================
 
         // Retrieves a MessageTemplate by its ID
-        static message::MessageTemplate msgTemplateById(uint32_t id);
+        static message::MessageTemplate msgTemplateById(HASH32 id);
 
         // Retrieves a MessageTemplate by its name
         static message::MessageTemplate msgTemplateByName(const std::string& name);
 
         // Adds a template of the given message to the register, returning the chosen typeID
-        static uint32_t registerMessage(const message::Message& message,
-                                        const std::string& name = std::string());
+        static HASH32 registerMessage(const message::Message& message,
+                                      const std::string& name = std::string());
 
         // Factory of messages. A call to this method will return an empty but structured message.
         // This method will return an invalid message if ID was not found, or it will
         // throw an exception if the provided ID is not valid (invalid id or in reserved range)
-        static cerberus_message messageConstruct(uint32_t id);
+        static cerberus_message messageConstruct(HASH32 id);
 
         // Factory of messages. A call to this method will return an empty but structured message.
         // This method will return an invalid message if name was not found,
         // or if it's not a Message name.
         static cerberus_message messageConstruct(const std::string& name);
-
-        // Construct a standard message. See the StandardMessage enum
-        static cerberus_message standardMessageConstruct(StandardMessage type);
     };
 }  // namespace cerberus
 

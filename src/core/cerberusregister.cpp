@@ -2,8 +2,6 @@
 
 #include <dlfcn.h>
 
-#include <cstdlib>
-
 #include "../cerberus.h"
 #include "../define.h"
 #include "../mutex/mutexlocker.h"
@@ -14,69 +12,66 @@ using namespace cerberus;
 using namespace cerberus::core;
 using namespace cerberus::message;
 
+#define FNV_OFFSET_BASIS 0x811c9dc5
+#define FNV_PRIME 0x01000193
+
 //=============================================================================
-uint32_t CerberusRegister::findAvailableId()
+HASH32 CerberusRegister::hash(const std::string& str)
 {
-    while (true)
+    // This method uses FNV1A algorithm
+    HASH32 hash    = FNV_OFFSET_BASIS;
+    const char* ch = str.c_str();
+
+    while ((*ch) != '\0')
     {
-        uint32_t id = (uint32_t)rand();
-
-        bool found = false;
-        for (auto&& el : m_objects)
-        {
-            if (id == el->id())
-            {
-                found = true;
-                break;
-            }
-        }
-
-        if (id < CERBERUS_FACTORY_START_ID)
-        {
-            continue;
-        }
-
-        if (!found) return id;
+        hash = hash ^ (HASH32)(*ch);
+        hash = hash * FNV_PRIME;
+        ch++;
     }
+
+    return hash;
 }
 //=============================================================================
-uint32_t CerberusRegister::findAvailablePluginId()
+HASH32 CerberusRegister::removeReserved(HASH32 hash) { return hash & 0xffffff00; }
+//=============================================================================
+HASH32 CerberusRegister::findAvailableObjectId(const std::string& name)
 {
-    while (true)
-    {
-        uint32_t id = (uint32_t)rand();
+    HASH32 h = removeReserved(hash(name));
 
-        bool found = false;
-        for (auto&& el : m_plugins)
-        {
-            if (id == el.id)
-            {
-                found = true;
-                break;
-            }
-        }
+    for (auto&& el : m_objects)
+        if (h == el->id()) return CERBERUS_INVALID_ID;
 
-        if (!found) return id;
-    }
+    return h;
 }
 //=============================================================================
-CerberusRegister::CerberusRegister() { srand(584239578); }
+HASH32 CerberusRegister::findAvailablePluginId(const std::string& path)
+{
+    HASH32 h = hash(path);
+
+    for (auto&& el : m_plugins)
+        if (h == el.id) return CERBERUS_INVALID_ID;
+
+    return h;
+}
+//=============================================================================
+CerberusRegister::CerberusRegister() {}
+//=============================================================================
+CerberusRegister::~CerberusRegister()
+{
+    // destroy all cerberus-managed objects (none, at the moment)
+}
 //=============================================================================
 void CerberusRegister::registerObj(CerberusObject* object)
 {
     if (object == nullptr) return;
 
+    if (object->name().empty()) throw cerberusIllegalArgExc("Registering objects must be named objects");
+
     mutex::MutexLocker locker(m_mutex);
 
-    if (!object->name().empty())
-    {
-        for (auto& el : m_objects)
-        {
-            if (CerberusUtils::areEqual(object->name(), el->name())) return;
-        }
-    }
+    object->m_id = findAvailableObjectId(object->name());
 
-    object->m_id = findAvailableId();
+    if (object->m_id == CERBERUS_INVALID_ID) throw cerberusIllegalArgExc("Object is a duplicate");
 
     switch (object->type())
     {
@@ -99,7 +94,7 @@ void CerberusRegister::registerObj(CerberusObject* object)
     logDebug("New %s", object->toObjStr().c_str());
 }
 //=============================================================================
-void CerberusRegister::unregisterObj(uint32_t id)
+void CerberusRegister::unregisterObj(HASH32 id)
 {
     if (id == CERBERUS_INVALID_ID) return;
 
@@ -123,7 +118,7 @@ void CerberusRegister::unregisterObj(uint32_t id)
     }
 }
 //=============================================================================
-uint32_t CerberusRegister::addPlugin(void* handle, const std::string& path, bool& exists)
+HASH32 CerberusRegister::addPlugin(void* handle, const std::string& path, bool& exists)
 {
     mutex::MutexLocker locker(m_mutex);
 
@@ -140,14 +135,16 @@ uint32_t CerberusRegister::addPlugin(void* handle, const std::string& path, bool
 
     exists = false;
 
-    uint32_t id = findAvailablePluginId();
+    uint32_t id = findAvailablePluginId(path);
+
+    if (id == CERBERUS_INVALID_ID) throw cerberusIllegalArgExc("Plugin is a duplicate");
 
     m_plugins.push_back(std::move(Plugin(id, handle, path)));
 
     return id;
 }
 //=============================================================================
-void CerberusRegister::removePlugin(uint32_t id)
+void CerberusRegister::removePlugin(HASH32 id)
 {
     mutex::MutexLocker locker(m_mutex);
 
@@ -183,7 +180,7 @@ void CerberusRegister::cleanupPlugins()
     m_plugins.clear();
 }
 //=============================================================================
-void* CerberusRegister::checkPlugin(uint32_t id)
+void* CerberusRegister::checkPlugin(HASH32 id)
 {
     mutex::MutexLocker locker(m_mutex);
 
@@ -198,7 +195,7 @@ void* CerberusRegister::checkPlugin(uint32_t id)
     return nullptr;
 }
 //=============================================================================
-mutex::MutexLocker CerberusRegister::getPluginMutex(uint32_t id)
+mutex::MutexLocker CerberusRegister::getPluginMutex(HASH32 id)
 {
     mutex::MutexLocker locker(m_mutex);
 
@@ -230,9 +227,9 @@ bool CerberusRegister::updatePlugin(uint32_t id, const std::string& path, void* 
     return false;
 }
 //=============================================================================
-CerberusObject* CerberusRegister::objById(uint32_t id)
+OpResData<CerberusObject*> CerberusRegister::objById(HASH32 id)
 {
-    if (id == CERBERUS_INVALID_ID) return nullptr;
+    if (id == CERBERUS_INVALID_ID) return OR_WrongArgument;
 
     for (auto&& el : m_objects)
     {
@@ -242,83 +239,74 @@ CerberusObject* CerberusRegister::objById(uint32_t id)
         }
     }
 
-    return nullptr;
+    return OR_NotFound;
 }
 //=============================================================================
-uint32_t CerberusRegister::objIdByName(const std::string& name)
+HASH32 CerberusRegister::objIdByName(const std::string& name)
 {
     mutex::MutexLocker locker(m_mutex);
 
-    CerberusObject* found = objByName(name);
+    auto found = objByName(name);
 
-    if (found == nullptr) return CERBERUS_INVALID_ID;
+    if (found.fail()) return CERBERUS_INVALID_ID;
 
-    return found->id();
+    return found.value->id();
 }
 //=============================================================================
 MessageTemplate CerberusRegister::msgTemplateByName(const std::string& name)
 {
     mutex::MutexLocker locker(m_mutex);
 
-    CerberusObject* found = objByName(name);
+    auto found = objByName(name).expect();
 
-    if (found == nullptr)
+    if (found.value->type() == CerberusObject::ObjectType::MessageTemplate)
     {
-        return message::MessageTemplate();
+        return *(found.value->to_p<message::MessageTemplate>());
     }
     else
     {
-        if (found->type() == CerberusObject::ObjectType::MessageTemplate)
-        {
-            return *(found->to_p<message::MessageTemplate>());
-        }
-        else
-        {
-            return message::MessageTemplate();
-        }
+        return message::MessageTemplate();
     }
 }
 //=============================================================================
-MessageTemplate CerberusRegister::msgTemplateById(uint32_t id)
+MessageTemplate CerberusRegister::msgTemplateById(HASH32 id)
 {
-    mutex::MutexLocker locker(m_mutex);
-    CerberusObject* found = objById(id);
+    if (id == CERBERUS_INVALID_ID) throw cerberusIllegalArgExc("invalid id");
 
-    if (found == nullptr)
+    if (id < 256u)  // reserved range
     {
-        return message::MessageTemplate();
+        return standardTemplate(id);
+    }
+
+    mutex::MutexLocker locker(m_mutex);
+
+    auto found = objById(id).expect();
+
+    if (found.value->type() == CerberusObject::ObjectType::MessageTemplate)
+    {
+        return *(found.value->to_p<message::MessageTemplate>());
     }
     else
     {
-        if (found->type() == CerberusObject::ObjectType::MessageTemplate)
-        {
-            return message::MessageTemplate(*(found->to_p<message::MessageTemplate>()));
-        }
-        else
-        {
-            return message::MessageTemplate();
-        }
+        return message::MessageTemplate();
     }
 }
 //=============================================================================
-void CerberusRegister::sendMsgToObj(uint32_t id, cerberus_message msg)
+void CerberusRegister::sendMsgToObj(HASH32 id, cerberus_message msg)
 {
     mutex::MutexLocker locker(m_mutex);
-    CerberusObject* found = objById(id);
+    auto found = objById(id).expect();
 
-    if (found->type() == CerberusObject::ObjectType::Thread)
+    if (found.value->type() == CerberusObject::ObjectType::Thread)
     {
-        auto thr = found->to_p<cerberus::thread::Thread>();
+        auto thr = found.value->to_p<cerberus::thread::Thread>();
         thr->addMessage(msg);
     }
 }
 //=============================================================================
-CerberusObject* CerberusRegister::objByName(const std::string& name)
+OpResData<CerberusObject*> CerberusRegister::objByName(const std::string& name)
 {
-    if (name.empty())
-    {
-        return nullptr;
-    }
+    if (name.empty()) return OR_WrongArgument;
 
     for (auto&& el : m_objects)
     {
@@ -328,6 +316,30 @@ CerberusObject* CerberusRegister::objByName(const std::string& name)
         }
     }
 
-    return nullptr;
+    return OR_NotFound;
+}
+//=============================================================================
+MessageTemplate CerberusRegister::standardTemplate(HASH32 id)
+{
+    MessageTemplate tmplt;
+
+    switch (id)
+    {
+        case CERBERUS_MESSAGE_LOG_ID:
+            tmplt.addSlotType(ST_STRING);
+            break;
+
+        case CERBERUS_MESSAGE_TERM_ID:
+            // nothing to add
+            break;
+
+            // add here more message specializations..
+
+        default:
+            throw cerberusImplMissExc("Requested standard message is not defined");
+            break;
+    }
+
+    return tmplt;
 }
 //=============================================================================

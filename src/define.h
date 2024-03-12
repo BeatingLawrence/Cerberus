@@ -47,8 +47,7 @@
 #endif
 
 // Cerberus constants definitions
-// Standard Messages (1~99 are reserved and not used by factory)
-#define CERBERUS_FACTORY_START_ID 100u
+// Standard Messages with id 1~255 are reserved and not used by factory
 
 #define CERBERUS_INVALID_ID 0u
 #define CERBERUS_MESSAGE_TERM_ID 1u

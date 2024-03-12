@@ -46,7 +46,7 @@ namespace cerberus
             std::string toObjStr();
 
            private:
-            uint32_t m_id;
+            HASH32 m_id;
 
             ObjectType m_type;
 
@@ -74,7 +74,7 @@ namespace cerberus
             bool isObjValid() const;
 
             // Returns the object ID
-            uint32_t id() const;
+            HASH32 id() const;
 
             // Returns the object type
             ObjectType type() const;

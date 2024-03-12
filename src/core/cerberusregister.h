@@ -20,7 +20,7 @@ namespace cerberus
         {
             struct Plugin
             {
-                Plugin(uint32_t id, void* h, const std::string& p)
+                Plugin(HASH32 id, void* h, const std::string& p)
                     : id(id),
                       handle(h),
                       path(p),
@@ -37,7 +37,7 @@ namespace cerberus
                     other.path   = "";
                 };
 
-                uint32_t id;
+                HASH32 id;
                 void* handle;
                 std::string path;
                 mutex::Mutex mutex;
@@ -48,22 +48,30 @@ namespace cerberus
 
             std::list<Plugin> m_plugins;
 
-            uint32_t findAvailableId();
+            HASH32 hash(const std::string& str);
 
-            uint32_t findAvailablePluginId();
+            HASH32 removeReserved(HASH32 hash);
+
+            HASH32 findAvailableObjectId(const std::string& name);
+
+            HASH32 findAvailablePluginId(const std::string& path);
 
             mutex::Mutex m_mutex;
 
             // Give a cerberus object from its ID, or nullptr if it does not exist
             // This method does not lock the mutex!
-            CerberusObject* objById(uint32_t id);
+            OpResData<CerberusObject*> objById(HASH32 id);
 
             // Give a cerberus object from its name, or nullptr if it does not exist
             // This method does not lock the mutex!
-            CerberusObject* objByName(const std::string& name);
+            OpResData<CerberusObject*> objByName(const std::string& name);
+
+            message::MessageTemplate standardTemplate(HASH32 id);
 
            public:
             CerberusRegister();
+
+            ~CerberusRegister();
 
             // Register a given object and return its id
             // Return an invalid ID if the registering failed
@@ -71,39 +79,39 @@ namespace cerberus
 
             // Unregiste an object by its id
             // Nothing happens if the ID does not exist
-            void unregisterObj(uint32_t id);
+            void unregisterObj(HASH32 id);
 
             // Add a plugin handle to the register. If the handle already exixst, exists is true
             // The new (or found) ID is returned
-            uint32_t addPlugin(void* handle, const std::string& path, bool& exists);
+            HASH32 addPlugin(void* handle, const std::string& path, bool& exists);
 
             // Remove the handle from the register
-            void removePlugin(uint32_t id);
+            void removePlugin(HASH32 id);
 
             // Remove and unload all the loaded plugins
             void cleanupPlugins();
 
             // Return the requested handle if it is registered, otherwise nullptr
-            void* checkPlugin(uint32_t id);
+            void* checkPlugin(HASH32 id);
 
             // Get the mutexlocker of a loaded shared object. The mutex is locked before return
-            mutex::MutexLocker getPluginMutex(uint32_t id);
+            mutex::MutexLocker getPluginMutex(HASH32 id);
 
             // Replaces data of an existing plugin. Returns false if id does not exist, true otherwise
-            bool updatePlugin(uint32_t id, const std::string& path, void* handle);
+            bool updatePlugin(HASH32 id, const std::string& path, void* handle);
 
             // Retrieves an object ID by its name
-            uint32_t objIdByName(const std::string& name);
+            HASH32 objIdByName(const std::string& name);
 
             // Retrieves a MessageTemplate by its name
             message::MessageTemplate msgTemplateByName(const std::string& name);  // consider hiding
 
             // Retrieves a MessageTemplate by its ID
-            message::MessageTemplate msgTemplateById(uint32_t id);  // consider hiding
+            message::MessageTemplate msgTemplateById(HASH32 id);  // consider hiding
 
             // Send a message to a cerberus object.
             // If the id is not valid or the message cannot be sent, nothing happens
-            void sendMsgToObj(uint32_t id, cerberus_message msg);
+            void sendMsgToObj(HASH32 id, cerberus_message msg);
         };
     }  // namespace core
 }  // namespace cerberus

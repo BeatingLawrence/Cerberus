@@ -91,9 +91,11 @@ std::string CerberusObject::toThreadStr(const CerberusObject& obj)
         case TP_NonPeriodic:
             return "Configuration: Non periodic";
         case TP_Periodic:
-            return CerberusUtils::strPrint("Configuration: Periodic, %us %uns", time.seconds, time.nanoseconds);
+            return CerberusUtils::strPrint("Configuration: Periodic, %us %uns", time.seconds,
+                                           time.nanoseconds);
         case TP_PeriodicQueue:
-            return CerberusUtils::strPrint("Configuration: Periodic queue, %us %uns", time.seconds, time.nanoseconds);
+            return CerberusUtils::strPrint("Configuration: Periodic queue, %us %uns", time.seconds,
+                                           time.nanoseconds);
         case TP_OneShot:
             return "Configuration: One shot";
         case TP_Continuos:
@@ -127,7 +129,7 @@ void CerberusObject::checkOut() { cerberus::Cerberus::unregisterObj(m_id); }
 //=============================================================================
 bool CerberusObject::isObjValid() const { return (m_id != CERBERUS_INVALID_ID); }
 //=============================================================================
-uint32_t CerberusObject::id() const { return m_id; }
+cerberus::HASH32 CerberusObject::id() const { return m_id; }
 //=============================================================================
 CerberusObject::ObjectType CerberusObject::type() const { return m_type; }
 //=============================================================================

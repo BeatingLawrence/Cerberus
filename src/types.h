@@ -20,6 +20,7 @@ namespace cerberus
     typedef uint64_t LSIZE;
     typedef uint8_t BYTE;
     typedef int64_t OFFSET;
+    typedef uint32_t HASH32;
 
     template <class T>
     class Iterator
@@ -141,13 +142,6 @@ namespace cerberus
         TP_PeriodicQueue,
         TP_OneShot,
         TP_Continuos,
-    };
-
-    enum StandardMessage
-    {
-        SM_LogMsg,
-        SM_TerminationMsg,
-        // add more custom messages here
     };
 
     enum Radix
