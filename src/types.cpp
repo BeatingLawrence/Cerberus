@@ -367,6 +367,22 @@ std::string cerberus::OpRes::errorString()
     return "Undefined";
 }
 //=============================================================================
+cerberus::OpRes &cerberus::OpRes::addOptional(Result opt)
+{
+    optional.push_back(opt);
+    return *this;
+}
+//=============================================================================
+bool cerberus::OpRes::hasOptional(Result opt)
+{
+    for (auto &el : optional)
+    {
+        if (el == opt) return true;
+    }
+
+    return false;
+}
+//=============================================================================
 StringOpRes cerberus::Dictionary::getFieldValue(const std::string &key, WordMatch match) const
 {
     for (auto &el : (*this))

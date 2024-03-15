@@ -6,10 +6,9 @@
 #include <cstring>
 
 #include "src/cerberus.h"
-#include "src/message/slot/slots.h"
+#include "src/message/slot/slot.h"
 
 using namespace cerberus::core;
-using namespace cerberus::message::slot;
 
 std::regex CerberusUtils::isNumberRegex("\\-?[0-9]+(?:\\.[0-9]+)?", std::regex_constants::ECMAScript |
                                                                         std::regex_constants::optimize |
@@ -353,7 +352,7 @@ cerberus::OpRes CerberusUtils::cleanNumber(std::string& str)
     return OR_OK;
 }
 //=============================================================================
-cerberus::cerberus_slot CerberusUtils::newSlot(SlotType type)
+cerberus::slot_ptr CerberusUtils::newSlot(SlotType type)
 {
     switch (type)
     {
@@ -374,11 +373,13 @@ cerberus::cerberus_slot CerberusUtils::newSlot(SlotType type)
         case ST_STRING:
             return StringSlot::create();
         case ST_BYTEBUFFER:
-            return ByteBufferSlot::create();
+            return BufferSlot::create();
         case ST_DICTIONARY:
             return DictionarySlot::create();
         case ST_JSON:
             return JsonSlot::create();
+        default:
+            break;
     }
 
     throw cerberusIllegalArgExc("Unknown slot type");

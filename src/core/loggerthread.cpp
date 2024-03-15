@@ -1,7 +1,6 @@
 #include "loggerthread.h"
 
 #include "../cerberus.h"
-#include "src/message/slot/stringslot.h"
 
 using namespace cerberus::core;
 
@@ -12,7 +11,7 @@ int LoggerThread::tick()
 
     if (message->id() != CERBERUS_MESSAGE_LOG_ID || m_failed.test()) return 0;
 
-    if (m_logFile.writeLine(message->getSlotAt(0)->to<message::slot::StringSlot>()->value()).fail())
+    if (m_logFile.writeLine(message->getSlotAt(0)->to<StringSlot>()->value()).fail())
     {
         m_failed.test_and_set();
         discardMessageQueue();

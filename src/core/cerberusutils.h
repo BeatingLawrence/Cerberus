@@ -52,7 +52,8 @@ namespace cerberus
             static bool contains(const std::string& str1, char c);
 
             // Return true when given strings are equal (default = case sensitive)
-            static bool areEqual(const std::string& str1, const std::string& str2, WordMatch match = WM_CaseSensitive);
+            static bool areEqual(const std::string& str1, const std::string& str2,
+                                 WordMatch match = WM_CaseSensitive);
 
             // Retrieve the value of specified environment variable
             static StringOpRes environmentVariable(const std::string& variableName);
@@ -123,7 +124,7 @@ namespace cerberus
             static OpRes cleanNumber(std::string& str);
 
             // Construct a new Slot
-            static cerberus_slot newSlot(SlotType type);
+            static slot_ptr newSlot(SlotType type);
         };
     }  // namespace core
 }  // namespace cerberus

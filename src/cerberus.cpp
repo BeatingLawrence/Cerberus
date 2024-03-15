@@ -6,7 +6,6 @@
 #include "core/cerberuscore.h"
 #include "core/cerberusregister.h"
 #include "exception/exception.h"
-#include "message/slot/slots.h"
 
 #ifdef WINDOWS_SYSTEM
 #include <windows.h>

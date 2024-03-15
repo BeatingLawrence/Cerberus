@@ -1,5 +1,7 @@
 #include "messagequeue.h"
 
+#include "./message.h"
+
 using namespace cerberus::message;
 
 //=============================================================================
@@ -14,12 +16,12 @@ cerberus::cerberus_message MessageQueue::next()
 {
     if (m_queue.empty())
     {
-        return Message::create();
+        return std::move(Message::create());
     }
 
-    cerberus_message next = m_queue.front();
+    cerberus_message next(m_queue.front());
     m_queue.pop_front();
-    return next;
+    return std::move(next);
 }
 //=============================================================================
 cerberus::cerberus_message MessageQueue::nextKeep() const
@@ -30,7 +32,7 @@ cerberus::cerberus_message MessageQueue::nextKeep() const
     }
 
     cerberus_message next = m_queue.front();
-    return next;
+    return std::move(next);
 }
 //=============================================================================
 size_t MessageQueue::size() const { return m_queue.size(); }

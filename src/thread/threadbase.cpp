@@ -2,7 +2,9 @@
 
 #include <cstring>
 
+#include "../message/message.h"
 #include "../mutex/mutexlocker.h"
+#include "src/exception/exception.h"
 
 using namespace cerberus::thread;
 using namespace cerberus::mutex;

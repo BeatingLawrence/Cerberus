@@ -3,7 +3,6 @@
 #include <iostream>
 
 #include "../cerberus.h"
-#include "../message/slot/stringslot.h"
 #include "./cerberusutils.h"
 #include "src/time/datetime.h"
 #include "src/types.h"
@@ -149,7 +148,7 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
         {
             // Log on file
             cerberus_message logMessage = Cerberus::messageConstruct(CERBERUS_MESSAGE_LOG_ID);
-            logMessage->getSlotAt(0)->to<message::slot::StringSlot>()->value(rawLog);
+            logMessage->getSlotAt(0)->to<StringSlot>()->value(rawLog);
             m_logger->addMessage(logMessage);
         }
     }

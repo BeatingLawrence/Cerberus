@@ -1,18 +1,16 @@
-#include "baseslot.h"
+#include "slot.h"
 
-using namespace cerberus::message::slot;
+using namespace cerberus;
 
 //=============================================================================
-BaseSlot::BaseSlot(SlotType type, const std::string& name)
-    : m_type(type),
-      m_name(name)
+BaseSlot::BaseSlot(const std::string& name)
+    : m_name(name)
 {
-    // noop
 }
 //=============================================================================
 BaseSlot::~BaseSlot() {}
 //=============================================================================
-cerberus::SlotType BaseSlot::type() const { return m_type; }
+cerberus::SlotType BaseSlot::type() const { return ST_UNDEFINED; }
 //=============================================================================
 std::string BaseSlot::name() const { return m_name; }
 //=============================================================================

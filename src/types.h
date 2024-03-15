@@ -2,8 +2,8 @@
 #define TYPES_H
 
 #include <cstdint>
-#include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "mutex/mutexlocker.h"
@@ -118,6 +118,22 @@ namespace cerberus
         std::string text;
     };
 
+    enum SlotType
+    {
+        ST_UNDEFINED  = 0,
+        ST_BYTE       = 1,
+        ST_INT32      = 2,
+        ST_INT64      = 3,
+        ST_FLOAT      = 4,
+        ST_DOUBLE     = 5,
+        ST_BOOL       = 6,
+        ST_VOIDP      = 7,
+        ST_STRING     = 8,
+        ST_BYTEBUFFER = 9,
+        ST_DICTIONARY = 10,
+        ST_JSON       = 11,
+    };
+
     enum WordMatch
     {
         WM_CaseSensitive,
@@ -216,34 +232,110 @@ namespace cerberus
         HTTP_CONNECT,
     };
 
-    enum SlotType
+    struct Clonable
     {
-        ST_BYTE,
-        ST_INT32,
-        ST_INT64,
-        ST_FLOAT,
-        ST_DOUBLE,
-        ST_BOOL,
-        ST_VOIDP,
-        ST_STRING,
-        ST_BYTEBUFFER,
-        ST_DICTIONARY,
-        ST_JSON,
+        virtual ~Clonable() {}
+        virtual Clonable* clone() const = 0;
+    };
+
+    template <typename T>
+    class managed_ptr
+    {
+        Clonable* m_ptr;
+        size_t* m_refcount;
+
+        managed_ptr(T* ptr, size_t* refcount)
+            : m_ptr(ptr),
+              m_refcount(refcount){};
+
+        void _destroy()
+        {
+            if (!m_refcount) return;
+
+            if ((*m_refcount) == 1)
+            {
+                delete m_ptr;
+                delete m_refcount;
+            }
+            else
+                (*m_refcount)--;
+
+            m_ptr      = nullptr;
+            m_refcount = nullptr;
+        };
+
+       public:
+        managed_ptr()
+            : m_ptr(nullptr),
+              m_refcount(nullptr){};
+
+        managed_ptr(T* ptr)
+            : m_ptr((Clonable*)ptr),
+              m_refcount(nullptr)
+        {
+            if (m_ptr == nullptr) throw std::exception();
+
+            // T must inherit Clonable
+            static_assert(std::is_convertible<T*, Clonable*>());
+
+            m_refcount = new size_t(1);
+        };
+
+        // copy constructor make a deep copy (safest)
+        managed_ptr(const managed_ptr& other)
+            : m_ptr((T*)(other.m_ptr->clone())),
+              m_refcount(new size_t(1))
+        {
+            (*m_refcount)++;
+        };
+
+        managed_ptr(managed_ptr&& other)
+            : m_ptr(other.m_ptr),
+              m_refcount(other.m_refcount)
+        {
+            other.m_ptr      = nullptr;
+            other.m_refcount = nullptr;
+        };
+
+        ~managed_ptr() { _destroy(); };
+
+        // duplicate the data (deep copy)
+        managed_ptr<T> duplicate() { return managed_ptr<T>((T*)(m_ptr->clone())); };
+
+        // just increment ref counter
+        managed_ptr<T> ref()
+        {
+            (*m_refcount)++;
+            return managed_ptr<T>((T*)m_ptr, m_refcount);
+        };
+
+        T& operator*() const { return *((T*)m_ptr); };
+
+        T* operator->() const { return (T*)m_ptr; };
+
+        T* get() const { return (T*)m_ptr; };
+
+        // shared copy
+        managed_ptr<T>& operator=(const managed_ptr<T>& other)
+        {
+            _destroy();
+            m_ptr      = other.m_ptr;
+            m_refcount = other.m_refcount;
+            (*m_refcount)++;
+            return *this;
+        };
     };
 
     namespace message
     {
         class Message;
+    }
 
-        namespace slot
-        {
-            class BaseSlot;
-        };
-    }  // namespace message
+    class BaseSlot;
 
-    typedef std::shared_ptr<class cerberus::message::slot::BaseSlot> cerberus_slot;
-    typedef std::shared_ptr<class cerberus::message::Message> cerberus_message;
-    typedef std::shared_ptr<const class cerberus::message::Message> cerberus_const_message;
+    typedef managed_ptr<class cerberus::message::Message> cerberus_message;
+    typedef managed_ptr<const class cerberus::message::Message> cerberus_const_message;
+    typedef managed_ptr<class cerberus::BaseSlot> slot_ptr;
 
     enum IniDataType : uint8_t
     {
@@ -325,6 +417,8 @@ namespace cerberus
 
         std::string reason;
 
+        std::vector<Result> optional;
+
         OpRes();
 
         OpRes(Result r, const std::string& reason = std::string());
@@ -355,6 +449,10 @@ namespace cerberus
 
         // Translate the Result
         std::string errorString();
+
+        OpRes& addOptional(Result opt);
+
+        bool hasOptional(Result opt);
     };
 
     // The OpResData template class is useful to exchange some custom data alongside with the result
@@ -505,6 +603,71 @@ namespace cerberus
         // Resolve the given Host using the hostname member.
         // The resulting numeric IP address is written in the ip parameter
         OpRes resolve();
+    };
+
+    namespace data
+    {
+        class ByteBuffer;
+        class JsonData;
+    }  // namespace data
+
+    struct TypeWrapper
+    {
+        SlotType type;
+        union
+        {
+            BYTE _byte;
+            int32_t _int32;
+            int64_t _int64;
+            float _float;
+            double _double;
+            bool _bool;
+            void* _voidp;
+        };
+
+        TypeWrapper(BYTE v)
+            : type(ST_BYTE),
+              _byte(v){};
+
+        TypeWrapper(int32_t v)
+            : type(ST_INT32),
+              _int32(v){};
+
+        TypeWrapper(int64_t v)
+            : type(ST_INT64),
+              _int64(v){};
+
+        TypeWrapper(float v)
+            : type(ST_FLOAT),
+              _float(v){};
+
+        TypeWrapper(double v)
+            : type(ST_DOUBLE),
+              _double(v){};
+
+        TypeWrapper(bool v)
+            : type(ST_BOOL),
+              _bool(v){};
+
+        TypeWrapper(void* v)
+            : type(ST_VOIDP),
+              _voidp(v){};
+
+        TypeWrapper(std::string& v)
+            : type(ST_STRING),
+              _voidp(&v){};
+
+        TypeWrapper(data::ByteBuffer& v)
+            : type(ST_BYTEBUFFER),
+              _voidp(&v){};
+
+        TypeWrapper(Dictionary& v)
+            : type(ST_DICTIONARY),
+              _voidp(&v){};
+
+        TypeWrapper(data::JsonData& v)
+            : type(ST_JSON),
+              _voidp(&v){};
     };
 
 }  // namespace cerberus

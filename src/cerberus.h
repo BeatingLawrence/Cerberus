@@ -7,7 +7,7 @@
 #include "log.h"
 #include "message/message.h"
 #include "message/messagetemplate.h"
-#include "message/slot/slots.h"
+#include "message/slot/slot.h"
 #include "time/datetime.h"
 #include "time/timeframe.h"
 #include "types.h"

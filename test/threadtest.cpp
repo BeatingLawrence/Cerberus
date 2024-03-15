@@ -1,6 +1,5 @@
 #include <cerberus/cerberus.h>
 #include <cerberus/core/cerberusregister.h>
-#include <cerberus/message/slot/byteslot.h>
 #include <gtest/gtest.h>
 
 #include "./testthread.h"
@@ -59,10 +58,10 @@ static int pingTestCallback(cerberus_message msg, cerberus::thread::Thread* thre
 
     if (msg->isValid())
     {
-        logInfo(core::CerberusUtils::strPrint(
-            "PONG! %u %u %u", msg->getSlotAt(0)->to<cerberus::message::slot::ByteSlot>()->value(),
-            msg->getSlotAt(1)->to<cerberus::message::slot::ByteSlot>()->value(),
-            msg->getSlotAt(2)->to<cerberus::message::slot::ByteSlot>()->value()));
+        logInfo(core::CerberusUtils::strPrint("PONG! %u %u %u",
+                                              msg->getSlotAt(0)->to<cerberus::ByteSlot>()->value(),
+                                              msg->getSlotAt(1)->to<cerberus::ByteSlot>()->value(),
+                                              msg->getSlotAt(2)->to<cerberus::ByteSlot>()->value()));
     }
     else  // tick
     {
@@ -77,9 +76,9 @@ static int pingTestCallback(cerberus_message msg, cerberus::thread::Thread* thre
         logInfo("PING!");
         // Create message using factory
         auto message = Cerberus::messageConstruct("PingPongMessage");
-        message->getSlotAt(0)->to<cerberus::message::slot::ByteSlot>()->value(a++);
-        message->getSlotAt(1)->to<cerberus::message::slot::ByteSlot>()->value(b++);
-        message->getSlotAt(2)->to<cerberus::message::slot::ByteSlot>()->value(c++);
+        message->getSlotAt(0)->to<cerberus::ByteSlot>()->value(a++);
+        message->getSlotAt(1)->to<cerberus::ByteSlot>()->value(b++);
+        message->getSlotAt(2)->to<cerberus::ByteSlot>()->value(c++);
         // Send the message
         cerberus::Cerberus::send(message, "pongThread");
     }
@@ -104,11 +103,8 @@ static int pongTestCallback(cerberus_message msg, cerberus::thread::Thread* thre
 TEST(threadTest, thread_ping_pong)
 {
     // register a generic message to test Thread message exchange
-    cerberus::message::Message msg;
-    msg.addSlot(cerberus::message::slot::ByteSlot::create());
-    msg.addSlot(cerberus::message::slot::ByteSlot::create());
-    msg.addSlot(cerberus::message::slot::ByteSlot::create());
-    Cerberus::registerMessage(msg, "PingPongMessage");
+    cerberus::message::MessageTemplate tmplt("PingPongMessage");
+    tmplt.addSlotType(ST_BYTE).addSlotType(ST_BYTE).addSlotType(ST_BYTE).checkIn();
     // start the test
     cerberus::thread::Thread ping(cerberus::TP_PeriodicQueue, 100, "pingThread");
     cerberus::thread::Thread pong("pongThread");  // Non-Periodic (receiver)

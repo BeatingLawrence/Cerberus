@@ -24,7 +24,7 @@ int CerberusCore::tick()
     }
     else
     {
-        Cerberus::sendMsgToObj(destination, message);
+        Cerberus::sendMsgToObj(destination, message.ref());
     }
 
     // Do other stuff..

@@ -1,14 +1,13 @@
 #include <cerberus/cerberus.h>
 #include <cerberus/message/messagetemplate.h>
-#include <cerberus/message/slot/byteslot.h>
 #include <gtest/gtest.h>
 
 TEST(messageFactoryTest, registering_message)
 {
     cerberus::message::Message msg;
-    msg.addSlot(cerberus::message::slot::ByteSlot::create(10));
-    msg.addSlot(cerberus::message::slot::ByteSlot::create(12));
-    msg.addSlot(cerberus::message::slot::ByteSlot::create(14));
+    msg.addSlot(cerberus::ByteSlot::create(10));
+    msg.addSlot(cerberus::ByteSlot::create(12));
+    msg.addSlot(cerberus::ByteSlot::create(14));
     EXPECT_NO_THROW(cerberus::Cerberus::registerMessage(msg, "Test-Message"));
 }
 

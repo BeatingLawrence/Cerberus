@@ -1,14 +1,14 @@
 #include "message.h"
 
 #include "../exception/exceptioncatalog.h"
-#include "./slot/baseslot.h"
+#include "slot/slot.h"
+#include "src/data/bytebuffer.h"
+#include "src/data/jsondata.h"
 
 using namespace cerberus::message;
 
 //=============================================================================
-cerberus::cerberus_message Message::create(uint32_t typeID) { return cerberus_message(new Message(typeID)); }
-//=============================================================================
-cerberus::cerberus_message Message::createFrom(const Message& other) { return cerberus_message(new Message(other)); }
+cerberus::cerberus_message Message::create(uint32_t typeID) { return new Message(typeID); }
 //=============================================================================
 Message::Message(uint32_t typeID)
     : m_slots(),
@@ -18,11 +18,33 @@ Message::Message(uint32_t typeID)
     // noop
 }
 //=============================================================================
+Message::~Message() {}
+//=============================================================================
 size_t Message::count() const { return m_slots.size(); }
 //=============================================================================
-void Message::addSlot(cerberus_slot slot) { m_slots.push_back(slot); }
+Message& Message::addSlot(slot_ptr slot)
+{
+    m_slots.push_back(slot);
+    return *this;
+}
 //=============================================================================
-cerberus::cerberus_slot Message::getSlotAt(size_t index) const
+Message& Message::clear()
+{
+    m_slots.clear();
+    return *this;
+}
+//=============================================================================
+cerberus::slot_ptr Message::getSlotAt(size_t index)
+{
+    if (index >= m_slots.size())
+    {
+        throw cerberusIllegalArgExc("Index out of boundaries");
+    }
+
+    return m_slots[index].ref();
+}
+//=============================================================================
+cerberus::slot_ptr Message::getConstSlotAt(size_t index) const
 {
     if (index >= m_slots.size())
     {
@@ -32,7 +54,20 @@ cerberus::cerberus_slot Message::getSlotAt(size_t index) const
     return m_slots[index];
 }
 //=============================================================================
-cerberus::cerberus_slot Message::getSlot(const std::string& name) const
+cerberus::slot_ptr Message::getSlot(const std::string& name)
+{
+    for (auto& el : m_slots)
+    {
+        if (core::CerberusUtils::areEqual(el->name(), name))
+        {
+            return el.ref();
+        }
+    }
+
+    throw cerberusIllegalArgExc("Slot %s does not exist in this message", name.c_str());
+}
+//=============================================================================
+cerberus::slot_ptr Message::getConstSlot(const std::string& name) const
 {
     for (auto& el : m_slots)
     {
@@ -42,14 +77,127 @@ cerberus::cerberus_slot Message::getSlot(const std::string& name) const
         }
     }
 
-    return cerberus_slot();
+    throw cerberusIllegalArgExc("Slot %s does not exist in this message", name.c_str());
 }
 //=============================================================================
 uint32_t Message::id() const { return m_id; }
 //=============================================================================
 uint32_t Message::destination() const { return m_destinationId; }
 //=============================================================================
-void Message::setDestination(uint32_t id) { m_destinationId = id; }
+Message& Message::setDestination(uint32_t id)
+{
+    m_destinationId = id;
+    return *this;
+}
 //=============================================================================
 bool Message::isValid() const { return (m_id != CERBERUS_INVALID_ID); }
+//=============================================================================
+cerberus::Clonable* Message::clone() const { return new Message(*this); }
+//=============================================================================
+Message& Message::fill(std::initializer_list<TypeWrapper> values)
+{
+    if (values.size() != m_slots.size())
+        throw cerberusIllegalArgExc("fill() called with a wrong number of args");
+
+    size_t index = 0;
+
+    for (auto&& el : values)
+    {
+        switch (el.type)
+        {
+            case ST_BYTE:
+                getSlotAt(index)->to<ByteSlot>()->value(el._byte);
+                break;
+            case ST_INT32:
+                getSlotAt(index)->to<Int32Slot>()->value(el._int32);
+                break;
+            case ST_INT64:
+                getSlotAt(index)->to<Int64Slot>()->value(el._int64);
+                break;
+            case ST_FLOAT:
+                getSlotAt(index)->to<FloatSlot>()->value(el._float);
+                break;
+            case ST_DOUBLE:
+                getSlotAt(index)->to<DoubleSlot>()->value(el._double);
+                break;
+            case ST_BOOL:
+                getSlotAt(index)->to<BoolSlot>()->value(el._bool);
+                break;
+            case ST_VOIDP:
+                getSlotAt(index)->to<VoidPSlot>()->value(el._voidp);
+                break;
+            case ST_STRING:
+                getSlotAt(index)->to<StringSlot>()->value(*((std::string*)el._voidp));
+                break;
+            case ST_BYTEBUFFER:
+                getSlotAt(index)->to<BufferSlot>()->value(*((data::ByteBuffer*)el._voidp));
+                break;
+            case ST_DICTIONARY:
+                getSlotAt(index)->to<DictionarySlot>()->value(*((Dictionary*)el._voidp));
+                break;
+            case ST_JSON:
+                getSlotAt(index)->to<JsonSlot>()->value(*((data::JsonData*)el._voidp));
+                break;
+
+            default:
+                throw cerberusImplMissExc("The given slot type has not been implemented");
+        }
+    }
+
+    return *this;
+}
+//=============================================================================
+Message& Message::insert(std::initializer_list<TypeWrapper> values)
+{
+    clear();
+
+    for (auto&& el : values)
+    {
+        slot_ptr s;
+
+        switch (el.type)
+        {
+            case ST_BYTE:
+                s = ByteSlot::create(el._byte);
+                break;
+            case ST_INT32:
+                s = Int32Slot::create(el._int32);
+                break;
+            case ST_INT64:
+                s = Int64Slot::create(el._int64);
+                break;
+            case ST_FLOAT:
+                s = FloatSlot::create(el._float);
+                break;
+            case ST_DOUBLE:
+                s = DoubleSlot::create(el._double);
+                break;
+            case ST_BOOL:
+                s = BoolSlot::create(el._bool);
+                break;
+            case ST_VOIDP:
+                s = VoidPSlot::create(el._voidp);
+                break;
+            case ST_STRING:
+                s = StringSlot::create(*((std::string*)el._voidp));
+                break;
+            case ST_BYTEBUFFER:
+                s = BufferSlot::create(*((data::ByteBuffer*)el._voidp));
+                break;
+            case ST_DICTIONARY:
+                s = DictionarySlot::create(*((Dictionary*)el._voidp));
+                break;
+            case ST_JSON:
+                s = JsonSlot::create(*((data::JsonData*)el._voidp));
+                break;
+
+            default:
+                throw cerberusImplMissExc("The given slot type has not been implemented");
+        }
+
+        m_slots.push_back(s);
+    }
+
+    return *this;
+}
 //=============================================================================

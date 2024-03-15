@@ -17,7 +17,7 @@
 #include <list>
 
 #include "../Cerberus_global.h"
-#include "./message.h"
+#include "../types.h"
 
 namespace cerberus
 {

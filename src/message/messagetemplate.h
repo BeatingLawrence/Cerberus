@@ -36,7 +36,7 @@ namespace cerberus
             virtual ~MessageTemplate();
 
             // Adds a single slot type at the end of the vector
-            void addSlotType(SlotType type);
+            MessageTemplate& addSlotType(SlotType type);
 
             // Returns the slot type at the index position
             SlotType getSlotTypeAt(size_t index) const;
