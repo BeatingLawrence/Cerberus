@@ -8,44 +8,41 @@
 
 namespace cerberus
 {
-    namespace time
+    class Timer
     {
-        class Timer
-        {
-           private:
-            std::atomic_bool m_running;
+       private:
+        std::atomic_bool m_running;
 
-            bool m_periodic;
+        bool m_periodic;
 
-            TimeFrame m_time;
+        TimeFrame m_time;
 
-            timerCallback m_callback;
+        timerCallback m_callback;
 
-            static void defaultTimeoutCallback();
+        static void defaultTimeoutCallback();
 
-           public:
-            Timer();
+       public:
+        Timer();
 
-            Timer(const TimeFrame& time, bool periodic = false);
+        Timer(const TimeFrame& time, bool periodic = false);
 
-            Timer(const Timer& other) = delete;
+        Timer(const Timer& other) = delete;
 
-            ~Timer();
+        ~Timer();
 
-            void setTime(const TimeFrame& time);
+        void setTime(const TimeFrame& time);
 
-            void start();
+        void start();
 
-            void stop();
+        void stop();
 
-            void reset();
+        void reset();
 
-            bool isRunning();
+        bool isRunning();
 
-            // Sets a callback to be executed when the timer expires
-            void provideTimeoutCallback(timerCallback callback);
-        };
-    }  // namespace time
+        // Sets a callback to be executed when the timer expires
+        void provideTimeoutCallback(timerCallback callback);
+    };
 }  // namespace cerberus
 
 #endif  // CERBERUS_TIME_TIMER_H

@@ -17,7 +17,7 @@ TEST(messageFactoryTest, probing_message)
 
     auto tmplt = cerberus::Cerberus::msgTemplateByName("Test-Message");
     EXPECT_NE(tmplt.id(), CERBERUS_INVALID_ID);
-    EXPECT_TRUE(tmplt.isObjValid());
+    EXPECT_TRUE(tmplt.isRegistered());
 }
 
 TEST(messageFactoryTest, constructing_message)

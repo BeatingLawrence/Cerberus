@@ -3,7 +3,7 @@
 #include <cerberus/time/timeframe.h>
 #include <gtest/gtest.h>
 
-using namespace cerberus::time;
+using namespace cerberus;
 
 TEST(timeFrameTest, creation)
 {

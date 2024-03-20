@@ -5,16 +5,20 @@
 
 #include "../data/filesystem/file.h"
 #include "../thread/thread.h"
+#include "../types.h"
 
 namespace cerberus
 {
     namespace core
     {
-        class LoggerThread : public cerberus::thread::Thread
+        class LoggerThread : public Thread
         {
            private:
-            data::filesystem::File m_logFile;
-            SIZE m_logFileMaxSize;
+            File m_logFile;
+            LSIZE m_currentSize;
+
+            FileLoggingConf m_conf;
+
             std::atomic_flag m_failed;
 
             virtual int tick() override;
@@ -26,13 +30,16 @@ namespace cerberus
            public:
             LoggerThread();
 
-            void setup(const std::string& filename, SIZE fileMaxSize);
+            void setup(FileLoggingConf configuration);
 
             bool isFailed();
 
             void open();
-        };
 
+            void archive();
+
+            void archiviationName(std::string& fmtStr);
+        };
     }  // namespace core
 }  // namespace cerberus
 

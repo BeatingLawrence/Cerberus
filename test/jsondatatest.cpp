@@ -2,7 +2,7 @@
 #include <cerberus/data/jsondata.h>
 #include <gtest/gtest.h>
 
-using namespace cerberus::data;
+using namespace cerberus;
 
 TEST(jsonDataTest, create_generate)
 {
@@ -37,7 +37,7 @@ TEST(jsonDataTest, create_generate)
 TEST(jsonDataTest, parse)
 {
     JsonData data;
-    filesystem::File f("jsontest.json");
+    File f("jsontest.json");
     ASSERT_TRUE(f.open().ok(true));
     ASSERT_TRUE(data.parse(f).ok(true));
     std::string s;
@@ -48,7 +48,7 @@ TEST(jsonDataTest, parse)
 TEST(jsonDataTest, copy_generate)
 {
     JsonData data;
-    filesystem::File f("jsontest.json");
+    File f("jsontest.json");
     ASSERT_TRUE(f.open().ok(true));
     ASSERT_TRUE(data.parse(f).ok(true));
     ByteBuffer bb;
@@ -59,7 +59,7 @@ TEST(jsonDataTest, copy_generate)
 TEST(jsonDataTest, search)
 {
     JsonData data;
-    filesystem::File f("jsontest.json");
+    File f("jsontest.json");
     ASSERT_TRUE(f.open().ok(true));
     ASSERT_TRUE(data.parse(f).ok(true));
     auto found = data.search("street_address");

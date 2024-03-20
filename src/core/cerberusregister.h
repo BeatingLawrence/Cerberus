@@ -1,11 +1,9 @@
 #ifndef CERBERUS_CERBERUSREGISTER_H
 #define CERBERUS_CERBERUSREGISTER_H
 
-#include <cstdint>
 #include <list>
 #include <string>
 
-#include "../message/message.h"
 #include "../message/messagetemplate.h"
 #include "../mutex/mutex.h"
 #include "../mutex/mutexlocker.h"
@@ -40,7 +38,7 @@ namespace cerberus
                 HASH32 id;
                 void* handle;
                 std::string path;
-                mutex::Mutex mutex;
+                Mutex mutex;
             };
 
            private:
@@ -48,30 +46,29 @@ namespace cerberus
 
             std::list<Plugin> m_plugins;
 
-            HASH32 hash(const std::string& str);
+            Mutex m_mutex;
 
-            HASH32 removeReserved(HASH32 hash);
+            static HASH32 removeReserved(HASH32 hash);
 
             HASH32 findAvailableObjectId(const std::string& name);
 
             HASH32 findAvailablePluginId(const std::string& path);
 
-            mutex::Mutex m_mutex;
-
-            // Give a cerberus object from its ID, or nullptr if it does not exist
-            // This method does not lock the mutex!
-            OpResData<CerberusObject*> objById(HASH32 id);
-
             // Give a cerberus object from its name, or nullptr if it does not exist
             // This method does not lock the mutex!
             OpResData<CerberusObject*> objByName(const std::string& name);
 
-            message::MessageTemplate standardTemplate(HASH32 id);
+            // delete all the cerberus-managed objects
+            void cleanup();
 
            public:
             CerberusRegister();
 
             ~CerberusRegister();
+
+            // Give a cerberus object from its ID, or nullptr if it does not exist
+            // This method does not lock the mutex!
+            OpResData<CerberusObject*> objById(HASH32 id);
 
             // Register a given object and return its id
             // Return an invalid ID if the registering failed
@@ -95,7 +92,7 @@ namespace cerberus
             void* checkPlugin(HASH32 id);
 
             // Get the mutexlocker of a loaded shared object. The mutex is locked before return
-            mutex::MutexLocker getPluginMutex(HASH32 id);
+            MutexLocker getPluginMutex(HASH32 id);
 
             // Replaces data of an existing plugin. Returns false if id does not exist, true otherwise
             bool updatePlugin(HASH32 id, const std::string& path, void* handle);
@@ -112,6 +109,9 @@ namespace cerberus
             // Send a message to a cerberus object.
             // If the id is not valid or the message cannot be sent, nothing happens
             void sendMsgToObj(HASH32 id, cerberus_message msg);
+
+            // Check if the given object is a Cerberus-managed object
+            BoolOpRes isCerbManaged(HASH32 id);
         };
     }  // namespace core
 }  // namespace cerberus

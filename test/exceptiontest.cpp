@@ -1,9 +1,8 @@
-#include <gtest/gtest.h>
-
-#include <cerberus/exception/exceptioncatalog.h>
 #include <cerberus/exception/exception.h>
+#include <cerberus/exception/exceptioncatalog.h>
+#include <gtest/gtest.h>
 
 TEST(exceptionTest, illegalArgument)
 {
-    EXPECT_THROW(throw cerberusIllegalArgExc("OOPS"), cerberus::exception::Exception);
+    EXPECT_THROW(throw cerberusIllegalArgExc("OOPS"), cerberus::Exception);
 }

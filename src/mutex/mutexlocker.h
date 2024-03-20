@@ -15,38 +15,36 @@
 
 namespace cerberus
 {
-    namespace mutex
+    class Mutex;
+
+    class CERBERUS_EXPORT MutexLocker
     {
-        class Mutex;
-        class CERBERUS_EXPORT MutexLocker
+       private:
+        struct MutexLockerData
         {
-           private:
-            struct MutexLockerData
-            {
-                Mutex* mutex;
-                int instances;
-            };
-
-            MutexLockerData* m_data;
-
-            void unref();
-
-           public:
-            MutexLocker();
-
-            MutexLocker(const MutexLocker& other);
-
-            MutexLocker(Mutex* mutex);
-
-            MutexLocker(Mutex& mutex);
-
-            ~MutexLocker();
-
-            void operator=(const MutexLocker& other);
-
-            bool isValid();
+            Mutex* mutex;
+            int instances;
         };
-    }  // namespace mutex
+
+        MutexLockerData* m_data;
+
+        void unref();
+
+       public:
+        MutexLocker();
+
+        MutexLocker(const MutexLocker& other);
+
+        MutexLocker(Mutex* mutex);
+
+        MutexLocker(Mutex& mutex);
+
+        ~MutexLocker();
+
+        void operator=(const MutexLocker& other);
+
+        bool isValid();
+    };
 }  // namespace cerberus
 
 #endif  // CERBERUS_MUTEX_MUTEXLOCKER_H

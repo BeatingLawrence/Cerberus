@@ -47,10 +47,14 @@
 #endif
 
 // Cerberus constants definitions
-// Standard Messages with id 1~255 are reserved and not used by factory
+// Standard Messages with id 1~255 are reserved and not used by register
 
 #define CERBERUS_INVALID_ID 0u
-#define CERBERUS_MESSAGE_TERM_ID 1u
-#define CERBERUS_MESSAGE_LOG_ID 2u
+#define CERBERUS_REG_RANGE_START 256u   // the first ID outside the reserved range
+#define CERBERUS_MESSAGE_TERM_ID 1u     // sent to threads to signal termination
+#define CERBERUS_MESSAGE_LOG_ID 2u      // sent to the logger thread to log on file
+#define CERBERUS_MESSAGE_SOCK_ID 3u     // sent to a socket to send data or manage the connection
+#define CERBERUS_MESSAGE_TASK_ID 4u     // sent to an actor to start a task
+#define CERBERUS_MESSAGE_TASKEND_ID 5u  // sent from an actor to signal a task end
 
 #endif  // CERBERUS_DEFINE_H

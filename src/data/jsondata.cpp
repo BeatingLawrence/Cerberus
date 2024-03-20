@@ -2,8 +2,7 @@
 
 #include "src/cerberus.h"
 
-using namespace cerberus::data;
-using namespace cerberus::core;
+using namespace cerberus;
 
 //=============================================================================
 BoolOpRes JsonData::_parse(const ByteBuffer &buffer, ParseMode mode)
@@ -317,7 +316,7 @@ JsonData JsonData::getAt(SIZE index)
 JsonData JsonData::get(const std::string &name)
 {
     for (auto &el : m_elements)
-        if (core::CerberusUtils::areEqual(el.m_name, name)) return el;
+        if (CerberusUtils::areEqual(el.m_name, name)) return el;
 
     return JsonData();
 }
@@ -532,7 +531,7 @@ cerberus::OpRes JsonData::parse(const ByteBuffer &buffer)
     return res;
 }
 //=============================================================================
-cerberus::OpRes JsonData::parse(const filesystem::File &file)
+cerberus::OpRes JsonData::parse(const File &file)
 {
     ByteBuffer buffer;
     auto res = file.read(buffer);
@@ -550,7 +549,7 @@ cerberus::OpRes JsonData::generate(ByteBuffer &buffer) const
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes JsonData::generate(filesystem::File &file) const
+cerberus::OpRes JsonData::generate(File &file) const
 {
     ByteBuffer buffer;
     auto res = generate(buffer);

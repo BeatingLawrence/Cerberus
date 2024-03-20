@@ -5,7 +5,7 @@
 
 #include "../bytebuffer.h"
 
-using namespace cerberus::data::crypto;
+using namespace cerberus;
 
 //=============================================================================
 Cipher::Cipher()

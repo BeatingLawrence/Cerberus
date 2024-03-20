@@ -5,7 +5,7 @@
 #include "src/cerberus.h"
 #include "src/exception/exception.h"
 
-using namespace cerberus::mutex;
+using namespace cerberus;
 
 //============================================================================
 Mutex::Mutex(MutexType type)

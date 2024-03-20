@@ -84,9 +84,9 @@ SQLTablePrototype::SQLDataType SQLTablePrototype::toSQLDataType(const std::strin
     {
         return SQLDataType::SDT_Money;
     }
-    else if (core::CerberusUtils::contains(type, "character"))
+    else if (CerberusUtils::contains(type, "character"))
     {
-        if (core::CerberusUtils::contains(type, "varying"))
+        if (CerberusUtils::contains(type, "varying"))
         {
             return SQLDataType::SDT_VarChar;
         }
@@ -95,9 +95,9 @@ SQLTablePrototype::SQLDataType SQLTablePrototype::toSQLDataType(const std::strin
             return SQLDataType::SDT_Char;
         }
     }
-    else if (core::CerberusUtils::contains(type, "bit"))
+    else if (CerberusUtils::contains(type, "bit"))
     {
-        if (core::CerberusUtils::contains(type, "varying"))
+        if (CerberusUtils::contains(type, "varying"))
         {
             return SQLDataType::SDT_VarBit;
         }
@@ -231,7 +231,8 @@ SQLBlock::BlockIterator SQLBlock::end() { return &(*m_rows.end()); }
 //=============================================================================
 bool SQLBlock::operator==(const SQLBlock& other) const
 {
-    if (size() != other.size() || m_prototype.size() != other.m_prototype.size())  // be sure rows and columns numbers are equal
+    if (size() != other.size() ||
+        m_prototype.size() != other.m_prototype.size())  // be sure rows and columns numbers are equal
     {
         return false;
     }
@@ -280,10 +281,10 @@ void SQLCell::set(const std::string& value) { m_value = value; }
 //=============================================================================
 void SQLCell::set(int64_t value)
 {
-    m_value = cerberus::core::CerberusUtils::strPrint("%" PRId64, value);  // try "%lld" if it does not work !!!
+    m_value = CerberusUtils::strPrint("%" PRId64, value);  // try "%lld" if it does not work !!!
 }
 //=============================================================================
-void SQLCell::set(double value) { m_value = cerberus::core::CerberusUtils::strPrint("%lf", value); }
+void SQLCell::set(double value) { m_value = CerberusUtils::strPrint("%lf", value); }
 //=============================================================================
 void SQLCell::set(bool value)
 {
@@ -344,7 +345,7 @@ double SQLCell::toFloat()
 //=============================================================================
 bool SQLCell::toBool()
 {
-    auto str = cerberus::core::CerberusUtils::toLower(m_value);
+    auto str = CerberusUtils::toLower(m_value);
 
     if (str.compare("t") == 0 || str.compare("true") == 0)
     {

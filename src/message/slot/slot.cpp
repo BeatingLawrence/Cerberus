@@ -14,3 +14,9 @@ cerberus::SlotType BaseSlot::type() const { return ST_UNDEFINED; }
 //=============================================================================
 std::string BaseSlot::name() const { return m_name; }
 //=============================================================================
+BaseSlot& BaseSlot::name(const std::string& name)
+{
+    m_name = name;
+    return *this;
+}
+//=============================================================================

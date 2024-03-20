@@ -4,17 +4,13 @@
 #include <cstdint>
 #include <string>
 
-#include "../log.h"
+#include "../log.h"  // IWYU pragma: export
 #include "../types.h"
 #include "loggerthread.h"
 
 namespace cerberus
 {
     class Cerberus;
-
-    struct CerberusLogRole;
-
-    struct CerberusLogSetup;
 
     namespace core
     {
@@ -27,29 +23,45 @@ namespace cerberus
            private:
             CerberusLog(const CerberusLog& other) = delete;
 
-            CerberusLogSetup m_setupParms;
+            LogConf m_logConf;
             LoggerThread* m_logger;
             std::atomic_flag m_loggerFlag;
 
-            std::string m_infoLogTerminalFormatting_Linux;                       // used for Linux only
-            std::string m_warningLogTerminalFormatting_Linux;                    // used for Linux only
-            std::string m_errorLogTerminalFormatting_Linux;                      // used for Linux only
-            std::string m_debugLogTerminalFormatting_Linux;                      // used for Linux only
-            static const char* EndOfFormatting_Linux;                            // used for Linux only
-            std::string parseFormattingData_Linux(const CerberusLogRole& data);  // used for Linux only
-
-            HANDLE m_stdoutHandle_Windows;                                     // used for Windows only
-            HANDLE m_stderrHandle_Windows;                                     // used for Windows only
-            uint8_t m_infoLogTerminalFormatting_Windows;                       // used for Windows only
-            uint8_t m_warningLogTerminalFormatting_Windows;                    // used for Windows only
-            uint8_t m_errorLogTerminalFormatting_Windows;                      // used for Windows only
-            uint8_t m_debugLogTerminalFormatting_Windows;                      // used for Windows only
-            static const uint8_t EndOfFormatting_Windows;                      // used for Windows only
-            uint8_t parseFormattingData_Windows(const CerberusLogRole& data);  // used for Windows only
-
+#if defined LINUX_SYSTEM || defined APPLE_SYSTEM
+            std::string m_infoForm;
+            std::string m_warnForm;
+            std::string m_errForm;
+            std::string m_debForm;
+            static const char* m_endForm;
+            std::string parseFormdata(const LogRole& data);
+#else
+            HANDLE m_stdoutHandle_Windows;                             // used for Windows only
+            HANDLE m_stderrHandle_Windows;                             // used for Windows only
+            uint8_t m_infoLogTerminalFormatting_Windows;               // used for Windows only
+            uint8_t m_warningLogTerminalFormatting_Windows;            // used for Windows only
+            uint8_t m_errorLogTerminalFormatting_Windows;              // used for Windows only
+            uint8_t m_debugLogTerminalFormatting_Windows;              // used for Windows only
+            static const uint8_t EndOfFormatting_Windows;              // used for Windows only
+            uint8_t parseFormattingData_Windows(const LogRole& data);  // used for Windows only
+#endif
             static bool isMultiLine(const std::string& str);
 
             static void align(std::string& str, LogLevel logLevel, uint32_t authorLen);
+
+            static std::string toRawLog(const std::string& str, LogLevel ll, const std::string& a,
+                                        const std::string& t);
+
+            std::string toFormattedLog(const std::string& str, LogLevel ll, const std::string& a,
+                                       const std::string& t);
+
+            bool rawLogNeeded();
+            bool fileLoggerAvail();
+
+            static FILE* stream(LogLevel ll);
+
+            static void sysPrint(FILE* f, const std::string& str);
+
+            static std::string auth(const std::string& author);
 
            public:
             CerberusLog();
@@ -57,7 +69,7 @@ namespace cerberus
             ~CerberusLog();
 
             // Setup the log features
-            void setup(const CerberusLogSetup& parms);
+            void setup(const LogConf& parms);
 
             void start();
 

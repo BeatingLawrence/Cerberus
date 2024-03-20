@@ -70,14 +70,16 @@ cerberus::OpRes SQLDatabase::createTable(SQLTablePrototype& prototype)
     {
         auto type = el.type();
 
-        if (type == SQLTablePrototype::SDT_Bit || type == SQLTablePrototype::SDT_VarBit || type == SQLTablePrototype::SDT_Char ||
+        if (type == SQLTablePrototype::SDT_Bit || type == SQLTablePrototype::SDT_VarBit ||
+            type == SQLTablePrototype::SDT_Char ||
             type == SQLTablePrototype::SDT_VarChar)  // check if the mod parameter should be printed
         {
-            cmd += core::CerberusUtils::strPrint("%s %s(%i), ", el.name().c_str(), el.typeString().c_str(), el.mod());
+            cmd +=
+                CerberusUtils::strPrint("%s %s(%i), ", el.name().c_str(), el.typeString().c_str(), el.mod());
         }
         else
         {
-            cmd += core::CerberusUtils::strPrint("%s %s, ", el.name().c_str(), el.typeString().c_str());
+            cmd += CerberusUtils::strPrint("%s %s, ", el.name().c_str(), el.typeString().c_str());
         }
     }
 
@@ -107,7 +109,8 @@ cerberus::OpRes SQLDatabase::insertBlock(const SQLBlock& block)
         {
             auto type = block.prototype()[i].type();
 
-            if (type == SQLTablePrototype::SDT_Char || type == SQLTablePrototype::SDT_VarChar)  // check if value is a number or a string
+            if (type == SQLTablePrototype::SDT_Char ||
+                type == SQLTablePrototype::SDT_VarChar)  // check if value is a number or a string
             {
                 cmd += '\'';
                 cmd += row[i].raw();
@@ -132,7 +135,10 @@ cerberus::OpRes SQLDatabase::insertBlock(const SQLBlock& block)
     return command(cmd);
 }
 //=============================================================================
-cerberus::OpRes SQLDatabase::dropTable(const std::string& table) { return command(cerberus::core::CerberusUtils::strPrint("DROP TABLE %s;", table.c_str())); }
+cerberus::OpRes SQLDatabase::dropTable(const std::string& table)
+{
+    return command(CerberusUtils::strPrint("DROP TABLE %s;", table.c_str()));
+}
 //=============================================================================
 cerberus::OpRes SQLDatabase::querytable(const std::string& tableName, SQLBlock& output)
 {
@@ -160,7 +166,7 @@ cerberus::OpRes SQLDatabase::querytable(const std::string& tableName, SQLBlock& 
     output.m_prototype = prototype;  // now it's structured
     SQLBlock block;
 
-    switch (queryBlock(cerberus::core::CerberusUtils::strPrint("SELECT * FROM %s;", tableName.c_str()), block).res)
+    switch (queryBlock(CerberusUtils::strPrint("SELECT * FROM %s;", tableName.c_str()), block).res)
     {
         case OR_QueryFailure:
             return OR_QueryFailure;

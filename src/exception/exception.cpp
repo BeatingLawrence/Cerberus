@@ -2,7 +2,7 @@
 
 #include "../core/cerberusutils.h"
 
-using namespace cerberus::exception;
+using namespace cerberus;
 
 //=============================================================================
 Exception::Exception() noexcept { m_error = "Unspecified exception"; }
@@ -13,8 +13,8 @@ Exception::Exception(const Exception& other) noexcept
     // noop
 }
 //=============================================================================
-Exception::Exception(const char* text, uint32_t line, const char* fileName, ExceptionType type) noexcept
-    : m_error()
+Exception::Exception(ExceptionType type, uint32_t line, const char* fileName, const char* format,
+                     ...) noexcept
 {
     switch (type)
     {
@@ -69,8 +69,24 @@ Exception::Exception(const char* text, uint32_t line, const char* fileName, Exce
         }
     }
 
-    if (line) m_error += core::CerberusUtils::strPrint(":%u", line);
-    if (text) m_error += core::CerberusUtils::strPrint(", %s", text);
+    if (line) m_error += CerberusUtils::strPrint(":%u", line);
+    std::string text;
+
+    // creating string
+    if (format)
+    {
+        va_list list;
+        va_start(list, format);
+        text = CerberusUtils::strPrint_valist(format, list);
+        va_end(list);
+    }
+    //
+
+    if (!text.empty())
+    {
+        m_error.append(", ");
+        m_error.append(text);
+    }
 }
 //=============================================================================
 Exception& Exception::operator=(const Exception& other) noexcept

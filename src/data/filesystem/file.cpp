@@ -16,8 +16,10 @@
 #include <unistd.h>
 #endif
 
+using namespace cerberus;
+
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::existsAsFile(const std::string& path)
+OpRes File::existsAsFile(const std::string& path)
 {
     if (path.empty())
     {
@@ -33,33 +35,25 @@ cerberus::OpRes cerberus::data::filesystem::File::existsAsFile(const std::string
 
 #else
     struct stat stat_struct;
-    int ret = stat(path.c_str(), &stat_struct);
+    int ret = ::stat(path.c_str(), &stat_struct);
 
     if (ret == 0)
     {
-        if (S_ISREG(stat_struct.st_mode))
-        {
-            return OR_OK;
-        }
+        if (S_ISREG(stat_struct.st_mode)) return OR_OK;
 
         return OR_InvalidPath;
     }
     else
     {
-        if (errno == ENOENT)
-        {
-            return OR_InvalidPath;
-        }
-        else
-        {
-            return OR_SystemFailure;
-        }
+        if (errno == ENOENT) return OR_NotFound;
+
+        return OR_SystemFailure;
     }
 
 #endif
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::existsAsDirectory(const std::string& path)
+OpRes File::existsAsDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
     throw cerberusImplementationMissExc("DIRECTORY EXISTANCE CHECK NOT IMPLEMENTED YET");
@@ -71,33 +65,25 @@ cerberus::OpRes cerberus::data::filesystem::File::existsAsDirectory(const std::s
 
 #else
     struct stat stat_struct;
-    int ret = stat(path.c_str(), &stat_struct);
+    int ret = ::stat(path.c_str(), &stat_struct);
 
     if (ret == 0)
     {
-        if (S_ISDIR(stat_struct.st_mode))
-        {
-            return OR_OK;
-        }
+        if (S_ISDIR(stat_struct.st_mode)) return OR_OK;
 
         return OR_InvalidPath;
     }
     else
     {
-        if (errno == ENOENT)
-        {
-            return OR_InvalidPath;
-        }
-        else
-        {
-            return OR_SystemFailure;
-        }
+        if (errno == ENOENT) return OR_NotFound;
+
+        return OR_SystemFailure;
     }
 
 #endif
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::createDirectory(const std::string& path)
+OpRes File::createDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
     throw cerberusImplementationMissExc("DIRECTORY CREATION NOT IMPLEMENTED YET");
@@ -114,35 +100,29 @@ cerberus::OpRes cerberus::data::filesystem::File::createDirectory(const std::str
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::remove(const std::string& path)
+OpRes File::remove(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
     throw cerberusImplementationMissExc("REMOVE NOT IMPLEMENTED YET");
 #else
-    if (::remove(path.c_str()) == -1)
-    {
-        return {OR_Failure, strerror(errno)};
-    }
+    if (::remove(path.c_str()) == -1) return {OR_Failure, strerror(errno)};
 
     return OR_OK;
 #endif
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::move(const std::string& oldPath, const std::string& newPath)
+OpRes File::move(const std::string& oldPath, const std::string& newPath)
 {
 #ifdef WINDOWS_SYSTEM
     throw cerberusImplementationMissExc("MOVE NOT IMPLEMENTED YET");
 #else
-    if (::rename(oldPath.c_str(), newPath.c_str()) == -1)
-    {
-        return {OR_Failure, strerror(errno)};
-    }
+    if (::rename(oldPath.c_str(), newPath.c_str()) == -1) return {OR_Failure, strerror(errno)};
 
     return OR_OK;
 #endif
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::isEmptyDirectory(const std::string& path)
+OpRes File::isEmptyDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
     throw cerberusImplementationMissExc("DIRECTORY EMPTY CHECK NOT IMPLEMENTED YET");
@@ -151,19 +131,13 @@ cerberus::OpRes cerberus::data::filesystem::File::isEmptyDirectory(const std::st
     struct dirent* d;
     DIR* dir = opendir(path.c_str());
 
-    if (dir == NULL)
-    {
-        return OR_InvalidPath;
-    }
+    if (dir == NULL) return OR_InvalidPath;
 
     errno = 0;
 
     while (readdir(dir) != NULL)
     {
-        if (++n > 2)
-        {
-            break;
-        }
+        if (++n > 2) break;
     }
 
     closedir(dir);
@@ -183,29 +157,27 @@ cerberus::OpRes cerberus::data::filesystem::File::isEmptyDirectory(const std::st
 #endif
 }
 //=============================================================================
-SizeOpRes cerberus::data::filesystem::File::sizeOf(const std::string& path)
+OpResData<FileMetadata> cerberus::File::stat(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
-    throw cerberusImplementationMissExc("sizeOf implementation missing");
+    throw cerberusImplementationMissExc("stat implementation missing");
 
 #else
-    struct stat stat_struct;
-    int ret = stat(path.c_str(), &stat_struct);
+    struct stat stat_struct = {};
 
-    if (ret == 0)
-    {
-        LSIZE s = stat_struct.st_size;
-        return s;
-    }
-    else
-    {
-        return OR_Failure;
-    }
+    int ret = ::stat(path.c_str(), &stat_struct);
 
+    if (ret != 0) return {OR_Failure, strerror(errno)};
+
+    FileMetadata metadata = {};
+
+    metadata.fromStat(stat_struct);
+
+    return metadata;
 #endif
 }
 //=============================================================================
-cerberus::data::filesystem::File::File(FileOpenMode openMode, bool binaryMode)
+File::File(FileOpenMode openMode, bool binaryMode)
     : m_filePath(),
       m_binaryMode(binaryMode),
       m_openMode(openMode),
@@ -214,7 +186,7 @@ cerberus::data::filesystem::File::File(FileOpenMode openMode, bool binaryMode)
 {
 }
 //=============================================================================
-cerberus::data::filesystem::File::File(const std::string& filePath, FileOpenMode openMode, bool binaryMode)
+File::File(const std::string& filePath, FileOpenMode openMode, bool binaryMode)
     : m_filePath(filePath),
       m_binaryMode(binaryMode),
       m_openMode(openMode),
@@ -223,21 +195,21 @@ cerberus::data::filesystem::File::File(const std::string& filePath, FileOpenMode
 {
 }
 //=============================================================================
-cerberus::data::filesystem::File::~File() {}
+File::~File() {}
 //=============================================================================
-void cerberus::data::filesystem::File::setFileName(const std::string& filePath) { m_filePath = filePath; }
+void File::setFileName(const std::string& filePath) { m_filePath = filePath; }
 //=============================================================================
-bool cerberus::data::filesystem::File::canWrite() const { return (m_openMode != FOM_Read); }
+bool File::canWrite() const { return (m_openMode != FOM_Read); }
 //=============================================================================
-std::string cerberus::data::filesystem::File::fileName() const { return m_filePath; }
+std::string File::fileName() const { return m_filePath; }
 //=============================================================================
-void cerberus::data::filesystem::File::setOpenMode(FileOpenMode openMode, bool binaryMode)
+void File::setOpenMode(FileOpenMode openMode, bool binaryMode)
 {
     m_openMode   = openMode;
     m_binaryMode = binaryMode;
 }
 //=============================================================================
-std::string cerberus::data::filesystem::File::getOpenModeString()
+std::string File::getOpenModeString()
 {
     std::string ret;
 
@@ -262,9 +234,9 @@ std::string cerberus::data::filesystem::File::getOpenModeString()
     return ret;
 }
 //=============================================================================
-bool cerberus::data::filesystem::File::isOpen() const { return m_file != NULL; }
+bool File::isOpen() const { return m_file != NULL; }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::open()
+OpRes File::open()
 {
     if (m_filePath.empty()) return OR_InvalidPath;
 
@@ -279,7 +251,7 @@ cerberus::OpRes cerberus::data::filesystem::File::open()
     return OR_OK;
 }
 //=============================================================================
-void cerberus::data::filesystem::File::close()
+void File::close()
 {
     if (!isOpen()) return;
 
@@ -289,7 +261,7 @@ void cerberus::data::filesystem::File::close()
     m_fd   = -1;
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::deleteFromDisk()
+OpRes File::deleteFromDisk()
 {
     if (isOpen())
     {
@@ -299,7 +271,7 @@ cerberus::OpRes cerberus::data::filesystem::File::deleteFromDisk()
     return remove(m_filePath);
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::move(const std::string& newName)
+OpRes File::move(const std::string& newName)
 {
     auto res = move(m_filePath, newName);
 
@@ -308,10 +280,25 @@ cerberus::OpRes cerberus::data::filesystem::File::move(const std::string& newNam
     return res;
 }
 //=============================================================================
-SizeOpRes cerberus::data::filesystem::File::size() const
+OpResData<FileMetadata> File::metadata()
 {
-    // maybe we should use fstat() ?
+    if (!isOpen()) return OR_BadConditions;
 
+    struct stat stat_struct = {};
+
+    int ret = fstat(m_fd, &stat_struct);
+
+    if (ret != 0) return {OR_Failure, strerror(errno)};
+
+    FileMetadata metadata = {};
+
+    metadata.fromStat(stat_struct);
+
+    return metadata;
+}
+//=============================================================================
+SizeOpRes File::size() const
+{
     if (!isOpen()) return OR_BadConditions;
 
     auto backup = ftell(m_file);
@@ -329,7 +316,7 @@ SizeOpRes cerberus::data::filesystem::File::size() const
     return (LSIZE)size;
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::write(const ByteBuffer& bytes)
+OpRes File::write(const ByteBuffer& bytes)
 {
     if (!isOpen()) return OR_BadConditions;
 
@@ -340,9 +327,12 @@ cerberus::OpRes cerberus::data::filesystem::File::write(const ByteBuffer& bytes)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::writeLine(const std::string& line) { return write(core::CerberusUtils::strPrint("%s\n", line.c_str()).c_str()); }
+OpRes File::writeLine(const std::string& line)
+{
+    return write(CerberusUtils::strPrint("%s\n", line.c_str()).c_str());
+}
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::read(ByteBuffer& bytes, LSIZE start) const
+OpRes File::read(ByteBuffer& bytes, LSIZE start) const
 {
     if (!isOpen()) return OR_BadConditions;
 
@@ -365,7 +355,7 @@ cerberus::OpRes cerberus::data::filesystem::File::read(ByteBuffer& bytes, LSIZE 
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::read(ByteBuffer& bytes, LSIZE start, LSIZE span) const
+OpRes File::read(ByteBuffer& bytes, LSIZE start, LSIZE span) const
 {
     if (!isOpen()) return OR_BadConditions;
 
@@ -388,7 +378,7 @@ cerberus::OpRes cerberus::data::filesystem::File::read(ByteBuffer& bytes, LSIZE 
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::readChunk(ByteBuffer& bytes, SIZE chunksize) const
+OpRes File::readChunk(ByteBuffer& bytes, SIZE chunksize) const
 {
     if (!isOpen()) return OR_BadConditions;
 
@@ -408,7 +398,7 @@ cerberus::OpRes cerberus::data::filesystem::File::readChunk(ByteBuffer& bytes, S
     return OR_OK;
 }
 //=============================================================================
-StringOpRes cerberus::data::filesystem::File::readLine() const
+StringOpRes File::readLine() const
 {
     if (!isOpen()) return OR_BadConditions;
 
@@ -433,7 +423,7 @@ StringOpRes cerberus::data::filesystem::File::readLine() const
     return line;
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::seek(cerberus::LSIZE pos) const
+OpRes File::seek(cerberus::LSIZE pos) const
 {
     if (!isOpen()) return OR_BadConditions;
 
@@ -446,7 +436,7 @@ cerberus::OpRes cerberus::data::filesystem::File::seek(cerberus::LSIZE pos) cons
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes cerberus::data::filesystem::File::seekOffset(int64_t pos) const
+OpRes File::seekOffset(int64_t pos) const
 {
     if (!isOpen()) return OR_BadConditions;
 
@@ -457,9 +447,9 @@ cerberus::OpRes cerberus::data::filesystem::File::seekOffset(int64_t pos) const
     return OR_OK;
 }
 //=============================================================================
-void cerberus::data::filesystem::File::resetCursor() const { ::rewind(m_file); }
+void File::resetCursor() const { ::rewind(m_file); }
 //=============================================================================
-SizeOpRes cerberus::data::filesystem::File::getCursor() const
+SizeOpRes File::getCursor() const
 {
     if (!isOpen()) return OR_BadConditions;
 
@@ -470,7 +460,7 @@ SizeOpRes cerberus::data::filesystem::File::getCursor() const
     return (LSIZE)pos;
 }
 //=============================================================================
-BoolOpRes cerberus::data::filesystem::File::isEqual(File& other) const
+BoolOpRes File::isEqual(File& other) const
 {
     if (!isOpen() || !other.isOpen()) return OR_BadConditions;
 

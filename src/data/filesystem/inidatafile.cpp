@@ -4,8 +4,7 @@
 #include "../../types.h"
 #include "src/cerberus.h"
 
-using namespace cerberus::data::filesystem;
-using namespace cerberus::core;
+using namespace cerberus;
 
 //=============================================================================
 bool IniDataFile::isValid(const std::string& line) { return std::regex_match(line, m_isValidRegex); }
@@ -199,7 +198,8 @@ cerberus::OpRes IniDataFile::syncFile()
         else if (!el.key.empty())
             line = CerberusUtils::strPrint("%s = %s", el.key.c_str(), el.value.c_str());
 
-        if (!el.comment.empty()) line += CerberusUtils::strPrint(" #%s", el.comment.c_str());  // fix the space
+        if (!el.comment.empty())
+            line += CerberusUtils::strPrint(" #%s", el.comment.c_str());  // fix the space
 
         m_file.writeLine(line);
     }
@@ -224,7 +224,8 @@ void IniDataFile::printDebug()
 
     for (auto&& el : m_lines)
     {
-        toPrint.append(CerberusUtils::strPrint("%i %i %s %s %s\n", el.sectionSpecifier, el.sectionId, el.key.c_str(), el.value.c_str(), el.comment.c_str()));
+        toPrint.append(CerberusUtils::strPrint("%i %i %s %s %s\n", el.sectionSpecifier, el.sectionId,
+                                               el.key.c_str(), el.value.c_str(), el.comment.c_str()));
     }
 
     toPrint.append("\n");
@@ -234,10 +235,15 @@ void IniDataFile::printDebug()
 //=============================================================================
 IniDataFile::IniDataFile(const std::string& fileName)
     : m_file(fileName),
-      m_isValidRegex("[a-z][^=]*[=]{1} *[^=]+", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase),
-      m_isIntegerRegex("\\d+", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase),
-      m_isDoubleRegex("\\d+\\.\\d+", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase),
-      m_isBoolRegex("(true|false)", std::regex_constants::ECMAScript | std::regex_constants::optimize | std::regex_constants::icase)
+      m_isValidRegex("[a-z][^=]*[=]{1} *[^=]+", std::regex_constants::ECMAScript |
+                                                    std::regex_constants::optimize |
+                                                    std::regex_constants::icase),
+      m_isIntegerRegex("\\d+", std::regex_constants::ECMAScript | std::regex_constants::optimize |
+                                   std::regex_constants::icase),
+      m_isDoubleRegex("\\d+\\.\\d+", std::regex_constants::ECMAScript | std::regex_constants::optimize |
+                                         std::regex_constants::icase),
+      m_isBoolRegex("(true|false)", std::regex_constants::ECMAScript | std::regex_constants::optimize |
+                                        std::regex_constants::icase)
 {
     // noop
 }
@@ -337,7 +343,10 @@ BoolOpRes IniDataFile::load()
     }
 }
 //=============================================================================
-bool IniDataFile::exists(const std::string& key, const std::string& section) { return (search(key, section) != nullptr); }
+bool IniDataFile::exists(const std::string& key, const std::string& section)
+{
+    return (search(key, section) != nullptr);
+}
 //=============================================================================
 cerberus::IniDataType IniDataFile::type(const std::string& key, const std::string& section)
 {
@@ -353,10 +362,11 @@ cerberus::IniDataType IniDataFile::type(const std::string& key, const std::strin
 //=============================================================================
 cerberus::OpRes IniDataFile::rewrite() { return syncFile(); }
 //=============================================================================
-cerberus::OpRes IniDataFile::write_string(const std::string& key, const std::string& value, const std::string& section)
+cerberus::OpRes IniDataFile::write_string(const std::string& key, const std::string& value,
+                                          const std::string& section)
 {
-    std::string k = core::CerberusUtils::removeBlank_copy(key);
-    std::string v = core::CerberusUtils::removeBlank_copy(value);
+    std::string k = CerberusUtils::removeBlank_copy(key);
+    std::string v = CerberusUtils::removeBlank_copy(value);
 
     if (k.empty() || v.empty())
     {
@@ -383,11 +393,20 @@ cerberus::OpRes IniDataFile::write_string(const std::string& key, const std::str
     return syncFile();
 }
 //=============================================================================
-cerberus::OpRes IniDataFile::write_integer(const std::string& key, int64_t value, const std::string& section) { return write_string(key, CerberusUtils::strPrint("%lli", value), section); }
+cerberus::OpRes IniDataFile::write_integer(const std::string& key, int64_t value, const std::string& section)
+{
+    return write_string(key, CerberusUtils::strPrint("%lli", value), section);
+}
 //=============================================================================
-cerberus::OpRes IniDataFile::write_double(const std::string& key, double value, const std::string& section) { return write_string(key, CerberusUtils::strPrint("%f", value), section); }
+cerberus::OpRes IniDataFile::write_double(const std::string& key, double value, const std::string& section)
+{
+    return write_string(key, CerberusUtils::strPrint("%f", value), section);
+}
 //=============================================================================
-cerberus::OpRes IniDataFile::write_bool(const std::string& key, bool value, const std::string& section) { return write_string(key, value ? "true" : "false", section); }
+cerberus::OpRes IniDataFile::write_bool(const std::string& key, bool value, const std::string& section)
+{
+    return write_string(key, value ? "true" : "false", section);
+}
 //=============================================================================
 StringOpRes IniDataFile::read_string(const std::string& key, const std::string& section)
 {

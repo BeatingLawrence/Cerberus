@@ -2,7 +2,7 @@
 
 #include "src/mutex/mutex.h"
 
-using namespace cerberus::mutex;
+using namespace cerberus;
 
 //============================================================================
 void MutexLocker::unref()

@@ -4,11 +4,13 @@
 
 #include "cerberus/data/bytebuffer.h"
 
+using namespace cerberus;
+
 TEST(SharedByteBufferTest, equalityOperator)
 {
     // test the equality operator
-    cerberus::data::SharedByteBuffer b1("Hello, World!");
-    cerberus::data::SharedByteBuffer b2("Hello, World!");
+    SharedByteBuffer b1("Hello, World!");
+    SharedByteBuffer b2("Hello, World!");
 
     ASSERT_TRUE(b1 == b2);
     ASSERT_FALSE(b1 != b2);
@@ -23,10 +25,10 @@ TEST(SharedByteBufferTest, COW)
 {
     // test the main feature of the ByteBuffer class
 
-    cerberus::data::SharedByteBuffer b1("Hello, World!");
+    SharedByteBuffer b1("Hello, World!");
     EXPECT_EQ(b1.instances(), 1);
 
-    cerberus::data::SharedByteBuffer b2(b1);  // copy construct, the buffer is the same
+    SharedByteBuffer b2(b1);  // copy construct, the buffer is the same
 
     EXPECT_EQ(b1.instances(), 2);
     EXPECT_EQ(b2.instances(), 2);
@@ -50,7 +52,7 @@ TEST(SharedByteBufferTest, COW)
 
 TEST(SharedByteBufferTest, SubBuffer)
 {
-    cerberus::data::SharedByteBuffer b1("Hello, World!");
+    SharedByteBuffer b1("Hello, World!");
 
     auto b2 = b1.subBuffer(7, 5);
 
@@ -67,21 +69,21 @@ TEST(SharedByteBufferTest, SubBuffer)
     char b[20] = {};
     b2.copyTo((cerberus::BYTE*)&b[0]);
 
-    logInfo(cerberus::core::CerberusUtils::strPrint("b1: %u, b2: %u", b1.size(), b2.size()));
+    logInfo(CerberusUtils::strPrint("b1: %u, b2: %u", b1.size(), b2.size()));
     logInfo(b);
     logInfo(a);
 
-    cerberus::data::ByteBuffer bb("hello hello hello");
+    ByteBuffer bb("hello hello hello");
 
     char c[20] = {};
     bb.copyTo((cerberus::BYTE*)&c[0]);
-    logInfo(cerberus::core::CerberusUtils::strPrint("bb: %u", bb.size()));
+    logInfo(CerberusUtils::strPrint("bb: %u", bb.size()));
     logInfo(c);
 
     auto bbb = bb.subBuffer(0, 5);
 
     char d[20] = {};
     bbb.copyTo((cerberus::BYTE*)&d[0]);
-    logInfo(cerberus::core::CerberusUtils::strPrint("bbb: %u", bbb.size()));
+    logInfo(CerberusUtils::strPrint("bbb: %u", bbb.size()));
     logInfo(d);
 }

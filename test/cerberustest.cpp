@@ -6,7 +6,7 @@ using namespace cerberus;
 
 TEST(cerberusTest, strPrint)
 {
-    EXPECT_STREQ(core::CerberusUtils::strPrint("%s %u", "test", 20u).c_str(), "test 20");
+    EXPECT_STREQ(CerberusUtils::strPrint("%s %u", "test", 20u).c_str(), "test 20");
 }
 
 TEST(cerberusTest, logTest)
@@ -19,7 +19,7 @@ TEST(cerberusTest, logTest)
 
 TEST(cerberusTest, environmentVariable)
 {
-    logInfo(core::CerberusUtils::environmentVariable("APPDATA").value.c_str());  // works only on windows
+    logInfo(CerberusUtils::environmentVariable("APPDATA").value.c_str());  // works only on windows
 }
 
 TEST(cerberusTest, cerberusVersion)
@@ -126,14 +126,14 @@ TEST(cerberusTest, dictionaryTest)
 
 TEST(cerberusTest, cerbUtilsTest)
 {
-    logInfo("%s", cerberus::core::CerberusUtils::toLower("Hello").c_str());
-    logInfo("%s", cerberus::core::CerberusUtils::toUpper("Hello").c_str());
+    logInfo("%s", CerberusUtils::toLower("Hello").c_str());
+    logInfo("%s", CerberusUtils::toUpper("Hello").c_str());
 
-    EXPECT_TRUE(cerberus::core::CerberusUtils::areEqual("Hello", "Hello", cerberus::WM_CaseSensitive));
-    EXPECT_FALSE(cerberus::core::CerberusUtils::areEqual("Hello", "hello", cerberus::WM_CaseSensitive));
-    EXPECT_TRUE(cerberus::core::CerberusUtils::areEqual("Hello", "hello", cerberus::WM_CaseInsensitive));
-    EXPECT_TRUE(cerberus::core::CerberusUtils::areEqual("hello", "hello", cerberus::WM_CaseInsensitive));
+    EXPECT_TRUE(CerberusUtils::areEqual("Hello", "Hello", cerberus::WM_CaseSensitive));
+    EXPECT_FALSE(CerberusUtils::areEqual("Hello", "hello", cerberus::WM_CaseSensitive));
+    EXPECT_TRUE(CerberusUtils::areEqual("Hello", "hello", cerberus::WM_CaseInsensitive));
+    EXPECT_TRUE(CerberusUtils::areEqual("hello", "hello", cerberus::WM_CaseInsensitive));
 
-    EXPECT_FALSE(cerberus::core::CerberusUtils::areEqual("hello", "hey", cerberus::WM_CaseInsensitive));
-    EXPECT_FALSE(cerberus::core::CerberusUtils::areEqual("hello", "hey", cerberus::WM_CaseSensitive));
+    EXPECT_FALSE(CerberusUtils::areEqual("hello", "hey", cerberus::WM_CaseInsensitive));
+    EXPECT_FALSE(CerberusUtils::areEqual("hello", "hey", cerberus::WM_CaseSensitive));
 }

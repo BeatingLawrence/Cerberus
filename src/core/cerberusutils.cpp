@@ -8,7 +8,10 @@
 #include "src/cerberus.h"
 #include "src/message/slot/slot.h"
 
-using namespace cerberus::core;
+#define FNV_OFFSET_BASIS 0x811c9dc5
+#define FNV_PRIME 0x01000193
+
+using namespace cerberus;
 
 std::regex CerberusUtils::isNumberRegex("\\-?[0-9]+(?:\\.[0-9]+)?", std::regex_constants::ECMAScript |
                                                                         std::regex_constants::optimize |
@@ -35,6 +38,31 @@ std::string CerberusUtils::strPrint(std::string format, ...)
     va_end(list);
     return ret;
 }
+//=============================================================================
+std::string CerberusUtils::strPrint_valist(std::string format, va_list list)
+{
+    std::string ret;
+    va_list testList;
+    va_copy(testList, list);
+    char garbage;
+    int required = vsnprintf(&garbage, 0, format.c_str(), testList);
+
+    if (required > 0)
+    {
+        ret.resize(required);
+        vsnprintf(&ret[0], required + 1, format.c_str(), list);
+    }
+
+    va_end(testList);
+    va_end(list);
+    return ret;
+}
+//=============================================================================
+std::string CerberusUtils::strPrint_uint(uint64_t v) { return strPrint("%lli", v); }
+//=============================================================================
+std::string CerberusUtils::strPrint_int(int64_t v) { return strPrint("%llu", v); }
+//=============================================================================
+std::string CerberusUtils::strPrint_float(double v) { return strPrint("%Lf", v); }
 //=============================================================================
 std::string CerberusUtils::toLower(const std::string& str)
 {
@@ -251,8 +279,8 @@ bool CerberusUtils::normalize(std::string& str)
 {
     bool ret = false;
 
-    core::CerberusUtils::replaceAll(str, "\r", "\\r");
-    core::CerberusUtils::replaceAll(str, "\n", "\\n\n");
+    CerberusUtils::replaceAll(str, "\r", "\\r");
+    CerberusUtils::replaceAll(str, "\n", "\\n\n");
 
     for (auto&& el : str)
     {
@@ -352,36 +380,115 @@ cerberus::OpRes CerberusUtils::cleanNumber(std::string& str)
     return OR_OK;
 }
 //=============================================================================
-cerberus::slot_ptr CerberusUtils::newSlot(SlotType type)
+cerberus::slot_ptr CerberusUtils::newSlot(SlotType type, const std::string& name)
 {
+    slot_ptr ret;
+
     switch (type)
     {
         case ST_BYTE:
-            return ByteSlot::create();
-        case ST_INT32:
-            return Int32Slot::create();
-        case ST_INT64:
-            return Int64Slot::create();
-        case ST_FLOAT:
-            return FloatSlot::create();
-        case ST_DOUBLE:
-            return DoubleSlot::create();
-        case ST_BOOL:
-            return BoolSlot::create();
-        case ST_VOIDP:
-            return VoidPSlot::create();
-        case ST_STRING:
-            return StringSlot::create();
-        case ST_BYTEBUFFER:
-            return BufferSlot::create();
-        case ST_DICTIONARY:
-            return DictionarySlot::create();
-        case ST_JSON:
-            return JsonSlot::create();
-        default:
+            ret = ByteSlot::create();
             break;
+        case ST_INT32:
+            ret = Int32Slot::create();
+            break;
+        case ST_INT64:
+            ret = Int64Slot::create();
+            break;
+        case ST_FLOAT:
+            ret = FloatSlot::create();
+            break;
+        case ST_DOUBLE:
+            ret = DoubleSlot::create();
+            break;
+        case ST_BOOL:
+            ret = BoolSlot::create();
+            break;
+        case ST_VOIDP:
+            ret = VoidPSlot::create();
+            break;
+        case ST_STRING:
+            ret = StringSlot::create();
+            break;
+        case ST_BYTEBUFFER:
+            ret = BufferSlot::create();
+            break;
+        case ST_DICTIONARY:
+            ret = DictionarySlot::create();
+            break;
+        case ST_JSON:
+            ret = JsonSlot::create();
+            break;
+        case ST_UINT64:
+            ret = UInt64Slot::create();
+            break;
+        case ST_HOST:
+            ret = HostSlot::create();
+            break;
+        case ST_TASK:
+            ret = TaskSlot::create();
+            break;
+        case ST_RESULT:
+            ret = ResultSlot::create();
+            break;
+        default:
+            throw cerberusIllegalArgExc("Unknown slot type");
     }
 
-    throw cerberusIllegalArgExc("Unknown slot type");
+    ret->name(name);
+    return ret;
+}
+//=============================================================================
+message::MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
+{
+    message::MessageTemplate tmplt;
+
+    switch (id)
+    {
+        case CERBERUS_MESSAGE_LOG_ID:
+            tmplt.addSlotType(ST_STRING);
+            break;
+
+        case CERBERUS_MESSAGE_TERM_ID:
+            // nothing to add
+            break;
+
+        case CERBERUS_MESSAGE_SOCK_ID:
+            tmplt.addSlotType(ST_HOST, "host");
+            tmplt.addSlotType(ST_BYTEBUFFER, "payload");
+            break;
+
+        case CERBERUS_MESSAGE_TASK_ID:
+            tmplt.addSlotType(ST_UINT64, "client");
+            tmplt.addSlotType(ST_TASK, "task");
+            break;
+
+        case CERBERUS_MESSAGE_TASKEND_ID:
+            tmplt.addSlotType(ST_RESULT, "result");
+            break;
+
+            // add here more message specializations..
+
+        default:
+            throw cerberusImplMissExc("Requested standard message is not defined");
+    }
+
+    return tmplt;
+}
+//=============================================================================
+HASH32 CerberusUtils::hash_fnv1a(const std::string& str)
+{
+    // This method uses FNV1A algorithm
+    HASH32 hash    = FNV_OFFSET_BASIS;
+    const char* ch = str.c_str();
+
+    while ((*ch) != '\0')
+    {
+        hash = hash ^ (HASH32)(*ch);
+        hash = hash * FNV_PRIME;
+        ch++;
+    }
+
+    return hash;
 }
 //=============================================================================

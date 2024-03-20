@@ -16,42 +16,37 @@
 
 namespace cerberus
 {
-    namespace thread
+    class ThreadBase;
+
+    class CERBERUS_EXPORT Mutex
     {
-        class ThreadBase;
-    }
+        friend class ::cerberus::ThreadBase;
 
-    namespace mutex
-    {
-        class CERBERUS_EXPORT Mutex
-        {
-            friend class ::cerberus::thread::ThreadBase;
+       private:
+        pthread_mutex_t m_pmutex;
+        bool m_valid;
 
-           private:
-            pthread_mutex_t m_pmutex;
-            bool m_valid;
+       public:
+        Mutex(MutexType type = Simple);
 
-           public:
-            Mutex(MutexType type = Simple);
+        Mutex(const Mutex& other) = delete;
 
-            Mutex(const Mutex& other) = delete;
+        Mutex(Mutex&& other);
 
-            Mutex(Mutex&& other);
+        ~Mutex();
 
-            ~Mutex();
+        // Takes mutex ownership. If block is true, this call will block or not,
+        // depending on the state of the mutex and it will always return true.
+        // If block is false and the mutex already locked, this call will not block and will return false,
+        // avoiding mutex locking. If block is false and the mutex is lockable, this call will not block and
+        // will return true, effectively locking the mutex. An excption will be thrown if the instance is
+        // invalid
+        bool lock(bool block = true);
 
-            // Takes mutex ownership. If block is true, this call will block or not,
-            // depending on the state of the mutex and it will always return true.
-            // If block is false and the mutex already locked, this call will not block and will return false, avoiding mutex locking.
-            // If block is false and the mutex is lockable, this call will not block and will return true, effectively locking the mutex.
-            // An excption will be thrown if the instance is invalid
-            bool lock(bool block = true);
-
-            // Unlocks the mutex. Do not attempt to call this before lock().
-            // An excption will be thrown if the instance is invalid
-            void unlock();
-        };
-    }  // namespace mutex
+        // Unlocks the mutex. Do not attempt to call this before lock().
+        // An excption will be thrown if the instance is invalid
+        void unlock();
+    };
 }  // namespace cerberus
 
 #endif  // CERBERUS_MUTEX_MUTEX_H

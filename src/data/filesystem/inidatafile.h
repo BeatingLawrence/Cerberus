@@ -10,125 +10,121 @@
 
 namespace cerberus
 {
-    namespace data
+    class CERBERUS_EXPORT IniDataFile
     {
-        namespace filesystem
+       private:
+        File m_file;
+
+        std::regex m_isValidRegex;
+        std::regex m_isIntegerRegex;
+        std::regex m_isDoubleRegex;
+        std::regex m_isBoolRegex;
+
+        struct Line
         {
-            class CERBERUS_EXPORT IniDataFile
+            bool sectionSpecifier;
+            int16_t sectionId;
+            std::string comment;
+            std::string key;
+            std::string value;
+
+            Line()
+                : sectionSpecifier(false),
+                  sectionId(0),
+                  comment(),
+                  key(),
+                  value()
             {
-               private:
-                File m_file;
+            }
+        };
 
-                std::regex m_isValidRegex;
-                std::regex m_isIntegerRegex;
-                std::regex m_isDoubleRegex;
-                std::regex m_isBoolRegex;
+        struct Section
+        {
+            int16_t id;
+            std::string name;
+        };
 
-                struct Line
-                {
-                    bool sectionSpecifier;
-                    int16_t sectionId;
-                    std::string comment;
-                    std::string key;
-                    std::string value;
+        std::list<Line> m_lines;
 
-                    Line()
-                        : sectionSpecifier(false),
-                          sectionId(0),
-                          comment(),
-                          key(),
-                          value()
-                    {
-                    }
-                };
+        std::vector<Section> m_sections;
 
-                struct Section
-                {
-                    int16_t id;
-                    std::string name;
-                };
+        bool isValid(const std::string& line);
+        bool isInteger(const std::string& val);
+        bool isDouble(const std::string& val);
+        bool isBool(const std::string& val);
 
-                std::list<Line> m_lines;
+        Line* search(const std::string& key, int16_t sectionId);
+        Line* search(const std::string& key, const std::string& section);
 
-                std::vector<Section> m_sections;
+        std::string getSectionName(int16_t sectionId);
+        int16_t getSectionId(const std::string& name);
+        int16_t addNewSection(const std::string& name);
 
-                bool isValid(const std::string& line);
-                bool isInteger(const std::string& val);
-                bool isDouble(const std::string& val);
-                bool isBool(const std::string& val);
+        IniDataType valueType(const std::string& value);
 
-                Line* search(const std::string& key, int16_t sectionId);
-                Line* search(const std::string& key, const std::string& section);
+        void insertLine(const Line& line);
 
-                std::string getSectionName(int16_t sectionId);
-                int16_t getSectionId(const std::string& name);
-                int16_t addNewSection(const std::string& name);
+        OpRes syncFile();  // rewrites the file reading from memory
 
-                IniDataType valueType(const std::string& value);
+        void printDebug();
 
-                void insertLine(const Line& line);
+       public:
+        // Construct an IniDataFile object with a file name
+        IniDataFile(const std::string& fileName = std::string(""));
 
-                OpRes syncFile();  // rewrites the file reading from memory
+        // Close the file if open
+        ~IniDataFile();
 
-                void printDebug();
+        // Sets a file name for the .ini file.
+        void setFileName(const std::string& fileName);
 
-               public:
-                // Construct an IniDataFile object with a file name
-                IniDataFile(const std::string& fileName = std::string(""));
+        // Attempt to load an .ini file.
+        // If load() manages to parse all the file with no errors, the result is OR_OK and true.
+        // If load() finds errors while parsing the file, the result is still OR_OK but it is false,
+        // to indicate that the operation retrieved all possible information from the file
+        // but some data was not correctly written and has been discarded.
+        // If a not ignoreable error has been encountered, OR_Failure is returned.
+        // If the given path is not valid, OR_InvalidFile is returned.
+        BoolOpRes load();
 
-                // Close the file if open
-                ~IniDataFile();
+        // Checks if a key exists in the memory
+        bool exists(const std::string& key, const std::string& section = MAIN_SECTION);
 
-                // Sets a file name for the .ini file.
-                void setFileName(const std::string& fileName);
+        // Returns the value type of the requested key.
+        // If key was not found, IDT_Invalid is returned
+        IniDataType type(const std::string& key, const std::string& section = MAIN_SECTION);
 
-                // Attempt to load an .ini file.
-                // If load() manages to parse all the file with no errors, the result is OR_OK and true.
-                // If load() finds errors while parsing the file, the result is still OR_OK but it is false,
-                // to indicate that the operation retrieved all possible information from the file
-                // but some data was not correctly written and has been discarded.
-                // If a not ignoreable error has been encountered, OR_Failure is returned.
-                // If the given path is not valid, OR_InvalidFile is returned.
-                BoolOpRes load();
+        // Check if the key object is convertible to the given type
+        bool isType(const std::string& key, IniDataType type);
 
-                // Checks if a key exists in the memory
-                bool exists(const std::string& key, const std::string& section = MAIN_SECTION);
+        // Force the re-write of the entire file
+        OpRes rewrite();
 
-                // Returns the value type of the requested key.
-                // If key was not found, IDT_Invalid is returned
-                IniDataType type(const std::string& key, const std::string& section = MAIN_SECTION);
+        // Write methods:
+        // These methods synchronously add or modifiy a
+        // key=value pair in both the file and memory.
+        // If the given section does not exist it will be created as well,
+        // and inserted at the end of the file.
+        // When the main section is specified, the key=value pair is written
+        // at the top of the file instead.
+        // If provided key or value is empty, the method will return OR_WrongArgument
+        OpRes write_string(const std::string& key, const std::string& value,
+                           const std::string& section = MAIN_SECTION);
+        OpRes write_integer(const std::string& key, int64_t value, const std::string& section = MAIN_SECTION);
+        OpRes write_double(const std::string& key, double value, const std::string& section = MAIN_SECTION);
+        OpRes write_bool(const std::string& key, bool value, const std::string& section = MAIN_SECTION);
 
-                // Check if the key object is convertible to the given type
-                bool isType(const std::string& key, IniDataType type);
+        // Read methods:
+        // These methods return the requested data reading from the keys loaded with load().
+        // If the value does not exist, OR_NotFound is returned.
+        // If the value is of a different type, OR_WrongType is returned.
+        // read_string() does not check for the type because all values are strings
+        StringOpRes read_string(const std::string& key, const std::string& section = MAIN_SECTION);
+        IntOpRes read_integer(const std::string& key, const std::string& section = MAIN_SECTION);
+        FloatOpRes read_double(const std::string& key, const std::string& section = MAIN_SECTION);
+        BoolOpRes read_bool(const std::string& key, const std::string& section = MAIN_SECTION);
+    };
 
-                // Force the re-write of the entire file
-                OpRes rewrite();
-
-                // Write methods:
-                // These methods synchronously add or modifiy a
-                // key=value pair in both the file and memory.
-                // If the given section does not exist it will be created as well,
-                // and inserted at the end of the file.
-                // When the main section is specified, the key=value pair is written
-                // at the top of the file instead.
-                // If provided key or value is empty, the method will return OR_WrongArgument
-                OpRes write_string(const std::string& key, const std::string& value, const std::string& section = MAIN_SECTION);
-                OpRes write_integer(const std::string& key, int64_t value, const std::string& section = MAIN_SECTION);
-                OpRes write_double(const std::string& key, double value, const std::string& section = MAIN_SECTION);
-                OpRes write_bool(const std::string& key, bool value, const std::string& section = MAIN_SECTION);
-
-                // Read methods:
-                // These methods return the requested data reading from the keys loaded with load().
-                // If the value does not exist, OR_NotFound is returned.
-                // If the value is of a different type, OR_WrongType is returned.
-                // read_string() does not check for the type because all values are strings
-                StringOpRes read_string(const std::string& key, const std::string& section = MAIN_SECTION);
-                IntOpRes read_integer(const std::string& key, const std::string& section = MAIN_SECTION);
-                FloatOpRes read_double(const std::string& key, const std::string& section = MAIN_SECTION);
-                BoolOpRes read_bool(const std::string& key, const std::string& section = MAIN_SECTION);
-            };
-        }  // namespace filesystem
-    }      // namespace data
 }  // namespace cerberus
 
 #endif  // CERBERUS_DATA_FILESYSTEM_INIDATAFILE_H

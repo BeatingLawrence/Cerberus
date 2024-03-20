@@ -3,16 +3,19 @@
 #include <cerberus/time/timer.h>
 #include <gtest/gtest.h>
 
+using namespace cerberus;
+
 TEST(timerTest, timer)
 {
-    auto timer = cerberus::time::Timer(cerberus::time::TimeFrame(500, cerberus::time::TimeFrame::U_MilliSecond));
+    auto timer = Timer(TimeFrame(500, TimeFrame::U_MilliSecond));
     timer.start();
     logDebug("timer started");
 
     while (timer.isRunning())
     {
-        cerberus::thread::Thread::sleep(cerberus::time::TimeFrame(1, cerberus::time::TimeFrame::U_MilliSecond));
+        Thread::sleep(TimeFrame(1, TimeFrame::U_MilliSecond));
     }
+
     logDebug("timer ended");
 
     //

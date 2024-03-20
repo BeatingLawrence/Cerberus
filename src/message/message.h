@@ -6,7 +6,7 @@
 #include "../Cerberus_global.h"
 #include "../define.h"
 #include "../types.h"
-#include "slot/slot.h"
+#include "slot/slot.h"  // IWYU pragma: export
 
 namespace cerberus
 {
@@ -17,14 +17,14 @@ namespace cerberus
            private:
             std::vector<slot_ptr> m_slots;
 
-            uint32_t m_id;
+            HASH32 m_id;
 
-            uint32_t m_destinationId;
+            HASH32 m_recipientId;
 
            public:
-            static cerberus_message create(uint32_t id = CERBERUS_INVALID_ID);
+            static cerberus_message create(HASH32 id = CERBERUS_INVALID_ID);
 
-            Message(uint32_t id = CERBERUS_INVALID_ID);
+            Message(HASH32 id = CERBERUS_INVALID_ID);
 
             Message(const Message& other) = default;
 
@@ -46,11 +46,13 @@ namespace cerberus
 
             slot_ptr getConstSlot(const std::string& name) const;
 
-            uint32_t id() const;
+            HASH32 id() const;
 
-            uint32_t destination() const;
+            HASH32 recipient() const;
 
-            Message& setDestination(uint32_t id);
+            bool hasValidRecipient() const;
+
+            Message& setRecipient(HASH32 id);
 
             bool isValid() const;
 

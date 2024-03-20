@@ -175,14 +175,14 @@ cerberus::OpRes LibLoader::reload() { return swap(m_path); }
 //=============================================================================
 cerberus::LoaderFunc LibLoader::get(const std::string& symbol)
 {
-    mutex::MutexLocker ml;
+    MutexLocker ml;
 
     if (!m_noreg)
     {
         ml = Cerberus::getPluginMutex(m_id);
         if (!ml.isValid())
         {
-            return {nullptr, mutex::MutexLocker()};
+            return {nullptr, MutexLocker()};
         };
     }
 

@@ -5,14 +5,16 @@
 #include "../cerberus.h"
 #include "../exception/exception.h"
 
+using namespace cerberus;
+
 //=============================================================================
-void* cerberus::thread::Thread::_staticThread(void* context)
+void* Thread::_staticThread(void* context)
 {
     ((Thread*)context)->_thread();
     return nullptr;
 }
 //=============================================================================
-void cerberus::thread::Thread::_thread()
+void Thread::_thread()
 {
     bool firstRun = true;
 
@@ -30,64 +32,70 @@ void cerberus::thread::Thread::_thread()
 
         switch (m_periodicity)
         {
-            case TP_NonPeriodic:
+            case TP_Message:
             {
                 if (isQueueEmpty())
-                {
-                    pause();
-                }
+                    stop();
                 else
-                {
                     m_retValue = tick();
-                }
             }
             break;
+
             case TP_Periodic:
             {
                 m_retValue = tick();
                 wait();
             }
             break;
-            case TP_PeriodicQueue:
+
+            case TP_PeriodicMessage:
             {
                 m_retValue = tick();
 
-                if (isQueueEmpty())
-                {
-                    wait();
-                }
+                if (isQueueEmpty()) wait();
             }
             break;
+
             case TP_OneShot:
             {
                 m_retValue = tick();
                 terminate();
             }
             break;
+
             case TP_Continuos:
             {
                 m_retValue = tick();
+            }
+            break;
+
+            case TP_Trigger:
+            {
+                m_retValue = tick();
+                stop();
             }
             break;
         }
     }
 
     if (!firstRun) coolDown();  // cool down only if warmUp() was called
+
+    dead();
 }
 //=============================================================================
-int cerberus::thread::Thread::defaultTickCallback(cerberus_message msg, Thread* thread) { return 0; }
+int Thread::defaultTickCallback(cerberus_message msg, Thread* thread) { return 0; }
 //=============================================================================
-void cerberus::thread::Thread::defaultWarmUpCallback()
+void Thread::defaultWarmUpCallback()
 {
     // noop
 }
 //=============================================================================
-void cerberus::thread::Thread::defaultCoolDownCallback()
+void Thread::defaultCoolDownCallback()
 {
     // noop
 }
 //=============================================================================
-void cerberus::thread::Thread::wait()
+void Thread::wait()
 {
     timespec t{};
     t.tv_nsec = m_time.nanoseconds;
@@ -95,9 +103,9 @@ void cerberus::thread::Thread::wait()
     nanosleep(&t, NULL);
 }
 //=============================================================================
-void cerberus::thread::Thread::construct(ThreadPeriodicity periodicity, const time::TimeFrame& time, const std::string& name)
+void Thread::construct(ThreadPeriodicity periodicity, const TimeFrame& time, const std::string& name)
 {
-    if (periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicQueue)
+    if (periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicMessage)
     {
         if (!time.isValid()) throw cerberusIllegalArgExc("Invalid time in Thread creation");
 
@@ -127,13 +135,13 @@ void cerberus::thread::Thread::construct(ThreadPeriodicity periodicity, const ti
 #endif
 }
 //=============================================================================
-int cerberus::thread::Thread::tick() { return m_tickCallback(nextMessage(), this); }
+int Thread::tick() { return m_tickCallback(nextMessage().ref(), this); }
 //=============================================================================
-void cerberus::thread::Thread::warmUp() { m_warmUpCallback(); }
+void Thread::warmUp() { m_warmUpCallback(); }
 //=============================================================================
-void cerberus::thread::Thread::coolDown() { m_coolDownCallback(); }
+void Thread::coolDown() { m_coolDownCallback(); }
 //=============================================================================
-void cerberus::thread::Thread::sleep(const time::TimeFrame& time)
+void Thread::sleep(const TimeFrame& time)
 {
     auto splitted = time.splittedTime();
     timespec t{};
@@ -142,9 +150,9 @@ void cerberus::thread::Thread::sleep(const time::TimeFrame& time)
     nanosleep(&t, NULL);
 }
 //=============================================================================
-cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const time::TimeFrame& time, const std::string& name)
+Thread::Thread(ThreadPeriodicity periodicity, const TimeFrame& time, const std::string& name)
     : ThreadBase(periodicity),
-      CerberusObject(CerberusObject::ObjectType::Thread, name),
+      CerberusObject(CerberusObject::ObjectType::COBJ_Thread, name),
       m_pthread(),
       m_retValue(0),
       m_tickCallback(&defaultTickCallback),
@@ -154,36 +162,38 @@ cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const time::Time
     construct(periodicity, time, name);
 }
 //=============================================================================
-cerberus::thread::Thread::Thread(const std::string& name)
-    : ThreadBase(TP_NonPeriodic),
-      CerberusObject(CerberusObject::ObjectType::Thread, name),
+Thread::Thread(const std::string& name)
+    : ThreadBase(TP_Message),
+      CerberusObject(CerberusObject::ObjectType::COBJ_Thread, name),
       m_pthread(),
       m_retValue(0),
       m_tickCallback(&defaultTickCallback),
       m_warmUpCallback(&defaultWarmUpCallback),
       m_coolDownCallback(&defaultCoolDownCallback)
 {
-    construct(TP_NonPeriodic, time::TimeFrame(), name);
+    construct(TP_Message, TimeFrame(), name);
 }
 //=============================================================================
-cerberus::thread::Thread::Thread(ThreadPeriodicity periodicity, const std::string& name)
+Thread::Thread(ThreadPeriodicity periodicity, const std::string& name)
     : ThreadBase(periodicity),
-      CerberusObject(CerberusObject::ObjectType::Thread, name),
+      CerberusObject(CerberusObject::ObjectType::COBJ_Thread, name),
       m_pthread(),
       m_retValue(0),
       m_tickCallback(&defaultTickCallback),
       m_warmUpCallback(&defaultWarmUpCallback),
       m_coolDownCallback(&defaultCoolDownCallback)
 {
-    construct(periodicity, time::TimeFrame(), name);
+    construct(periodicity, TimeFrame(), name);
 }
 //=============================================================================
-cerberus::thread::Thread::~Thread() { checkOut(); }
+Thread::~Thread() { checkOut(); }
 //=============================================================================
-cerberus::time::SplittedTime cerberus::thread::Thread::getTime() const { return m_time; }
+SplittedTime Thread::getTime() const { return m_time; }
 //=============================================================================
-IntOpRes cerberus::thread::Thread::join(bool stop)
+IntOpRes Thread::join(bool stop)
 {
+    if (isDead()) return m_retValue;
+
     if (stop)
     {
         terminate();  // set termination flag
@@ -206,10 +216,10 @@ IntOpRes cerberus::thread::Thread::join(bool stop)
         }
     }
 
-    return (int64_t)m_retValue;
+    return m_retValue;
 }
 //=============================================================================
-cerberus::OpRes cerberus::thread::Thread::detach()
+cerberus::OpRes Thread::detach()
 {
     int ret = pthread_detach(m_pthread);
 
@@ -223,9 +233,9 @@ cerberus::OpRes cerberus::thread::Thread::detach()
     return OR_OK;
 }
 //=============================================================================
-void cerberus::thread::Thread::provideTickCallback(customTickCallback callback) { m_tickCallback = callback; }
+void Thread::provideTickCallback(threadTickCallback callback) { m_tickCallback = callback; }
 //=============================================================================
-void cerberus::thread::Thread::provideWarmUpCallback(customCallback callback) { m_warmUpCallback = callback; }
+void Thread::provideWarmUpCallback(threadCallback callback) { m_warmUpCallback = callback; }
 //=============================================================================
-void cerberus::thread::Thread::provideCoolDownCallback(customCallback callback) { m_coolDownCallback = callback; }
+void Thread::provideCoolDownCallback(threadCallback callback) { m_coolDownCallback = callback; }
 //=============================================================================

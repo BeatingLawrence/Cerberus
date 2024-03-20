@@ -8,12 +8,12 @@
 using namespace cerberus::message;
 
 //=============================================================================
-cerberus::cerberus_message Message::create(uint32_t typeID) { return new Message(typeID); }
+cerberus::cerberus_message Message::create(HASH32 typeID) { return new Message(typeID); }
 //=============================================================================
-Message::Message(uint32_t typeID)
+Message::Message(HASH32 typeID)
     : m_slots(),
       m_id(typeID),
-      m_destinationId(CERBERUS_INVALID_ID)
+      m_recipientId(CERBERUS_INVALID_ID)
 {
     // noop
 }
@@ -36,20 +36,14 @@ Message& Message::clear()
 //=============================================================================
 cerberus::slot_ptr Message::getSlotAt(size_t index)
 {
-    if (index >= m_slots.size())
-    {
-        throw cerberusIllegalArgExc("Index out of boundaries");
-    }
+    if (index >= m_slots.size()) throw cerberusIllegalArgExc("Index out of boundaries");
 
     return m_slots[index].ref();
 }
 //=============================================================================
 cerberus::slot_ptr Message::getConstSlotAt(size_t index) const
 {
-    if (index >= m_slots.size())
-    {
-        throw cerberusIllegalArgExc("Index out of boundaries");
-    }
+    if (index >= m_slots.size()) throw cerberusIllegalArgExc("Index out of boundaries");
 
     return m_slots[index];
 }
@@ -57,12 +51,7 @@ cerberus::slot_ptr Message::getConstSlotAt(size_t index) const
 cerberus::slot_ptr Message::getSlot(const std::string& name)
 {
     for (auto& el : m_slots)
-    {
-        if (core::CerberusUtils::areEqual(el->name(), name))
-        {
-            return el.ref();
-        }
-    }
+        if (CerberusUtils::areEqual(el->name(), name)) return el.ref();
 
     throw cerberusIllegalArgExc("Slot %s does not exist in this message", name.c_str());
 }
@@ -70,23 +59,20 @@ cerberus::slot_ptr Message::getSlot(const std::string& name)
 cerberus::slot_ptr Message::getConstSlot(const std::string& name) const
 {
     for (auto& el : m_slots)
-    {
-        if (core::CerberusUtils::areEqual(el->name(), name))
-        {
-            return el;
-        }
-    }
+        if (CerberusUtils::areEqual(el->name(), name)) return el;
 
     throw cerberusIllegalArgExc("Slot %s does not exist in this message", name.c_str());
 }
 //=============================================================================
-uint32_t Message::id() const { return m_id; }
+cerberus::HASH32 Message::id() const { return m_id; }
 //=============================================================================
-uint32_t Message::destination() const { return m_destinationId; }
+cerberus::HASH32 Message::recipient() const { return m_recipientId; }
 //=============================================================================
-Message& Message::setDestination(uint32_t id)
+bool Message::hasValidRecipient() const { return m_recipientId != CERBERUS_INVALID_ID; }
+//=============================================================================
+Message& Message::setRecipient(HASH32 id)
 {
-    m_destinationId = id;
+    m_recipientId = id;
     return *this;
 }
 //=============================================================================
@@ -130,13 +116,13 @@ Message& Message::fill(std::initializer_list<TypeWrapper> values)
                 getSlotAt(index)->to<StringSlot>()->value(*((std::string*)el._voidp));
                 break;
             case ST_BYTEBUFFER:
-                getSlotAt(index)->to<BufferSlot>()->value(*((data::ByteBuffer*)el._voidp));
+                getSlotAt(index)->to<BufferSlot>()->value(*((ByteBuffer*)el._voidp));
                 break;
             case ST_DICTIONARY:
                 getSlotAt(index)->to<DictionarySlot>()->value(*((Dictionary*)el._voidp));
                 break;
             case ST_JSON:
-                getSlotAt(index)->to<JsonSlot>()->value(*((data::JsonData*)el._voidp));
+                getSlotAt(index)->to<JsonSlot>()->value(*((JsonData*)el._voidp));
                 break;
 
             default:
@@ -182,13 +168,13 @@ Message& Message::insert(std::initializer_list<TypeWrapper> values)
                 s = StringSlot::create(*((std::string*)el._voidp));
                 break;
             case ST_BYTEBUFFER:
-                s = BufferSlot::create(*((data::ByteBuffer*)el._voidp));
+                s = BufferSlot::create(*((ByteBuffer*)el._voidp));
                 break;
             case ST_DICTIONARY:
                 s = DictionarySlot::create(*((Dictionary*)el._voidp));
                 break;
             case ST_JSON:
-                s = JsonSlot::create(*((data::JsonData*)el._voidp));
+                s = JsonSlot::create(*((JsonData*)el._voidp));
                 break;
 
             default:

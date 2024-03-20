@@ -2,7 +2,7 @@
 
 #include "src/cerberus.h"
 
-using namespace cerberus::time;
+using namespace cerberus;
 
 //=============================================================================
 void Timer::defaultTimeoutCallback()
@@ -35,7 +35,7 @@ void Timer::start()
     if (m_periodic)
         Cerberus::startTimer(m_running, m_time, m_callback);
     else
-        Cerberus::startTimer(m_running, time::DateTime::current().add(m_time), m_callback);
+        Cerberus::startTimer(m_running, DateTime::current().add(m_time), m_callback);
 }
 //=============================================================================
 void Timer::stop() { Cerberus::stopTimer(m_running); }

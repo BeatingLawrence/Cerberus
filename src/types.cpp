@@ -50,25 +50,25 @@ cerberus::Host cerberus::Host::stringToHost(const std::string &str)
     std::string ip = str.substr(0, str.find_last_of(':'));
     // search for any, local or broadcast
 
-    if (core::CerberusUtils::areEqual(core::CerberusUtils::toLower(ip), "any"))
+    if (CerberusUtils::areEqual(CerberusUtils::toLower(ip), "any"))
     {
         ret.octet_networkOrder = ADDR_ANY;
         return ret;
     }
 
-    if (core::CerberusUtils::areEqual(core::CerberusUtils::toLower(ip), "local"))
+    if (CerberusUtils::areEqual(CerberusUtils::toLower(ip), "local"))
     {
         ret.octet_networkOrder = ADDR_LOOPBACK;
         return ret;
     }
 
-    if (core::CerberusUtils::areEqual(core::CerberusUtils::toLower(ip), "broadcast"))
+    if (CerberusUtils::areEqual(CerberusUtils::toLower(ip), "broadcast"))
     {
         ret.octet_networkOrder = ADDR_BROADCAST;
         return ret;
     }
 
-    if (core::CerberusUtils::isAlpha(ip))  // Domain name
+    if (CerberusUtils::isAlpha(ip))  // Domain name
     {
         ret.hostname = ip;
         return ret;
@@ -157,8 +157,7 @@ bool cerberus::Host::fromString(const std::string &str)
 //=============================================================================
 std::string cerberus::Host::toString() const
 {
-    return cerberus::core::CerberusUtils::strPrint("%u.%u.%u.%u:%u", octect[0], octect[1], octect[2],
-                                                   octect[3], port);
+    return CerberusUtils::strPrint("%u.%u.%u.%u:%u", octect[0], octect[1], octect[2], octect[3], port);
 }
 //=============================================================================
 bool cerberus::Host::isValid() const { return (isNumeric() || isTextual() || hasPort()); }
@@ -387,7 +386,7 @@ StringOpRes cerberus::Dictionary::getFieldValue(const std::string &key, WordMatc
 {
     for (auto &el : (*this))
     {
-        if (cerberus::core::CerberusUtils::areEqual(el.key, key, match)) return el.val;
+        if (CerberusUtils::areEqual(el.key, key, match)) return el.val;
     }
     return OR_NotFound;
 }
@@ -399,7 +398,7 @@ cerberus::OpRes cerberus::Dictionary::getFieldMatch(const std::string &key, cons
 
     if (res.fail()) return res;
 
-    if (core::CerberusUtils::areEqual(value, res.value, valmatch)) return OR_OK;
+    if (CerberusUtils::areEqual(value, res.value, valmatch)) return OR_OK;
 
     return OR_Mismatch;
 }
@@ -432,7 +431,7 @@ cerberus::DictLine &cerberus::Dictionary::get(const std::string &key, WordMatch 
 {
     for (auto it = begin(); it < end(); it++)
     {
-        if (cerberus::core::CerberusUtils::areEqual((*it).key, key, match)) return (*it);
+        if (cerberus::CerberusUtils::areEqual((*it).key, key, match)) return (*it);
     }
 
     throw cerberusIllegalArgExc("Name not found");
@@ -442,9 +441,63 @@ bool cerberus::Dictionary::exists(const std::string &key, WordMatch match)
 {
     for (auto it = begin(); it < end(); it++)
     {
-        if (cerberus::core::CerberusUtils::areEqual((*it).key, key, match)) return true;
+        if (cerberus::CerberusUtils::areEqual((*it).key, key, match)) return true;
     }
 
     return false;
+}
+//=============================================================================
+void cerberus::FileMetadata::fromStat(const struct stat &stat_struct)
+{
+    // time
+    accTime.fromTimespec(stat_struct.st_atimespec.tv_sec, stat_struct.st_atimespec.tv_nsec);
+    modTime.fromTimespec(stat_struct.st_mtimespec.tv_sec, stat_struct.st_mtimespec.tv_nsec);
+    chgTime.fromTimespec(stat_struct.st_ctimespec.tv_sec, stat_struct.st_ctimespec.tv_nsec);
+
+    // link refs
+    linkrefs = stat_struct.st_nlink;
+
+    // mode
+    mode.user  = 0;
+    mode.group = 0;
+    mode.other = 0;
+
+    if (stat_struct.st_mode & S_IRUSR) mode.user |= FP_READ;   // user write
+    if (stat_struct.st_mode & S_IWUSR) mode.user |= FP_WRITE;  // user read
+    if (stat_struct.st_mode & S_IXUSR) mode.user |= FP_EXEC;   // user exec
+    if (stat_struct.st_mode & S_ISUID) mode.user |= FP_UID;    // uid bit
+
+    if (stat_struct.st_mode & S_IRGRP) mode.group |= FP_READ;   // group read
+    if (stat_struct.st_mode & S_IWGRP) mode.group |= FP_WRITE;  // group write
+    if (stat_struct.st_mode & S_IXGRP) mode.group |= FP_EXEC;   // group exec
+    if (stat_struct.st_mode & S_ISGID) mode.user |= FP_GID;     // gid bit
+
+    if (stat_struct.st_mode & S_IROTH) mode.other |= FP_READ;   // other read
+    if (stat_struct.st_mode & S_IWOTH) mode.other |= FP_WRITE;  // other write
+    if (stat_struct.st_mode & S_IXOTH) mode.other |= FP_EXEC;   // other exec
+    if (stat_struct.st_mode & S_ISVTX) mode.user |= FP_STICKY;  // sticky bit
+
+    // type
+    if (stat_struct.st_mode & S_IFBLK)
+        type = FT_BLK;
+    else if (stat_struct.st_mode & S_IFCHR)
+        type = FT_CHR;
+    else if (stat_struct.st_mode & S_IFDIR)
+        type = FT_DIR;
+    else if (stat_struct.st_mode & S_IFIFO)
+        type = FT_FIFO;
+    else if (stat_struct.st_mode & S_IFLNK)
+        type = FT_LNK;
+    else if (stat_struct.st_mode & S_IFREG)
+        type = FT_REG;
+    else if (stat_struct.st_mode & S_IFSOCK)
+        type = FT_SOCK;
+
+    // size
+    size = stat_struct.st_size;
+
+    // UID, GID
+    ownUID = stat_struct.st_uid;
+    ownGID = stat_struct.st_gid;
 }
 //=============================================================================

@@ -8,7 +8,7 @@ using namespace cerberus;
 
 TEST(threadTest, simple_thread_creation_destruction)
 {
-    cerberus::thread::Thread thread("Simple-Thread");
+    Thread thread("Simple-Thread");
     thread.checkIn();
     thread.join(true);
 }
@@ -21,13 +21,13 @@ TEST(threadTest, derived_thread_creation)
     thread2.checkIn();
     thread1.start();
     thread2.start();
-    cerberus::thread::Thread::sleep(2000);
+    Thread::sleep(2000);
     thread2.join(true);
     logDebug("t1 joined");
     EXPECT_EQ(thread1.join(true).expect().value, 10);
 }
 
-static int testCallback(cerberus_message msg, cerberus::thread::Thread* thread)
+static int testCallback(cerberus_message msg, Thread* thread)
 {
     logInfo("Tick from callback");
     return 20;
@@ -39,18 +39,18 @@ static void testCoolDownCallback() { logInfo("Cool-down Callback"); }
 
 TEST(threadTest, thread_callback)
 {
-    cerberus::thread::Thread thread3(cerberus::TP_Periodic, 100, "test-Thread3");
+    Thread thread3(cerberus::TP_Periodic, 100, "test-Thread3");
     thread3.checkIn();
     thread3.provideTickCallback(&testCallback);
     thread3.provideWarmUpCallback(&testWarmUpCallback);
     thread3.provideCoolDownCallback(&testCoolDownCallback);
     thread3.start();
     // debug("2");
-    cerberus::thread::Thread::sleep(1000);
+    Thread::sleep(1000);
     EXPECT_EQ(thread3.join(true).expect().value, 20);
 }
 
-static int pingTestCallback(cerberus_message msg, cerberus::thread::Thread* thread)
+static int pingTestCallback(cerberus_message msg, Thread* thread)
 {
     static char a = 0;
     static char b = 10;
@@ -58,17 +58,17 @@ static int pingTestCallback(cerberus_message msg, cerberus::thread::Thread* thre
 
     if (msg->isValid())
     {
-        logInfo(core::CerberusUtils::strPrint("PONG! %u %u %u",
-                                              msg->getSlotAt(0)->to<cerberus::ByteSlot>()->value(),
-                                              msg->getSlotAt(1)->to<cerberus::ByteSlot>()->value(),
-                                              msg->getSlotAt(2)->to<cerberus::ByteSlot>()->value()));
+        logInfo(CerberusUtils::strPrint("PONG! %u %u %u",
+                                        msg->getSlotAt(0)->to<cerberus::ByteSlot>()->value(),
+                                        msg->getSlotAt(1)->to<cerberus::ByteSlot>()->value(),
+                                        msg->getSlotAt(2)->to<cerberus::ByteSlot>()->value()));
     }
     else  // tick
     {
         if (a == 10)
         {
             auto message = Cerberus::messageConstruct(CERBERUS_MESSAGE_TERM_ID);
-            cerberus::Cerberus::send(message, "pongThread");
+            Cerberus::send(message, "pongThread");
             thread->terminate();
             return 0;
         }
@@ -80,13 +80,13 @@ static int pingTestCallback(cerberus_message msg, cerberus::thread::Thread* thre
         message->getSlotAt(1)->to<cerberus::ByteSlot>()->value(b++);
         message->getSlotAt(2)->to<cerberus::ByteSlot>()->value(c++);
         // Send the message
-        cerberus::Cerberus::send(message, "pongThread");
+        Cerberus::send(message, "pongThread");
     }
 
     return 0;
 }
 
-static int pongTestCallback(cerberus_message msg, cerberus::thread::Thread* thread)
+static int pongTestCallback(cerberus_message msg, Thread* thread)
 {
     if (msg->id() == CERBERUS_MESSAGE_TERM_ID)
     {
@@ -106,8 +106,8 @@ TEST(threadTest, thread_ping_pong)
     cerberus::message::MessageTemplate tmplt("PingPongMessage");
     tmplt.addSlotType(ST_BYTE).addSlotType(ST_BYTE).addSlotType(ST_BYTE).checkIn();
     // start the test
-    cerberus::thread::Thread ping(cerberus::TP_PeriodicQueue, 100, "pingThread");
-    cerberus::thread::Thread pong("pongThread");  // Non-Periodic (receiver)
+    Thread ping(cerberus::TP_PeriodicMessage, 100, "pingThread");
+    Thread pong("pongThread");  // Non-Periodic (receiver)
     ping.checkIn();
     pong.checkIn();
     ping.provideTickCallback(&pingTestCallback);

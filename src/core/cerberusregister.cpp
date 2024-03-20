@@ -12,31 +12,12 @@ using namespace cerberus;
 using namespace cerberus::core;
 using namespace cerberus::message;
 
-#define FNV_OFFSET_BASIS 0x811c9dc5
-#define FNV_PRIME 0x01000193
-
-//=============================================================================
-HASH32 CerberusRegister::hash(const std::string& str)
-{
-    // This method uses FNV1A algorithm
-    HASH32 hash    = FNV_OFFSET_BASIS;
-    const char* ch = str.c_str();
-
-    while ((*ch) != '\0')
-    {
-        hash = hash ^ (HASH32)(*ch);
-        hash = hash * FNV_PRIME;
-        ch++;
-    }
-
-    return hash;
-}
 //=============================================================================
 HASH32 CerberusRegister::removeReserved(HASH32 hash) { return hash & 0xffffff00; }
 //=============================================================================
 HASH32 CerberusRegister::findAvailableObjectId(const std::string& name)
 {
-    HASH32 h = removeReserved(hash(name));
+    HASH32 h = removeReserved(CerberusUtils::hash_fnv1a(name));
 
     for (auto&& el : m_objects)
         if (h == el->id()) return CERBERUS_INVALID_ID;
@@ -46,7 +27,7 @@ HASH32 CerberusRegister::findAvailableObjectId(const std::string& name)
 //=============================================================================
 HASH32 CerberusRegister::findAvailablePluginId(const std::string& path)
 {
-    HASH32 h = hash(path);
+    HASH32 h = CerberusUtils::hash_fnv1a(path);
 
     for (auto&& el : m_plugins)
         if (h == el.id) return CERBERUS_INVALID_ID;
@@ -56,10 +37,7 @@ HASH32 CerberusRegister::findAvailablePluginId(const std::string& path)
 //=============================================================================
 CerberusRegister::CerberusRegister() {}
 //=============================================================================
-CerberusRegister::~CerberusRegister()
-{
-    // destroy all cerberus-managed objects (none, at the moment)
-}
+CerberusRegister::~CerberusRegister() { cleanup(); }
 //=============================================================================
 void CerberusRegister::registerObj(CerberusObject* object)
 {
@@ -67,7 +45,7 @@ void CerberusRegister::registerObj(CerberusObject* object)
 
     if (object->name().empty()) throw cerberusIllegalArgExc("Registering objects must be named objects");
 
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
 
     object->m_id = findAvailableObjectId(object->name());
 
@@ -75,12 +53,12 @@ void CerberusRegister::registerObj(CerberusObject* object)
 
     switch (object->type())
     {
-        case CerberusObject::Thread:
-        case CerberusObject::Socket:
+        case CerberusObject::COBJ_Thread:
+        case CerberusObject::COBJ_Socket:
             m_objects.push_back(object);
             break;
 
-        case CerberusObject::MessageTemplate:
+        case CerberusObject::COBJ_MessageTmplt:
         {
             auto mt = new MessageTemplate(*(object->to_p<MessageTemplate>()));  // copy
             m_objects.push_back(mt);
@@ -88,7 +66,7 @@ void CerberusRegister::registerObj(CerberusObject* object)
         break;
 
         default:
-            throw cerberusIllegalArgExc("given object has no type");
+            throw cerberusIllegalArgExc("unknown type");
     }
 
     logDebug("New %s", object->toObjStr().c_str());
@@ -98,7 +76,7 @@ void CerberusRegister::unregisterObj(HASH32 id)
 {
     if (id == CERBERUS_INVALID_ID) return;
 
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
 
     for (auto it = m_objects.begin(); it != m_objects.end(); it++)
     {
@@ -106,10 +84,7 @@ void CerberusRegister::unregisterObj(HASH32 id)
         {
             logDebug("Unregistering %s", (*it)->toObjStr().c_str());
 
-            if ((*it)->type() == CerberusObject::MessageTemplate)
-            {
-                delete *it;
-            }
+            if ((*it)->type() == CerberusObject::COBJ_MessageTmplt) delete *it;
 
             m_objects.erase(it);
 
@@ -120,7 +95,7 @@ void CerberusRegister::unregisterObj(HASH32 id)
 //=============================================================================
 HASH32 CerberusRegister::addPlugin(void* handle, const std::string& path, bool& exists)
 {
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
 
     // check if plugin exists
 
@@ -146,7 +121,7 @@ HASH32 CerberusRegister::addPlugin(void* handle, const std::string& path, bool& 
 //=============================================================================
 void CerberusRegister::removePlugin(HASH32 id)
 {
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
 
     for (auto it = m_plugins.begin(); it != m_plugins.end(); it++)
     {
@@ -162,17 +137,15 @@ void CerberusRegister::removePlugin(HASH32 id)
 //=============================================================================
 void CerberusRegister::cleanupPlugins()
 {
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
 
     for (auto&& el : m_plugins)
     {
         el.mutex.lock();  // wait the lock
         el.mutex.unlock();
         int ret = dlclose(el.handle);
-        if (ret != 0)
-        {
-            logError("Error while unloading plugin %u %s", el.id, el.path.c_str());
-        }
+
+        if (ret != 0) logError("Error while unloading plugin %u %s", el.id, el.path.c_str());
 
         return;
     }
@@ -182,37 +155,27 @@ void CerberusRegister::cleanupPlugins()
 //=============================================================================
 void* CerberusRegister::checkPlugin(HASH32 id)
 {
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
 
     for (auto&& el : m_plugins)
-    {
-        if (el.id == id)
-        {
-            return el.handle;
-        }
-    }
+        if (el.id == id) return el.handle;
 
     return nullptr;
 }
 //=============================================================================
-mutex::MutexLocker CerberusRegister::getPluginMutex(HASH32 id)
+MutexLocker CerberusRegister::getPluginMutex(HASH32 id)
 {
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
 
     for (auto&& el : m_plugins)
-    {
-        if (el.id == id)
-        {
-            return el.mutex;
-        }
-    }
+        if (el.id == id) return el.mutex;
 
-    return mutex::MutexLocker();  // invalid
+    return MutexLocker();  // invalid
 }
 //=============================================================================
 bool CerberusRegister::updatePlugin(uint32_t id, const std::string& path, void* handle)
 {
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
 
     for (auto&& el : m_plugins)
     {
@@ -232,19 +195,14 @@ OpResData<CerberusObject*> CerberusRegister::objById(HASH32 id)
     if (id == CERBERUS_INVALID_ID) return OR_WrongArgument;
 
     for (auto&& el : m_objects)
-    {
-        if (el->id() == id)
-        {
-            return el;
-        }
-    }
+        if (el->id() == id) return el;
 
     return OR_NotFound;
 }
 //=============================================================================
 HASH32 CerberusRegister::objIdByName(const std::string& name)
 {
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
 
     auto found = objByName(name);
 
@@ -255,91 +213,91 @@ HASH32 CerberusRegister::objIdByName(const std::string& name)
 //=============================================================================
 MessageTemplate CerberusRegister::msgTemplateByName(const std::string& name)
 {
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
 
     auto found = objByName(name).expect();
 
-    if (found.value->type() == CerberusObject::ObjectType::MessageTemplate)
-    {
+    if (found.value->type() == CerberusObject::ObjectType::COBJ_MessageTmplt)
         return *(found.value->to_p<message::MessageTemplate>());
-    }
     else
-    {
         return message::MessageTemplate();
-    }
 }
 //=============================================================================
 MessageTemplate CerberusRegister::msgTemplateById(HASH32 id)
 {
     if (id == CERBERUS_INVALID_ID) throw cerberusIllegalArgExc("invalid id");
 
-    if (id < 256u)  // reserved range
-    {
-        return standardTemplate(id);
-    }
+    if (id < 256u) throw cerberusIllegalArgExc("reserved range not accessible by register");
 
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
 
     auto found = objById(id).expect();
 
-    if (found.value->type() == CerberusObject::ObjectType::MessageTemplate)
-    {
+    if (found.value->type() == CerberusObject::ObjectType::COBJ_MessageTmplt)
         return *(found.value->to_p<message::MessageTemplate>());
-    }
     else
-    {
-        return message::MessageTemplate();
-    }
+        throw cerberusIllegalArgExc("requested template is not a template");
 }
 //=============================================================================
 void CerberusRegister::sendMsgToObj(HASH32 id, cerberus_message msg)
 {
-    mutex::MutexLocker locker(m_mutex);
+    MutexLocker locker(m_mutex);
     auto found = objById(id).expect();
 
-    if (found.value->type() == CerberusObject::ObjectType::Thread)
+    if (found.value->type() == CerberusObject::ObjectType::COBJ_Thread)
     {
-        auto thr = found.value->to_p<cerberus::thread::Thread>();
+        auto thr = found.value->to_p<cerberus::Thread>();
         thr->addMessage(msg);
     }
+}
+//=============================================================================
+OpResData<bool> CerberusRegister::isCerbManaged(HASH32 id)
+{
+    MutexLocker locker(m_mutex);
+    auto obj = objById(id);
+
+    if (obj.fail()) return obj;
+
+    return obj.value->m_cerbManaged;
 }
 //=============================================================================
 OpResData<CerberusObject*> CerberusRegister::objByName(const std::string& name)
 {
     if (name.empty()) return OR_WrongArgument;
 
+    HASH32 h = removeReserved(CerberusUtils::hash_fnv1a(name));
+
     for (auto&& el : m_objects)
-    {
-        if (core::CerberusUtils::areEqual(el->name(), name))
-        {
-            return el;
-        }
-    }
+        if (el->m_id == h) return el;
 
     return OR_NotFound;
 }
 //=============================================================================
-MessageTemplate CerberusRegister::standardTemplate(HASH32 id)
+void CerberusRegister::cleanup()
 {
-    MessageTemplate tmplt;
-
-    switch (id)
+    for (auto&& el : m_objects)
     {
-        case CERBERUS_MESSAGE_LOG_ID:
-            tmplt.addSlotType(ST_STRING);
-            break;
+        if (el->m_cerbManaged)
+        {
+            if (el->m_type == CerberusObject::COBJ_Thread)
+            {
+                el->to_p<Thread>()->join(true);
+                logDebug("Joined %s", el->name().c_str());
+            }
 
-        case CERBERUS_MESSAGE_TERM_ID:
-            // nothing to add
-            break;
+            delete el;
+            continue;
+        }
 
-            // add here more message specializations..
-
-        default:
-            throw cerberusImplMissExc("Requested standard message is not defined");
-            break;
+        switch (el->m_type)
+        {
+            case CerberusObject::COBJ_MessageTmplt:
+                delete el;
+            default:
+                break;
+        }
     }
 
-    return tmplt;
+    m_objects.clear();
 }
 //=============================================================================

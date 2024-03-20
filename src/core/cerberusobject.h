@@ -6,9 +6,12 @@
 
 #include "../Cerberus_global.h"
 #include "../exception/exception.h"
+#include "../types.h"
 
 namespace cerberus
 {
+    class Cerberus;
+
     namespace core
     {
         class CerberusRegister;
@@ -16,14 +19,15 @@ namespace cerberus
         class CERBERUS_EXPORT CerberusObject
         {
             friend class ::cerberus::core::CerberusRegister;
+            friend class ::cerberus::Cerberus;
 
            public:
             enum ObjectType : uint8_t
             {
-                InvalidObject,
-                Thread,
-                MessageTemplate,
-                Socket,
+                COBJ_Invalid,
+                COBJ_Thread,
+                COBJ_MessageTmplt,
+                COBJ_Socket,
                 // add more types here..
             };
 
@@ -54,6 +58,8 @@ namespace cerberus
 
             SocketType m_socketType;
 
+            bool m_cerbManaged;
+
             static std::string toThreadStr(const CerberusObject& obj);
 
            protected:
@@ -66,12 +72,16 @@ namespace cerberus
 
             virtual ~CerberusObject();
 
+            // Register this instance in the Cerberus framework register.
+            // After this call, all other registered objects will be capable of
+            // getting a reference to this instance and use it
             void checkIn();
 
+            // Un-register this instance from the Cerberus framework register.
             void checkOut();
 
-            // Checks if the object is valid
-            bool isObjValid() const;
+            // Checks if the object is registered
+            bool isRegistered() const;
 
             // Returns the object ID
             HASH32 id() const;
@@ -116,7 +126,7 @@ namespace cerberus
             template <class T>
             const T* to_p() const
             {
-                const T* casted = dynamic_cast<const T*>(this);
+                T* casted = dynamic_cast<T*>(this);
 
                 if (casted == nullptr)
                 {
@@ -129,7 +139,7 @@ namespace cerberus
             template <class T>
             const T& to() const
             {
-                const T* casted = dynamic_cast<const T*>(this);
+                T* casted = dynamic_cast<T*>(this);
 
                 if (casted == nullptr)
                 {

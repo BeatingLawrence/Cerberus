@@ -6,6 +6,8 @@
 #include "core/cerberuscore.h"
 #include "core/cerberusregister.h"
 #include "exception/exception.h"
+#include "network/socket.h"
+#include "thread/actor.h"
 
 #ifdef WINDOWS_SYSTEM
 #include <windows.h>
@@ -45,8 +47,24 @@ void Cerberus::sendMsgToObj(HASH32 id, cerberus_message msg)
     Cerberus::framework.reg.data->sendMsgToObj(id, msg);
 }
 //=============================================================================
+OpResData<bool> Cerberus::isCerbManaged(HASH32 id)
+{
+    Cerberus::framework.reg.isReadySevere();
+    auto locker = Cerberus::framework.reg.getLocker();
+    return Cerberus::framework.reg.data->isCerbManaged(id);
+}
+//=============================================================================
+OpResData<CerberusObject *> Cerberus::rawObjById(HASH32 id)
+{
+    Cerberus::framework.reg.isReadySevere();
+    auto locker = Cerberus::framework.reg.getLocker();
+    return Cerberus::framework.reg.data->objById(id);
+}
+//=============================================================================
 message::MessageTemplate Cerberus::msgTemplateById(uint32_t id)
 {
+    if (id < CERBERUS_REG_RANGE_START) return CerberusUtils::standardTemplate(id);
+
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
     return Cerberus::framework.reg.data->msgTemplateById(id);
@@ -74,7 +92,7 @@ cerberus_message Cerberus::messageConstruct(HASH32 id)
 
     for (size_t i = 0; i < tmplt.count(); i++)
     {
-        message->addSlot(CerberusUtils::newSlot(tmplt.getSlotTypeAt(i)));
+        message->addSlot(CerberusUtils::newSlot(tmplt.getSlotAt(i).type, tmplt.getSlotAt(i).name));
     }
 
     return message;
@@ -88,10 +106,28 @@ cerberus_message Cerberus::messageConstruct(const std::string &name)
 
     for (size_t i = 0; i < tmplt.count(); i++)
     {
-        message->addSlot(CerberusUtils::newSlot(tmplt.getSlotTypeAt(i)));
+        message->addSlot(CerberusUtils::newSlot(tmplt.getSlotAt(i).type, tmplt.getSlotAt(i).name));
     }
 
     return message;
+}
+//=============================================================================
+HASH32 Cerberus::createThread(const std::string &name)
+{
+    auto obj = new Actor(false, name);
+
+    obj->m_cerbManaged = true;
+    obj->checkIn();
+    return obj->id();
+}
+//=============================================================================
+HASH32 Cerberus::createSocket(core::CerberusObject::SocketType socketType, const std::string &name)
+{
+    CerberusObject *obj = new Socket(socketType, name);
+
+    obj->m_cerbManaged = true;
+    obj->checkIn();
+    return obj->id();
 }
 //=============================================================================
 HASH32 Cerberus::addPlugin(void *handle, const std::string &path, bool &exists)
@@ -101,7 +137,7 @@ HASH32 Cerberus::addPlugin(void *handle, const std::string &path, bool &exists)
     return Cerberus::framework.reg.data->addPlugin(handle, path, exists);
 }
 //=============================================================================
-mutex::MutexLocker Cerberus::getPluginMutex(HASH32 id)
+MutexLocker Cerberus::getPluginMutex(HASH32 id)
 {
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
@@ -122,21 +158,21 @@ bool Cerberus::updatePlugin(uint32_t id, const std::string &path, void *handle)
     return Cerberus::framework.reg.data->updatePlugin(id, path, handle);
 }
 //=============================================================================
-void Cerberus::startTimer(std::atomic_bool &bit, time::TimeFrame t, timerCallback callback)
+void Cerberus::startTimer(std::atomic_bool &bit, TimeFrame t, timerCallback callback)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
     Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, t, callback);
 }
 //=============================================================================
-void Cerberus::startTimer(std::atomic_bool &bit, time::DateTime d, time::TimeFrame t, timerCallback callback)
+void Cerberus::startTimer(std::atomic_bool &bit, DateTime d, TimeFrame t, timerCallback callback)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
     Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, d, t, callback);
 }
 //=============================================================================
-void Cerberus::startTimer(std::atomic_bool &bit, time::DateTime d, timerCallback callback)
+void Cerberus::startTimer(std::atomic_bool &bit, DateTime d, timerCallback callback)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
@@ -150,9 +186,9 @@ void Cerberus::stopTimer(std::atomic_bool &bit)
     Cerberus::framework.core.data->m_eventScheduler.stopTimer(bit);
 }
 //=============================================================================
-void Cerberus::init(const CerberusInitParms &parms)
+void Cerberus::init(const CerberusInitConf &parms)
 {
-    Cerberus::framework.construct(parms.logSetup);
+    Cerberus::framework.construct(parms);
 
     Cerberus::framework.start();
 
@@ -183,15 +219,23 @@ void Cerberus::deinit()
     Cerberus::framework.destroy();
 }
 //=============================================================================
-CerberusInitParms Cerberus::cerberusDefaultParms()
+CerberusInitConf Cerberus::cerberusDefaultParms()
 {
-    CerberusInitParms toReturn{};
-    toReturn.logSetup.colorFormatting     = true;
-    toReturn.logSetup.logOnFile           = true;
-    toReturn.logSetup.logFileName         = "./last.log";
-    toReturn.logSetup.logFileMaximumSize  = 4096;  // 4Kb
-    toReturn.logSetup.applicationLogLevel = LL_Error;
-    toReturn.logSetup.cerberusLogLevel    = LL_Error;
+    CerberusInitConf toReturn{};
+    toReturn.useCiphers               = true;
+    toReturn.logSetup.colorFormatting = true;
+
+    toReturn.logSetup.fileLogConf.enable        = true;
+    toReturn.logSetup.fileLogConf.fileName      = "./app.log";
+    toReturn.logSetup.fileLogConf.fileMaxSize   = 4096;
+    toReturn.logSetup.fileLogConf.logDir        = "logs";
+    toReturn.logSetup.fileLogConf.fileNameFmt   = "%Y-%M-%D_%h-%m-%s.log";
+    toReturn.logSetup.fileLogConf.logDirMaxSize = 1000000;
+
+    toReturn.logSetup.appLogLevel  = LL_Error;
+    toReturn.logSetup.cerbLogLevel = LL_Error;
+
+    toReturn.coreSetup.threadPool = 0;
 
 #ifdef WINDOWS_SYSTEM
     toReturn.logSetup.infoRole.foregroundColor    = TERMINAL_FOREGROUND_GREEN;
@@ -270,31 +314,32 @@ void Cerberus::send(cerberus_message message)
     Cerberus::framework.core.data->addMessage(message);
 }
 //=============================================================================
-void Cerberus::send(cerberus_message message, HASH32 id)
+void Cerberus::send(cerberus_message message, HASH32 recipientID)
 {
-    message->setDestination(id);
+    message->setRecipient(recipientID);
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
     Cerberus::framework.core.data->addMessage(message);
 }
 //=============================================================================
-void Cerberus::send(cerberus_message message, const std::string &name)
+void Cerberus::send(cerberus_message message, const std::string &recipient)
 {
-    message->setDestination(objIdByName(name));
+    message->setRecipient(objIdByName(recipient));
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
     Cerberus::framework.core.data->addMessage(message);
 }
 //=============================================================================
-void FrameworkData::construct(const CerberusLogSetup &logSetup)
+void FrameworkData::construct(const CerberusInitConf &conf)
 {
     if (core.isReady()) throw cerberusUsageErrorExc("attempt to construct the framework multiple times");
 
     log.construct();
-    log.data->setup(logSetup);
+    log.data->setup(conf.logSetup);
 
     reg.construct();
     core.construct();
+    core.data->setup(conf.coreSetup);
 }
 //=============================================================================
 void FrameworkData::destroy()

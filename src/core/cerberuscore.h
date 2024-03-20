@@ -8,6 +8,7 @@
  *
  */
 
+#include "../thread/actor.h"
 #include "../thread/thread.h"
 #include "eventscheduler.h"
 
@@ -15,19 +16,40 @@ namespace cerberus
 {
     namespace core
     {
-        class CerberusCore : public cerberus::thread::Thread
+        class CerberusCore : public cerberus::Thread
         {
            private:
+            CoreConf m_conf;
+
+            std::list<Actor*> m_pool;
+
+            void initializeThreadPool();
+            void deinitializeThreadPool();
+
+            static void taskEndCb(void* ctx, Actor* thread, OpRes res);
+
+            void _taskEndCb(Actor* thread, OpRes res);
+
             virtual int tick() override;
 
             virtual void warmUp() override;
 
             virtual void coolDown() override;
 
+            void processSockMsg(cerberus_message msg);
+            void processTaskMsg(cerberus_message msg);
+            void processMsg(cerberus_message msg);
+
+            void runTask(Task t);
+
            public:
             EventScheduler m_eventScheduler;
 
             CerberusCore();
+
+            virtual ~CerberusCore();
+
+            void setup(const CoreConf& parms);
         };
     }  // namespace core
 }  // namespace cerberus

@@ -6,8 +6,7 @@
 #include "../mutex/mutexlocker.h"
 #include "src/exception/exception.h"
 
-using namespace cerberus::thread;
-using namespace cerberus::mutex;
+using namespace cerberus;
 
 //=============================================================================
 ThreadBase::ThreadBase(ThreadPeriodicity periodicity)
@@ -15,6 +14,7 @@ ThreadBase::ThreadBase(ThreadPeriodicity periodicity)
       m_cond(),
       m_pausedFlag(true),
       m_terminateFlag(false),
+      m_dead(false),
       m_periodicity(periodicity)
 {
     pthread_condattr_t attr{};
@@ -73,22 +73,28 @@ bool ThreadBase::getTerminateFlag() const
     return m_terminateFlag;
 }
 //=============================================================================
+bool ThreadBase::getPausedFlag() const
+{
+    MutexLocker locker(&m_mutex);
+    return m_pausedFlag;
+}
+//=============================================================================
 cerberus::cerberus_message ThreadBase::nextMessage()
 {
     MutexLocker locker(&m_mutex);
 
-    if (m_queue.size() == 1 && m_periodicity == TP_NonPeriodic && !m_pausedFlag)
+    if (m_queue.size() == 1 && m_periodicity == TP_Message && !m_pausedFlag)
     {
         setPausedFlag(true);
     }
 
-    return m_queue.next();
+    return m_queue.next().ref();
 }
 //=============================================================================
 cerberus::cerberus_message ThreadBase::nextMessageKeep() const
 {
     MutexLocker locker(&m_mutex);
-    return m_queue.nextKeep();
+    return m_queue.nextKeep().ref();
 }
 //=============================================================================
 void ThreadBase::discardMessageQueue()
@@ -103,12 +109,18 @@ bool ThreadBase::isQueueEmpty() const
     return m_queue.isEmpty();
 }
 //=============================================================================
+void ThreadBase::dead()
+{
+    MutexLocker locker(&m_mutex);
+    m_dead = true;
+}
+//=============================================================================
 void ThreadBase::addMessage(cerberus_message message)
 {
     MutexLocker locker(&m_mutex);
     m_queue.add(message);
 
-    if (m_periodicity == TP_NonPeriodic && m_pausedFlag)
+    if (m_periodicity == TP_Message && m_pausedFlag)
     {
         setPausedFlag(false);
     }
@@ -136,5 +148,11 @@ void ThreadBase::terminate()
 {
     MutexLocker locker(&m_mutex);
     m_terminateFlag = true;
+}
+//=============================================================================
+bool ThreadBase::isDead()
+{
+    MutexLocker locker(&m_mutex);
+    return m_dead;
 }
 //=============================================================================

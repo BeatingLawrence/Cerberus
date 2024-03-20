@@ -7,7 +7,6 @@
 #include "src/cerberus.h"
 #include "src/exception/exception.h"
 
-using namespace cerberus::data;
 using namespace cerberus;
 
 //=============================================================================
@@ -391,7 +390,7 @@ std::string ByteBuffer::toString() const
 StringOpRes ByteBuffer::toNormalizedString() const
 {
     auto str = toString();
-    core::CerberusUtils::normalize(str);
+    CerberusUtils::normalize(str);
     return str;
 }
 //=============================================================================
@@ -408,7 +407,7 @@ std::string ByteBuffer::toBinaryDumpString(uint32_t align) const
             aligncounter = 0;
         }
 
-        ret.append(core::CerberusUtils::strPrint("%02hhx ", (uint8_t)(*(m_bytes + i))));
+        ret.append(CerberusUtils::strPrint("%02hhx ", (uint8_t)(*(m_bytes + i))));
 
         aligncounter++;
     }

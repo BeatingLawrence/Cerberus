@@ -34,7 +34,7 @@ namespace cerberus
 
             MessageQueue(const MessageQueue& other) = delete;
 
-            MessageQueue(MessageQueue&& other) = delete;
+            MessageQueue(MessageQueue&& other);
 
             // Adds a message at the end of the queue
             void add(cerberus_message message);

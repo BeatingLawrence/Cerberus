@@ -8,57 +8,64 @@
 
 namespace cerberus
 {
-    namespace thread
+    class ThreadBase
     {
-        class ThreadBase
-        {
-           private:
-            mutable mutex::Mutex m_mutex;
+       private:
+        mutable Mutex m_mutex;
 
-            pthread_cond_t m_cond;
+        pthread_cond_t m_cond;
 
-            message::MessageQueue m_queue;
+        message::MessageQueue m_queue;
 
-            bool m_pausedFlag;
+        bool m_pausedFlag, m_terminateFlag, m_dead;
 
-            bool m_terminateFlag;
+        // Call this method with the mutex locked!
+        void setPausedFlag(bool state);
 
-            // Call this method with the mutex locked!
-            void setPausedFlag(bool state);
+       protected:
+        ThreadBase() = delete;
 
-           protected:
-            ThreadBase(ThreadPeriodicity periodicity);
+        ThreadBase(const ThreadBase& other) = delete;
 
-            virtual ~ThreadBase();
+        ThreadBase(ThreadBase&& other) = delete;
 
-            ThreadPeriodicity m_periodicity;
+        ThreadBase(ThreadPeriodicity periodicity);
 
-            void pause();
+        virtual ~ThreadBase();
 
-            bool getTerminateFlag() const;
+        ThreadPeriodicity m_periodicity;
 
-            cerberus_message nextMessage();
+        void pause();
 
-            cerberus_message nextMessageKeep() const;
+        bool getTerminateFlag() const;
 
-            void discardMessageQueue();
+        bool getPausedFlag() const;
 
-            bool isQueueEmpty() const;
+        cerberus_message nextMessage();
 
-           public:
-            void addMessage(cerberus_message message);
+        cerberus_message nextMessageKeep() const;
 
-            size_t messageCount() const;
+        void discardMessageQueue();
 
-            void start();
+        bool isQueueEmpty() const;
 
-            void stop();
+        void dead();
 
-            void terminate();
+       public:
+        void addMessage(cerberus_message message);
 
-            inline ThreadPeriodicity getPeriodicity() const { return m_periodicity; };
-        };
-    }  // namespace thread
+        size_t messageCount() const;
+
+        void start();
+
+        void stop();
+
+        void terminate();
+
+        bool isDead();
+
+        inline ThreadPeriodicity getPeriodicity() const { return m_periodicity; };
+    };
 }  // namespace cerberus
 
 #endif  // CERBERUS_THREAD_THREADBASE_H

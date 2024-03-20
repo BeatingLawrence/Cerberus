@@ -3,24 +3,23 @@
 #include "src/cerberus.h"
 #include "src/core/cerberusutils.h"
 
-using namespace cerberus::network;
-using namespace cerberus::core;
+using namespace cerberus;
 
 //=============================================================================
-cerberus::OpRes HTTPClient::_connect()
+OpRes HTTPClient::_connect()
 {
-    auto res = m_socket.reset();
+    auto res = Socket::reset();
 
     if (res.fail()) return res;
 
-    res = m_socket.connect(m_server);
+    res = Socket::connect(m_remote);
 
     if (res.fail()) return res;
 
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes HTTPClient::getDictFromHeader(const data::ByteBuffer &header, Dictionary &dict)
+cerberus::OpRes HTTPClient::getDictFromHeader(const ByteBuffer &header, Dictionary &dict)
 {
     // debug("%s", header.toNormalizedString().c_str());
 
@@ -53,43 +52,43 @@ cerberus::OpRes HTTPClient::getDictFromHeader(const data::ByteBuffer &header, Di
     }
 }
 //=============================================================================
-cerberus::OpRes HTTPClient::getStatus(const data::ByteBuffer &statusLine, data::HTTPResponse &response)
+cerberus::OpRes HTTPClient::getStatus(const ByteBuffer &statusLine, HTTPResponse &response)
 {
     auto str = statusLine.toString();
-    core::CerberusUtils::removeBlankAfter(str);
+    CerberusUtils::removeBlankAfter(str);
 
     auto space1 = str.find_first_of(' ');
     auto space2 = str.find_first_of(' ', space1 + 1);
 
     std::string ver = str.substr(0, space1);
-    core::CerberusUtils::toUpper(ver);
+    CerberusUtils::toUpper(ver);
 
-    if (core::CerberusUtils::areEqual(ver, "HTTP/1.0"))
+    if (CerberusUtils::areEqual(ver, "HTTP/1.0"))
         response.version = HTTP_1_0;
-    else if (core::CerberusUtils::areEqual(ver, "HTTP/1.1"))
+    else if (CerberusUtils::areEqual(ver, "HTTP/1.1"))
         response.version = HTTP_1_1;
-    else if (core::CerberusUtils::areEqual(ver, "HTTP/2"))
+    else if (CerberusUtils::areEqual(ver, "HTTP/2"))
         response.version = HTTP_2;
     else
     {
         return {OR_Failure, "Unrecognized HTTP version received"};
     }
 
-    response.statusCode = core::CerberusUtils::stringToInt(str.substr(space1 + 1, space2)).value;
+    response.statusCode = CerberusUtils::stringToInt(str.substr(space1 + 1, space2)).value;
     response.message    = str.substr(space2 + 1, std::string::npos);
 
     return OR_OK;
 }
 //=============================================================================
-void HTTPClient::decodeChunkedData(data::ByteBuffer &data)
+void HTTPClient::decodeChunkedData(ByteBuffer &data)
 {
     data.resetCursor();
-    data::ByteBuffer tmp;
+    ByteBuffer tmp;
 
     while (true)
     {
         auto str = data.getLine();  // get until \r\n
-        int size = cerberus::core::CerberusUtils::stringToInt(str, Radix::Hexadecimal).value;
+        int size = CerberusUtils::stringToInt(str, Radix::Hexadecimal).value;
 
         if (size == 0) break;
 
@@ -102,38 +101,26 @@ void HTTPClient::decodeChunkedData(data::ByteBuffer &data)
 }
 //=============================================================================
 HTTPClient::HTTPClient(const std::string &name)
-    : m_socket(CerberusObject::Socket_TCP, core::CerberusUtils::strPrint("Socket of \"%s\"", name.c_str())),
+    : Socket(core::CerberusObject::Socket_TCP, name),
       m_persistent(false),
-      m_server()
+      m_remote()
 {
-    m_socket.setRecvBufferSize(4096);  // 4K buffer size
+    setRecvBufferSize(4096);  // 4K buffer size
 }
 //=============================================================================
-HTTPClient::~HTTPClient() { disconnect(); }
-//=============================================================================
-cerberus::OpRes HTTPClient::TLS_init(const std::string &ca_file, const std::string &certfile,
-                                     const std::string &keyfile)
-{
-    return m_socket.TLS_init(certfile, keyfile, ca_file);
-}
-//=============================================================================
-cerberus::OpRes HTTPClient::TLS_ignoreHangup(bool ignore) { return m_socket.TLS_ignoreHangup(ignore); }
-//=============================================================================
-cerberus::OpRes HTTPClient::TLS_deinit() { return m_socket.TLS_deinit(); }
+HTTPClient::~HTTPClient() {}
 //=============================================================================
 cerberus::OpRes HTTPClient::connect(const Host &host)
 {
-    m_server = host;
+    m_remote = host;
     return _connect();
 }
 //=============================================================================
-void HTTPClient::disconnect() { m_socket.close(); }
-//=============================================================================
 void HTTPClient::persistent(bool persistent) { m_persistent = persistent; }
 //=============================================================================
-cerberus::OpRes HTTPClient::makeRequest(const data::HTTPRequest &request)
+cerberus::OpRes HTTPClient::makeRequest(const HTTPRequest &request)
 {
-    if (!m_socket.isConnected())
+    if (!Socket::isConnected())
     {
         if (m_persistent)
         {
@@ -144,18 +131,18 @@ cerberus::OpRes HTTPClient::makeRequest(const data::HTTPRequest &request)
             return OR_BadConditions;
     }
 
-    return m_socket.send(request.data());
+    return Socket::send(request.data());
 }
 //=============================================================================
-cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const time::TimeFrame &timeout,
-                                                                          const time::TimeFrame &cycTimeout)
+cerberus::OpResData<HTTPResponse> HTTPClient::getResponse(const TimeFrame &timeout,
+                                                          const TimeFrame &cycTimeout)
 {
-    if (!m_socket.isConnected()) return OR_BadConditions;
+    if (!Socket::isConnected()) return OR_BadConditions;
 
-    data::ByteBuffer buf;
+    ByteBuffer buf;
 
     {
-        auto res = m_socket.recv(buf, timeout, cycTimeout);
+        auto res = Socket::recv(buf, timeout, cycTimeout);
         if (res.fail())
         {
             if (res.res != OR_Hangup || buf.isEmpty()) return res;
@@ -166,15 +153,15 @@ cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const 
 
     // find the gap between header and payload
     auto res = buf.search("\r\n\r\n");
-    if (res.fail()) return {OR_WrongData, core::CerberusUtils::truncStr(buf.toString(), 1000)};
+    if (res.fail()) return {OR_WrongData, CerberusUtils::truncStr(buf.toString(), 1000)};
     SIZE gap = res.value;
 
     // find the status line end
     res = buf.search("\r\n");
-    if (res.fail()) return {OR_WrongData, core::CerberusUtils::truncStr(buf.toString(), 1000)};
+    if (res.fail()) return {OR_WrongData, CerberusUtils::truncStr(buf.toString(), 1000)};
     SIZE sle = res.value;
 
-    data::HTTPResponse data;
+    HTTPResponse data;
     data.setPayload(buf.subBuffer(gap + 4));
 
     // get status line
@@ -185,7 +172,7 @@ cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const 
     Dictionary dict;
 
     if (getDictFromHeader(buf.subBuffer(sle + 2, gap + 2 - sle), dict).fail())
-        return {OR_WrongData, core::CerberusUtils::truncStr(buf.toString(), 1000)};
+        return {OR_WrongData, CerberusUtils::truncStr(buf.toString(), 1000)};
 
     data.setHeaderDict(dict);
 
@@ -199,16 +186,11 @@ cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::getResponse(const 
     return data;
 }
 //=============================================================================
-cerberus::OpResData<cerberus::data::HTTPResponse> HTTPClient::get(const data::HTTPRequest &request,
-                                                                  const time::TimeFrame &timeout,
-                                                                  const time::TimeFrame &cycTimeout)
+cerberus::OpResData<HTTPResponse> HTTPClient::get(const HTTPRequest &request, const TimeFrame &timeout,
+                                                  const TimeFrame &cycTimeout)
 {
     auto r = makeRequest(request);
-
     if (r.fail()) return r;
-
     return getResponse(timeout, cycTimeout);
 }
-//=============================================================================
-Socket &HTTPClient::getSocket() { return m_socket; }
 //=============================================================================

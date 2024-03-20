@@ -19,15 +19,11 @@ namespace cerberus
         class CerberusObject;
         class CerberusCore;
         class CerberusRegister;
-        class CerberusFactory;
         class CerberusLog;
         class LibLoader;
     }  // namespace core
 
-    namespace time
-    {
-        class Timer;
-    }
+    class Timer;
 
     template <class T>
     struct FrameworkLock
@@ -52,8 +48,6 @@ namespace cerberus
             : ready(false),
               usage(0),
               data(nullptr){};
-
-        ~FrameworkLock() { lldebug("destructor called"); }  // to be removed
 
         FrameworkLock(const FrameworkLock& other) = delete;
 
@@ -104,7 +98,7 @@ namespace cerberus
         FrameworkLock<core::CerberusRegister> reg;
         FrameworkLock<core::CerberusCore> core;
 
-        void construct(const CerberusLogSetup& logSetup);
+        void construct(const CerberusInitConf& conf);
         void destroy();
 
         void start();
@@ -115,10 +109,9 @@ namespace cerberus
     {
         friend class ::cerberus::core::CerberusCore;
         friend class ::cerberus::core::CerberusObject;
-        friend class ::cerberus::core::CerberusFactory;
         friend class ::cerberus::core::CerberusLog;
         friend class ::cerberus::core::LibLoader;
-        friend class ::cerberus::time::Timer;
+        friend class ::cerberus::Timer;
 
        private:
         static FrameworkData framework;
@@ -135,6 +128,11 @@ namespace cerberus
         // Directly send a message to a cerberus object
         static void sendMsgToObj(HASH32 id, cerberus_message msg);
 
+        // Check if the given object is a Cerberus-managed object
+        static BoolOpRes isCerbManaged(HASH32 id);
+
+        static OpResData<core::CerberusObject*> rawObjById(HASH32 id);
+
         // =======================Plugin manager============================
 
         // Add a plugin handle to the register. If the handle already exixst, exists is true
@@ -142,7 +140,7 @@ namespace cerberus
         static HASH32 addPlugin(void* handle, const std::string& path, bool& exists);
 
         // Get the mutexlocker of a loaded shared object. The mutex is locked before return
-        static mutex::MutexLocker getPluginMutex(HASH32 id);
+        static MutexLocker getPluginMutex(HASH32 id);
 
         // Return the requested handle if it is registered, otherwise nullptr
         static void* checkPlugin(HASH32 id);
@@ -153,15 +151,14 @@ namespace cerberus
         // =======================Event scheduler===========================
 
         // Start a new periodic timer that will fire every t time
-        static void startTimer(std::atomic_bool& bit, time::TimeFrame t, timerCallback callback);
+        static void startTimer(std::atomic_bool& bit, TimeFrame t, timerCallback callback);
 
         // Start a new periodic timer that will fire at d (the first time) and then, every t time
-        static void startTimer(std::atomic_bool& bit, time::DateTime d, time::TimeFrame t,
-                               timerCallback callback);
+        static void startTimer(std::atomic_bool& bit, DateTime d, TimeFrame t, timerCallback callback);
 
         // Start a new one-shot timer that will fire at d and then it will be removed from the
         // references as stopTimer() were called
-        static void startTimer(std::atomic_bool& bit, time::DateTime d, timerCallback callback);
+        static void startTimer(std::atomic_bool& bit, DateTime d, timerCallback callback);
 
         // Stop a timer and remove it from references
         static void stopTimer(std::atomic_bool& bit);
@@ -172,7 +169,7 @@ namespace cerberus
         // Perform the init sequence of the Cerberus framework
         // This operation must precede any others
         // The default parameter will use default settings
-        static void init(const CerberusInitParms& parms = cerberusDefaultParms());
+        static void init(const CerberusInitConf& parms = cerberusDefaultParms());
 
         // Perform the de-init sequence of the Cerberus framework
         static void deinit();
@@ -181,14 +178,13 @@ namespace cerberus
         static void send(cerberus_message message);
 
         // Send a message ignoring the destination of message and using id instead
-        static void send(cerberus_message message, HASH32 id);
+        static void send(cerberus_message message, HASH32 recipientID);
 
-        // Send a message ignoring the destination of message and using the id of the named object
-        // instead
-        static void send(cerberus_message message, const std::string& name);
+        // Send a message using the id of the given named object
+        static void send(cerberus_message message, const std::string& recipient);
 
         // Return a working default set of init parameters
-        static CerberusInitParms cerberusDefaultParms();
+        static CerberusInitConf cerberusDefaultParms();
 
         // Return the version of the Cerberus framework
         static CerbVersion cerberusVersion();
@@ -223,6 +219,13 @@ namespace cerberus
         // This method will return an invalid message if name was not found,
         // or if it's not a Message name.
         static cerberus_message messageConstruct(const std::string& name);
+
+        // Create a new CerberusObject into the Cerberus memory space.
+        // The Cerberus Framework has the ownership of the object and will manage
+        // its existance in memory. The application will be able to interact with it
+        // sending messages to it.
+        static HASH32 createThread(const std::string& name);
+        static HASH32 createSocket(core::CerberusObject::SocketType socketType, const std::string& name);
     };
 }  // namespace cerberus
 

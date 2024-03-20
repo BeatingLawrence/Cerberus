@@ -1,12 +1,18 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#ifndef WINDOWS_SYSTEM
+#include <sys/stat.h>
+#endif
+
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <type_traits>
 #include <vector>
 
 #include "mutex/mutexlocker.h"
+#include "time/datetime.h"
 
 #define StringOpRes ::cerberus::OpResData<std::string>
 #define BoolOpRes ::cerberus::OpResData<bool>
@@ -86,8 +92,6 @@ namespace cerberus
         const T* operator->() { return p; };
     };
 
-    typedef void (*timerCallback)();
-
     struct DoubleString
     {
         std::string left;
@@ -97,7 +101,7 @@ namespace cerberus
     struct LoaderFunc
     {
         void* func;
-        mutex::MutexLocker mutexLocker;
+        MutexLocker mutexLocker;
 
         bool isValid() { return func != nullptr; };
     };
@@ -118,20 +122,73 @@ namespace cerberus
         std::string text;
     };
 
+    enum FileType
+    {
+        FT_BLK,
+        FT_CHR,
+        FT_DIR,
+        FT_FIFO,
+        FT_LNK,
+        FT_REG,
+        FT_SOCK,
+    };
+
+    enum FilePermission : uint8_t
+    {
+        FP_UID    = 32,
+        FP_GID    = 16,
+        FP_STICKY = 8,
+        FP_READ   = 4,
+        FP_WRITE  = 2,
+        FP_EXEC   = 1,
+    };
+
+    struct FileMode
+    {
+        uint8_t user;
+        uint8_t group;
+        uint8_t other;
+    };
+
+    struct FileMetadata
+    {
+        FileType type;     // the file type
+        SIZE linkrefs;     // the number of refs to the hard link
+        LSIZE size;        // the file size
+        FileMode mode;     // the file mode
+        LSIZE ownUID;      // the owner user ID
+        LSIZE ownGID;      // the owner group ID
+        DateTime accTime;  // last file access time
+        DateTime modTime;  // last modification time
+        DateTime chgTime;  // last status change time
+
+        void fromStat(const struct stat& stat_struct);
+    };
+
     enum SlotType
     {
-        ST_UNDEFINED  = 0,
-        ST_BYTE       = 1,
-        ST_INT32      = 2,
-        ST_INT64      = 3,
-        ST_FLOAT      = 4,
-        ST_DOUBLE     = 5,
-        ST_BOOL       = 6,
-        ST_VOIDP      = 7,
-        ST_STRING     = 8,
-        ST_BYTEBUFFER = 9,
-        ST_DICTIONARY = 10,
-        ST_JSON       = 11,
+        ST_UNDEFINED = 0,
+        ST_BYTE,
+        ST_INT32,
+        ST_INT64,
+        ST_UINT64,
+        ST_FLOAT,
+        ST_DOUBLE,
+        ST_BOOL,
+        ST_VOIDP,
+        ST_STRING,
+        ST_BYTEBUFFER,
+        ST_DICTIONARY,
+        ST_JSON,
+        ST_HOST,
+        ST_TASK,
+        ST_RESULT,
+    };
+
+    struct SlotTemplate
+    {
+        SlotType type;
+        std::string name;
     };
 
     enum WordMatch
@@ -153,11 +210,12 @@ namespace cerberus
 
     enum ThreadPeriodicity
     {
-        TP_NonPeriodic,
+        TP_Message,
         TP_Periodic,
-        TP_PeriodicQueue,
+        TP_PeriodicMessage,
         TP_OneShot,
         TP_Continuos,
+        TP_Trigger,
     };
 
     enum Radix
@@ -183,33 +241,58 @@ namespace cerberus
         SSLSH_SentReceived,
     };
 
-    struct CerberusLogRole
+    struct LogRole
     {
         uint8_t textFormatting[3];  // up to 3 formatting specifiers, 0 will be ignored, see define.h
         uint8_t foregroundColor;    // color specifier
         uint8_t backgroundColor;    // color specifier
     };
 
-    struct CerberusLogSetup
+    struct FileLoggingConf
     {
-        LogLevel applicationLogLevel;  // set the application log level. Minor levels will be silenced
-        LogLevel cerberusLogLevel;     // set the Cerberus framework log level. Minor levels will be
-                                       // silenced
-        bool colorFormatting;          // enable the color formatting of the output terminal
-        bool logOnFile;                // enable the log on file
-        std::string logFileName;       // set the log file name
-        SIZE logFileMaximumSize;       // set to zero to disable (not recommended)
-        CerberusLogRole infoRole;      // set the log role for the info level
-        CerberusLogRole warningRole;   // set the log role for the warning level
-        CerberusLogRole errorRole;     // set the log role for the error level
-        CerberusLogRole debugRole;     // set the log role for the debug level
+        bool enable;              // enable the log on file
+        std::string fileName;     // log file name
+        LSIZE fileMaxSize;        // set to zero to disable log rotation (not recommended)
+        std::string logDir;       // the archive of the log files
+        std::string fileNameFmt;  // format string for the archived files name (see below)
+        SIZE logDirMaxSize;       // the maximum size allowed for the log archive, before the
+                                  // log rotation kicks in
     };
 
-    struct CerberusInitParms
+    /* archive file format tokens:
+
+       %h: hours
+       %m: minutes
+       %s: seconds
+
+       %D: days
+       %M: months
+       %Y: years
+
+     */
+
+    struct LogConf
     {
-        CerberusLogSetup logSetup;
+        LogLevel appLogLevel;         // application log level. Minor levels will be silenced
+        LogLevel cerbLogLevel;        // framework log level. Minor levels will be silenced
+        bool colorFormatting;         // enable the color formatting of the output terminal
+        LogRole infoRole;             // log role for the info level
+        LogRole warningRole;          // log role for the warning level
+        LogRole errorRole;            // log role for the error level
+        LogRole debugRole;            // log role for the debug level
+        FileLoggingConf fileLogConf;  // file logging configuration parameters
+    };
+
+    struct CoreConf
+    {
+        SIZE threadPool;  // set the size of the Cerberus thread pool. a value of zero disables it
+    };
+
+    struct CerberusInitConf
+    {
+        LogConf logSetup;
+        CoreConf coreSetup;
         bool useCiphers;  // enable cerberus to init and use the OpenSSL library
-        // add more configuration members here..
     };
 
     enum HTTPVersion
@@ -490,6 +573,23 @@ namespace cerberus
             OpRes::expect();
             return *this;
         };
+    };
+
+    class Actor;
+    class Thread;
+
+    typedef void (*timerCallback)();
+    typedef int (*threadTickCallback)(cerberus_message, Thread*);
+    typedef void (*threadCallback)();
+    typedef OpRes (*actorCallback)(void* ctx);
+    typedef void (*taskEndCallback)(void* ctx, Actor*, OpRes);
+
+    struct Task
+    {
+        actorCallback cb;
+        void* ctx;
+
+        bool isValid() { return cb; };
     };
 
     struct DictLine
