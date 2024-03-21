@@ -134,6 +134,9 @@ namespace cerberus
 
         // Compute the FNV1A digest of the string
         static HASH32 hash_fnv1a(const std::string& str);
+
+        // Get the complete absolute path
+        static StringOpRes completePath(const std::string& path);
     };
 }  // namespace cerberus
 

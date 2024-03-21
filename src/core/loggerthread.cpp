@@ -78,7 +78,7 @@ bool LoggerThread::isFailed() { return m_failed.test(); }
 void LoggerThread::open()
 {
     m_logFile.close();
-    m_logFile.setFileName(m_conf.fileName);
+    m_logFile.path(m_conf.fileName);
 
     if (m_logFile.open().ok())
     {
@@ -114,6 +114,8 @@ void LoggerThread::archive()
 
     m_logFile.move(logDir.append("/").append(archivedFileName)).ok(true);
 
+    checkArchiveSize();
+
     open();
 }
 //=============================================================================
@@ -139,5 +141,18 @@ void LoggerThread::archiviationName(std::string &fmtStr)
 
     tmp = CerberusUtils::strPrint_uint(current.seconds());
     CerberusUtils::replaceAll(fmtStr, "%s", tmp);
+}
+//=============================================================================
+void LoggerThread::checkArchiveSize()
+{
+    return;
+    auto res = File::stat(m_conf.logDir);
+
+    if (res.fail(true))
+    {
+        logError("could not get log archive size");
+    }
+
+    // auto size = res.value.size;
 }
 //=============================================================================

@@ -27,18 +27,20 @@ namespace cerberus
 
             virtual void coolDown() override;
 
+            void open();
+
+            void archive();
+
+            void archiviationName(std::string& fmtStr);
+
+            void checkArchiveSize();
+
            public:
             LoggerThread();
 
             void setup(FileLoggingConf configuration);
 
             bool isFailed();
-
-            void open();
-
-            void archive();
-
-            void archiviationName(std::string& fmtStr);
         };
     }  // namespace core
 }  // namespace cerberus

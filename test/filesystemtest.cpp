@@ -1,4 +1,5 @@
 #include <cerberus/cerberus.h>
+#include <cerberus/data/filesystem/directory.h>
 #include <cerberus/data/filesystem/file.h>
 #include <cerberus/data/filesystem/inidatafile.h>
 #include <gtest/gtest.h>
@@ -90,4 +91,19 @@ TEST(iniDataFileTest, readSections2)
     IniDataFile file("temp.ini");
     EXPECT_TRUE(file.load().ok(true));
     EXPECT_FALSE(file.read_bool("bool_value", "section 1").expect().value);
+}
+
+TEST(directoryTest, get)
+{
+    Directory d("logs");
+    d.get(true).expect();
+    std::string s;
+    d.toStr(s);
+    logInfo("%s", s.c_str());
+
+    logInfo("");  // some space
+    logInfo("");
+
+    logInfo("size of logs dir: %u", d.size());
+    logInfo("path of first file: %s", d.files().front().completePath().c_str());
 }

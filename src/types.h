@@ -6,7 +6,7 @@
 #endif
 
 #include <cstdint>
-#include <functional>
+#include <list>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -27,6 +27,58 @@ namespace cerberus
     typedef uint8_t BYTE;
     typedef int64_t OFFSET;
     typedef uint32_t HASH32;
+
+    struct Path : public std::list<std::string>
+    {
+        Path() = default;
+
+        Path(const std::string& path) { fromStr(path); }
+
+        void append(const std::string& str) { push_back(str); }
+
+        Path copy_append(const std::string& str) const
+        {
+            Path p(*this);
+            p.append(str);
+            return p;
+        }
+
+        std::string toStr() const
+        {
+            std::string ret;
+
+            for (auto el = begin(), en = --end(); el != en; el++)
+            {
+                ret.append((*el));
+                ret.append("/");
+            }
+
+            ret.append(back());
+
+            return ret;
+        }
+
+        void fromStr(const std::string& str)
+        {
+            clear();
+            std::string tmp;
+
+            for (auto& el : str)
+            {
+                if (el == '/')
+                {
+                    if (!tmp.empty()) push_back(tmp);  // TODO USE REGEX
+                    tmp.clear();
+                }
+                else
+                {
+                    tmp.push_back(el);
+                }
+            }
+
+            if (!tmp.empty()) push_back(tmp);
+        }
+    };
 
     template <class T>
     class Iterator

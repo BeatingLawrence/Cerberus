@@ -492,3 +492,14 @@ HASH32 CerberusUtils::hash_fnv1a(const std::string& str)
     return hash;
 }
 //=============================================================================
+StringOpRes CerberusUtils::completePath(const std::string& path)
+{
+    auto comp = ::realpath(path.c_str(), NULL);
+
+    if (comp == NULL) return OR_Failure;
+
+    std::string ret(comp);
+    free(comp);
+    return ret;
+}
+//=============================================================================

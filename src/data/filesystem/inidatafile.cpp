@@ -253,7 +253,7 @@ IniDataFile::~IniDataFile()
     // noop
 }
 //=============================================================================
-void IniDataFile::setFileName(const std::string& fileName) { m_file.setFileName(fileName); }
+void IniDataFile::setFileName(const std::string& fileName) { m_file.path(fileName); }
 //=============================================================================
 BoolOpRes IniDataFile::load()
 {
