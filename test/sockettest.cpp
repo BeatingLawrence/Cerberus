@@ -115,7 +115,7 @@ static int testCallback_FTP(cerberus_message msg, Thread* thread)
     socket.bind("localhost:54321");
     socket.listen(3);
     File file("ftp_socket_test_file_received.file", cerberus::FOM_ReadWriteTrunc);
-    if (file.open().fail(true))
+    if (file.open().fail())
     {
         logDebug("file open error");
         socket.close();
@@ -206,7 +206,7 @@ TEST(socketTest, FTP)
     //
     // file creation
     File f("ftp_socket_test_file_sent.file", cerberus::FOM_ReadWriteTrunc);
-    ASSERT_TRUE(f.open().ok(true));
+    ASSERT_TRUE(f.open().ok());
     for (int i = 0; i < 500; i++)
     {
         f.writeLine("Hello, World!");
@@ -221,7 +221,7 @@ TEST(socketTest, FTP)
     socket.close();  // it causes hangup on the other side
     EXPECT_EQ(receiver.join().expect().value, THREAD_SUCCESS);
     File rf("ftp_socket_test_file_received.file");
-    ASSERT_TRUE(rf.open().ok(true));
+    ASSERT_TRUE(rf.open().ok());
     EXPECT_TRUE(rf.isEqual(f).value);
 
     rf.close();
@@ -232,7 +232,7 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
 {
     auto socket = TCPSocket("TLS socket");
     ASSERT_EQ(socket.TLS_init().res, cerberus::OR_OK);  // mark the socket as TLS
-    socket.TLS_ignoreHangup(true).fail(true);
+    socket.TLS_ignoreHangup(true).fail();
     logDebug("connecting..");
     cerberus::Host h("www.google.com:443");
     ASSERT_EQ(socket.connect(h).res, cerberus::OR_OK);
@@ -257,7 +257,7 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
     logDebug("receiving");
     auto r = socket.recv(buf, 1000, 200);
 
-    EXPECT_TRUE(r.ok(true));
+    EXPECT_TRUE(r.ok());
 
     socket.close();
 
@@ -272,7 +272,7 @@ TEST(socketTest, HTTPClient)
 {
     HTTPClient client("HTTP Client test");
     client.TLS_init();
-    ASSERT_TRUE(client.connect("www.google.com:443").ok(true));
+    ASSERT_TRUE(client.connect("www.google.com:443").ok());
     logDebug("connected");
     HTTPRequest req;
     req.setup(cerberus::HTTP_GET, "/", cerberus::HTTP_1_1)
@@ -286,7 +286,7 @@ TEST(socketTest, HTTPClient)
     logDebug("data to be sent:");
     logDebug(req.data().toNormalizedString().value.c_str());
     //
-    EXPECT_TRUE(client.makeRequest(req).ok(true));
+    EXPECT_TRUE(client.makeRequest(req).ok());
     logDebug("request sent");
     auto response = client.getResponse(1000, 200);
     client.close();
@@ -309,18 +309,18 @@ TEST(socketTest, HTTPClient)
     logDebug("payload written on disk");
 }
 
-// This code test the client authentication capabilities
+// This code test the client authentication
 TEST(socketTest, TLS_clientAuth)
 {
     auto socket = TCPSocket("TLS socket");
     ASSERT_TRUE(socket
                     .TLS_init("/Users/lory/ssl/com.apple.systemdefault.pem",
                               "/Users/lory/ssl/com.apple.systemdefault.key.pem", "/Users/lory/ssl/cert.pem")
-                    .ok(true));
+                    .ok());
     socket.TLS_ignoreHangup(true);
     logDebug("connecting..");
     cerberus::Host h("api.openai.com:443");
-    ASSERT_TRUE(socket.connect(h).ok(true));
+    ASSERT_TRUE(socket.connect(h).ok());
     logDebug("connected with encryption: PROTO: %s CIPHER: %s", socket.TLS_getProtocolName().value.c_str(),
              socket.TLS_getCipherName().value.c_str());
     Thread::sleep(500);

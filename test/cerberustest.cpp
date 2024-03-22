@@ -121,7 +121,7 @@ TEST(cerberusTest, dictionaryTest)
     dict.addKey("Transfer-Encoding", "chunked");
     EXPECT_TRUE(dict.getFieldMatch("transfer-encoding", "chunked", cerberus::WM_CaseInsensitive,
                                    cerberus::WM_CaseSensitive)
-                    .ok(true));
+                    .ok());
 }
 
 TEST(cerberusTest, cerbUtilsTest)

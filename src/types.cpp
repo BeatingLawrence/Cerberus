@@ -230,9 +230,9 @@ cerberus::OpRes::OpRes()
 {
 }
 //=============================================================================
-cerberus::OpRes::OpRes(Result r, const std::string &reason)
+cerberus::OpRes::OpRes(Result r, const std::string &reason, const std::string &reason2)
     : res(r),
-      reason(reason)
+      reason(reason + " " + reason2)
 {
 }
 //=============================================================================
@@ -272,15 +272,18 @@ cerberus::OpRes &cerberus::OpRes::expect()
     return *this;
 }
 //=============================================================================
-bool cerberus::OpRes::ok(bool print)
+bool cerberus::OpRes::ok(const std::string &str)
 {
     if (res == Result::OR_OK)
     {
         return true;
     }
-    else if (print)
+    else if (!str.empty())
     {
-        std::string err = errorString();
+        std::string err = str;
+        err += " ,";
+        err += errorString();
+
         if (!reason.empty()) err.append("\n").append(reason);
 
         logError("Operation failed: %s", err.c_str());
@@ -289,7 +292,7 @@ bool cerberus::OpRes::ok(bool print)
     return false;
 }
 //=============================================================================
-bool cerberus::OpRes::fail(bool print) { return !ok(print); }
+bool cerberus::OpRes::fail(const std::string &str) { return !ok(str); }
 //=============================================================================
 std::string cerberus::OpRes::errorString()
 {
@@ -453,6 +456,7 @@ void cerberus::FileMetadata::fromStat(const struct stat &stat_struct)
     accTime.fromTimespec(stat_struct.st_atimespec.tv_sec, stat_struct.st_atimespec.tv_nsec);
     modTime.fromTimespec(stat_struct.st_mtimespec.tv_sec, stat_struct.st_mtimespec.tv_nsec);
     chgTime.fromTimespec(stat_struct.st_ctimespec.tv_sec, stat_struct.st_ctimespec.tv_nsec);
+    creTime.fromTimespec(stat_struct.st_birthtimespec.tv_sec, stat_struct.st_birthtimespec.tv_nsec);
 
     // link refs
     linkrefs = stat_struct.st_nlink;

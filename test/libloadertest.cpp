@@ -9,7 +9,7 @@ TEST(libLoaderTest, standalone_libloading)
     GTEST_SKIP();
     LibLoader loader;
 
-    ASSERT_TRUE(loader.load("libtestobject.dylib", true).ok(true));
+    ASSERT_TRUE(loader.load("libtestobject.dylib", true).ok());
 
     int (*func)(int, int) = (int (*)(int, int))loader.get("add").func;
 
@@ -34,7 +34,7 @@ TEST(libLoaderTest, shared_libloading)
     GTEST_SKIP();
     LibLoader loader;
 
-    ASSERT_TRUE(loader.load("libtestobject.dylib").ok(true));
+    ASSERT_TRUE(loader.load("libtestobject.dylib").ok());
 
     ASSERT_TRUE(loader.isLoaded());
 

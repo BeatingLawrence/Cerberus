@@ -9,25 +9,29 @@
 using namespace cerberus;
 
 //=============================================================================
-Directory::Directory(const std::string& dirName)
-    : m_name(dirName)
-{
-}
+void Directory::path(const Path& path) { m_path = path; }
+//=============================================================================
+Path Directory::path() const { return m_path; }
 //=============================================================================
 OpRes Directory::_get(int parentFd, bool recursive)
 {
     m_files.clear();
     m_dirs.clear();
-    m_parent.clear();
     m_size = 0;
 
-    int fd = openat(parentFd, m_name.c_str(), O_RDONLY | O_DIRECTORY);
+    if (m_path.empty()) return {OR_Empty, "path is empty"};
 
-    if (fd == -1) return {OR_Failure, strerror(errno)};
+    int fd = openat(parentFd, m_path.back().c_str(), O_RDONLY | O_DIRECTORY);
+
+    if (fd == -1) return {OR_Failure, "openat error", strerror(errno)};
 
     auto dir = fdopendir(fd);
 
-    if (!dir) return {OR_Failure, strerror(errno)};
+    if (!dir)
+    {
+        ::close(fd);
+        return {OR_Failure, "fdopendir error", strerror(errno)};
+    }
 
     while (true)
     {
@@ -38,26 +42,36 @@ OpRes Directory::_get(int parentFd, bool recursive)
         {
             if (errno == 0) break;  // end of directory
 
-            logError("error in readdir %s", strerror(errno));
-            break;
+            closedir(dir);
+            return {OR_Failure, "readdir error", strerror(errno)};
         }
 
         if ((strcmp(el->d_name, ".") == 0) || (strcmp(el->d_name, "..") == 0)) continue;  // skip
 
         if (el->d_type == DT_DIR)
-            m_dirs.push_back(Directory(m_parent.copy_append(m_name), el->d_name));
+            m_dirs.push_back(Directory(m_path.copy_append(el->d_name)));
 
         else if (el->d_type == DT_REG)
         {
-            m_files.push_back(File(m_parent.copy_append(m_name), el->d_name));
-            m_size += m_files.back().size().expect().value;
+            File f(m_path.copy_append(el->d_name));
+            m_files.push_back(f);
+
+            auto res = f.size();
+            if (res.ok("error when getting file size")) m_size += res.value;
         }
     }
 
     if (recursive)
         for (auto& el : m_dirs)
         {
-            el._get(fd, true).expect();
+            auto res = el._get(fd, true);
+
+            if (res.fail())
+            {
+                closedir(dir);
+                return res;
+            }
+
             m_size += el.size();
         }
 
@@ -66,19 +80,14 @@ OpRes Directory::_get(int parentFd, bool recursive)
     return OR_OK;
 }
 //=============================================================================
-Directory::Directory(Path parents, const std::string& dirName)
-    : m_name(dirName),
-      m_parent(parents)
+Directory::Directory(const Path& path)
+    : m_path(path)
 {
 }
 //=============================================================================
-void Directory::name(const std::string& dirName) { m_name = dirName; }
+Path Directory::completePath() const { return CerberusUtils::completePath(m_path.toStr()).value; }
 //=============================================================================
-std::string Directory::name() const { return m_name; }
-//=============================================================================
-std::string Directory::path() const { return m_parent.copy_append(m_name).toStr(); }
-//=============================================================================
-std::string Directory::completePath() const { return CerberusUtils::completePath(path()).value; }
+std::string Directory::name() const { return m_path.back(); }
 //=============================================================================
 OpRes Directory::get(bool recursive) { return _get(AT_FDCWD, recursive); }
 //=============================================================================

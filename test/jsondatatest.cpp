@@ -29,7 +29,7 @@ TEST(jsonDataTest, create_generate)
     //
     // generate JSON:
     ByteBuffer bb;
-    EXPECT_TRUE(root.generate(bb).ok(true));
+    EXPECT_TRUE(root.generate(bb).ok());
 
     logInfo("GENERATED JSON:\n%s", bb.toString().c_str());
 }
@@ -38,8 +38,8 @@ TEST(jsonDataTest, parse)
 {
     JsonData data;
     File f("jsontest.json");
-    ASSERT_TRUE(f.open().ok(true));
-    ASSERT_TRUE(data.parse(f).ok(true));
+    ASSERT_TRUE(f.open().ok());
+    ASSERT_TRUE(data.parse(f).ok());
     std::string s;
     data.toStr(s);
     logInfo("JSON DATA: %s", s.c_str());
@@ -49,10 +49,10 @@ TEST(jsonDataTest, copy_generate)
 {
     JsonData data;
     File f("jsontest.json");
-    ASSERT_TRUE(f.open().ok(true));
-    ASSERT_TRUE(data.parse(f).ok(true));
+    ASSERT_TRUE(f.open().ok());
+    ASSERT_TRUE(data.parse(f).ok());
     ByteBuffer bb;
-    EXPECT_TRUE(data.generate(bb).ok(true));
+    EXPECT_TRUE(data.generate(bb).ok());
     logInfo("GENERATED JSON:\n%s", bb.toString().c_str());
 }
 
@@ -60,8 +60,8 @@ TEST(jsonDataTest, search)
 {
     JsonData data;
     File f("jsontest.json");
-    ASSERT_TRUE(f.open().ok(true));
-    ASSERT_TRUE(data.parse(f).ok(true));
+    ASSERT_TRUE(f.open().ok());
+    ASSERT_TRUE(data.parse(f).ok());
     auto found = data.search("street_address");
 
     ASSERT_TRUE(found.isValid());
@@ -71,6 +71,6 @@ TEST(jsonDataTest, search)
     logInfo("JSON DATA: %s", s.c_str());
     //
     ByteBuffer bb;
-    EXPECT_TRUE(found.generate(bb).ok(true));
+    EXPECT_TRUE(found.generate(bb).ok());
     logInfo("GENERATED JSON:\n%s", bb.toString().c_str());
 }

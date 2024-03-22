@@ -10,27 +10,23 @@ namespace cerberus
 {
     class Directory
     {
-        std::string m_name;
-
+        Path m_path;
         std::list<File> m_files;
         std::list<Directory> m_dirs;
-        Path m_parent;
         LSIZE m_size;
 
         OpRes _get(int parentFd, bool recursive);
 
-        Directory(Path parents, const std::string& dirName);
-
        public:
-        Directory(const std::string& dirName = "");
+        Directory(const Path& path);
 
-        void name(const std::string& dirName);
+        void path(const Path& path);
+
+        Path path() const;
+
+        Path completePath() const;
 
         std::string name() const;
-
-        std::string path() const;
-
-        std::string completePath() const;
 
         OpRes get(bool recursive = false);
 

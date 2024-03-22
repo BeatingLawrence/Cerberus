@@ -197,7 +197,7 @@ DateTime &DateTime::operator+(const TimeFrame &other) { return add(other); }
 //=============================================================================
 DateTime &DateTime::operator-(const TimeFrame &other) { return subtract(other); }
 //=============================================================================
-bool DateTime::operator<(const DateTime &other)
+bool DateTime::operator<(const DateTime &other) const
 {
     auto thisTime  = normalize();
     auto otherTime = other.normalize();
@@ -210,7 +210,7 @@ bool DateTime::operator<(const DateTime &other)
     return thisTime < otherTime;
 }
 //=============================================================================
-bool DateTime::operator<=(const DateTime &other)
+bool DateTime::operator<=(const DateTime &other) const
 {
     auto thisTime  = normalize();
     auto otherTime = other.normalize();
@@ -223,7 +223,7 @@ bool DateTime::operator<=(const DateTime &other)
     return thisTime < otherTime;
 }
 //=============================================================================
-bool DateTime::operator>(const DateTime &other)
+bool DateTime::operator>(const DateTime &other) const
 {
     auto thisTime  = normalize();
     auto otherTime = other.normalize();
@@ -236,7 +236,7 @@ bool DateTime::operator>(const DateTime &other)
     return thisTime > otherTime;
 }
 //=============================================================================
-bool DateTime::operator>=(const DateTime &other)
+bool DateTime::operator>=(const DateTime &other) const
 {
     auto thisTime  = normalize();
     auto otherTime = other.normalize();
@@ -248,6 +248,10 @@ bool DateTime::operator>=(const DateTime &other)
 
     return thisTime > otherTime;
 }
+//=============================================================================
+bool DateTime::isOlder(const DateTime &other) const { return (*this) < other; }
+//=============================================================================
+bool DateTime::isNewer(const DateTime &other) const { return (*this) > other; }
 //=============================================================================
 std::string DateTime::toString() const
 {

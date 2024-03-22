@@ -84,28 +84,6 @@ OpRes File::existsAsDirectory(const std::string& path)
 #endif
 }
 //=============================================================================
-::cerberus::OpResData<LSIZE> File::directorySize(const std::string& path)
-{
-    // Directory dir(path);
-    // LSIZE size = 0;
-
-    // auto files = dir.listFiles();
-    // auto dirs  = dir.listDirs();
-
-    // for (auto& el : files)
-    // {
-    //     size += el.size().value;
-    // }
-
-    // for (auto& el : dirs)
-    // {
-    //     size += el.size().value;
-    // }
-
-    // return size;
-    return OR_OK;
-}
-//=============================================================================
 OpRes File::createDirectory(const std::string& path)
 {
 #ifdef WINDOWS_SYSTEM
@@ -190,7 +168,7 @@ OpResData<FileMetadata> cerberus::File::stat(const std::string& path)
 
     int ret = ::stat(path.c_str(), &stat_struct);
 
-    if (ret != 0) return {OR_Failure, strerror(errno)};
+    if (ret != 0) return {OR_Failure, "stat error", strerror(errno)};
 
     FileMetadata metadata = {};
 
@@ -201,7 +179,7 @@ OpResData<FileMetadata> cerberus::File::stat(const std::string& path)
 }
 //=============================================================================
 File::File(FileOpenMode openMode, bool binaryMode)
-    : m_name(),
+    : m_path(),
       m_binaryMode(binaryMode),
       m_openMode(openMode),
       m_file(nullptr),
@@ -209,27 +187,72 @@ File::File(FileOpenMode openMode, bool binaryMode)
 {
 }
 //=============================================================================
-File::File(const std::string& path, FileOpenMode openMode, bool binaryMode)
-    : m_name(),
+File::File(const Path& path, FileOpenMode openMode, bool binaryMode)
+    : m_path(path),
       m_binaryMode(binaryMode),
       m_openMode(openMode),
       m_file(nullptr),
       m_fd(-1)
 {
-    setPath(path);
 }
 //=============================================================================
-File::~File() {}
+File::File(const File& other)
+    : m_path(other.m_path),
+      m_binaryMode(other.m_binaryMode),
+      m_openMode(other.m_openMode),
+      m_file(nullptr),
+      m_fd(-1)
+{
+}
 //=============================================================================
-void File::path(const std::string& path) { setPath(path); }
+File::File(File&& other)
+    : m_path(other.m_path),
+      m_binaryMode(other.m_binaryMode),
+      m_openMode(other.m_openMode),
+      m_file(other.m_file),
+      m_fd(other.m_fd)
+{
+    other.m_fd   = -1;
+    other.m_file = nullptr;
+}
+//=============================================================================
+File& File::operator=(const File& other)
+{
+    m_path       = other.m_path;
+    m_binaryMode = other.m_binaryMode;
+    m_openMode   = other.m_openMode;
+    return *this;
+}
+//=============================================================================
+File::~File()
+{
+    if (isOpen()) close();
+}
+//=============================================================================
+OpResData<FileMetadata> File::stat()
+{
+    if (!isOpen()) return File::stat(m_path.toStr());
+
+    struct stat stat_struct = {};
+
+    int ret = fstat(m_fd, &stat_struct);
+
+    if (ret != 0) return {OR_Failure, "fstat error", strerror(errno)};
+
+    FileMetadata metadata = {};
+
+    metadata.fromStat(stat_struct);
+
+    return metadata;
+}
 //=============================================================================
 bool File::canWrite() const { return (m_openMode != FOM_Read); }
 //=============================================================================
-std::string File::name() const { return m_name; }
+std::string File::name() const { return (m_path.empty() ? "" : m_path.back()); }
 //=============================================================================
-std::string File::path() const { return m_parent.copy_append(m_name).toStr(); }
+Path File::path() const { return m_path; }
 //=============================================================================
-std::string File::completePath() const { return CerberusUtils::completePath(path()).value; }
+Path File::completePath() const { return CerberusUtils::completePath(m_path.toStr()).value; }
 //=============================================================================
 void File::setOpenMode(FileOpenMode openMode, bool binaryMode)
 {
@@ -262,30 +285,15 @@ std::string File::getOpenModeString()
     return ret;
 }
 //=============================================================================
-void File::setPath(const std::string& path)
-{
-    m_parent.fromStr(path);
-    m_name = m_parent.back();
-    if (!m_parent.empty()) m_parent.pop_back();
-}
-//=============================================================================
-File::File(Path parent, const std::string& name)
-    : m_name(name),
-      m_binaryMode(false),
-      m_openMode(FOM_Read),
-      m_file(nullptr),
-      m_fd(-1),
-      m_parent(parent)
-{
-}
+void File::path(const Path& path) { m_path = path; }
 //=============================================================================
 bool File::isOpen() const { return m_file != NULL; }
 //=============================================================================
 OpRes File::open()
 {
-    if (m_name.empty()) return OR_InvalidPath;
+    if (m_path.empty()) return OR_InvalidPath;
 
-    m_file = fopen(path().c_str(), getOpenModeString().c_str());
+    m_file = fopen(m_path.toStr().c_str(), getOpenModeString().c_str());
 
     if (!isOpen()) return {OR_Failure, strerror(errno)};
 
@@ -306,44 +314,27 @@ void File::close()
     m_fd   = -1;
 }
 //=============================================================================
-OpRes File::deleteFromDisk()
+OpRes File::remove()
 {
     if (isOpen()) close();
 
-    return remove(path());
+    return remove(m_path.toStr());
 }
 //=============================================================================
-OpRes File::move(const std::string& newPath)
+OpRes File::move(const Path& newPath)
 {
-    auto res = move(path(), newPath);
+    auto res = move(m_path.toStr(), newPath.toStr());
 
-    if (res.ok()) setPath(newPath);
+    if (res.ok()) path(newPath);
 
     return res;
-}
-//=============================================================================
-OpResData<FileMetadata> File::metadata()
-{
-    if (!isOpen()) return OR_BadConditions;
-
-    struct stat stat_struct = {};
-
-    int ret = fstat(m_fd, &stat_struct);
-
-    if (ret != 0) return {OR_Failure, strerror(errno)};
-
-    FileMetadata metadata = {};
-
-    metadata.fromStat(stat_struct);
-
-    return metadata;
 }
 //=============================================================================
 SizeOpRes File::size() const
 {
     if (!isOpen())
     {
-        auto st = File::stat(path());
+        auto st = File::stat(m_path.toStr());
         if (st.fail()) return st;
 
         return st.value.size;

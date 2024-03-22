@@ -7,10 +7,11 @@ using namespace cerberus::core;
 
 int main(int argc, char* argv[])
 {
-    auto parms                  = Cerberus::cerberusDefaultParms();
-    parms.logSetup.cerbLogLevel = cerberus::LL_Debug;
-    parms.logSetup.appLogLevel  = cerberus::LL_Debug;
-    parms.coreSetup.threadPool  = 10;  // 10 threads in the threadpool
+    auto parms                               = Cerberus::cerberusDefaultParms();
+    parms.logSetup.cerbLogLevel              = cerberus::LL_Debug;
+    parms.logSetup.appLogLevel               = cerberus::LL_Debug;
+    parms.coreSetup.threadPool               = 10;      // 10 threads in the threadpool
+    parms.logSetup.fileLogConf.logDirMaxSize = 500000;  //~ 500K
     Cerberus::init(parms);
     // cerberus::core::LibLoader::fastload("libtestobject.dylib");
     //   start testing

@@ -35,6 +35,8 @@ namespace cerberus
 
             void checkArchiveSize();
 
+            void removeOldestFile();
+
            public:
             LoggerThread();
 

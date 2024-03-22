@@ -21,7 +21,7 @@ namespace cerberus
         friend class ::cerberus::Directory;
 
        private:
-        std::string m_name;
+        Path m_path;
 
         bool m_binaryMode;
 
@@ -31,13 +31,7 @@ namespace cerberus
 
         int m_fd;
 
-        Path m_parent;
-
         std::string getOpenModeString();
-
-        void setPath(const std::string& path);
-
-        File(Path parent, const std::string& name);
 
        public:
         // Check wether a regular file exists on filesystem
@@ -55,10 +49,6 @@ namespace cerberus
         //      OR_NotFound if it does not exist
         //      OR_SystemFailure if a system error occurred
         static OpRes existsAsDirectory(const std::string& path);
-
-        // Get the real size of a directory.
-        // For real size is intended the sum of all files and directories inside it
-        static SizeOpRes directorySize(const std::string& path);
 
         // Create a directory
         static OpRes createDirectory(const std::string& path);
@@ -79,12 +69,20 @@ namespace cerberus
 
         // Create a File instance
         File(FileOpenMode openMode = FOM_Read, bool binaryMode = false);
-        File(const std::string& path, FileOpenMode openMode = FOM_Read, bool binaryMode = false);
+        File(const Path& path, FileOpenMode openMode = FOM_Read, bool binaryMode = false);
+
+        File(const File& other);
+        File(File&& other);
+
+        File& operator=(const File& other);
 
         ~File();
 
+        // Get file metadata (see FileMetadata structure)
+        OpResData<FileMetadata> stat();
+
         // Set the path of the file
-        void path(const std::string& path);
+        void path(const Path& path);
 
         // Set the openMode of the file
         void setOpenMode(FileOpenMode openMode, bool binaryMode = false);
@@ -96,10 +94,10 @@ namespace cerberus
         std::string name() const;
 
         // Get the set path
-        std::string path() const;
+        Path path() const;
 
         // Get the complete absolute path of the file
-        std::string completePath() const;
+        Path completePath() const;
 
         // Check if the file is currently open
         bool isOpen() const;
@@ -114,13 +112,10 @@ namespace cerberus
         void close();
 
         // Close the file if open, and remove it from filesystem
-        OpRes deleteFromDisk();
+        OpRes remove();
 
         // Move the current file to another path name
-        OpRes move(const std::string& newPath);
-
-        // Get all the file metadata
-        OpResData<FileMetadata> metadata();
+        OpRes move(const Path& newPath);
 
         // Get the file size
         SizeOpRes size() const;

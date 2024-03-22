@@ -96,10 +96,13 @@ namespace cerberus
         DateTime& operator-(const TimeFrame& other);
 
         // Comparison
-        bool operator<(const DateTime& other);
-        bool operator<=(const DateTime& other);
-        bool operator>(const DateTime& other);
-        bool operator>=(const DateTime& other);
+        bool operator<(const DateTime& other) const;
+        bool operator<=(const DateTime& other) const;
+        bool operator>(const DateTime& other) const;
+        bool operator>=(const DateTime& other) const;
+
+        bool isOlder(const DateTime& other) const;
+        bool isNewer(const DateTime& other) const;
 
         // Return the time value as a string
         std::string toString() const;

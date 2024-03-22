@@ -28,11 +28,15 @@ namespace cerberus
     typedef int64_t OFFSET;
     typedef uint32_t HASH32;
 
-    struct Path : public std::list<std::string>
+    struct Path : private std::list<std::string>
     {
         Path() = default;
 
         Path(const std::string& path) { fromStr(path); }
+        Path(const char* path) { fromStr(path); }
+
+        using std::list<std::string>::back;
+        using std::list<std::string>::empty;
 
         void append(const std::string& str) { push_back(str); }
 
@@ -213,6 +217,7 @@ namespace cerberus
         DateTime accTime;  // last file access time
         DateTime modTime;  // last modification time
         DateTime chgTime;  // last status change time
+        DateTime creTime;  // file creation time
 
         void fromStat(const struct stat& stat_struct);
     };
@@ -308,7 +313,7 @@ namespace cerberus
         std::string logDir;       // the archive of the log files
         std::string fileNameFmt;  // format string for the archived files name (see below)
         SIZE logDirMaxSize;       // the maximum size allowed for the log archive, before the
-                                  // log rotation kicks in
+                                  // log deletion is performed. To disable this, set a value of zero
     };
 
     /* archive file format tokens:
@@ -556,7 +561,7 @@ namespace cerberus
 
         OpRes();
 
-        OpRes(Result r, const std::string& reason = std::string());
+        OpRes(Result r, const std::string& reason = "", const std::string& reason2 = "");
 
         bool operator==(const OpRes& other) = delete;
         bool operator!=(const OpRes& other) = delete;
@@ -575,12 +580,12 @@ namespace cerberus
         OpRes& expect();
 
         // Return true if the Result is OR_OK, false otherwise.
-        // If print is true, the error will be printer with logError
-        bool ok(bool print = false);
+        // If print is specified, the error string will be printed with the internal error info
+        bool ok(const std::string& str = "");
 
         // Return false if the Result is OR_OK, true otherwise.
-        // If print is true, the error will be printer with logError
-        bool fail(bool print = false);
+        // If print is specified, the error string will be printed with the internal error info
+        bool fail(const std::string& str = "");
 
         // Translate the Result
         std::string errorString();
@@ -596,8 +601,8 @@ namespace cerberus
     {
         T value;
 
-        OpResData(Result r, const std::string& reason = std::string())
-            : OpRes(r, reason),
+        OpResData(Result r, const std::string& reason = "", const std::string& reason2 = "")
+            : OpRes(r, reason, reason2),
               value(){};
 
         OpResData(const T& value)

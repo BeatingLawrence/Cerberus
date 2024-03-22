@@ -1,6 +1,7 @@
 #include "loggerthread.h"
 
 #include "../cerberus.h"
+#include "../data/filesystem/directory.h"
 
 using namespace cerberus::core;
 
@@ -68,7 +69,7 @@ void LoggerThread::setup(FileLoggingConf configuration)
 
     if (File::createDirectory(configuration.logDir).fail())
     {
-        logError("failed to create log archive directory");
+        logError("failed to create log archive directory, disabling log rotation");
         configuration.fileMaxSize = 0;  // disable log rotation
     }
 }
@@ -82,7 +83,6 @@ void LoggerThread::open()
 
     if (m_logFile.open().ok())
     {
-        logInfo("LogFile ready");
         m_failed.clear();
     }
     else
@@ -94,7 +94,7 @@ void LoggerThread::open()
 
     auto res = m_logFile.size();  // get file size
 
-    if (res.fail(true))
+    if (res.fail("unable to get file size"))
     {
         m_failed.test_and_set();
         return;
@@ -112,14 +112,14 @@ void LoggerThread::archive()
 
     std::string logDir = m_conf.logDir;
 
-    m_logFile.move(logDir.append("/").append(archivedFileName)).ok(true);
+    m_logFile.move(logDir.append("/").append(archivedFileName)).ok("error while moving log file");
 
-    checkArchiveSize();
+    if (m_conf.logDirMaxSize) checkArchiveSize();
 
     open();
 }
 //=============================================================================
-void LoggerThread::archiviationName(std::string &fmtStr)
+void LoggerThread::archiviationName(std::string& fmtStr)
 {
     auto current = DateTime::current();
 
@@ -145,14 +145,44 @@ void LoggerThread::archiviationName(std::string &fmtStr)
 //=============================================================================
 void LoggerThread::checkArchiveSize()
 {
-    return;
-    auto res = File::stat(m_conf.logDir);
+    Directory dir(m_conf.logDir);
+    LSIZE size = 0;
 
-    if (res.fail(true))
+    while (true)
     {
-        logError("could not get log archive size");
+        if (dir.get().fail("failure while getting log archive size")) return;
+
+        size = dir.size();
+
+        if (size > m_conf.logDirMaxSize)
+            removeOldestFile();
+        else
+            break;
+    }
+}
+//=============================================================================
+void LoggerThread::removeOldestFile()
+{
+    Directory dir(m_conf.logDir);
+    if (dir.get().fail("failure while getting log archive files")) return;
+
+    auto files = dir.files();
+    if (files.empty()) return;
+
+    // first file
+    File oldest      = files.front();
+    auto oldestBirth = oldest.stat().expect().value.creTime;
+
+    for (auto el = ++files.begin(); el != files.end(); el++)
+    {
+        auto birth = (*el).stat().expect().value.creTime;
+        if (birth.isOlder(oldestBirth))
+        {
+            oldest      = (*el);
+            oldestBirth = oldest.stat().expect().value.creTime;
+        }
     }
 
-    // auto size = res.value.size;
+    oldest.remove();
 }
 //=============================================================================
