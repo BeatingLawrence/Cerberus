@@ -1071,17 +1071,11 @@ Socket Socket::accept()
 }
 //=============================================================================
 #ifdef LINUX_SYSTEM
-cerberus::OperationResult cerberus::network::Socket::setCork(bool cork)
+OpRes Socket::setCork(bool cork)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
-    if (transportType() != TCP)
-    {
-        return OR_Unavailable;
-    }
+    if (transportType() != TCP) return OR_Unavailable;
 
     int val = cork ? 1 : 0;
 
@@ -1207,7 +1201,7 @@ OpRes Socket::send(const File &file)
 
     do
     {
-        bytes = sendfile(m_fd, file.m_fd, &offset, res.sz);
+        bytes = sendfile(m_fd, file.m_fd, &offset, res.value);
     } while (bytes > 0);
 
     if (bytes == -1)

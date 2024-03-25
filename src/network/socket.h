@@ -281,13 +281,13 @@ namespace cerberus
         Socket accept();
 
 #ifdef LINUX_SYSTEM
-        // If cork == true then stop sending out frames with send()
-        // If cork == false then send all the outgoing queue
-        // This is useful to compose a buffer using multiple send() calls and then
-        // send all the buffer at once calling setCork(false)
-        OperationResult setCork(bool cork = true);
+        //  If cork == true then stop sending out frames with send()
+        //  If cork == false then send all the outgoing queue
+        //  This is useful to compose a buffer using multiple send() calls and then
+        //  send all the buffer at once calling setCork(false)
+        OpRes setCork(bool cork = true);
 #endif
-        // Set the Nagle algorithm state. As default, TCP sockets have it enabled
+        //  Set the Nagle algorithm state. As default, TCP sockets have it enabled
         OpRes useNagle(bool use = true);
 
         // Set the connection timeout of the socket. Default is 20 minutes (system dependent)

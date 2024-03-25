@@ -272,7 +272,7 @@ TEST(socketTest, HTTPClient)
 {
     HTTPClient client("HTTP Client test");
     client.TLS_init();
-    ASSERT_TRUE(client.connect("www.google.com:443").ok());
+    client.setRemote("www.google.com:443");
     logDebug("connected");
     HTTPRequest req;
     req.setup(cerberus::HTTP_GET, "/", cerberus::HTTP_1_1)
@@ -289,7 +289,6 @@ TEST(socketTest, HTTPClient)
     EXPECT_TRUE(client.makeRequest(req).ok());
     logDebug("request sent");
     auto response = client.getResponse(1000, 200);
-    client.close();
 
     EXPECT_TRUE(response.value.isOk());
 

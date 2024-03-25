@@ -1,5 +1,7 @@
 #include "exception.h"
 
+#include <cstdarg>
+
 #include "../core/cerberusutils.h"
 
 using namespace cerberus;

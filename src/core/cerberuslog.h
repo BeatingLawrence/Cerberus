@@ -25,7 +25,7 @@ namespace cerberus
 
             LogConf m_logConf;
             LoggerThread* m_logger;
-            std::atomic_flag m_loggerFlag;
+            std::atomic<bool> m_loggerFlag;
 
 #if defined LINUX_SYSTEM || defined APPLE_SYSTEM
             std::string m_infoForm;

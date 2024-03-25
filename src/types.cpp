@@ -282,7 +282,7 @@ bool cerberus::OpRes::ok(const std::string &str)
     else if (!str.empty())
     {
         std::string err = str;
-        err += " ,";
+        err += ", ";
         err += errorString();
 
         if (!reason.empty()) err.append("\n").append(reason);

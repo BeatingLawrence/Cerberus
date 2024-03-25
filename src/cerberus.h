@@ -40,7 +40,7 @@ namespace cerberus
 
         friend FrameworkLocker;
 
-        std::atomic_flag ready;
+        std::atomic<bool> ready;
         std::atomic<int> usage;
         T* data;
 
@@ -73,22 +73,22 @@ namespace cerberus
         void construct()
         {
             if (!data) data = new T;
-            ready.test_and_set();
+            ready.store(true);
         }
 
         void destroy()
         {
-            ready.clear();
+            ready.store(false);
             wait();
             delete data;
             data = nullptr;
         }
 
-        bool isReady() { return ready.test(); };
+        bool isReady() { return ready.load(); };
 
         void isReadySevere()
         {
-            if (!ready.test()) throw cerberusUsageErrorExc("bad init usage");
+            if (!isReady()) throw cerberusUsageErrorExc("bad init usage");
         };
     };
 

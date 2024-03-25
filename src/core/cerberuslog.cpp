@@ -171,14 +171,14 @@ void CerberusLog::start()
     m_logger = new LoggerThread;
     m_logger->setup(m_logConf.fileLogConf);
     m_logger->start();
-    m_loggerFlag.test_and_set();
+    m_loggerFlag.store(true);
 }
 //=============================================================================
 void CerberusLog::stop()
 {
-    if (!m_loggerFlag.test()) return;
+    if (!m_loggerFlag.load()) return;
 
-    m_loggerFlag.clear();
+    m_loggerFlag.store(false);
 
     m_logger->join(true);
     delete m_logger;
@@ -308,13 +308,15 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
     }
 
 #endif
+
+    return "";
 }
 //=============================================================================
 bool CerberusLog::rawLogNeeded() { return (!m_logConf.colorFormatting || fileLoggerAvail()); }
 //=============================================================================
 bool CerberusLog::fileLoggerAvail()
 {
-    if (m_loggerFlag.test())
+    if (m_loggerFlag.load())
         if (!m_logger->isFailed()) return true;
 
     return false;

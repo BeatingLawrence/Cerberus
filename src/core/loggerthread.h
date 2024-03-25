@@ -19,7 +19,7 @@ namespace cerberus
 
             FileLoggingConf m_conf;
 
-            std::atomic_flag m_failed;
+            std::atomic_bool m_failed;
 
             virtual int tick() override;
 

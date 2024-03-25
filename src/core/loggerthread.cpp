@@ -10,11 +10,11 @@ int LoggerThread::tick()
 {
     cerberus_message message = nextMessage();
 
-    if (message->id() != CERBERUS_MESSAGE_LOG_ID || m_failed.test()) return 0;
+    if (message->id() != CERBERUS_MESSAGE_LOG_ID || m_failed.load()) return 0;
 
     if (m_logFile.writeLine(message->getSlotAt(0)->to<StringSlot>()->value()).fail())
     {
-        m_failed.test_and_set();
+        m_failed.store(true);
         discardMessageQueue();
         m_logFile.close();
         return 0;
@@ -37,7 +37,7 @@ void LoggerThread::warmUp() {}
 //=============================================================================
 void LoggerThread::coolDown()
 {
-    if (!m_failed.test())
+    if (!m_failed.load())
     {
         logInfo("Closing Log file");
         m_logFile.writeLine("---LOG-END---");
@@ -53,7 +53,7 @@ LoggerThread::LoggerThread()
       m_currentSize(0),
       m_conf()
 {
-    m_failed.clear();
+    m_failed.store(false);
     m_logFile.setOpenMode(FOM_ReadWriteAppend);
 }
 //=============================================================================
@@ -74,7 +74,7 @@ void LoggerThread::setup(FileLoggingConf configuration)
     }
 }
 //=============================================================================
-bool LoggerThread::isFailed() { return m_failed.test(); }
+bool LoggerThread::isFailed() { return m_failed.load(); }
 //=============================================================================
 void LoggerThread::open()
 {
@@ -83,12 +83,12 @@ void LoggerThread::open()
 
     if (m_logFile.open().ok())
     {
-        m_failed.clear();
+        m_failed.store(false);
     }
     else
     {
         logError("LogFile open failed");
-        m_failed.test_and_set();
+        m_failed.store(true);
         return;
     }
 
@@ -96,7 +96,7 @@ void LoggerThread::open()
 
     if (res.fail("unable to get file size"))
     {
-        m_failed.test_and_set();
+        m_failed.store(true);
         return;
     }
 
