@@ -454,10 +454,10 @@ bool cerberus::Dictionary::exists(const std::string &key, WordMatch match)
 void cerberus::FileMetadata::fromStat(const struct stat &stat_struct)
 {
     // time
-    accTime.fromTimespec(stat_struct.st_atimespec.tv_sec, stat_struct.st_atimespec.tv_nsec);
-    modTime.fromTimespec(stat_struct.st_mtimespec.tv_sec, stat_struct.st_mtimespec.tv_nsec);
-    chgTime.fromTimespec(stat_struct.st_ctimespec.tv_sec, stat_struct.st_ctimespec.tv_nsec);
-    creTime.fromTimespec(stat_struct.st_birthtimespec.tv_sec, stat_struct.st_birthtimespec.tv_nsec);
+    accTime.fromTimespec(stat_struct.st_atime);  // 1 second resolution
+    modTime.fromTimespec(stat_struct.st_mtime);
+    chgTime.fromTimespec(stat_struct.st_ctime);
+    creTime.fromTimespec(stat_struct.st_birthtime);
 
     // link refs
     linkrefs = stat_struct.st_nlink;

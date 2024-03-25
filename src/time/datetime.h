@@ -112,7 +112,7 @@ namespace cerberus
 
         // Set the time according to the seconds and nanoseconds (timespec struct).
         // Please note that nanosecond precision is lost
-        DateTime& fromTimespec(uint32_t seconds, uint32_t nanoseconds);
+        DateTime& fromTimespec(uint32_t seconds, uint32_t nanoseconds = 0);
 
         // Return the current system time
         static DateTime current();
