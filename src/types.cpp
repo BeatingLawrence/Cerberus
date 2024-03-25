@@ -6,6 +6,7 @@
 
 #include "core/cerberusutils.h"
 #include "exception/exception.h"
+#include "network/socket.h"
 #include "src/cerberus.h"
 
 #ifdef WINDOWS_SYSTEM
@@ -503,5 +504,10 @@ void cerberus::FileMetadata::fromStat(const struct stat &stat_struct)
     // UID, GID
     ownUID = stat_struct.st_uid;
     ownGID = stat_struct.st_gid;
+}
+//=============================================================================
+cerberus::SocketCloser::~SocketCloser()
+{
+    if (sock) sock->close();
 }
 //=============================================================================

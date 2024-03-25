@@ -162,6 +162,20 @@ namespace cerberus
         bool isValid() { return func != nullptr; };
     };
 
+    struct TLS_SD_STATE
+    {
+        bool local;
+        bool remote;
+
+        TLS_SD_STATE(bool local = false, bool remote = false)
+            : local(local),
+              remote(remote)
+        {
+        }
+
+        bool any() { return local || remote; }
+    };
+
     struct CerbVersion
     {
         enum VersionType
@@ -548,6 +562,25 @@ namespace cerberus
     {
         Simple,     // ERRORCHECK mutex
         Recursive,  // RECURSIVE mutex
+    };
+
+    class Socket;
+
+    struct SocketCloser
+    {
+        Socket* sock;
+
+        SocketCloser(Socket* s = nullptr)
+            : sock(s)
+        {
+        }
+
+        SocketCloser(const SocketCloser& other)            = delete;
+        SocketCloser& operator=(const SocketCloser& other) = delete;
+
+        void assignSocket(Socket* s) { sock = s; }
+
+        ~SocketCloser();
     };
 
     // The basic Operation Result object contains a Result member and some data.

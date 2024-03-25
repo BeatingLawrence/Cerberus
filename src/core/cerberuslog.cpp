@@ -92,6 +92,18 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
     std::string rawLog;
     if (rawLogNeeded()) rawLog = toRawLog(s, logLevel, logAuth, time);
 
+    // log on terminal
+    if (m_logConf.colorFormatting)
+    {
+        sysPrint(stream(logLevel), toFormattedLog(s, logLevel, logAuth, time));
+    }
+    else
+    {
+        sysPrint(stream(logLevel), rawLog);
+    }
+
+    rawLog.pop_back();  // remove the \n
+
     // file log
     if (fileLoggerAvail())
     {
@@ -99,15 +111,6 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
         logMessage->getSlotAt(0)->to<StringSlot>()->value(rawLog);
         m_logger->addMessage(logMessage);
     }
-
-    if (!m_logConf.colorFormatting)
-    {
-        sysPrint(stream(logLevel), rawLog.append(NEWLINE));
-        return;  // end of log funcion
-    }
-
-    // color formatting is wanted
-    sysPrint(stream(logLevel), toFormattedLog(s, logLevel, logAuth, time));
 }
 //=============================================================================
 void CerberusLog::llDebug(const std::string& str, const std::string& author)
@@ -216,16 +219,16 @@ std::string CerberusLog::toRawLog(const std::string& str, LogLevel ll, const std
     switch (ll)
     {
         case LL_Info:
-            return CerberusUtils::strPrint("%s [INFO] %s%s", t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [INFO] %s%s" NEWLINE, t.c_str(), a.c_str(), str.c_str());
 
         case LL_Warning:
-            return CerberusUtils::strPrint("%s [WARNING] %s%s", t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [WARNING] %s%s" NEWLINE, t.c_str(), a.c_str(), str.c_str());
 
         case LL_Error:
-            return CerberusUtils::strPrint("%s [ERROR] %s%s", t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [ERROR] %s%s" NEWLINE, t.c_str(), a.c_str(), str.c_str());
 
         case LL_Debug:
-            return CerberusUtils::strPrint("%s [DEBUG] %s%s", t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [DEBUG] %s%s" NEWLINE, t.c_str(), a.c_str(), str.c_str());
     }
 
     return "";

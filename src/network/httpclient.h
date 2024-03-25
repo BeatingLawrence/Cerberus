@@ -26,23 +26,24 @@ namespace cerberus
 
         virtual ~HTTPClient();
 
-        using Socket::close;
+        // using Socket::close;
         using Socket::TLS_deinit;
         using Socket::TLS_ignoreHangup;
         using Socket::TLS_init;
 
-        // Connect to a remote host
-        cerberus::OpRes connect(const Host &host);
+        void setRemote(const Host &host);
 
         // Make the client persistent.
         // A persistent client automatically reconnects to the server if the connection
         // drops, when the application makes a request.
         void persistent(bool persistent = true);
 
-        // Perform an HTTP request using the given data
+        // Connect to the remote (if not already connected) and
+        // send an HTTP request using the given data
         cerberus::OpRes makeRequest(const HTTPRequest &request);
 
-        // Block until a response is available to be read
+        // Block until a response is available to be read, then, if connection is
+        // not persistent, close the socket
         cerberus::OpResData<HTTPResponse> getResponse(const TimeFrame &timeout    = TimeFrame(1000),
                                                       const TimeFrame &cycTimeout = TimeFrame());
 

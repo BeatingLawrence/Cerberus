@@ -105,16 +105,12 @@ HTTPClient::HTTPClient(const std::string &name)
       m_persistent(false),
       m_remote()
 {
-    setRecvBufferSize(4096);  // 4K buffer size
+    setRecvBufferSize(8192);  // 8K buffer size
 }
 //=============================================================================
 HTTPClient::~HTTPClient() {}
 //=============================================================================
-cerberus::OpRes HTTPClient::connect(const Host &host)
-{
-    m_remote = host;
-    return _connect();
-}
+void HTTPClient::setRemote(const Host &host) { m_remote = host; }
 //=============================================================================
 void HTTPClient::persistent(bool persistent) { m_persistent = persistent; }
 //=============================================================================
@@ -122,22 +118,24 @@ cerberus::OpRes HTTPClient::makeRequest(const HTTPRequest &request)
 {
     if (!Socket::isConnected())
     {
-        if (m_persistent)
-        {
-            auto r = _connect();
-            if (r.fail()) return r;
-        }
-        else
-            return OR_BadConditions;
+        auto r = _connect();
+        if (r.fail()) return r;
     }
 
-    return Socket::send(request.data());
+    auto ret = Socket::send(request.data());
+
+    if (ret.fail()) close();
+
+    return ret;
 }
 //=============================================================================
 cerberus::OpResData<HTTPResponse> HTTPClient::getResponse(const TimeFrame &timeout,
                                                           const TimeFrame &cycTimeout)
 {
     if (!Socket::isConnected()) return OR_BadConditions;
+
+    SocketCloser closer;
+    if (!m_persistent) closer.assignSocket(this);
 
     ByteBuffer buf;
 
@@ -154,11 +152,13 @@ cerberus::OpResData<HTTPResponse> HTTPClient::getResponse(const TimeFrame &timeo
     // find the gap between header and payload
     auto res = buf.search("\r\n\r\n");
     if (res.fail()) return {OR_WrongData, CerberusUtils::truncStr(buf.toString(), 1000)};
+
     SIZE gap = res.value;
 
     // find the status line end
     res = buf.search("\r\n");
     if (res.fail()) return {OR_WrongData, CerberusUtils::truncStr(buf.toString(), 1000)};
+
     SIZE sle = res.value;
 
     HTTPResponse data;
@@ -179,7 +179,6 @@ cerberus::OpResData<HTTPResponse> HTTPClient::getResponse(const TimeFrame &timeo
     if (data.getHeaderMatch("transfer-encoding", "chunked").ok())
     {
         // chunked encoding
-        logDebug("processing chunked data...");
         decodeChunkedData(data.payload());
     }
 

@@ -8,7 +8,6 @@
 #include "../../data/data.h"
 #include "../../exception/exception.h"
 #include "../../types.h"
-#include "src/core/cerberuslog.h"
 
 namespace cerberus
 {

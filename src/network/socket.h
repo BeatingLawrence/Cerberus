@@ -49,9 +49,9 @@ namespace cerberus
 
         TransportType transportType();
 
-        int _accept(Host& peer);
+        IntOpRes _accept(Host& peer);
 
-        void printSSLErrors();
+        std::string printSSLErrors();
 
         OpRes _recv(ByteBuffer& buffer, bool donotblock);
 
@@ -166,6 +166,12 @@ namespace cerberus
         // before closing the socket.
         OpRes close();
 
+        // Check if the connection is still present.
+        // If it is, this method returns false and does nothing more.
+        // If the connection is not present, this method closes the socket, as calling close()
+        // and returns true
+        bool check();
+
         // Close the socket and create a new one bound to the same interface if any.
         // The SSL layer is kept and re-associated to the new socket file descriptor.
         // NOTE: the SSL status is cleared but not totally reset,
@@ -215,6 +221,8 @@ namespace cerberus
         // Otherwise, if quick is true, the method will just send the close-notify alert
         // to the other peer and consider the TLS layer closed
         OpRes TLS_shutdown(bool quick = false);
+
+        OpResData<TLS_SD_STATE> TLS_getshutdown() const;
 
         // Set the Socket to ignore the Hangup signal from the peer before a shutdown is
         // completed. After this call, the Socket will not give an error inside a recv()

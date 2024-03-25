@@ -123,7 +123,7 @@ Socket::TransportType Socket::transportType()
     throw cerberusImplMissExc("requested socket has not been implemented yet");
 }
 //=============================================================================
-int Socket::_accept(Host &peer)
+IntOpRes Socket::_accept(Host &peer)
 {
     sockaddr_in addr{};
     socklen_t len = sizeof(sockaddr_in);
@@ -132,8 +132,7 @@ int Socket::_accept(Host &peer)
 
     if (ret == -1)
     {
-        logDebug("error in socket accept: %s", strerror(errno));
-        return -1;
+        return {OR_Failure, "error in socket accept", strerror(errno)};
     }
 
     peer.octet_networkOrder = addr.sin_addr.s_addr;
@@ -142,8 +141,10 @@ int Socket::_accept(Host &peer)
     return ret;
 }
 //=============================================================================
-void Socket::printSSLErrors()
+std::string Socket::printSSLErrors()
 {
+    std::string ret;
+
     char errstr[256] = {};
 
     unsigned long err = ERR_get_error();
@@ -152,10 +153,15 @@ void Socket::printSSLErrors()
     {
         ERR_error_string_n(err, &errstr[0], sizeof(errstr));
 
-        logError("SSL: %s", &errstr);
+        ret.append(CerberusUtils::strPrint("%s, ", &errstr));
 
         err = ERR_get_error();
     }
+
+    ret.pop_back();
+    ret.pop_back();
+
+    return ret;
 }
 //=============================================================================
 OpRes Socket::_recv(ByteBuffer &buffer, bool donotblock)
@@ -176,14 +182,13 @@ OpRes Socket::_recv(ByteBuffer &buffer, bool donotblock)
     {
         if (errno == EAGAIN || errno == EWOULDBLOCK) return OR_WouldBlock;  // no data available at the moment
         if (errno == ENOTCONN || errno == ECONNREFUSED) m_streamConnected = false;
-        logDebug("socket recv error, %s", strerror(errno));
-        return OR_Failure;  // improve error handling
+        return {OR_Failure, "socket recv error", strerror(errno)};
     }
 
     if (ret == 0)
     {
-        // socket closed in case of a stream socket, zero length datagram in case of a datagram
-        // socket
+        // socket closed in case of a stream socket, zero length
+        // datagram in case of a datagram socket
         m_streamConnected = false;
         return OR_Hangup;
     }
@@ -202,8 +207,7 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
 
     if (!certfile.empty() && keyfile.empty())
     {
-        logError("Cannot use the certificate without a private key");
-        return OR_WrongArgument;
+        return {OR_WrongArgument, "Cannot use the certificate without a private key"};
     }
 
     ERR_clear_error();
@@ -212,10 +216,7 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
 
     if (m_sslCtx == NULL)
     {
-        // TODO check the error
-        logError("SSL context creation failed");
-        printSSLErrors();
-        return OR_SystemFailure;
+        return {OR_SystemFailure, "SSL context creation failed", printSSLErrors()};
     }
 
     // CA file setup
@@ -223,19 +224,17 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
     {
         if (SSL_CTX_set_default_verify_file(m_sslCtx) == 0)
         {
-            logError("SSL set default CA file failure");
             SSL_CTX_free(m_sslCtx);
-            return OR_Failure;
+            return {OR_Failure, "SSL set default CA file failure"};
         }
     }
     else
     {
         if (SSL_CTX_load_verify_file(m_sslCtx, ca_file.c_str()) == 0)
         {
-            logError("SSL load CA file failure");
             printSSLErrors();
             SSL_CTX_free(m_sslCtx);
-            return OR_Failure;
+            return {OR_Failure, "SSL load CA file failure"};
         }
     }
 
@@ -244,19 +243,17 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
     {
         if (SSL_CTX_set_default_verify_dir(m_sslCtx) == 0)
         {
-            logError("SSL set default CA dir failure");
             SSL_CTX_free(m_sslCtx);
-            return OR_Failure;
+            return {OR_Failure, "SSL set default CA dir failure"};
         }
     }
     else
     {
         if (SSL_CTX_load_verify_dir(m_sslCtx, ca_path.c_str()) == 0)
         {
-            logError("SSL load CA dir failure");
             printSSLErrors();
             SSL_CTX_free(m_sslCtx);
-            return OR_Failure;
+            return {OR_Failure, "SSL load CA dir failure"};
         }
     }
 
@@ -265,30 +262,27 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
     {
         if (SSL_CTX_use_certificate_file(m_sslCtx, certfile.c_str(), SSL_FILETYPE_PEM) != 1)
         {
-            logError("SSL certificate file setup failed");
             printSSLErrors();
             SSL_CTX_free(m_sslCtx);
-            return OR_Failure;
+            return {OR_Failure, "SSL certificate file setup failed"};
         }
 
         logDebug("SSL certificate file \"%s\" set", certfile.c_str());
 
         if (SSL_CTX_use_PrivateKey_file(m_sslCtx, keyfile.c_str(), SSL_FILETYPE_PEM) != 1)
         {
-            logError("SSL private key file setup failed");
             printSSLErrors();
             SSL_CTX_free(m_sslCtx);
-            return OR_Failure;
+            return {OR_Failure, "SSL private key file setup failed"};
         }
 
         logDebug("SSL key file \"%s\" set", keyfile.c_str());
 
         if (SSL_CTX_check_private_key(m_sslCtx) != 1)
         {
-            logError("SSL private key check failed");
             printSSLErrors();
             SSL_CTX_free(m_sslCtx);
-            return OR_TLSKeysCheckFail;
+            return {OR_TLSKeysCheckFail, "SSL private key check failed"};
         }
     }
 
@@ -307,18 +301,19 @@ OpRes Socket::_TLS_send(const ByteBuffer &buffer)
     {
         auto err = SSL_get_error(m_ssl, ret);
 
-        logError("SSL socket send error %i", err);
-
-        printSSLErrors();
+        OpRes r(OR_Failure, CerberusUtils::strPrint("SSL_write error %i", err));
 
         if (err == SSL_ERROR_SYSCALL)
         {
             if (errno == EPIPE) m_streamConnected = false;
-            logError("SSL_ERROR_SYSCALL errno: %i", errno);
+            r.reason.append(", ");
+            r.reason.append(strerror(errno));
+            r = OR_SystemFailure;
         }
         else if (err == SSL_ERROR_ZERO_RETURN)
         {
             close();
+            r = OR_Hangup;
         }
         else if (err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
         {
@@ -326,11 +321,16 @@ OpRes Socket::_TLS_send(const ByteBuffer &buffer)
         }
         else if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
         {
-            return OR_TemporaryUnavailable;
+            r = OR_TemporaryUnavailable;
         }
 
-        return OR_Failure;
+        r.reason.append(", ");
+        r.reason.append(printSSLErrors());
+
+        return r;
     }
+
+    if (check()) return OR_Hangup;
 
     return OR_OK;
 }
@@ -346,18 +346,19 @@ OpRes Socket::_TLS_sendFile(const File &file)
     {
         auto err = SSL_get_error(m_ssl, ret);
 
-        logError("SSL socket send error %i", err);
-
-        printSSLErrors();
+        OpRes r(OR_Failure, CerberusUtils::strPrint("SSL_sendfile error %i", err));
 
         if (err == SSL_ERROR_SYSCALL)
         {
             if (errno == EPIPE) m_streamConnected = false;
-            logError("SSL_ERROR_SYSCALL errno: %i", errno);
+            r.reason.append(", ");
+            r.reason.append(strerror(errno));
+            r = OR_SystemFailure;
         }
         else if (err == SSL_ERROR_ZERO_RETURN)
         {
             close();
+            r = OR_Hangup;
         }
         else if (err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
         {
@@ -365,16 +366,20 @@ OpRes Socket::_TLS_sendFile(const File &file)
         }
         else if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
         {
-            return OR_TemporaryUnavailable;
+            r = OR_TemporaryUnavailable;
         }
 
-        return OR_Failure;
+        r.reason.append(", ");
+        r.reason.append(printSSLErrors());
+
+        return r;
     }
     else if (ret != res.value)
     {
-        logError("SSL socket sendfile size mismatch");
-        return OR_Failure;
+        return {OR_Failure, "SSL socket sendfile size mismatch"};
     }
+
+    if (check()) return OR_Hangup;
 
     return OR_OK;
 }
@@ -390,30 +395,39 @@ OpRes Socket::_TLS_recv(ByteBuffer &buffer)
     {
         auto err = SSL_get_error(m_ssl, ret);
 
-        if (err == SSL_ERROR_ZERO_RETURN)
+        OpRes r(OR_Failure, CerberusUtils::strPrint("SSL_read_ex error %i", err));
+
+        if (err == SSL_ERROR_SYSCALL)
+        {
+            if (errno == EPIPE) m_streamConnected = false;
+            r.reason.append(", ");
+            r.reason.append(strerror(errno));
+            r = OR_SystemFailure;
+        }
+        else if (err == SSL_ERROR_ZERO_RETURN)
         {
             close();
-            return OR_Hangup;
+            r = OR_Hangup;
         }
-
-        if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+        else if (err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
         {
-            return OR_TemporaryUnavailable;
-        }
-
-        logError("SSL socket recv error: %i, errno: %i", err, errno);
-        printSSLErrors();
-
-        if (err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
-        {
-            // underlying transport layer is not connected
             m_streamConnected = false;
         }
+        else if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+        {
+            r = OR_TemporaryUnavailable;
+        }
 
-        return OR_Failure;
+        r.reason.append(", ");
+        r.reason.append(printSSLErrors());
+
+        return r;
     }
 
     buffer.assign(m_recvBuffer, readB);
+
+    if (check()) return OR_Hangup;
+
     return OR_OK;
 }
 //=============================================================================
@@ -425,10 +439,7 @@ OpRes Socket::_TLS_create()
 
     if (m_ssl == NULL)
     {
-        // TODO check the error
-        logError("SSL object creation failed");
-        printSSLErrors();
-        return OR_SystemFailure;
+        return {OR_SystemFailure, "SSL object creation failed", printSSLErrors()};
     }
 
     return OR_OK;
@@ -449,10 +460,7 @@ OpRes Socket::_TLS_associate()
 
     if (SSL_set_fd(m_ssl, m_fd) != 1)
     {
-        // TODO check the error
-        logError("SSL association with kernel fd failed");
-        printSSLErrors();
-        return OR_Failure;
+        return {OR_Failure, "SSL association with kernel fd failed", printSSLErrors()};
     }
 
     return OR_OK;
@@ -463,13 +471,13 @@ OpRes Socket::_TLS_handshake(bool server, const Host &remote)
     if (!isTLS()) throw cerberusIllegalStateExc("_TLS_handshake() called without an SSL context");
 
     auto res = _TLS_create();
-    if (res.fail()) return OR_Failure;
+    if (res.fail()) return res;
 
     res = _TLS_associate();
     if (res.fail())
     {
         _TLS_destroy();
-        return OR_Failure;
+        return res;
     }
 
     if (server)
@@ -480,17 +488,14 @@ OpRes Socket::_TLS_handshake(bool server, const Host &remote)
     if (remote.isTextual())
         if (SSL_set_tlsext_host_name(m_ssl, remote.hostname.c_str()) == 0)
         {
-            logError("SSL server hostname setup failed");
             _TLS_destroy();
-            return OR_Failure;
+            return {OR_Failure, "SSL_set_tlsext_host_name failed"};
         }
 
     if (SSL_do_handshake(m_ssl) != 1)
     {
-        logError("SSL handshake failed");
-        printSSLErrors();
         _TLS_destroy();
-        return OR_Failure;
+        return {OR_Failure, "SSL_do_handshake failed", printSSLErrors()};
     }
 
     return OR_OK;
@@ -512,10 +517,7 @@ OpRes Socket::_TLS_shutdown(bool quick)
         }
         else if (ret < 0)  // error
         {
-            // TODO check the error
-            logError("SSL socket shutdown error");
-            printSSLErrors();
-            return OR_Failure;
+            return {OR_Failure, "SSL socket shutdown error", printSSLErrors()};
         }
 
     } while (!quick);
@@ -573,8 +575,7 @@ OpRes Socket::bind(const Host &iface)
 
     if (ret == -1)
     {
-        logError("error in socket bind: %s", strerror(errno));
-        return OR_Failure;
+        return {OR_Failure, CerberusUtils::strPrint("error in socket bind: %s", strerror(errno))};
     }
 
     m_bind = iface;  // backup iface
@@ -604,17 +605,15 @@ OpRes Socket::connect(const Host &dest)
 
     if (ret == -1)
     {
-        logError("error in socket connect: %s", strerror(errno));
         if (transportType() == TCP) close();  // the socket is not usable anymore
-        return OR_Failure;
+        return {OR_Failure, CerberusUtils::strPrint("error in socket connect: %s", strerror(errno))};
     }
 
     if (transportType() == TCP) m_streamConnected = true;
 
-    if (isTLS())  // TLS mode
-    {
-        if (_TLS_handshake(false, dest).fail()) return OR_Failure;
-    }
+    if (!isTLS()) return OR_OK;
+
+    if (_TLS_handshake(false, dest).fail()) return OR_Failure;
 
     return OR_OK;
 }
@@ -633,9 +632,8 @@ OpRes Socket::send(const ByteBuffer &buffer, bool donotblock)
 
     if (ret == -1)
     {
-        logError("socket send error, %s", strerror(errno));
         if (errno == ENOTCONN || errno == ECONNRESET || errno == EPIPE) m_streamConnected = false;
-        return OR_Failure;
+        return {OR_Failure, CerberusUtils::strPrint("socket send error, %s", strerror(errno))};
     }
 
     return OR_OK;
@@ -703,7 +701,14 @@ bool Socket::isFailed() const { return (m_fd == -1) || (socketType() == Socket_N
 //=============================================================================
 bool Socket::isConnected() const
 {
-    if (isTLS()) return (TLS_hasSession() && m_streamConnected);
+    if (isTLS())
+    {
+        if (!TLS_hasSession()) return false;
+        if (!m_streamConnected) return false;
+        if (TLS_getshutdown().value.any()) return false;
+
+        return true;
+    }
 
     return m_streamConnected;
 }
@@ -724,8 +729,7 @@ OpRes Socket::waitRead(const TimeFrame &timeout)
 
     if (ret == -1)
     {
-        logError("error in poll: %s", strerror(errno));
-        return OR_SystemFailure;
+        return {OR_SystemFailure, CerberusUtils::strPrint("error in poll: %s", strerror(errno))};
     }
 
     if (set.revents & POLLIN) return OR_OK;
@@ -753,8 +757,7 @@ OpRes Socket::waitWrite(const TimeFrame &timeout)
 
     if (ret == -1)
     {
-        logError("error in poll: %s", strerror(errno));
-        return OR_SystemFailure;
+        return {OR_SystemFailure, CerberusUtils::strPrint("error in poll: %s", strerror(errno))};
     }
 
     if (set.revents & POLLOUT) return OR_OK;
@@ -779,18 +782,25 @@ OpRes Socket::close()
 
     ::shutdown(m_fd, SHUT_WR);  // discard return value
 
-    Result res = OR_OK;
+    OpRes res(OR_OK);
 
     if (::close(m_fd) == -1)
     {
-        logError("socket close error, %s", strerror(errno));
-        res = OR_Failure;
+        res = OpRes(OR_Failure, CerberusUtils::strPrint("socket close error, %s", strerror(errno)));
     }
 
     m_fd              = -1;
     m_streamConnected = false;
 
     return res;
+}
+//=============================================================================
+bool Socket::check()
+{
+    if (isConnected()) return false;
+
+    close();
+    return true;
 }
 //=============================================================================
 OpRes Socket::reset()
@@ -812,10 +822,7 @@ OpRes Socket::reset()
 
         if (SSL_clear(m_ssl) != 1)  // reset the TLS status
         {
-            // TODO check the error
-            logError("SSL_clear failed");
-            printSSLErrors();
-            return OR_Failure;
+            return {OR_Failure, "SSL_clear failed", printSSLErrors()};
         }
     }
 
@@ -861,6 +868,22 @@ bool Socket::TLS_hasSession() const { return m_ssl; }
 //=============================================================================
 OpRes Socket::TLS_shutdown(bool quick) { return _TLS_shutdown(quick); }
 //=============================================================================
+OpResData<TLS_SD_STATE> Socket::TLS_getshutdown() const
+{
+    if (!TLS_hasSession()) return OR_Unavailable;
+
+    int ret = SSL_get_shutdown(m_ssl);
+
+    bool local  = false;
+    bool remote = false;
+
+    if (ret & SSL_SENT_SHUTDOWN) local = true;
+
+    if (ret & SSL_RECEIVED_SHUTDOWN) remote = true;
+
+    return TLS_SD_STATE(local, remote);
+}
+//=============================================================================
 OpRes Socket::TLS_ignoreHangup(bool ignore)
 {
     if (!isTLS()) return OR_Unavailable;
@@ -869,24 +892,18 @@ OpRes Socket::TLS_ignoreHangup(bool ignore)
     {
         SSL_CTX_set_options(m_sslCtx, SSL_OP_IGNORE_UNEXPECTED_EOF);
 
-        logInfo("EOF is ignored for ctx");
-
         if (TLS_hasSession())
         {
             SSL_set_options(m_ssl, SSL_OP_IGNORE_UNEXPECTED_EOF);
-            logInfo("EOF is ignored for ssl");
         }
     }
     else
     {
         SSL_CTX_clear_options(m_sslCtx, SSL_OP_IGNORE_UNEXPECTED_EOF);
 
-        logInfo("EOF is not ignored for ctx");
-
         if (TLS_hasSession())
         {
             SSL_clear_options(m_ssl, SSL_OP_IGNORE_UNEXPECTED_EOF);
-            logInfo("EOF is not ignored for ssl");
         }
     }
 
@@ -959,8 +976,7 @@ OpRes Socket::sendTo(const ByteBuffer &buffer, const Host &dest, bool donotblock
 
     if (ret == -1)
     {
-        logError("socket send error, %s", strerror(errno));
-        return OR_Failure;
+        return {OR_Failure, CerberusUtils::strPrint("socket send error, %s", strerror(errno))};
     }
 
     return OR_OK;
@@ -1010,8 +1026,7 @@ OpRes Socket::connectP2P(const Host &dest, const TimeFrame &timeout)
 
     if (ret == -1)
     {
-        logError("error in socket connectP2P: %s", strerror(errno));
-        return OR_Failure;
+        return {OR_Failure, CerberusUtils::strPrint("error in socket connectP2P: %s", strerror(errno))};
     }
 
     // connect succeeded
@@ -1029,8 +1044,7 @@ OpRes Socket::listen(size_t maxconn)
 
     if (::listen(m_fd, maxconn == 0 ? m_maxConnections : maxconn) == -1)
     {
-        logDebug("error in socket listen: %s", strerror(errno));
-        return OR_Failure;
+        return {OR_Failure, CerberusUtils::strPrint("error in socket listen: %s", strerror(errno))};
     }
 
     return OR_OK;
@@ -1045,9 +1059,9 @@ Socket Socket::accept(Host &peer)
 
     auto fd = _accept(peer);
 
-    if (fd == -1) return {Socket_None, -1};
+    if (fd.fail()) return {Socket_None, -1};
 
-    return {socketType(), fd};
+    return {socketType(), static_cast<int>(fd.value)};
 }
 //=============================================================================
 Socket Socket::accept()
@@ -1073,8 +1087,7 @@ cerberus::OperationResult cerberus::network::Socket::setCork(bool cork)
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_CORK, &val, sizeof(val)) == -1)
     {
-        logDebug("error in setCork function: %s", strerror(errno));
-        return OR_Failure;  // improve error handling
+        return {OR_Failure, CerberusUtils::strPrint("error in setCork function: %s", strerror(errno))};
     }
 
     return OR_OK;
@@ -1083,22 +1096,15 @@ cerberus::OperationResult cerberus::network::Socket::setCork(bool cork)
 //=============================================================================
 OpRes Socket::useNagle(bool use)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
-    if (transportType() != TCP)
-    {
-        return OR_Unavailable;
-    }
+    if (transportType() != TCP) return OR_Unavailable;
 
     int val = use ? 1 : 0;
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val)) == -1)
     {
-        logDebug("error in useNagle function: %s", strerror(errno));
-        return OR_Failure;  // improve error handling
+        return {OR_Failure, CerberusUtils::strPrint("error in useNagle function: %s", strerror(errno))};
     }
 
     return OR_OK;
@@ -1106,15 +1112,9 @@ OpRes Socket::useNagle(bool use)
 //=============================================================================
 OpRes Socket::setTimeout(uint32_t timeout)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
-    if (transportType() != TCP)
-    {
-        return OR_Unavailable;
-    }
+    if (transportType() != TCP) return OR_Unavailable;
 
     unsigned int val = timeout;
 
@@ -1124,8 +1124,7 @@ OpRes Socket::setTimeout(uint32_t timeout)
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_CONNECTIONTIMEOUT, &val, sizeof(val)) == -1)
 #endif
     {
-        logDebug("error in setTimeout function: %s", strerror(errno));
-        return OR_Failure;  // improve error handling
+        return {OR_Failure, CerberusUtils::strPrint("error in setTimeout function: %s", strerror(errno))};
     }
 
     return OR_OK;
@@ -1133,34 +1132,22 @@ OpRes Socket::setTimeout(uint32_t timeout)
 //=============================================================================
 OpRes Socket::useKeepAlive(bool use, int maxprobes, int idleTime, int interval)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
-    if (transportType() != TCP)
-    {
-        return OR_Unavailable;
-    }
+    if (transportType() != TCP) return OR_Unavailable;
 
     auto ret = useKeepAlive(use);
 
-    if (ret != OR_OK)
-    {
-        return ret;
-    }
+    if (ret != OR_OK) return ret;
 
-    if (!use)
-    {
-        return OR_OK;
-    }
+    if (!use) return OR_OK;
 
     int val = maxprobes;
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPCNT, &val, sizeof(val)) == -1)
     {
-        logDebug("error in useKeepAlive:TCP_KEEPCNT function: %s", strerror(errno));
-        return OR_Failure;  // improve error handling
+        return {OR_Failure,
+                CerberusUtils::strPrint("error in useKeepAlive:TCP_KEEPCNT function: %s", strerror(errno))};
     }
 
     val = idleTime;
@@ -1171,16 +1158,16 @@ OpRes Socket::useKeepAlive(bool use, int maxprobes, int idleTime, int interval)
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPALIVE, &val, sizeof(val)) == -1)
 #endif
     {
-        logDebug("error in useKeepAlive:TCP_KEEPIDLE function: %s", strerror(errno));
-        return OR_Failure;  // improve error handling
+        return {OR_Failure,
+                CerberusUtils::strPrint("error in useKeepAlive:TCP_KEEPIDLE function: %s", strerror(errno))};
     }
 
     val = interval;
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPINTVL, &val, sizeof(val)) == -1)
     {
-        logDebug("error in useKeepAlive:TCP_KEEPINTVL function: %s", strerror(errno));
-        return OR_Failure;  // improve error handling
+        return {OR_Failure,
+                CerberusUtils::strPrint("error in useKeepAlive:TCP_KEEPINTVL function: %s", strerror(errno))};
     }
 
     return OR_OK;
@@ -1188,22 +1175,16 @@ OpRes Socket::useKeepAlive(bool use, int maxprobes, int idleTime, int interval)
 //=============================================================================
 OpRes Socket::useKeepAlive(bool use)
 {
-    if (isFailed())
-    {
-        return OR_FailedInstance;
-    }
+    if (isFailed()) return OR_FailedInstance;
 
-    if (transportType() != TCP)
-    {
-        return OR_Unavailable;
-    }
+    if (transportType() != TCP) return OR_Unavailable;
 
     int val = use ? 1 : 0;
 
     if (setsockopt(m_fd, SOL_SOCKET, SO_KEEPALIVE, &val, sizeof(val)) == -1)
     {
-        logDebug("error in useKeepAlive:SO_KEEPALIVE function: %s", strerror(errno));
-        return OR_Failure;  // improve error handling
+        return {OR_Failure,
+                CerberusUtils::strPrint("error in useKeepAlive:SO_KEEPALIVE function: %s", strerror(errno))};
     }
 
     return OR_OK;
@@ -1231,8 +1212,7 @@ OpRes Socket::send(const File &file)
 
     if (bytes == -1)
     {
-        logError("socket sendfile error, %s", strerror(errno));
-        return OR_Failure;
+        return {OR_Failure, CerberusUtils::strPrint("socket sendfile error, %s", strerror(errno))};
     }
 #elif APPLE_SYSTEM
     off_t len = 0;  // send until EOF
@@ -1245,8 +1225,7 @@ OpRes Socket::send(const File &file)
 
     if (bytes == -1)
     {
-        logError("socket sendfile error, %s", strerror(errno));
-        return OR_Failure;
+        return {OR_Failure, CerberusUtils::strPrint("socket sendfile error, %s", strerror(errno))};
     }
 #endif
 
