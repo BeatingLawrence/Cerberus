@@ -47,6 +47,8 @@ namespace cerberus
             IPC,
         };
 
+        OpRes _connectP2P(const Host& dest, const TimeFrame& timeout);
+
         TransportType transportType();
 
         IntOpRes _accept(Host& peer);
@@ -57,6 +59,8 @@ namespace cerberus
 
         OpRes _TLS_init(const std::string& ca_file, const std::string& ca_path, const std::string& certfile,
                         const std::string& keyfile);
+
+        void _TLS_CTX_destroy();
 
         OpRes _TLS_send(const ByteBuffer& buffer);
 

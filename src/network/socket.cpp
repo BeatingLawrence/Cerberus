@@ -100,6 +100,49 @@ void Socket::flushSocket(ByteBuffer &buffer)
     }
 }
 //=============================================================================
+OpRes Socket::_connectP2P(const Host &dest, const TimeFrame &timeout)
+{
+    Host h = dest;
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port   = htons(h.port);
+
+    if (!h.hostname.empty() && !h.resolved) h.resolve();
+
+    if (h.octet_networkOrder == 0)
+        addr.sin_addr.s_addr = INADDR_ANY;
+    else
+        addr.sin_addr.s_addr = h.octet_networkOrder;
+
+    Timer timer(timeout);
+
+    if (timeout.isValid()) timer.start();
+
+    while (true)
+    {
+        int ret = ::connect(m_fd, (sockaddr *)&addr, sizeof(sockaddr_in));
+
+        if (ret == 0) return OR_OK;
+
+        if (ret == -1)
+        {
+            if (errno == EISCONN) return OR_OK;
+
+            if (errno == ECONNREFUSED)
+            {
+                if (reset().fail()) return {OR_Failure, "socket reset fail in connect p2p"};
+            }
+            else
+                return {OR_Failure,
+                        CerberusUtils::strPrint("error in socket connectP2P: %s", strerror(errno))};
+        }
+
+        if (timeout.isValid())
+            if (!timer.isRunning()) return OR_TimedOut;
+    }
+}
+//=============================================================================
 Socket::TransportType Socket::transportType()
 {
     switch (socketType())
@@ -147,19 +190,23 @@ std::string Socket::printSSLErrors()
 
     char errstr[256] = {};
 
-    unsigned long err = ERR_get_error();
+    unsigned long err = 0;
 
-    while (err != 0)
+    bool first = true;
+
+    while (true)
     {
+        err = ERR_get_error();
+
+        if (err == 0) break;
+
         ERR_error_string_n(err, &errstr[0], sizeof(errstr));
 
-        ret.append(CerberusUtils::strPrint("%s, ", &errstr));
+        if (!first) ret.append(", ");
+        ret.append((const char *)&errstr);
 
-        err = ERR_get_error();
+        first = false;
     }
-
-    ret.pop_back();
-    ret.pop_back();
 
     return ret;
 }
@@ -224,7 +271,7 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
     {
         if (SSL_CTX_set_default_verify_file(m_sslCtx) == 0)
         {
-            SSL_CTX_free(m_sslCtx);
+            _TLS_CTX_destroy();
             return {OR_Failure, "SSL set default CA file failure"};
         }
     }
@@ -233,7 +280,7 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
         if (SSL_CTX_load_verify_file(m_sslCtx, ca_file.c_str()) == 0)
         {
             printSSLErrors();
-            SSL_CTX_free(m_sslCtx);
+            _TLS_CTX_destroy();
             return {OR_Failure, "SSL load CA file failure"};
         }
     }
@@ -243,7 +290,7 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
     {
         if (SSL_CTX_set_default_verify_dir(m_sslCtx) == 0)
         {
-            SSL_CTX_free(m_sslCtx);
+            _TLS_CTX_destroy();
             return {OR_Failure, "SSL set default CA dir failure"};
         }
     }
@@ -252,7 +299,7 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
         if (SSL_CTX_load_verify_dir(m_sslCtx, ca_path.c_str()) == 0)
         {
             printSSLErrors();
-            SSL_CTX_free(m_sslCtx);
+            _TLS_CTX_destroy();
             return {OR_Failure, "SSL load CA dir failure"};
         }
     }
@@ -263,7 +310,7 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
         if (SSL_CTX_use_certificate_file(m_sslCtx, certfile.c_str(), SSL_FILETYPE_PEM) != 1)
         {
             printSSLErrors();
-            SSL_CTX_free(m_sslCtx);
+            _TLS_CTX_destroy();
             return {OR_Failure, "SSL certificate file setup failed"};
         }
 
@@ -272,7 +319,7 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
         if (SSL_CTX_use_PrivateKey_file(m_sslCtx, keyfile.c_str(), SSL_FILETYPE_PEM) != 1)
         {
             printSSLErrors();
-            SSL_CTX_free(m_sslCtx);
+            _TLS_CTX_destroy();
             return {OR_Failure, "SSL private key file setup failed"};
         }
 
@@ -281,7 +328,7 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
         if (SSL_CTX_check_private_key(m_sslCtx) != 1)
         {
             printSSLErrors();
-            SSL_CTX_free(m_sslCtx);
+            _TLS_CTX_destroy();
             return {OR_TLSKeysCheckFail, "SSL private key check failed"};
         }
     }
@@ -289,6 +336,12 @@ OpRes Socket::_TLS_init(const std::string &ca_file, const std::string &ca_path, 
     SSL_CTX_clear_mode(m_sslCtx, SSL_MODE_AUTO_RETRY);
 
     return OR_OK;
+}
+//=============================================================================
+void Socket::_TLS_CTX_destroy()
+{
+    SSL_CTX_free(m_sslCtx);
+    m_sslCtx = nullptr;
 }
 //=============================================================================
 OpRes Socket::_TLS_send(const ByteBuffer &buffer)
@@ -846,7 +899,7 @@ OpRes Socket::TLS_deinit()
         TLS_shutdown();  // send close_notify alert to the peer
     }
 
-    SSL_CTX_free(m_sslCtx);  // decrement reference counter
+    _TLS_CTX_destroy();  // decrement reference counter
     m_sslCtx = nullptr;
 
     return OR_OK;
@@ -987,53 +1040,11 @@ OpRes Socket::connectP2P(const Host &dest, const TimeFrame &timeout)
     if (isFailed()) return OR_FailedInstance;
     if (socketType() != Socket_TCPP2P || m_streamConnected) return OR_Unavailable;
 
-    Host h = dest;
+    auto res = _connectP2P(dest, timeout);
 
-    sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_port   = htons(h.port);
+    if (res.ok()) m_streamConnected = true;
 
-    if (!h.hostname.empty() && !h.resolved) h.resolve();
-
-    if (h.octet_networkOrder == 0)
-        addr.sin_addr.s_addr = INADDR_ANY;
-    else
-        addr.sin_addr.s_addr = h.octet_networkOrder;
-
-    Timer timer(timeout);
-
-    if (timeout.isValid()) timer.start();
-
-    int ret = 0;
-
-    while (timer.isRunning() || !timeout.isValid())
-    {
-        ret = ::connect(m_fd, (sockaddr *)&addr, sizeof(sockaddr_in));
-
-        if (ret == -1)
-        {
-            if (errno == ECONNREFUSED)  // refused, retry
-            {
-                if (reset().fail()) break;
-                continue;
-            }
-            else if (errno == EISCONN)  // already connected
-                ret = 0;
-
-            break;
-        }
-    }
-
-    if (ret == -1)
-    {
-        return {OR_Failure, CerberusUtils::strPrint("error in socket connectP2P: %s", strerror(errno))};
-    }
-
-    // connect succeeded
-
-    m_streamConnected = true;
-
-    return OR_OK;
+    return res;
 }
 //=============================================================================
 OpRes Socket::listen(size_t maxconn)

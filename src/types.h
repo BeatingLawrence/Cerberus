@@ -234,6 +234,8 @@ namespace cerberus
         DateTime creTime;  // file creation time
 
         void fromStat(const struct stat& stat_struct);
+
+        void fromStatX(const struct statx& stat_struct);
     };
 
     enum SlotType

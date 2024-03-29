@@ -25,10 +25,7 @@ int LoggerThread::tick()
     // increment file size
     m_currentSize += message->getConstSlotAt(0)->to<StringSlot>()->value().size();
 
-    if (m_currentSize > m_conf.fileMaxSize)
-    {
-        archive();
-    }
+    if (m_currentSize > m_conf.fileMaxSize) archive();
 
     return 0;
 }
@@ -39,12 +36,12 @@ void LoggerThread::coolDown()
 {
     if (!m_failed.load())
     {
-        logInfo("Closing Log file");
+        tlogInfo("Closing Log file");
         m_logFile.writeLine("---LOG-END---");
         m_logFile.close();
     }
 
-    logInfo("Stopping Logger Thread");
+    tlogInfo("Stopping Logger Thread");
 }
 //=============================================================================
 LoggerThread::LoggerThread()
@@ -69,7 +66,7 @@ void LoggerThread::setup(FileLoggingConf configuration)
 
     if (File::createDirectory(configuration.logDir).fail())
     {
-        logError("failed to create log archive directory, disabling log rotation");
+        tlogError("failed to create log archive directory, disabling log rotation");
         configuration.fileMaxSize = 0;  // disable log rotation
     }
 }
@@ -87,7 +84,7 @@ void LoggerThread::open()
     }
     else
     {
-        logError("LogFile open failed");
+        tlogError("LogFile open failed");
         m_failed.store(true);
         return;
     }

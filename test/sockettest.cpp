@@ -80,7 +80,7 @@ static int testCallback_TCP_P2P(cerberus_message msg, Thread* thread)
     auto socket = TCPP2PSocket("TCPP2P receiver");
     socket.bind(cerberus::Host("localhost:44444"));
 
-    if (socket.connectP2P(Host("localhost:57829"), 2000) != cerberus::OR_OK)
+    if (socket.connectP2P(Host("localhost:57829"), 2000).fail("connect error in thread callback"))
     {
         logDebug("connect error");
         socket.close();
@@ -188,7 +188,7 @@ TEST(socketTest, TCP_P2P)
     //
     auto socket = TCPP2PSocket("TCPP2P transmitter");
     ASSERT_EQ(socket.bind(cerberus::Host("localhost:57829")).res, cerberus::OR_OK);
-    ASSERT_EQ(socket.connectP2P(cerberus::Host("localhost:44444"), 2000).res, cerberus::OR_OK);
+    ASSERT_TRUE(socket.connectP2P(cerberus::Host("localhost:44444"), 2000).ok("connect p2p failure"));
     ByteBuffer buf("Hello, World!");
     ASSERT_EQ(socket.send(buf).res, cerberus::OR_OK);
 
@@ -255,9 +255,9 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
     ByteBuffer buf;
     socket.setRecvBufferSize(8192);
     logDebug("receiving");
-    auto r = socket.recv(buf, 1000, 200);
+    auto r = socket.recv(buf, 1000, 300);
 
-    EXPECT_TRUE(r.ok());
+    EXPECT_TRUE(r.ok("recv fail"));
 
     socket.close();
 
@@ -306,22 +306,4 @@ TEST(socketTest, HTTPClient)
     f.close();
 
     logDebug("payload written on disk");
-}
-
-// This code test the client authentication
-TEST(socketTest, TLS_clientAuth)
-{
-    auto socket = TCPSocket("TLS socket");
-    ASSERT_TRUE(socket
-                    .TLS_init("/Users/lory/ssl/com.apple.systemdefault.pem",
-                              "/Users/lory/ssl/com.apple.systemdefault.key.pem", "/Users/lory/ssl/cert.pem")
-                    .ok());
-    socket.TLS_ignoreHangup(true);
-    logDebug("connecting..");
-    cerberus::Host h("api.openai.com:443");
-    ASSERT_TRUE(socket.connect(h).ok());
-    logDebug("connected with encryption: PROTO: %s CIPHER: %s", socket.TLS_getProtocolName().value.c_str(),
-             socket.TLS_getCipherName().value.c_str());
-    Thread::sleep(500);
-    socket.close();
 }

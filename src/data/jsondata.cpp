@@ -564,28 +564,30 @@ void JsonData::toStr(std::string &str, uint8_t level) const
 
     str.append("\n").append(indent);
 
+    str.append("Type: ");
+
     switch (m_type)
     {
-        case JDT_Undefined:
-            str.append("UNDEFINED");
-            break;
         case JDT_Null:
-            str.append("Type: null");
+            str.append("null");
             break;
         case JDT_Number:
-            str.append("Type: number");
+            str.append("number");
             break;
         case JDT_String:
-            str.append("Type: string");
+            str.append("string");
             break;
         case JDT_Boolean:
-            str.append("Type: boolean");
+            str.append("boolean");
             break;
         case JDT_Array:
-            str.append("Type: array");
+            str.append("array");
             break;
         case JDT_Object:
-            str.append("Type: object");
+            str.append("object");
+            break;
+        default:
+            str.append("UNDEFINED");
             break;
     }
 
@@ -593,17 +595,14 @@ void JsonData::toStr(std::string &str, uint8_t level) const
 
     if (!m_value.empty()) str.append(", Value: ").append(m_value);
 
-    str.append("\n").append(indent);
-
     if (m_elements.empty()) return;
 
-    str.append("Contains:\n").append(indent);
+    str.append("\n").append(indent);
+
+    str.append("Contains:");
 
     for (auto &el : m_elements) el.toStr(str, level + 1);
 
-    str.pop_back();  // back one level
-    str.pop_back();
-
-    str.append("end\n").append(indent);
+    str.append("\n").append(indent).append("end");
 }
 //=============================================================================

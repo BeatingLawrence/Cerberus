@@ -4,13 +4,13 @@
 
 int TestThread::tick()
 {
-    thrlogInfo("TICK");
+    tlogInfo("TICK");
     return 10;
 }
 
-void TestThread::warmUp() { thrlogInfo("Warm-up"); }
+void TestThread::warmUp() { tlogInfo("Warm-up"); }
 
-void TestThread::coolDown() { thrlogInfo("Cool-down"); }
+void TestThread::coolDown() { tlogInfo("Cool-down"); }
 
 TestThread::TestThread(const char* name)
     : cerberus::Thread(cerberus::ThreadPeriodicity::TP_Periodic, 500, name)

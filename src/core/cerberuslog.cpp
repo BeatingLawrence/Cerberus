@@ -14,6 +14,7 @@ using namespace cerberus::core;
 #define INFO_TAG_STRING_LEN 8
 #define WARNING_TAG_STRING_LEN 11
 #define ERROR_TAG_STRING_LEN 9
+#define CERB_TAG_STR "[CERB]"
 
 #ifdef WINDOWS_SYSTEM
 #include <windows.h>
@@ -79,7 +80,7 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
         return;
 
     // author
-    std::string logAuth = auth(author);
+    std::string logAuth = authStr(author, application);
 
     // time
     std::string time = DateTime::current().toTimeStampString();
@@ -113,15 +114,9 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
     }
 }
 //=============================================================================
-void CerberusLog::llDebug(const std::string& str, const std::string& author)
+void CerberusLog::llDebug(const std::string& str)
 {
-    // time
-    std::string time = DateTime::current().toTimeStampString();
-
-    // author
-    std::string logAuth = auth(author);
-
-    sysPrint(stream(LL_Debug), toRawLog(str, LL_Debug, logAuth, time));
+    sysPrint(stream(LL_Debug), toRawLog(str, LL_Debug, "", DateTime::current().toTimeStampString()));
 }
 //=============================================================================
 void CerberusLog::setup(const LogConf& parms)
@@ -330,9 +325,23 @@ FILE* CerberusLog::stream(LogLevel ll)
 //=============================================================================
 void CerberusLog::sysPrint(FILE* f, const std::string& str) { fprintf(f, "%s", str.c_str()); }
 //=============================================================================
-std::string CerberusLog::auth(const std::string& author)
+std::string CerberusLog::authStr(const std::string& str, bool app)
 {
-    if (author.empty()) return "";
-    return std::string("[").append(author).append("]");
+    if (str.empty())
+    {
+        if (app)
+            return "";
+        else
+            return CERB_TAG_STR " ";
+    }
+    else
+    {
+        if (app)
+        {
+            return std::string("[").append(str).append("] ");
+        }
+        else
+            return std::string(CERB_TAG_STR " [").append(str).append("] ");
+    }
 }
 //=============================================================================

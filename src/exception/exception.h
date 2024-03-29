@@ -6,7 +6,7 @@
 #include <string>
 
 #include "../Cerberus_global.h"
-#include "exceptioncatalog.h"
+#include "exceptioncatalog.h" // IWYU pragma: export
 
 namespace cerberus
 {

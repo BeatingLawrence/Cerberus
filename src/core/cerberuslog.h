@@ -61,7 +61,7 @@ namespace cerberus
 
             static void sysPrint(FILE* f, const std::string& str);
 
-            static std::string auth(const std::string& author);
+            static std::string authStr(const std::string& str, bool app);
 
            public:
             CerberusLog();
@@ -80,7 +80,7 @@ namespace cerberus
             void log(const std::string& str, LogLevel logLevel = LL_Info,
                      const std::string& author = std::string(), bool application = true);
 
-            static void llDebug(const std::string& str, const std::string& author = std::string());
+            static void llDebug(const std::string& str);
         };
     }  // namespace core
 }  // namespace cerberus

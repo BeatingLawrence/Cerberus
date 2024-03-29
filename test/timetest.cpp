@@ -29,16 +29,14 @@ TEST(timeFrameTest, creation)
 
 TEST(timeFrameTest, sum)
 {
-    TimeFrame hundredMilliseconds(100);
     TimeFrame tenSeconds(10, TimeFrame::U_Second);
-
-    auto sum = hundredMilliseconds + tenSeconds;
-
-    EXPECT_EQ(sum.toMilliseconds(), 10100);
-    //
+    TimeFrame hundredMilliseconds(100);
 
     EXPECT_EQ(tenSeconds.toMilliseconds(), 10000);
     EXPECT_EQ(hundredMilliseconds.toMilliseconds(), 100);
+
+    auto sum = hundredMilliseconds + tenSeconds;
+    EXPECT_EQ(sum.toMilliseconds(), 10100);
 
     auto diff = tenSeconds - hundredMilliseconds;
 

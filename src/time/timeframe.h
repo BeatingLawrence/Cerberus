@@ -29,8 +29,8 @@ namespace cerberus
         uint64_t m_us;
         bool m_negative;
 
-        void add(uint64_t val);
-        void subtract(uint64_t val);
+        void _add(uint64_t val);
+        void _subtract(uint64_t val);
 
        public:
         enum Unit
@@ -47,6 +47,8 @@ namespace cerberus
 
         // Construct an invalid TimeFrame object
         TimeFrame();
+
+        TimeFrame(const TimeFrame& other) = default;
 
         // Construct a TimeFrame object
         TimeFrame(uint64_t count, Unit unit = U_MilliSecond);

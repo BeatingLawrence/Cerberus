@@ -130,7 +130,7 @@ void Thread::construct(ThreadPeriodicity periodicity, const TimeFrame& time, con
 
 #ifdef LINUX_SYSTEM
 
-    if (!name.empty()) pthread_setname_np(m_pthread, core::CerberusUtils::truncStr(name, 15).c_str());
+    if (!name.empty()) pthread_setname_np(m_pthread, CerberusUtils::truncStr(name, 15).c_str());
 
 #endif
 }

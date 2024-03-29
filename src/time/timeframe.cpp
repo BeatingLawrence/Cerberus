@@ -11,7 +11,7 @@
 using namespace cerberus;
 
 //=============================================================================
-void TimeFrame::add(uint64_t val)
+void TimeFrame::_add(uint64_t val)
 {
     if (isNegative())
     {
@@ -31,7 +31,7 @@ void TimeFrame::add(uint64_t val)
     }
 }
 //=============================================================================
-void TimeFrame::subtract(uint64_t val)
+void TimeFrame::_subtract(uint64_t val)
 {
     if (isNegative())
     {
@@ -52,12 +52,15 @@ void TimeFrame::subtract(uint64_t val)
 }
 //=============================================================================
 TimeFrame::TimeFrame()
-    : m_us(0)
+    : m_us(0),
+      m_negative(false)
 {
     // noop
 }
 //=============================================================================
 TimeFrame::TimeFrame(uint64_t count, Unit unit)
+    : m_us(0),
+      m_negative(false)
 {
     switch (unit)
     {
@@ -150,9 +153,7 @@ TimeFrame &TimeFrame::addMicroseconds(int64_t time)
         subtract(val);
     }
     else
-    {
         add(time);
-    }
 
     return *this;
 }
@@ -166,13 +167,9 @@ TimeFrame &TimeFrame::setMicroseconds(uint64_t time)
 TimeFrame &TimeFrame::add(const TimeFrame &other)
 {
     if (other.isNegative())
-    {
-        subtract(other.m_us);
-    }
+        _subtract(other.m_us);
     else
-    {
-        add(other.m_us);
-    }
+        _add(other.m_us);
 
     return *this;
 }
@@ -180,13 +177,9 @@ TimeFrame &TimeFrame::add(const TimeFrame &other)
 TimeFrame &TimeFrame::subtract(const TimeFrame &other)
 {
     if (other.isNegative())
-    {
-        add(other.m_us);
-    }
+        _add(other.m_us);
     else
-    {
-        subtract(other.m_us);
-    }
+        _subtract(other.m_us);
 
     return *this;
 }
@@ -214,24 +207,16 @@ bool TimeFrame::operator<(const TimeFrame &other) const
     if (isNegative())
     {
         if (other.isNegative())
-        {
             return m_us > other.m_us;
-        }
         else
-        {
             return true;
-        }
     }
     else
     {
         if (other.isNegative())
-        {
             return false;
-        }
         else
-        {
             return m_us < other.m_us;
-        }
     }
 }
 //=============================================================================
@@ -240,95 +225,62 @@ bool TimeFrame::operator>(const TimeFrame &other) const
     if (isNegative())
     {
         if (other.isNegative())
-        {
             return m_us < other.m_us;
-        }
         else
-        {
             return false;
-        }
     }
     else
     {
         if (other.isNegative())
-        {
             return true;
-        }
         else
-        {
             return m_us > other.m_us;
-        }
     }
 }
 //=============================================================================
 bool TimeFrame::operator<=(const TimeFrame &other) const
 {
-    if (isNegative() == other.isNegative() && m_us == other.m_us)
-    {
-        return true;
-    }
+    if (isNegative() == other.isNegative() && m_us == other.m_us) return true;
 
     if (isNegative())
     {
         if (other.isNegative())
-        {
             return m_us > other.m_us;
-        }
         else
-        {
             return true;
-        }
     }
     else
     {
         if (other.isNegative())
-        {
             return false;
-        }
         else
-        {
             return m_us < other.m_us;
-        }
     }
 }
 //=============================================================================
 bool TimeFrame::operator>=(const TimeFrame &other) const
 {
-    if (isNegative() == other.isNegative() && m_us == other.m_us)
-    {
-        return true;
-    }
+    if (isNegative() == other.isNegative() && m_us == other.m_us) return true;
 
     if (isNegative())
     {
         if (other.isNegative())
-        {
             return m_us < other.m_us;
-        }
         else
-        {
             return false;
-        }
     }
     else
     {
         if (other.isNegative())
-        {
             return true;
-        }
         else
-        {
             return m_us > other.m_us;
-        }
     }
 }
 //=============================================================================
 bool TimeFrame::operator==(const TimeFrame &other) const
 {
-    if (isNegative() == other.isNegative() && m_us == other.m_us)
-    {
-        return true;
-    }
+    if (isNegative() == other.isNegative() && m_us == other.m_us) return true;
 
     return false;
 }

@@ -164,15 +164,22 @@ OpResData<FileMetadata> cerberus::File::stat(const std::string& path)
     throw cerberusImplementationMissExc("stat implementation missing");
 
 #else
-    struct stat stat_struct = {};
+    struct statx stat_struct = {};
 
-    int ret = ::stat(path.c_str(), &stat_struct);
+    int flags = 0;
+    if (path.empty()) flags |= AT_EMPTY_PATH;
 
-    if (ret != 0) return {OR_Failure, "stat error", strerror(errno)};
+    unsigned int mask = STATX_BASIC_STATS | STATX_BTIME;
+
+    int ret = ::statx(AT_FDCWD, path.c_str(), flags, mask, &stat_struct);
+
+    if (ret == -1) return {OR_Failure, "statx error", strerror(errno)};
+
+    if((mask & stat_struct.stx_mask) != mask) return {OR_Failure, "incomplete data from statx"};
 
     FileMetadata metadata = {};
 
-    metadata.fromStat(stat_struct);
+    metadata.fromStatX(stat_struct);
 
     return metadata;
 #endif
@@ -233,15 +240,19 @@ OpResData<FileMetadata> File::stat()
 {
     if (!isOpen()) return File::stat(m_path.toStr());
 
-    struct stat stat_struct = {};
+    struct statx stat_struct = {};
 
-    int ret = fstat(m_fd, &stat_struct);
+    unsigned int mask = STATX_BASIC_STATS | STATX_BTIME;
 
-    if (ret != 0) return {OR_Failure, "fstat error", strerror(errno)};
+    int ret = ::statx(m_fd, "", AT_EMPTY_PATH, mask, &stat_struct);
+
+    if (ret == -1) return {OR_Failure, "statx error", strerror(errno)};
+
+    if((mask & stat_struct.stx_mask) != mask) return {OR_Failure, "incomplete data from statx"};
 
     FileMetadata metadata = {};
 
-    metadata.fromStat(stat_struct);
+    metadata.fromStatX(stat_struct);
 
     return metadata;
 }

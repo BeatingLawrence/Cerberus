@@ -454,10 +454,17 @@ bool cerberus::Dictionary::exists(const std::string &key, WordMatch match)
 void cerberus::FileMetadata::fromStat(const struct stat &stat_struct)
 {
     // time
-    accTime.fromTimespec(stat_struct.st_atime);  // 1 second resolution
+#if defined(APPLE_SYSTEM)
+    accTime.fromTimespec(stat_struct.st_atime);
     modTime.fromTimespec(stat_struct.st_mtime);
     chgTime.fromTimespec(stat_struct.st_ctime);
     creTime.fromTimespec(stat_struct.st_birthtime);
+#elif defined(LINUX_SYSTEM)
+    accTime.fromTimespec(stat_struct.st_atim.tv_sec, stat_struct.st_atim.tv_nsec);
+    modTime.fromTimespec(stat_struct.st_mtim.tv_sec, stat_struct.st_mtim.tv_nsec);
+    chgTime.fromTimespec(stat_struct.st_ctim.tv_sec, stat_struct.st_ctim.tv_nsec);
+    creTime.fromTimespec(stat_struct.st_ctim.tv_sec, stat_struct.st_ctim.tv_nsec);
+#endif
 
     // link refs
     linkrefs = stat_struct.st_nlink;
@@ -504,6 +511,68 @@ void cerberus::FileMetadata::fromStat(const struct stat &stat_struct)
     // UID, GID
     ownUID = stat_struct.st_uid;
     ownGID = stat_struct.st_gid;
+}
+//=============================================================================
+void cerberus::FileMetadata::fromStatX(const struct statx &stat_struct)
+{
+    // time
+#if defined(APPLE_SYSTEM)
+    accTime.fromTimespec(stat_struct.st_atime);
+    modTime.fromTimespec(stat_struct.st_mtime);
+    chgTime.fromTimespec(stat_struct.st_ctime);
+    creTime.fromTimespec(stat_struct.st_birthtime);
+#elif defined(LINUX_SYSTEM)
+    accTime.fromTimespec(stat_struct.stx_atime.tv_sec, stat_struct.stx_atime.tv_nsec);
+    modTime.fromTimespec(stat_struct.stx_mtime.tv_sec, stat_struct.stx_mtime.tv_nsec);
+    chgTime.fromTimespec(stat_struct.stx_ctime.tv_sec, stat_struct.stx_ctime.tv_nsec);
+    creTime.fromTimespec(stat_struct.stx_btime.tv_sec, stat_struct.stx_btime.tv_nsec);
+#endif
+
+    // link refs
+    linkrefs = stat_struct.stx_nlink;
+
+    // mode
+    mode.user  = 0;
+    mode.group = 0;
+    mode.other = 0;
+
+    if (stat_struct.stx_mode & S_IRUSR) mode.user |= FP_READ;   // user write
+    if (stat_struct.stx_mode & S_IWUSR) mode.user |= FP_WRITE;  // user read
+    if (stat_struct.stx_mode & S_IXUSR) mode.user |= FP_EXEC;   // user exec
+    if (stat_struct.stx_mode & S_ISUID) mode.user |= FP_UID;    // uid bit
+
+    if (stat_struct.stx_mode & S_IRGRP) mode.group |= FP_READ;   // group read
+    if (stat_struct.stx_mode & S_IWGRP) mode.group |= FP_WRITE;  // group write
+    if (stat_struct.stx_mode & S_IXGRP) mode.group |= FP_EXEC;   // group exec
+    if (stat_struct.stx_mode & S_ISGID) mode.user |= FP_GID;     // gid bit
+
+    if (stat_struct.stx_mode & S_IROTH) mode.other |= FP_READ;   // other read
+    if (stat_struct.stx_mode & S_IWOTH) mode.other |= FP_WRITE;  // other write
+    if (stat_struct.stx_mode & S_IXOTH) mode.other |= FP_EXEC;   // other exec
+    if (stat_struct.stx_mode & S_ISVTX) mode.user |= FP_STICKY;  // sticky bit
+
+    // type
+    if (stat_struct.stx_mode & S_IFBLK)
+        type = FT_BLK;
+    else if (stat_struct.stx_mode & S_IFCHR)
+        type = FT_CHR;
+    else if (stat_struct.stx_mode & S_IFDIR)
+        type = FT_DIR;
+    else if (stat_struct.stx_mode & S_IFIFO)
+        type = FT_FIFO;
+    else if (stat_struct.stx_mode & S_IFLNK)
+        type = FT_LNK;
+    else if (stat_struct.stx_mode & S_IFREG)
+        type = FT_REG;
+    else if (stat_struct.stx_mode & S_IFSOCK)
+        type = FT_SOCK;
+
+    // size
+    size = stat_struct.stx_size;
+
+    // UID, GID
+    ownUID = stat_struct.stx_uid;
+    ownGID = stat_struct.stx_gid;
 }
 //=============================================================================
 cerberus::SocketCloser::~SocketCloser()

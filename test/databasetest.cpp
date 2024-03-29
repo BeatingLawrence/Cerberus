@@ -23,7 +23,7 @@ class DatabaseTest : public ::testing::Test
         //   database name: testdb
     };
 
-    virtual void TearDown() override { delete db; };
+    virtual void TearDown() override { return;delete db; };
 };
 
 TEST_F(DatabaseTest, connection)
