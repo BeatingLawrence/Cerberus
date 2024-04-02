@@ -3,6 +3,7 @@
 
 #ifndef WINDOWS_SYSTEM
 #include <sys/stat.h>
+#include <sys/types.h>
 #endif
 
 #include <cstdint>
@@ -233,9 +234,11 @@ namespace cerberus
         DateTime chgTime;  // last status change time
         DateTime creTime;  // file creation time
 
+#if defined(LINUX_SYSTEM)
+        void fromStat(const struct statx& stat_struct);
+#elif defined(APPLE_SYSTEM)
         void fromStat(const struct stat& stat_struct);
-
-        void fromStatX(const struct statx& stat_struct);
+#endif
     };
 
     enum SlotType

@@ -160,10 +160,12 @@ OpRes File::isEmptyDirectory(const std::string& path)
 //=============================================================================
 OpResData<FileMetadata> cerberus::File::stat(const std::string& path)
 {
-#ifdef WINDOWS_SYSTEM
+    FileMetadata metadata = {};
+
+#if defined(WINDOWS_SYSTEM)
     throw cerberusImplementationMissExc("stat implementation missing");
 
-#else
+#elif defined(LINUX_SYSTEM)
     struct statx stat_struct = {};
 
     int flags = 0;
@@ -175,14 +177,20 @@ OpResData<FileMetadata> cerberus::File::stat(const std::string& path)
 
     if (ret == -1) return {OR_Failure, "statx error", strerror(errno)};
 
-    if((mask & stat_struct.stx_mask) != mask) return {OR_Failure, "incomplete data from statx"};
+    if ((mask & stat_struct.stx_mask) != mask) return {OR_Failure, "incomplete data from statx"};
 
-    FileMetadata metadata = {};
+#elif defined(APPLE_SYSTEM)
 
-    metadata.fromStatX(stat_struct);
+    struct stat stat_struct = {};
 
-    return metadata;
+    int ret = ::stat(path.c_str(), &stat_struct);
+
+    if (ret == -1) return {OR_Failure, "stat error", strerror(errno)};
+
 #endif
+
+    metadata.fromStat(stat_struct);
+    return metadata;
 }
 //=============================================================================
 File::File(FileOpenMode openMode, bool binaryMode)
@@ -240,6 +248,10 @@ OpResData<FileMetadata> File::stat()
 {
     if (!isOpen()) return File::stat(m_path.toStr());
 
+    FileMetadata metadata = {};
+
+#if defined(LINUX_SYSTEM)
+
     struct statx stat_struct = {};
 
     unsigned int mask = STATX_BASIC_STATS | STATX_BTIME;
@@ -248,12 +260,19 @@ OpResData<FileMetadata> File::stat()
 
     if (ret == -1) return {OR_Failure, "statx error", strerror(errno)};
 
-    if((mask & stat_struct.stx_mask) != mask) return {OR_Failure, "incomplete data from statx"};
+    if ((mask & stat_struct.stx_mask) != mask) return {OR_Failure, "incomplete data from statx"};
 
-    FileMetadata metadata = {};
+#elif defined(APPLE_SYSTEM)
 
-    metadata.fromStatX(stat_struct);
+    struct stat stat_struct = {};
 
+    int ret = ::fstat(m_fd, &stat_struct);
+
+    if (ret == -1) return {OR_Failure, "fstat error", strerror(errno)};
+
+#endif
+
+    metadata.fromStat(stat_struct);
     return metadata;
 }
 //=============================================================================
