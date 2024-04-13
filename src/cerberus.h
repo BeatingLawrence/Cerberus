@@ -3,11 +3,11 @@
 
 #include "Cerberus_global.h"
 #include "core/cerberuslog.h"
-#include "data/data.h"
-#include "log.h"
-#include "message/message.h"
+#include "data/data.h"        // IWYU pragma: export
+#include "log.h"              // IWYU pragma: export
+#include "message/message.h"  // IWYU pragma: export
 #include "message/messagetemplate.h"
-#include "message/slot/slot.h"
+#include "message/slot/slot.h"  // IWYU pragma: export
 #include "time/datetime.h"
 #include "time/timeframe.h"
 #include "types.h"
@@ -88,7 +88,7 @@ namespace cerberus
 
         void isReadySevere()
         {
-            if (!isReady()) throw cerberusUsageErrorExc("bad init usage");
+            if (!isReady()) throw cUsageErrorExc("bad init usage");
         };
     };
 
@@ -201,14 +201,13 @@ namespace cerberus
         // ===========================Factory==============================
 
         // Retrieves a MessageTemplate by its ID
-        static message::MessageTemplate msgTemplateById(HASH32 id);
+        static MessageTemplate msgTemplateById(HASH32 id);
 
         // Retrieves a MessageTemplate by its name
-        static message::MessageTemplate msgTemplateByName(const std::string& name);
+        static MessageTemplate msgTemplateByName(const std::string& name);
 
         // Adds a template of the given message to the register, returning the chosen typeID
-        static HASH32 registerMessage(const message::Message& message,
-                                      const std::string& name = std::string());
+        static HASH32 registerMessage(const Message& message, const std::string& name = std::string());
 
         // Factory of messages. A call to this method will return an empty but structured message.
         // This method will return an invalid message if ID was not found, or it will

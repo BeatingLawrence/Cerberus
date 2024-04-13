@@ -2,7 +2,7 @@
 #include <cerberus/data/database/sqldatabase.h>
 #include <gtest/gtest.h>
 
-#include "src/data/database/sqldata.h"
+#include "src/data/database/dbdata.h"
 
 using namespace cerberus::data::database;
 
@@ -45,7 +45,7 @@ TEST_F(DatabaseTest, createTable)
         ASSERT_FALSE(true);
     }
 
-    SQLTablePrototype prototype("test");
+    DBTableProto prototype("test");
     prototype.add("ID", SQLTablePrototype::SQLDataType::SDT_BigInt)
         .add("name", SQLTablePrototype::SQLDataType::SDT_VarChar, 255)
         .add("country", SQLTablePrototype::SQLDataType::SDT_VarChar, 255)
@@ -63,11 +63,11 @@ TEST_F(DatabaseTest, insertInto)
         ASSERT_FALSE(true);
     }
 
-    SQLTablePrototype prototype("test");
+    DBTableProto prototype("test");
     ASSERT_EQ(db->queryPrototype(prototype).res, cerberus::OR_OK);
-    SQLBlock block("test");
+    DBTableBlock block("test");
     block.setPrototype(prototype);
-    SQLRow row;
+    DBRow row;
     row.append(1);
     row.append("Josh");
     row.append("USA");
@@ -107,7 +107,7 @@ TEST_F(DatabaseTest, queryResult)
         ASSERT_FALSE(true);
     }
 
-    SQLBlock block;
+    DBTableBlock block;
     ASSERT_EQ(db->querytable("test", block).res, cerberus::OR_OK);
     EXPECT_TRUE(block.structured());
 

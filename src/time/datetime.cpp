@@ -273,7 +273,7 @@ DateTime &DateTime::fromTimespec(uint32_t seconds, uint32_t nanoseconds)
 
     if (!localtime_r(&t, &m_time))
     {
-        throw cerberusSystemExc("gmtime failure: %u", errno);
+        throw cSystemExc("gmtime failure: %u", errno);
     }
 
     // normalize();

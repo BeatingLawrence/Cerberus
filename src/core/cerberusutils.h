@@ -130,13 +130,19 @@ namespace cerberus
         static slot_ptr newSlot(SlotType type, const std::string& name = "");
 
         // Construct a standard message template
-        static message::MessageTemplate standardTemplate(HASH32 id);
+        static MessageTemplate standardTemplate(HASH32 id);
 
         // Compute the FNV1A digest of the string
         static HASH32 hash_fnv1a(const std::string& str);
 
         // Get the complete absolute path
         static StringOpRes completePath(const std::string& path);
+
+        // Transform the SQL type contained in string in a SQLDataType value
+        static SQLDataType toSQLDataType(const std::string& type);
+
+        // Transform the given SQL data type to a string valid for databases
+        static std::string fromSQLDataType(SQLDataType type);
     };
 }  // namespace cerberus
 

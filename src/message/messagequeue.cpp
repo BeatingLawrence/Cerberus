@@ -2,7 +2,7 @@
 
 #include "./message.h"
 
-using namespace cerberus::message;
+using namespace cerberus;
 
 //=============================================================================
 MessageQueue::MessageQueue()
@@ -17,7 +17,7 @@ MessageQueue::MessageQueue(MessageQueue &&other)
 //=============================================================================
 void MessageQueue::add(cerberus_message message) { m_queue.push_back(message); }
 //=============================================================================
-cerberus::cerberus_message MessageQueue::next()
+cerberus_message MessageQueue::next()
 {
     if (m_queue.empty()) return Message::create();
 
@@ -26,7 +26,7 @@ cerberus::cerberus_message MessageQueue::next()
     return next.ref();
 }
 //=============================================================================
-cerberus::cerberus_message MessageQueue::nextKeep() const
+cerberus_message MessageQueue::nextKeep() const
 {
     if (m_queue.empty()) return Message::create();
 

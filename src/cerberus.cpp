@@ -61,7 +61,7 @@ OpResData<CerberusObject *> Cerberus::rawObjById(HASH32 id)
     return Cerberus::framework.reg.data->objById(id);
 }
 //=============================================================================
-message::MessageTemplate Cerberus::msgTemplateById(uint32_t id)
+MessageTemplate Cerberus::msgTemplateById(uint32_t id)
 {
     if (id < CERBERUS_REG_RANGE_START) return CerberusUtils::standardTemplate(id);
 
@@ -70,16 +70,16 @@ message::MessageTemplate Cerberus::msgTemplateById(uint32_t id)
     return Cerberus::framework.reg.data->msgTemplateById(id);
 }
 //=============================================================================
-message::MessageTemplate Cerberus::msgTemplateByName(const std::string &name)
+MessageTemplate Cerberus::msgTemplateByName(const std::string &name)
 {
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
     return Cerberus::framework.reg.data->msgTemplateByName(name);
 }
 //=============================================================================
-uint32_t Cerberus::registerMessage(const message::Message &message, const std::string &name)
+uint32_t Cerberus::registerMessage(const Message &message, const std::string &name)
 {
-    auto tmplt = cerberus::message::MessageTemplate(message, name);
+    auto tmplt = cerberus::MessageTemplate(message, name);
     tmplt.checkIn();
     return tmplt.id();
 }
@@ -88,7 +88,7 @@ cerberus_message Cerberus::messageConstruct(HASH32 id)
 {
     auto tmplt = cerberus::Cerberus::msgTemplateById(id);
 
-    cerberus_message message = message::Message::create(id);
+    cerberus_message message = Message::create(id);
 
     for (size_t i = 0; i < tmplt.count(); i++)
     {
@@ -102,7 +102,7 @@ cerberus_message Cerberus::messageConstruct(const std::string &name)
 {
     auto tmplt = Cerberus::msgTemplateByName(name);
 
-    cerberus_message message = message::Message::create(tmplt.id());
+    cerberus_message message = Message::create(tmplt.id());
 
     for (size_t i = 0; i < tmplt.count(); i++)
     {
@@ -285,7 +285,7 @@ CerbVersion Cerberus::cerberusVersion()
             break;
 
         default:
-            throw cerberusImplMissExc("Version type mismatch");
+            throw cImplMissExc("Version type mismatch");
     }
 
     ret.text = CerberusUtils::strPrint("%u.%u.%u%s", ret.major, ret.minor, ret.patch, typ.c_str());
@@ -332,7 +332,7 @@ void Cerberus::send(cerberus_message message, const std::string &recipient)
 //=============================================================================
 void FrameworkData::construct(const CerberusInitConf &conf)
 {
-    if (core.isReady()) throw cerberusUsageErrorExc("attempt to construct the framework multiple times");
+    if (core.isReady()) throw cUsageErrorExc("attempt to construct the framework multiple times");
 
     log.construct();
     log.data->setup(conf.logSetup);
@@ -344,7 +344,7 @@ void FrameworkData::construct(const CerberusInitConf &conf)
 //=============================================================================
 void FrameworkData::destroy()
 {
-    if (!core.isReady()) throw cerberusUsageErrorExc("attempt to destroy the framework multiple times");
+    if (!core.isReady()) throw cUsageErrorExc("attempt to destroy the framework multiple times");
     core.destroy();
     reg.destroy();
     log.destroy();

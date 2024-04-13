@@ -101,10 +101,10 @@ namespace cerberus
             HASH32 objIdByName(const std::string& name);
 
             // Retrieves a MessageTemplate by its name
-            message::MessageTemplate msgTemplateByName(const std::string& name);  // consider hiding
+            MessageTemplate msgTemplateByName(const std::string& name);  // consider hiding
 
             // Retrieves a MessageTemplate by its ID
-            message::MessageTemplate msgTemplateById(HASH32 id);  // consider hiding
+            MessageTemplate msgTemplateById(HASH32 id);  // consider hiding
 
             // Send a message to a cerberus object.
             // If the id is not valid or the message cannot be sent, nothing happens

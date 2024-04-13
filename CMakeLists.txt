@@ -36,27 +36,23 @@ endif()
 
 # =======================Cerberus library=========================
 
-#add_subdirectory("compile-time-regular-expressions" EXCLUDE_FROM_ALL) #maybe used in the future
-
 file(GLOB_RECURSE src_files CONFIGURE_DEPENDS
     "src/*.cpp"
-)
-
-file(GLOB_RECURSE header_files CONFIGURE_DEPENDS
     "src/*.h"
 )
 
 add_library(Cerberus SHARED
   ${src_files}
-  ${header_files}
 )
-
-#target_link_libraries(Cerberus LINK_PUBLIC ctre)
 
 set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
 
-target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY PRIVATE _CRT_SECURE_NO_WARNINGS PRIVATE CERBERUS_VERSION="${CMAKE_PROJECT_VERSION}")
-target_compile_definitions(Cerberus PRIVATE CERBERUS_LIBRARY PRIVATE _CRT_SECURE_NO_WARNINGS PRIVATE CERBERUS_VERSION_TWEAK=${CMAKE_PROJECT_VERSION_TWEAK})
+target_compile_definitions(Cerberus
+    PRIVATE CERBERUS_LIBRARY
+    PRIVATE _CRT_SECURE_NO_WARNINGS
+    PRIVATE CERBERUS_VERSION="${CMAKE_PROJECT_VERSION}"
+    PRIVATE CERBERUS_VERSION_TWEAK=${CMAKE_PROJECT_VERSION_TWEAK}
+)
 
 install(TARGETS Cerberus DESTINATION lib)
 install(DIRECTORY src/ DESTINATION include/cerberus FILES_MATCHING PATTERN "*.h")
@@ -71,9 +67,9 @@ add_executable(test EXCLUDE_FROM_ALL
   ${test_files}
 )
 
-target_include_directories(test PUBLIC
-    "../Dist/include"
-)
+target_include_directories(test PUBLIC "../Dist/include")
+target_link_directories(test PUBLIC "../Dist/lib")
+target_link_libraries(test LINK_PUBLIC Cerberus)
 
 # ================================================================
 
@@ -98,8 +94,12 @@ if(MSVC)
         message(FATAL_ERROR "GTest library needed on Windows system! Please Read README.md")
     endif()
 
-    #OPEN-SSL
+    #postgres support
+    if(POSTGRESQL)
+        target_link_libraries(Cerberus LINK_PUBLIC libpqxx)
+    endif()
 
+    #OPEN-SSL
     target_include_directories(Cerberus PUBLIC "C:/Qt/Tools/OpenSSL/Win_x64/include")
     target_link_directories(Cerberus PUBLIC "C:/Qt/Tools/OpenSSL/Win_x64/lib")
     target_link_libraries(Cerberus LINK_PUBLIC libssl)
@@ -116,27 +116,28 @@ elseif(UNIX)
     message(STATUS "On Linux/MACOSX system")
 
     target_include_directories(Cerberus PUBLIC
-        "/usr/include"
-        "/opt/homebrew/include"
+        "/usr/include"          #for Linux
+        "/opt/homebrew/include" #for MACOS
     )
 
-    target_include_directories(test PUBLIC
-        "/usr/include"
+    target_link_directories(Cerberus PUBLIC
+        "/usr/lib"              #for Linux
+        "/opt/homebrew/lib"     #for MACOS
     )
+
+    #postgres support
+    if(POSTGRESQL)
+        target_link_libraries(Cerberus LINK_PUBLIC pqxx)
+        target_compile_definitions(Cerberus PRIVATE POSTGRESQL_SUPPORT)
+    endif()
+
+    #OPEN-SSL
+    target_link_libraries(Cerberus LINK_PUBLIC ssl crypto)
 
     find_library(GTEST_LIBRARY NAMES gtest PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
     find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
 
-    #OPEN-SSL
-    target_link_directories(Cerberus PUBLIC "/opt/homebrew/lib")
-
-    target_link_libraries(Cerberus LINK_PUBLIC ssl)
-    target_link_libraries(Cerberus LINK_PUBLIC crypto)
-
 endif()
 
-target_link_directories(test PUBLIC "../Dist/lib")
-
-target_link_libraries(test LINK_PUBLIC Cerberus)
 target_link_libraries(test LINK_PUBLIC ${GTEST_LIBRARY})
 target_link_libraries(test LINK_PUBLIC ${GTEST_MAIN_LIBRARY})

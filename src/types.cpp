@@ -233,8 +233,9 @@ cerberus::OpRes::OpRes()
 //=============================================================================
 cerberus::OpRes::OpRes(Result r, const std::string &reason, const std::string &reason2)
     : res(r),
-      reason(reason + " " + reason2)
+      reason(reason)
 {
+    addInfo(reason2);
 }
 //=============================================================================
 bool cerberus::OpRes::operator==(Result r) { return (res == r); }
@@ -243,14 +244,14 @@ bool cerberus::OpRes::operator!=(Result r) { return (res != r); }
 //=============================================================================
 cerberus::OpRes &cerberus::OpRes::expect(const std::string &str)
 {
-    if (fail()) throw cerberusOpResExc(str.c_str());
+    if (fail()) throw cOpResExc(str.c_str());
 
     return *this;
 }
 //=============================================================================
 cerberus::OpRes &cerberus::OpRes::expect(Result reason, const std::string &str)
 {
-    if (fail() && res == reason) throw cerberusOpResExc(str.c_str());
+    if (fail() && res == reason) throw cOpResExc(str.c_str());
 
     return *this;
 }
@@ -267,7 +268,7 @@ cerberus::OpRes &cerberus::OpRes::expect()
             errorstr.append(reason);
         }
 
-        throw cerberusOpResExc(errorstr.c_str());
+        throw cOpResExc(errorstr.c_str());
     }
 
     return *this;
@@ -386,6 +387,13 @@ bool cerberus::OpRes::hasOptional(Result opt)
     return false;
 }
 //=============================================================================
+cerberus::OpRes &cerberus::OpRes::addInfo(const std::string &str)
+{
+    reason.append(", ");
+    reason.append(str);
+    return *this;
+}
+//=============================================================================
 StringOpRes cerberus::Dictionary::getFieldValue(const std::string &key, WordMatch match) const
 {
     for (auto &el : (*this))
@@ -409,13 +417,13 @@ cerberus::OpRes cerberus::Dictionary::getFieldMatch(const std::string &key, cons
 //=============================================================================
 std::string cerberus::Dictionary::getNameAt(SIZE index) const
 {
-    if (index >= size()) throw cerberusIllegalArgExc("Index out of bounds");
+    if (index >= size()) throw cIllegalArgExc("Index out of bounds");
     return at(index).key;
 }
 //=============================================================================
 std::string cerberus::Dictionary::getValueAt(SIZE index) const
 {
-    if (index >= size()) throw cerberusIllegalArgExc("Index out of bounds");
+    if (index >= size()) throw cIllegalArgExc("Index out of bounds");
     return at(index).val;
 }
 //=============================================================================
@@ -427,7 +435,7 @@ cerberus::Dictionary &cerberus::Dictionary::addKey(const std::string &key, const
 //=============================================================================
 cerberus::DictLine &cerberus::Dictionary::get(SIZE index)
 {
-    if (index >= size()) throw cerberusIllegalArgExc("Index out of bounds");
+    if (index >= size()) throw cIllegalArgExc("Index out of bounds");
     return at(index);
 }
 //=============================================================================
@@ -438,7 +446,7 @@ cerberus::DictLine &cerberus::Dictionary::get(const std::string &key, WordMatch 
         if (cerberus::CerberusUtils::areEqual((*it).key, key, match)) return (*it);
     }
 
-    throw cerberusIllegalArgExc("Name not found");
+    throw cIllegalArgExc("Name not found");
 }
 //=============================================================================
 bool cerberus::Dictionary::exists(const std::string &key, WordMatch match)

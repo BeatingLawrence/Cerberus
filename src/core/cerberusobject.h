@@ -104,7 +104,7 @@ namespace cerberus
 
                 if (casted == nullptr)
                 {
-                    throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
+                    throw cInvalidCastExc("Unable co cast to %s", typeid(T).name());
                 }
 
                 return casted;
@@ -117,7 +117,7 @@ namespace cerberus
 
                 if (casted == nullptr)
                 {
-                    throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
+                    throw cInvalidCastExc("Unable co cast to %s", typeid(T).name());
                 }
 
                 return *casted;
@@ -130,7 +130,7 @@ namespace cerberus
 
                 if (casted == nullptr)
                 {
-                    throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
+                    throw cInvalidCastExc("Unable co cast to %s", typeid(T).name());
                 }
 
                 return casted;
@@ -143,7 +143,7 @@ namespace cerberus
 
                 if (casted == nullptr)
                 {
-                    throw cerberusInvalidCastExc("Unable co cast to %s", typeid(T).name());
+                    throw cInvalidCastExc("Unable co cast to %s", typeid(T).name());
                 }
 
                 return *casted;

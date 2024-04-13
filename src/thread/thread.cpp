@@ -107,7 +107,7 @@ void Thread::construct(ThreadPeriodicity periodicity, const TimeFrame& time, con
 {
     if (periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicMessage)
     {
-        if (!time.isValid()) throw cerberusIllegalArgExc("Invalid time in Thread creation");
+        if (!time.isValid()) throw cIllegalArgExc("Invalid time in Thread creation");
 
         m_time = time.splittedTime();
     }
@@ -116,14 +116,14 @@ void Thread::construct(ThreadPeriodicity periodicity, const TimeFrame& time, con
 
     if (pthread_attr_init(&attr))  // default attributes
     {
-        throw cerberusSystemExc("pthread_attr_init function failed");
+        throw cSystemExc("pthread_attr_init function failed");
     }
 
     auto ret = pthread_create(&m_pthread, &attr, &_staticThread, this);
 
     if (ret)
     {
-        throw cerberusSystemExc("pthread_create function failed: %s", strerror(ret));
+        throw cSystemExc("pthread_create function failed: %s", strerror(ret));
     }
 
     pthread_attr_destroy(&attr);

@@ -1,9 +1,9 @@
 #include "messagetemplate.h"
 
-#include "./message.h"
+#include "message.h"
 #include "slot/slot.h"
 
-using namespace cerberus::message;
+using namespace cerberus;
 
 //=============================================================================
 MessageTemplate::MessageTemplate()

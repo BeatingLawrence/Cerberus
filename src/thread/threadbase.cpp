@@ -23,14 +23,14 @@ ThreadBase::ThreadBase(ThreadPeriodicity periodicity)
 
     if (ret)
     {
-        throw cerberusSystemExc("pthread_condattr_init error %s", strerror(ret));
+        throw cSystemExc("pthread_condattr_init error %s", strerror(ret));
     }
 
     ret = pthread_cond_init(&m_cond, &attr);
 
     if (ret)
     {
-        throw cerberusSystemExc("pthread_cond_init error %s", strerror(ret));
+        throw cSystemExc("pthread_cond_init error %s", strerror(ret));
     }
 
     pthread_condattr_destroy(&attr);
@@ -46,7 +46,7 @@ void ThreadBase::setPausedFlag(bool state)
 
     if (ret)
     {
-        throw cerberusSystemExc("pthread_cond_signal error %s", strerror(ret));
+        throw cSystemExc("pthread_cond_signal error %s", strerror(ret));
     }
 }
 //=============================================================================
@@ -62,7 +62,7 @@ void ThreadBase::pause()
 
         if (ret)
         {
-            throw cerberusSystemExc("pthread_cond_wait error %s", strerror(ret));
+            throw cSystemExc("pthread_cond_wait error %s", strerror(ret));
         }
     }
 }

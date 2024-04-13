@@ -41,7 +41,7 @@ Socket::Socket(SocketType type, int fd, SSL_CTX *ctx)
     {
         if (SSL_CTX_up_ref(ctx) != 1)
         {
-            throw cerberusSystemExc("could not increment reference counter of SSL CTX");
+            throw cSystemExc("could not increment reference counter of SSL CTX");
         }
     }
 }
@@ -148,7 +148,7 @@ Socket::TransportType Socket::transportType()
     switch (socketType())
     {
         case CerberusObject::Socket_None:
-            throw cerberusIllegalArgExc("None type cannot be used");
+            throw cIllegalArgExc("None type cannot be used");
         case CerberusObject::Socket_UDP:
             return UDP;
         case CerberusObject::Socket_TCP:
@@ -156,14 +156,14 @@ Socket::TransportType Socket::transportType()
         case CerberusObject::Socket_TCPP2P:
             return TCP;
         case CerberusObject::Socket_HTTP:
-            throw cerberusImplMissExc("HTTP sockets not implemented yet");
+            throw cImplMissExc("HTTP sockets not implemented yet");
         case CerberusObject::Socket_ICMP:
             return ICMP;
         case CerberusObject::Socket_IPC:
             return IPC;
     }
 
-    throw cerberusImplMissExc("requested socket has not been implemented yet");
+    throw cImplMissExc("requested socket has not been implemented yet");
 }
 //=============================================================================
 IntOpRes Socket::_accept(Host &peer)
@@ -486,7 +486,7 @@ OpRes Socket::_TLS_recv(ByteBuffer &buffer)
 //=============================================================================
 OpRes Socket::_TLS_create()
 {
-    if (m_ssl) throw cerberusIllegalStateExc("call to _TLS_create() twice causes memory leak");
+    if (m_ssl) throw cIllegalStateExc("call to _TLS_create() twice causes memory leak");
     ERR_clear_error();
     m_ssl = SSL_new(m_sslCtx);
 
@@ -521,7 +521,7 @@ OpRes Socket::_TLS_associate()
 //=============================================================================
 OpRes Socket::_TLS_handshake(bool server, const Host &remote)
 {
-    if (!isTLS()) throw cerberusIllegalStateExc("_TLS_handshake() called without an SSL context");
+    if (!isTLS()) throw cIllegalStateExc("_TLS_handshake() called without an SSL context");
 
     auto res = _TLS_create();
     if (res.fail()) return res;
@@ -600,10 +600,10 @@ Socket::Socket(SocketType type, const std::string &name)
             createUdpSocket();
             break;
         case ICMP:
-            throw cerberusImplMissExc("ICMP sockets not implemented yet");
+            throw cImplMissExc("ICMP sockets not implemented yet");
             break;
         case IPC:
-            throw cerberusImplMissExc("IPC sockets not implemented yet");
+            throw cImplMissExc("IPC sockets not implemented yet");
             break;
     }
 }

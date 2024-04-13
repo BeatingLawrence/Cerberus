@@ -40,7 +40,7 @@ namespace cerberus
 
             if (casted == nullptr)
             {
-                throw cerberusIllegalArgExc(
+                throw cIllegalArgExc(
                     CerberusUtils::strPrint("Invalid cast from %s to %s",
                                             boost::core::demangle(typeid(*this).name()).c_str(),
                                             boost::core::demangle(typeid(T).name()).c_str())

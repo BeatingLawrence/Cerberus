@@ -22,7 +22,7 @@ void ByteBuffer::_resize(SIZE size)
 
     if (newbuf == nullptr)
     {
-        throw cerberusSystemExc("could not allocate ByteBuffer memory");
+        throw cSystemExc("could not allocate ByteBuffer memory");
     }
 
     m_bytes = newbuf;
@@ -159,7 +159,7 @@ const cerberus::BYTE& ByteBuffer::at(SIZE index) const
 {
     if (index >= m_size)
     {
-        throw cerberusIllegalArgExc("index out of bound, %u/%u", index, m_size);
+        throw cIllegalArgExc("index out of bound, %u/%u", index, m_size);
     }
     return getat(index);
 }
@@ -168,7 +168,7 @@ cerberus::BYTE& ByteBuffer::at(SIZE index)
 {
     if (index >= m_size)
     {
-        throw cerberusIllegalArgExc("index out of bound, %u/%u", index, m_size);
+        throw cIllegalArgExc("index out of bound, %u/%u", index, m_size);
     }
     return getat(index);
 }

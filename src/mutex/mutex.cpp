@@ -15,7 +15,7 @@ Mutex::Mutex(MutexType type)
 
     if (pthread_mutexattr_init(&attr))
     {
-        throw cerberusSystemExc("pthread_mutexattr_init error");
+        throw cSystemExc("pthread_mutexattr_init error");
     }
 
     int kind = 0;
@@ -33,14 +33,14 @@ Mutex::Mutex(MutexType type)
 
     if (pthread_mutexattr_settype(&attr, kind))
     {
-        throw cerberusSystemExc("pthread_mutexattr_settype error");
+        throw cSystemExc("pthread_mutexattr_settype error");
     }
 
     auto ret = pthread_mutex_init(&m_pmutex, &attr);  // default parameters
 
     if (ret)
     {
-        throw cerberusSystemExc("pthread_mutex_init error %s", strerror(ret));
+        throw cSystemExc("pthread_mutex_init error %s", strerror(ret));
     }
 
     pthread_mutexattr_destroy(&attr);
@@ -66,7 +66,7 @@ bool Mutex::lock(bool block)
 {
     if (!m_valid)
     {
-        throw cerberusIllegalStateExc("lock called on an invalid Mutex");
+        throw cIllegalStateExc("lock called on an invalid Mutex");
     }
 
     int ret = 0;
@@ -94,7 +94,7 @@ bool Mutex::lock(bool block)
             return true;
         }
 #endif
-        throw cerberusSystemExc("pthread_mutex_%s error %s", block ? "lock" : "trylock", strerror(ret));
+        throw cSystemExc("pthread_mutex_%s error %s", block ? "lock" : "trylock", strerror(ret));
     }
 
     return true;
@@ -104,14 +104,14 @@ void Mutex::unlock()
 {
     if (!m_valid)
     {
-        throw cerberusIllegalStateExc("unlock called on an invalid Mutex");
+        throw cIllegalStateExc("unlock called on an invalid Mutex");
     }
 
     auto ret = pthread_mutex_unlock(&m_pmutex);
 
     if (ret)
     {
-        throw cerberusSystemExc("pthread_mutex_unlock error %s", strerror(ret));
+        throw cSystemExc("pthread_mutex_unlock error %s", strerror(ret));
     }
 }
 //=============================================================================

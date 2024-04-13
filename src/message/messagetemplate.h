@@ -14,37 +14,34 @@
 
 namespace cerberus
 {
-    namespace message
+    class Message;
+
+    class CERBERUS_EXPORT MessageTemplate : public core::CerberusObject
     {
-        class Message;
+       private:
+        std::vector<SlotTemplate> m_types;
 
-        class CERBERUS_EXPORT MessageTemplate : public core::CerberusObject
-        {
-           private:
-            std::vector<SlotTemplate> m_types;
+       public:
+        // Construct an invalid template
+        MessageTemplate();
 
-           public:
-            // Construct an invalid template
-            MessageTemplate();
+        // Constructs an empty template with a name
+        MessageTemplate(const std::string& name);
 
-            // Constructs an empty template with a name
-            MessageTemplate(const std::string& name);
+        // Constructs a template taking data from a message
+        MessageTemplate(const Message& message, const std::string& name);
 
-            // Constructs a template taking data from a message
-            MessageTemplate(const Message& message, const std::string& name);
+        virtual ~MessageTemplate();
 
-            virtual ~MessageTemplate();
+        // Adds a single slot type at the end of the vector
+        MessageTemplate& addSlotType(SlotType type, const std::string& name = "");
 
-            // Adds a single slot type at the end of the vector
-            MessageTemplate& addSlotType(SlotType type, const std::string& name = "");
+        // Returns the slot type at the index position
+        SlotTemplate getSlotAt(size_t index) const;
 
-            // Returns the slot type at the index position
-            SlotTemplate getSlotAt(size_t index) const;
-
-            // Returns the number of slots contained in this template
-            size_t count() const;
-        };
-    }  // namespace message
+        // Returns the number of slots contained in this template
+        size_t count() const;
+    };
 }  // namespace cerberus
 
 #endif  // CERBERUS_MESSAGE_MESSAGETEMPLATE_H

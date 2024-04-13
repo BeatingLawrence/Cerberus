@@ -15,7 +15,7 @@ namespace cerberus
 
         pthread_cond_t m_cond;
 
-        message::MessageQueue m_queue;
+        MessageQueue m_queue;
 
         bool m_pausedFlag, m_terminateFlag, m_dead;
 

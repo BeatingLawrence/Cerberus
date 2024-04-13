@@ -179,8 +179,8 @@ void CerberusCore::runTask(Task t)
         }
     }
 
-    throw cerberusIllegalStateExc("Could not assign a task to the thread pool, %u threads are not enough",
-                                  m_conf.threadPool);
+    throw cIllegalStateExc("Could not assign a task to the thread pool, %u threads are not enough",
+                           m_conf.threadPool);
 }
 //=============================================================================
 CerberusCore::CerberusCore()

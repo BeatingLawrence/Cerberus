@@ -329,7 +329,7 @@ OpRes File::open()
 
     m_fd = fileno(m_file);
 
-    if (m_fd == -1) throw cerberusSystemExc("stream is not associated with a file");
+    if (m_fd == -1) throw cSystemExc("stream is not associated with a file");
 
     return OR_OK;
 }

@@ -322,12 +322,12 @@ std::string CerberusUtils::substrFrom(const std::string& str, const std::string&
     return str.substr(found + token.size());
 }
 //=============================================================================
-cerberus::DoubleString CerberusUtils::split(const std::string& str, const std::string& token)
+DoubleString CerberusUtils::split(const std::string& str, const std::string& token)
 {
     return {substrUntil(str, token), substrFrom(str, token)};
 }
 //=============================================================================
-cerberus::OpRes CerberusUtils::cleanNumber(std::string& str)
+OpRes CerberusUtils::cleanNumber(std::string& str)
 {
     if (!isNumber(str)) return {OR_WrongArgument, strPrint("Given %s is not a number", str.c_str())};
 
@@ -380,7 +380,7 @@ cerberus::OpRes CerberusUtils::cleanNumber(std::string& str)
     return OR_OK;
 }
 //=============================================================================
-cerberus::slot_ptr CerberusUtils::newSlot(SlotType type, const std::string& name)
+slot_ptr CerberusUtils::newSlot(SlotType type, const std::string& name)
 {
     slot_ptr ret;
 
@@ -432,16 +432,16 @@ cerberus::slot_ptr CerberusUtils::newSlot(SlotType type, const std::string& name
             ret = ResultSlot::create();
             break;
         default:
-            throw cerberusIllegalArgExc("Unknown slot type");
+            throw cIllegalArgExc("Unknown slot type");
     }
 
     ret->name(name);
     return ret;
 }
 //=============================================================================
-message::MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
+MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
 {
-    message::MessageTemplate tmplt;
+    MessageTemplate tmplt;
 
     switch (id)
     {
@@ -470,7 +470,7 @@ message::MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
             // add here more message specializations..
 
         default:
-            throw cerberusImplMissExc("Requested standard message is not defined");
+            throw cImplMissExc("Requested standard message is not defined");
     }
 
     return tmplt;
@@ -501,5 +501,92 @@ StringOpRes CerberusUtils::completePath(const std::string& path)
     std::string ret(comp);
     free(comp);
     return ret;
+}
+//=============================================================================
+SQLDataType CerberusUtils::toSQLDataType(const std::string& type)
+{
+    if (type.compare("bigint") == 0)
+        return SQLDataType::SDT_BigInt;
+
+    else if (type.compare("integer") == 0)
+        return SQLDataType::SDT_Int;
+
+    else if (type.compare("smallint") == 0)
+        return SQLDataType::SDT_SmallInt;
+
+    else if (type.compare("real") == 0)
+        return SQLDataType::SDT_Real;
+
+    else if (type.compare("double precision") == 0)
+        return SQLDataType::SDT_Double;
+
+    else if (type.compare("boolean") == 0)
+        return SQLDataType::SDT_Boolean;
+
+    else if (type.compare("money") == 0)
+        return SQLDataType::SDT_Money;
+
+    else if (CerberusUtils::contains(type, "character"))
+    {
+        if (CerberusUtils::contains(type, "varying"))
+            return SQLDataType::SDT_VarChar;
+
+        else
+            return SQLDataType::SDT_Char;
+    }
+    else if (CerberusUtils::contains(type, "bit"))
+    {
+        if (CerberusUtils::contains(type, "varying"))
+            return SQLDataType::SDT_VarBit;
+
+        else
+            return SQLDataType::SDT_Bit;
+    }
+
+    return SQLDataType::SDT_Undefined;
+}
+//=============================================================================
+std::string CerberusUtils::fromSQLDataType(SQLDataType type)
+{
+    switch (type)
+    {
+        case SQLDataType::SDT_Undefined:
+            return "";
+
+        case SQLDataType::SDT_Int:
+            return "integer";
+
+        case SQLDataType::SDT_SmallInt:
+            return "smallint";
+
+        case SQLDataType::SDT_BigInt:
+            return "bigint";
+
+        case SQLDataType::SDT_Real:
+            return "real";
+
+        case SQLDataType::SDT_Double:
+            return "double precision";
+
+        case SQLDataType::SDT_Boolean:
+            return "boolean";
+
+        case SQLDataType::SDT_Bit:
+            return "bit";
+
+        case SQLDataType::SDT_VarBit:
+            return "bit varying";
+
+        case SQLDataType::SDT_Char:
+            return "char";
+
+        case SQLDataType::SDT_VarChar:
+            return "char varying";
+
+        case SQLDataType::SDT_Money:
+            return "money";
+    }
+
+    return "";
 }
 //=============================================================================

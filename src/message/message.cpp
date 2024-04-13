@@ -5,10 +5,10 @@
 #include "src/data/bytebuffer.h"
 #include "src/data/jsondata.h"
 
-using namespace cerberus::message;
+using namespace cerberus;
 
 //=============================================================================
-cerberus::cerberus_message Message::create(HASH32 typeID) { return new Message(typeID); }
+cerberus_message Message::create(HASH32 typeID) { return new Message(typeID); }
 //=============================================================================
 Message::Message(HASH32 typeID)
     : m_slots(),
@@ -34,39 +34,39 @@ Message& Message::clear()
     return *this;
 }
 //=============================================================================
-cerberus::slot_ptr Message::getSlotAt(size_t index)
+slot_ptr Message::getSlotAt(size_t index)
 {
-    if (index >= m_slots.size()) throw cerberusIllegalArgExc("Index out of boundaries");
+    if (index >= m_slots.size()) throw cIllegalArgExc("Index out of boundaries");
 
     return m_slots[index].ref();
 }
 //=============================================================================
-cerberus::slot_ptr Message::getConstSlotAt(size_t index) const
+slot_ptr Message::getConstSlotAt(size_t index) const
 {
-    if (index >= m_slots.size()) throw cerberusIllegalArgExc("Index out of boundaries");
+    if (index >= m_slots.size()) throw cIllegalArgExc("Index out of boundaries");
 
     return m_slots[index];
 }
 //=============================================================================
-cerberus::slot_ptr Message::getSlot(const std::string& name)
+slot_ptr Message::getSlot(const std::string& name)
 {
     for (auto& el : m_slots)
         if (CerberusUtils::areEqual(el->name(), name)) return el.ref();
 
-    throw cerberusIllegalArgExc("Slot %s does not exist in this message", name.c_str());
+    throw cIllegalArgExc("Slot %s does not exist in this message", name.c_str());
 }
 //=============================================================================
-cerberus::slot_ptr Message::getConstSlot(const std::string& name) const
+slot_ptr Message::getConstSlot(const std::string& name) const
 {
     for (auto& el : m_slots)
         if (CerberusUtils::areEqual(el->name(), name)) return el;
 
-    throw cerberusIllegalArgExc("Slot %s does not exist in this message", name.c_str());
+    throw cIllegalArgExc("Slot %s does not exist in this message", name.c_str());
 }
 //=============================================================================
-cerberus::HASH32 Message::id() const { return m_id; }
+HASH32 Message::id() const { return m_id; }
 //=============================================================================
-cerberus::HASH32 Message::recipient() const { return m_recipientId; }
+HASH32 Message::recipient() const { return m_recipientId; }
 //=============================================================================
 bool Message::hasValidRecipient() const { return m_recipientId != CERBERUS_INVALID_ID; }
 //=============================================================================
@@ -78,12 +78,11 @@ Message& Message::setRecipient(HASH32 id)
 //=============================================================================
 bool Message::isValid() const { return (m_id != CERBERUS_INVALID_ID); }
 //=============================================================================
-cerberus::Clonable* Message::clone() const { return new Message(*this); }
+Clonable* Message::clone() const { return new Message(*this); }
 //=============================================================================
 Message& Message::fill(std::initializer_list<TypeWrapper> values)
 {
-    if (values.size() != m_slots.size())
-        throw cerberusIllegalArgExc("fill() called with a wrong number of args");
+    if (values.size() != m_slots.size()) throw cIllegalArgExc("fill() called with a wrong number of args");
 
     size_t index = 0;
 
@@ -126,7 +125,7 @@ Message& Message::fill(std::initializer_list<TypeWrapper> values)
                 break;
 
             default:
-                throw cerberusImplMissExc("The given slot type has not been implemented");
+                throw cImplMissExc("The given slot type has not been implemented");
         }
     }
 
@@ -178,7 +177,7 @@ Message& Message::insert(std::initializer_list<TypeWrapper> values)
                 break;
 
             default:
-                throw cerberusImplMissExc("The given slot type has not been implemented");
+                throw cImplMissExc("The given slot type has not been implemented");
         }
 
         m_slots.push_back(s);

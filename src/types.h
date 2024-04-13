@@ -29,6 +29,28 @@ namespace cerberus
     typedef int64_t OFFSET;
     typedef uint32_t HASH32;
 
+    enum SQLDataType
+    {
+        SDT_Undefined = 0,
+        SDT_BigInt,    // 8 byte signed integer
+        SDT_Int,       // 4 byte signed integer
+        SDT_SmallInt,  // 2 byte signed integer
+        SDT_Real,      // 4 byte signed float
+        SDT_Double,    // 8 byte signed float
+        SDT_Boolean,   // bool
+        SDT_Bit,       // fixed length bit array
+        SDT_VarBit,    // variable length bit array
+        SDT_Char,      // fixed length char array
+        SDT_VarChar,   // variable length char array
+        SDT_Money,     // fixed fractional precision (2 digits typically)
+    };
+
+    enum DBBackend
+    {
+        DBB_PostgreSQL,
+        DBB_Filesystem,
+    };
+
     struct Path : private std::list<std::string>
     {
         Path() = default;
@@ -485,15 +507,11 @@ namespace cerberus
         };
     };
 
-    namespace message
-    {
-        class Message;
-    }
-
+    class Message;
     class BaseSlot;
 
-    typedef managed_ptr<class cerberus::message::Message> cerberus_message;
-    typedef managed_ptr<const class cerberus::message::Message> cerberus_const_message;
+    typedef managed_ptr<class cerberus::Message> cerberus_message;
+    typedef managed_ptr<const class cerberus::Message> cerberus_const_message;
     typedef managed_ptr<class cerberus::BaseSlot> slot_ptr;
 
     enum IniDataType : uint8_t
@@ -631,6 +649,8 @@ namespace cerberus
         OpRes& addOptional(Result opt);
 
         bool hasOptional(Result opt);
+
+        OpRes& addInfo(const std::string& str);
     };
 
     // The OpResData template class is useful to exchange some custom data alongside with the result

@@ -21,40 +21,38 @@
 
 namespace cerberus
 {
-    namespace message
+
+    class CERBERUS_EXPORT MessageQueue
     {
-        class CERBERUS_EXPORT MessageQueue
-        {
-           private:
-            std::list<cerberus_message> m_queue;
+       private:
+        std::list<cerberus_message> m_queue;
 
-           public:
-            // Constructs an empty message queue
-            MessageQueue();
+       public:
+        // Constructs an empty message queue
+        MessageQueue();
 
-            MessageQueue(const MessageQueue& other) = delete;
+        MessageQueue(const MessageQueue& other) = delete;
 
-            MessageQueue(MessageQueue&& other);
+        MessageQueue(MessageQueue&& other);
 
-            // Adds a message at the end of the queue
-            void add(cerberus_message message);
+        // Adds a message at the end of the queue
+        void add(cerberus_message message);
 
-            // Returns the first message in the queue and removes it
-            cerberus_message next();
+        // Returns the first message in the queue and removes it
+        cerberus_message next();
 
-            // Returns the first message in the queue without modifying the queue
-            cerberus_message nextKeep() const;
+        // Returns the first message in the queue without modifying the queue
+        cerberus_message nextKeep() const;
 
-            // Returns the size of the queue
-            size_t size() const;
+        // Returns the size of the queue
+        size_t size() const;
 
-            // Tells wether the queue is empty or not
-            bool isEmpty() const;
+        // Tells wether the queue is empty or not
+        bool isEmpty() const;
 
-            // Completely delete all the messages
-            void clear();
-        };
-    }  // namespace message
+        // Completely delete all the messages
+        void clear();
+    };
 }  // namespace cerberus
 
 #endif  // CERBERUS_MESSAGE_MESSAGEQUEUE_H

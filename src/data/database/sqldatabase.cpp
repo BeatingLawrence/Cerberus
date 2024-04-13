@@ -1,66 +1,29 @@
 #include "sqldatabase.h"
 
-#include "../../cerberus.h"
-#include "sqldata.h"
+#include "dbdata.h"
 
-using namespace cerberus::data::database;
+using namespace cerberus;
 
 //=============================================================================
-SQLDatabase::SQLDatabase(const std::string& parameters) noexcept
-    : m_failed(false),
-      m_failureReason()
+SQLDatabase::SQLDatabase(DBBackend backend)
+    : Database(backend)
 {
-    // connect to DB
+    if (backend == DBB_Filesystem) throw cIllegalArgExc("DBB_Filesystem is not an SQL backend");
 }
 //=============================================================================
-SQLDatabase::~SQLDatabase()
+SQLDatabase::~SQLDatabase() {}
+//=============================================================================
+cerberus::OpRes SQLDatabase::createTable(DBTableProto& prototype)
 {
-    // de-init the DB
-}
-//=============================================================================
-bool SQLDatabase::isFailed() const { return m_failed; }
-//=============================================================================
-std::string SQLDatabase::failureReason() const { return m_failureReason; }
-//=============================================================================
-cerberus::OpRes SQLDatabase::queryBlock(const std::string& query, SQLBlock& output)
-{
-    // Query a single block
-    return OR_Undefined;
-}
-//=============================================================================
-cerberus::OpRes SQLDatabase::queryPrototype(SQLTablePrototype& prototype)
-{
-    // Query a prototype
-    return OR_Undefined;
-}
-//=============================================================================
-cerberus::OpRes SQLDatabase::command(const std::string& query)
-{
-    // Send a command
-    return OR_Undefined;
-}
-//=============================================================================
-cerberus::OpRes SQLDatabase::createTable(SQLTablePrototype& prototype)
-{
-    if (prototype.name().empty())
-    {
-        logError("Asked to create an empty-named table");
-        return OR_QueryFailure;
-    }
+    auto name = prototype.name();
 
-    SQLTablePrototype p(prototype.name());
-    auto res = queryPrototype(p);
+    if (name.empty()) return OR_WrongArgument;
 
-    if (res != OR_NotFound)
-    {
-        if (res == OR_OK)
-        {
-            logError("Asked to create an existing table");
-            return OR_TableAlreadyPresent;
-        }
+    auto res = queryPrototype(name);
 
-        return res;
-    }
+    if (res.ok()) return OR_TableAlreadyPresent;
+
+    if (res.res != OR_NotFound) return res;
 
     std::string cmd("CREATE TABLE ");
     cmd += prototype.name();
@@ -70,9 +33,9 @@ cerberus::OpRes SQLDatabase::createTable(SQLTablePrototype& prototype)
     {
         auto type = el.type();
 
-        if (type == SQLTablePrototype::SDT_Bit || type == SQLTablePrototype::SDT_VarBit ||
-            type == SQLTablePrototype::SDT_Char ||
-            type == SQLTablePrototype::SDT_VarChar)  // check if the mod parameter should be printed
+        if (type == SQLDataType::SDT_Bit || type == SQLDataType::SDT_VarBit ||
+            type == SQLDataType::SDT_Char ||
+            type == SQLDataType::SDT_VarChar)  // check if the mod parameter should be printed
         {
             cmd +=
                 CerberusUtils::strPrint("%s %s(%i), ", el.name().c_str(), el.typeString().c_str(), el.mod());
@@ -89,13 +52,9 @@ cerberus::OpRes SQLDatabase::createTable(SQLTablePrototype& prototype)
     return command(cmd);
 }
 //=============================================================================
-cerberus::OpRes SQLDatabase::insertBlock(const SQLBlock& block)
+cerberus::OpRes SQLDatabase::insertBlock(const DBTableBlock& block)
 {
-    if (block.m_prototype.name().empty())
-    {
-        logError("Asked to insert into an empty-named table");
-        return OR_QueryFailure;
-    }
+    if (block.m_prototype.name().empty()) return OR_WrongArgument;
 
     std::string cmd("INSERT INTO ");
     cmd += block.m_prototype.name();
@@ -109,8 +68,8 @@ cerberus::OpRes SQLDatabase::insertBlock(const SQLBlock& block)
         {
             auto type = block.prototype()[i].type();
 
-            if (type == SQLTablePrototype::SDT_Char ||
-                type == SQLTablePrototype::SDT_VarChar)  // check if value is a number or a string
+            if (type == SQLDataType::SDT_Char ||
+                type == SQLDataType::SDT_VarChar)  // check if value is a number or a string
             {
                 cmd += '\'';
                 cmd += row[i].raw();
@@ -140,51 +99,22 @@ cerberus::OpRes SQLDatabase::dropTable(const std::string& table)
     return command(CerberusUtils::strPrint("DROP TABLE %s;", table.c_str()));
 }
 //=============================================================================
-cerberus::OpRes SQLDatabase::querytable(const std::string& tableName, SQLBlock& output)
+OpResData<DBTableBlock> SQLDatabase::querytable(const std::string& tableName)
 {
-    SQLTablePrototype prototype(tableName);
+    auto proto = queryPrototype(tableName);
 
-    switch (queryPrototype(prototype).res)
-    {
-        case OR_QueryFailure:
-            return OR_QueryFailure;
-            break;
+    if (proto.fail()) return proto;
 
-        case OR_DBFailure:
-            return OR_DBFailure;
-            break;
+    DBTableBlock ret(proto.value);
 
-        case OR_NotFound:
-            return OR_NotFound;
-            break;
+    auto q = queryBlock(CerberusUtils::strPrint("SELECT * FROM %s;", tableName.c_str()));
 
-        default:
-            break;
-    }
+    if (q.fail()) return q;
 
-    output.clear();
-    output.m_prototype = prototype;  // now it's structured
-    SQLBlock block;
+    DBTableBlock block = q.value;
 
-    switch (queryBlock(CerberusUtils::strPrint("SELECT * FROM %s;", tableName.c_str()), block).res)
-    {
-        case OR_QueryFailure:
-            return OR_QueryFailure;
-            break;
+    ret.m_rows = block.m_rows;
 
-        case OR_DBFailure:
-            return OR_DBFailure;
-            break;
-
-        case OR_NotFound:
-            return OR_NotFound;
-            break;
-
-        default:
-            break;
-    }
-
-    output.m_rows = block.m_rows;
-    return OR_OK;
+    return ret;
 }
 //=============================================================================
