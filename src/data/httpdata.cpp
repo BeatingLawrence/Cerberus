@@ -66,7 +66,11 @@ HTTPData &HTTPData::setPayload(const ByteBuffer &payload)
 //=============================================================================
 OpRes HTTPData::setJsonPayload(const JsonData &payload)
 {
-    auto r = payload.generate(m_payload);
+    auto r = payload.generate();
+
+    if (r.fail()) return r;
+
+    m_payload = r.value;
     setPayloadSize(m_payload.size());
     return r;
 }

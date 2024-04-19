@@ -10,7 +10,7 @@ namespace cerberus
 
     class CERBERUS_EXPORT ByteBuffer
     {
-        friend class cerberus::SharedByteBuffer;
+        friend cerberus::SharedByteBuffer;
 
        private:
         BYTE* m_bytes;  // heap
@@ -23,9 +23,10 @@ namespace cerberus
 
         BYTE& getat(SIZE index) const;
 
-        ByteBuffer(BYTE* buf, SIZE size);
-
        public:
+        // Construct a ByteBuffer copying its content from a given buffer
+        explicit ByteBuffer(BYTE* buf, SIZE size);
+
         // Construct a ByteBuffer allocating size bytes. The buffer is not initialized and may contain
         // garbage
         explicit ByteBuffer(SIZE size);
@@ -33,7 +34,7 @@ namespace cerberus
         // Construct a ByteBuffer allocating size bytes. The buffer is initialized using val value
         ByteBuffer(SIZE size, BYTE val);
 
-        // Construct an invalid ByteBuffer, no buffer memory allocation performed
+        // Construct an invalid ByteBuffer, no buffer memory allocation is performed
         ByteBuffer();
 
         // Construct a ByteBuffer from another one. This operation will shallow-copy the buffer
@@ -48,8 +49,7 @@ namespace cerberus
         // Construct a ByteBuffer from an std::string
         ByteBuffer(const std::string& str);
 
-        // Destroy the ByteBuffer instance and deallocate the memory ONLY if not used by another
-        // ByteBuffer
+        // Destroy the ByteBuffer instance and deallocate the memory
         virtual ~ByteBuffer();
 
         // Iterator implementation
@@ -76,7 +76,7 @@ namespace cerberus
         // Append len bytes read from the given buffer to this ByteBuffer.
         ByteBuffer& appendFrom(const BYTE* buffer, SIZE len);
 
-        // Assigns the content of the given buffer to this ByteBuffer. Existing content will be discarded.
+        // Assign the content of the given buffer to this ByteBuffer. Existing content will be discarded.
         ByteBuffer& assignFrom(const BYTE* buffer, SIZE len);
 
         // Copy the content of this ByteBuffer to the given buffer. No more than maxLen bytes will be

@@ -54,13 +54,16 @@ SharedByteBuffer::SharedByteBuffer(SIZE size, uint8_t val)
 }
 //=============================================================================
 SharedByteBuffer::SharedByteBuffer(ByteBuffer& buffer)
-    : m_buffer(new ByteBuffer(buffer.m_bytes, buffer.m_size)),  // private constructor
+    : m_buffer(new ByteBuffer),
       m_instances(new uint32_t(1)),
       m_mutex(new Mutex(Recursive)),
       m_hasOwner(new bool(true)),
       m_owner(true)
 {
-    buffer.m_bytes = nullptr;
+    m_buffer->m_bytes = buffer.m_bytes;  // private of ByteBuffer
+    m_buffer->m_size  = buffer.m_size;
+
+    buffer.m_bytes = nullptr;  // private of ByteBuffer
     buffer.m_size  = 0;
 }
 //=============================================================================

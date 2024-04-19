@@ -7,7 +7,7 @@
 #include "log.h"              // IWYU pragma: export
 #include "message/message.h"  // IWYU pragma: export
 #include "message/messagetemplate.h"
-#include "message/slot/slot.h"  // IWYU pragma: export
+#include "message/slot.h"  // IWYU pragma: export
 #include "time/datetime.h"
 #include "time/timeframe.h"
 #include "types.h"

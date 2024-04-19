@@ -43,10 +43,11 @@ void ByteBuffer::_clear()
 cerberus::BYTE& ByteBuffer::getat(SIZE index) const { return *((unsigned char*)(m_bytes + index)); }
 //=============================================================================
 ByteBuffer::ByteBuffer(BYTE* buf, SIZE size)
-    : m_bytes(buf),
-      m_size(size),
+    : m_bytes(nullptr),
+      m_size(0),
       m_pos(0)
 {
+    assignFrom(buf, size);
 }
 //=============================================================================
 ByteBuffer::ByteBuffer(SIZE size)

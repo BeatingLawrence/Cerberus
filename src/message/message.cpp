@@ -1,7 +1,7 @@
 #include "message.h"
 
 #include "../exception/exceptioncatalog.h"
-#include "slot/slot.h"
+#include "slot.h"
 #include "src/data/bytebuffer.h"
 #include "src/data/jsondata.h"
 

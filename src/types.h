@@ -749,6 +749,9 @@ namespace cerberus
 
         // Tell if a key is present in the dictionary
         bool exists(const std::string& key, WordMatch match = WM_CaseSensitive);
+
+        // Print all the lines of the dictionary on a string
+        std::string toString() const;
     };
 
     struct Host

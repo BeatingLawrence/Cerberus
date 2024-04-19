@@ -459,6 +459,21 @@ bool cerberus::Dictionary::exists(const std::string &key, WordMatch match)
     return false;
 }
 //=============================================================================
+std::string cerberus::Dictionary::toString() const
+{
+    std::string ret;
+
+    for (auto &el : (*this))
+    {
+        ret.append(el.key);
+        ret.append(": ");
+        ret.append(el.val);
+        ret.append("\n");
+    }
+
+    return ret;
+}
+//=============================================================================
 #if defined(LINUX_SYSTEM)
 void cerberus::FileMetadata::fromStat(const struct statx &stat_struct)
 {

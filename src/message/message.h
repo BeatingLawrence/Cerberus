@@ -6,7 +6,7 @@
 #include "../Cerberus_global.h"
 #include "../define.h"
 #include "../types.h"
-#include "slot/slot.h"  // IWYU pragma: export
+#include "slot.h"  // IWYU pragma: export
 
 namespace cerberus
 {

@@ -158,16 +158,19 @@ namespace cerberus
         // Remove all the nested object only
         JsonData& clear();
 
-        // parser section
+        // Parse the given ByteBuffer and fill this instance using the obtained data
         OpRes parse(const ByteBuffer& buffer);
 
+        // Parse the given File content and fill this instance using the obtained data
         OpRes parse(const File& file);
 
-        // generator section
-        OpRes generate(ByteBuffer& buffer) const;
+        // Generate the instance using the JSON syntax
+        OpResData<ByteBuffer> generate() const;
 
+        // Write the generated data to the given file. The File must be open
         OpRes generate(File& file) const;
 
+        // Print the content using a debug formatting rule
         void toStr(std::string& str, uint8_t level = 0) const;
     };
 }  // namespace cerberus

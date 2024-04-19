@@ -1,6 +1,7 @@
 #ifndef FILESYSTEMDB_H
 #define FILESYSTEMDB_H
 
+#include "../../data/filesystem/file.h"
 #include "idatabase.h"
 
 namespace cerberus
@@ -9,6 +10,8 @@ namespace cerberus
     {
         class FilesystemDB : public IDatabase
         {
+            File m_file;
+
            public:
             FilesystemDB();
 

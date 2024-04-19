@@ -541,21 +541,20 @@ cerberus::OpRes JsonData::parse(const File &file)
     return parse(buffer);
 }
 //=============================================================================
-cerberus::OpRes JsonData::generate(ByteBuffer &buffer) const
+OpResData<ByteBuffer> JsonData::generate() const
 {
-    buffer.clear();
+    ByteBuffer buffer;
     _generate(buffer);
 
-    return OR_OK;
+    return buffer;
 }
 //=============================================================================
 cerberus::OpRes JsonData::generate(File &file) const
 {
-    ByteBuffer buffer;
-    auto res = generate(buffer);
+    auto res = generate();
     if (res.fail()) return res;
 
-    return file.write(buffer);
+    return file.write(res.value);
 }
 //=============================================================================
 void JsonData::toStr(std::string &str, uint8_t level) const

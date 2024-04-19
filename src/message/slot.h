@@ -3,11 +3,11 @@
 
 #include <boost/core/demangle.hpp>
 
-#include "../../Cerberus_global.h"
-#include "../../core/cerberusutils.h"
-#include "../../data/data.h"
-#include "../../exception/exception.h"
-#include "../../types.h"
+#include "../Cerberus_global.h"
+#include "../core/cerberusutils.h"
+#include "../data/data.h"
+#include "../exception/exception.h"
+#include "../types.h"
 
 namespace cerberus
 {
@@ -30,6 +30,10 @@ namespace cerberus
 
         // Set the name
         BaseSlot& name(const std::string& name);
+
+        virtual Clonable* clone() const = 0;
+
+        virtual ByteBuffer toBuffer() const = 0;
 
         // Perform a dynamic cast of this object into T.
         // An exception will be thrown if cast is invalid.
@@ -54,9 +58,9 @@ namespace cerberus
     template <typename T>
     class CERBERUS_EXPORT Slot : public BaseSlot
     {
+       protected:
         T m_value;
 
-       protected:
         Slot(const T& value = T(), const std::string& name = "")
             : BaseSlot(name),
               m_value(value){};
@@ -89,6 +93,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new BoolSlot(*this); };
+
+        virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(bool)); };
     };
 
     struct CERBERUS_EXPORT BufferSlot : public Slot<ByteBuffer>
@@ -103,6 +109,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new BufferSlot(*this); };
+
+        virtual ByteBuffer toBuffer() const { return m_value; };
     };
 
     struct CERBERUS_EXPORT ByteSlot : public Slot<BYTE>
@@ -117,6 +125,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new ByteSlot(*this); };
+
+        virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(BYTE)); };
     };
 
     struct CERBERUS_EXPORT DictionarySlot : public Slot<Dictionary>
@@ -131,6 +141,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new DictionarySlot(*this); };
+
+        virtual ByteBuffer toBuffer() const { return ByteBuffer(m_value.toString()); };
     };
 
     struct CERBERUS_EXPORT DoubleSlot : public Slot<double>
@@ -145,6 +157,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new DoubleSlot(*this); };
+
+        virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(double)); };
     };
 
     struct CERBERUS_EXPORT FloatSlot : public Slot<float>
@@ -159,6 +173,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new FloatSlot(*this); };
+
+        virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(float)); };
     };
 
     struct CERBERUS_EXPORT Int32Slot : public Slot<int32_t>
@@ -173,6 +189,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new Int32Slot(*this); };
+
+        virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(int32_t)); };
     };
 
     struct CERBERUS_EXPORT Int64Slot : public Slot<int64_t>
@@ -187,6 +205,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new Int64Slot(*this); };
+
+        virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(int64_t)); };
     };
 
     struct CERBERUS_EXPORT UInt64Slot : public Slot<uint64_t>
@@ -201,6 +221,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new UInt64Slot(*this); };
+
+        virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(uint64_t)); };
     };
 
     struct CERBERUS_EXPORT JsonSlot : public Slot<JsonData>
@@ -215,6 +237,11 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new JsonSlot(*this); };
+
+        virtual ByteBuffer toBuffer() const
+        {
+            return m_value.generate().value;
+        };  // throw an exception if conversion fails?
     };
 
     struct CERBERUS_EXPORT StringSlot : public Slot<std::string>
@@ -229,6 +256,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new StringSlot(*this); };
+
+        virtual ByteBuffer toBuffer() const { return ByteBuffer(m_value); };
     };
 
     struct CERBERUS_EXPORT VoidPSlot : public Slot<void*>
@@ -243,6 +272,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new VoidPSlot(*this); };
+
+        virtual ByteBuffer toBuffer() const { throw cUsageErrorExc("void* is not convertible to a buffer"); };
     };
 
     struct CERBERUS_EXPORT HostSlot : public Slot<Host>
@@ -257,6 +288,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new HostSlot(*this); };
+
+        virtual ByteBuffer toBuffer() const { return ByteBuffer(m_value.toString()); };
     };
 
     struct CERBERUS_EXPORT TaskSlot : public Slot<Task>
@@ -271,6 +304,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new TaskSlot(*this); };
+
+        virtual ByteBuffer toBuffer() const { throw cUsageErrorExc("Task is not convertible to a buffer"); };
     };
 
     struct CERBERUS_EXPORT ResultSlot : public Slot<OpRes>
@@ -285,6 +320,8 @@ namespace cerberus
         };
 
         virtual Clonable* clone() const { return new ResultSlot(*this); };
+
+        virtual ByteBuffer toBuffer() const { throw cUsageErrorExc("OpRes is not convertible to a buffer"); };
     };
 
 }  // namespace cerberus

@@ -1,7 +1,7 @@
 #include "messagetemplate.h"
 
 #include "message.h"
-#include "slot/slot.h"
+#include "slot.h"
 
 using namespace cerberus;
 

@@ -6,7 +6,7 @@
 #include <cstring>
 
 #include "src/cerberus.h"
-#include "src/message/slot/slot.h"
+#include "src/message/slot.h"
 
 #define FNV_OFFSET_BASIS 0x811c9dc5
 #define FNV_PRIME 0x01000193
