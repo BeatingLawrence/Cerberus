@@ -666,6 +666,8 @@ OpRes Socket::connect(const Host &dest)
 
     if (!isTLS()) return OR_OK;
 
+    _TLS_destroy();
+
     if (_TLS_handshake(false, dest).fail()) return OR_Failure;
 
     return OR_OK;
