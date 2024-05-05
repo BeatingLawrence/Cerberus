@@ -8,8 +8,7 @@ using namespace cerberus;
 
 //=============================================================================
 Database::Database(DBBackend backend)
-    : m_ready(false),
-      m_db(nullptr)
+    : m_db(nullptr)
 {
     switch (backend)
     {
@@ -24,34 +23,12 @@ Database::Database(DBBackend backend)
             break;
 
         default:
-            throw cImplMissExc("Unknown database backend");
+            throw cImplMissExc("Unknown database backend [or excluded from build]");
     }
 }
 //=============================================================================
 Database::~Database()
 {
     if (m_db) delete m_db;
-}
-//=============================================================================
-OpRes Database::init(const string &parameters)
-{
-    auto ret = m_db->init(parameters);
-    if (ret.ok()) m_ready = true;
-    return ret;
-}
-//=============================================================================
-void Database::deinit()
-{
-    m_db->deinit();
-    m_ready = false;
-}
-//=============================================================================
-OpRes Database::command(const string &query) { return m_db->command(query); }
-//=============================================================================
-OpResData<DBTableBlock> Database::queryBlock(const string &query) { return m_db->queryBlock(query); }
-//=============================================================================
-OpResData<DBTableProto> Database::queryPrototype(const string &tableName)
-{
-    return m_db->queryPrototype(tableName);
 }
 //=============================================================================

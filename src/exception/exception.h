@@ -6,7 +6,7 @@
 #include <string>
 
 #include "../Cerberus_global.h"
-#include "exceptioncatalog.h" // IWYU pragma: export
+#include "exceptioncatalog.h"  // IWYU pragma: export
 
 namespace cerberus
 {
@@ -27,6 +27,7 @@ namespace cerberus
             ET_InvalidCast,            // exception thrown for invalid cast operations
             ET_UsageError,             // exception thrown for a bad usage of the framework
             ET_OperationResult,        // exception type used by OpRes class
+            ET_Fatal,                  // exception thrown for crucial pieces of code
         };
 
         Exception() noexcept;

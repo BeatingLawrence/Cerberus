@@ -453,11 +453,6 @@ MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
             // nothing to add
             break;
 
-        case CERBERUS_MESSAGE_SOCK_ID:
-            tmplt.addSlotType(ST_HOST, "host");
-            tmplt.addSlotType(ST_BYTEBUFFER, "payload");
-            break;
-
         case CERBERUS_MESSAGE_TASK_ID:
             tmplt.addSlotType(ST_UINT64, "client");
             tmplt.addSlotType(ST_TASK, "task");
@@ -465,6 +460,7 @@ MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
 
         case CERBERUS_MESSAGE_TASKEND_ID:
             tmplt.addSlotType(ST_RESULT, "result");
+            tmplt.addSlotType(ST_VOIDP, "player");
             break;
 
             // add here more message specializations..

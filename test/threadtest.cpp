@@ -67,7 +67,7 @@ static int pingTestCallback(cerberus_message msg, Thread* thread)
     {
         if (a == 10)
         {
-            auto message = Cerberus::messageConstruct(CERBERUS_MESSAGE_TERM_ID);
+            auto message = Cerberus::constructMessage(CERBERUS_MESSAGE_TERM_ID);
             Cerberus::send(message, "pongThread");
             thread->terminate();
             return 0;
@@ -75,7 +75,7 @@ static int pingTestCallback(cerberus_message msg, Thread* thread)
 
         logInfo("PING!");
         // Create message using factory
-        auto message = Cerberus::messageConstruct("PingPongMessage");
+        auto message = Cerberus::constructMessage("PingPongMessage");
         message->getSlotAt(0)->to<cerberus::ByteSlot>()->value(a++);
         message->getSlotAt(1)->to<cerberus::ByteSlot>()->value(b++);
         message->getSlotAt(2)->to<cerberus::ByteSlot>()->value(c++);
@@ -103,17 +103,23 @@ static int pongTestCallback(cerberus_message msg, Thread* thread)
 TEST(threadTest, thread_ping_pong)
 {
     // register a generic message to test Thread message exchange
-    cerberus::message::MessageTemplate tmplt("PingPongMessage");
-    tmplt.addSlotType(ST_BYTE).addSlotType(ST_BYTE).addSlotType(ST_BYTE).checkIn();
+    MessageTemplate tmplt("PingPongMessage");
+    tmplt.addSlotType(ST_BYTE).addSlotType(ST_BYTE).addSlotType(ST_BYTE);
+    Cerberus::registerTemplate(tmplt);
+
     // start the test
     Thread ping(cerberus::TP_PeriodicMessage, 100, "pingThread");
     Thread pong("pongThread");  // Non-Periodic (receiver)
+
     ping.checkIn();
     pong.checkIn();
+
     ping.provideTickCallback(&pingTestCallback);
     pong.provideTickCallback(&pongTestCallback);
+
     pong.start();
     ping.start();
+
     ping.join();
     pong.join();
 }

@@ -49,13 +49,12 @@
  * execution finishes, the join() returns.
  */
 
-#include "../core/cerberusobject.h"
 #include "../time/timeframe.h"
 #include "./threadbase.h"
 
 namespace cerberus
 {
-    class CERBERUS_EXPORT Thread : public ThreadBase, public core::CerberusObject
+    class CERBERUS_EXPORT Thread : public ThreadBase
     {
        private:
         pthread_t m_pthread;

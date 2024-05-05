@@ -1,5 +1,7 @@
 #include "filesystemdb.h"
 
+#include "../../exception/exception.h"
+
 using namespace cerberus::db;
 
 //=============================================================================

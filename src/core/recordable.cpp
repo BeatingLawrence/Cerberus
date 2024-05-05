@@ -1,4 +1,4 @@
-#include "cerberusobject.h"
+#include "recordable.h"
 
 #include "src/cerberus.h"
 #include "src/define.h"
@@ -7,7 +7,7 @@
 using namespace cerberus::core;
 
 //=============================================================================
-std::string CerberusObject::toStr(const CerberusObject& obj)
+std::string Recordable::toStr(const Recordable& obj)
 {
     std::string ret;
 
@@ -18,51 +18,17 @@ std::string CerberusObject::toStr(const CerberusObject& obj)
         case COBJ_Thread:
             ret.append("Thread");
             break;
-        case COBJ_MessageTmplt:
-            ret.append("Message template");
-            break;
-        case COBJ_Socket:
-            ret.append("Socket");
-            break;
         default:
             ret.append("Unknown type");
-            break;
-    }
-
-    switch (obj.m_socketType)
-    {
-        case Socket_None:
-            break;
-        case Socket_UDP:
-            ret.append(" UDP");
-            break;
-        case Socket_TCP:
-            ret.append(" TCP");
-            break;
-        case Socket_TCPP2P:
-            ret.append(" TCP P2P");
-            break;
-        case Socket_HTTP:
-            ret.append(" HTTP");
-            break;
-        case Socket_ICMP:
-            ret.append(" ICMP");
-            break;
-        case Socket_IPC:
-            ret.append(" IPC");
             break;
     }
 
     ret.append(", ID:");
 
     if (obj.m_id == CERBERUS_INVALID_ID)
-    {
         ret.append("INVALID");
-    }
     else
-    {
         ret.append(CerberusUtils::strPrint("%lx", obj.m_id));
-    }
 
     if (!obj.m_name.empty())
     {
@@ -79,9 +45,9 @@ std::string CerberusObject::toStr(const CerberusObject& obj)
     return ret;
 }
 //=============================================================================
-std::string CerberusObject::toObjStr() { return CerberusObject::toStr(*this); }
+std::string Recordable::toObjStr() { return Recordable::toStr(*this); }
 //=============================================================================
-std::string CerberusObject::toThreadStr(const CerberusObject& obj)
+std::string Recordable::toThreadStr(const Recordable& obj)
 {
     auto thr  = obj.to_p<const cerberus::Thread>();
     auto time = thr->getTime();
@@ -112,37 +78,24 @@ std::string CerberusObject::toThreadStr(const CerberusObject& obj)
     return "";
 }
 //=============================================================================
-CerberusObject::CerberusObject(ObjectType type, const std::string& name)
+Recordable::Recordable(ObjectType type, const std::string& name)
     : m_id(CERBERUS_INVALID_ID),
       m_type(type),
-      m_name(name),
-      m_socketType(Socket_None),
-      m_cerbManaged(false)
+      m_name(name)
 {
 }
 //=============================================================================
-CerberusObject::CerberusObject(SocketType type, const std::string& name)
-    : m_id(CERBERUS_INVALID_ID),
-      m_type(COBJ_Socket),
-      m_name(name),
-      m_socketType(type),
-      m_cerbManaged(false)
-{
-}
+Recordable::~Recordable() {}
 //=============================================================================
-CerberusObject::~CerberusObject() {}
+void Recordable::checkIn() { cerberus::Cerberus::registerObj(this); }
 //=============================================================================
-void CerberusObject::checkIn() { cerberus::Cerberus::registerObj(this); }
+void Recordable::checkOut() { cerberus::Cerberus::unregisterObj(m_id); }
 //=============================================================================
-void CerberusObject::checkOut() { cerberus::Cerberus::unregisterObj(m_id); }
+bool Recordable::isRegistered() const { return (m_id != CERBERUS_INVALID_ID); }
 //=============================================================================
-bool CerberusObject::isRegistered() const { return (m_id != CERBERUS_INVALID_ID); }
+cerberus::HASH32 Recordable::id() const { return m_id; }
 //=============================================================================
-cerberus::HASH32 CerberusObject::id() const { return m_id; }
+Recordable::ObjectType Recordable::type() const { return m_type; }
 //=============================================================================
-CerberusObject::ObjectType CerberusObject::type() const { return m_type; }
-//=============================================================================
-CerberusObject::SocketType CerberusObject::socketType() const { return m_socketType; }
-//=============================================================================
-std::string CerberusObject::name() const { return m_name; }
+std::string Recordable::name() const { return m_name; }
 //=============================================================================

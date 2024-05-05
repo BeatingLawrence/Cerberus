@@ -18,6 +18,8 @@ namespace cerberus
         {
             pqxx::connection* m_connection;
 
+            void _deinit();
+
            public:
             PostgresDB();
 

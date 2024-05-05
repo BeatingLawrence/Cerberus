@@ -45,6 +45,12 @@ add_library(Cerberus SHARED
   ${src_files}
 )
 
+set_property(   #delete install directory on clean
+        TARGET Cerberus
+        APPEND
+        PROPERTY ADDITIONAL_CLEAN_FILES "../Dist"
+)
+
 set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
 
 target_compile_definitions(Cerberus
@@ -67,9 +73,9 @@ add_executable(test EXCLUDE_FROM_ALL
   ${test_files}
 )
 
-target_include_directories(test PUBLIC "../Dist/include")
-target_link_directories(test PUBLIC "../Dist/lib")
-target_link_libraries(test LINK_PUBLIC Cerberus)
+target_include_directories(test PRIVATE "../Dist/include")
+target_link_directories(test PRIVATE "../Dist/lib")
+target_link_libraries(test LINK_PRIVATE Cerberus)
 
 # ================================================================
 
@@ -96,7 +102,7 @@ if(MSVC)
 
     #postgres support
     if(POSTGRESQL)
-        target_link_libraries(Cerberus LINK_PUBLIC libpqxx)
+        target_link_libraries(Cerberus LINK_PRIVATE libpqxx)
     endif()
 
     #OPEN-SSL
@@ -127,17 +133,17 @@ elseif(UNIX)
 
     #postgres support
     if(POSTGRESQL)
-        target_link_libraries(Cerberus LINK_PUBLIC pqxx)
+        target_link_libraries(Cerberus LINK_PRIVATE pqxx)
         target_compile_definitions(Cerberus PRIVATE POSTGRESQL_SUPPORT)
     endif()
 
     #OPEN-SSL
-    target_link_libraries(Cerberus LINK_PUBLIC ssl crypto)
+    target_link_libraries(Cerberus LINK_PRIVATE ssl crypto)
 
     find_library(GTEST_LIBRARY NAMES gtest PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
     find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
 
 endif()
 
-target_link_libraries(test LINK_PUBLIC ${GTEST_LIBRARY})
-target_link_libraries(test LINK_PUBLIC ${GTEST_MAIN_LIBRARY})
+target_link_libraries(test LINK_PRIVATE ${GTEST_LIBRARY})
+target_link_libraries(test LINK_PRIVATE ${GTEST_MAIN_LIBRARY})

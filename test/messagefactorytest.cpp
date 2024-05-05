@@ -4,7 +4,7 @@
 
 TEST(messageFactoryTest, registering_message)
 {
-    cerberus::message::Message msg;
+    cerberus::Message msg;
     msg.addSlot(cerberus::ByteSlot::create(10));
     msg.addSlot(cerberus::ByteSlot::create(12));
     msg.addSlot(cerberus::ByteSlot::create(14));
@@ -13,15 +13,16 @@ TEST(messageFactoryTest, registering_message)
 
 TEST(messageFactoryTest, probing_message)
 {
-    EXPECT_THROW(cerberus::Cerberus::msgTemplateByName("UNKNOWN_MESSAGE"), std::exception);
+    EXPECT_FALSE(cerberus::Cerberus::templateByName("UNKNOWN_MESSAGE").ok());
 
-    auto tmplt = cerberus::Cerberus::msgTemplateByName("Test-Message");
-    EXPECT_NE(tmplt.id(), CERBERUS_INVALID_ID);
-    EXPECT_TRUE(tmplt.isRegistered());
+    auto tmplt = cerberus::Cerberus::templateByName("Test-Message");
+
+    EXPECT_TRUE(tmplt.ok());
+    EXPECT_NE(tmplt.value.id, CERBERUS_INVALID_ID);
 }
 
 TEST(messageFactoryTest, constructing_message)
 {
-    auto msg = cerberus::Cerberus::messageConstruct("Test-Message");
+    auto msg = cerberus::Cerberus::constructMessage("Test-Message");
     EXPECT_EQ(msg->count(), 3);
 }

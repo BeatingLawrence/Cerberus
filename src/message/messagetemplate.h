@@ -2,28 +2,38 @@
 #define CERBERUS_MESSAGE_MESSAGETEMPLATE_H
 
 /*  This class represents a template of a message.
- *  It holds the message name and the set of its slot types.
- *  This class is used by the Messages factory to produce standardized and registered messages.
+ *  It holds the message name and the list of its slots type and name.
+ *  This class is used by the Cerberus factory to produce messages.
  */
 
 #include <string>
 #include <vector>
 
 #include "../Cerberus_global.h"
-#include "../core/cerberusobject.h"
+#include "../types.h"
 
 namespace cerberus
 {
     class Message;
 
-    class CERBERUS_EXPORT MessageTemplate : public core::CerberusObject
+    class CERBERUS_EXPORT MessageTemplate
     {
-       private:
+        struct SlotTemplate
+        {
+            SlotType type;
+            std::string name;
+        };
+
         std::vector<SlotTemplate> m_types;
+        std::string m_name;
 
        public:
-        // Construct an invalid template
+        HASH32 id;
+
+        // Construct an empty template
         MessageTemplate();
+
+        MessageTemplate(const MessageTemplate& other) = default;
 
         // Constructs an empty template with a name
         MessageTemplate(const std::string& name);
@@ -31,9 +41,7 @@ namespace cerberus
         // Constructs a template taking data from a message
         MessageTemplate(const Message& message, const std::string& name);
 
-        virtual ~MessageTemplate();
-
-        // Adds a single slot type at the end of the vector
+        // Adds a single slot type at the end of the template
         MessageTemplate& addSlotType(SlotType type, const std::string& name = "");
 
         // Returns the slot type at the index position
@@ -41,6 +49,8 @@ namespace cerberus
 
         // Returns the number of slots contained in this template
         size_t count() const;
+
+        std::string name() const;
     };
 }  // namespace cerberus
 

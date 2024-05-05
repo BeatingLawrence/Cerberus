@@ -2,8 +2,8 @@
 
 #include <cstring>
 
-#include "../cerberus.h"
 #include "../exception/exception.h"
+#include "../message/message.h"  // IWYU pragma: export
 
 using namespace cerberus;
 
@@ -151,8 +151,7 @@ void Thread::sleep(const TimeFrame& time)
 }
 //=============================================================================
 Thread::Thread(ThreadPeriodicity periodicity, const TimeFrame& time, const std::string& name)
-    : ThreadBase(periodicity),
-      CerberusObject(CerberusObject::ObjectType::COBJ_Thread, name),
+    : ThreadBase(periodicity, name),
       m_pthread(),
       m_retValue(0),
       m_tickCallback(&defaultTickCallback),
@@ -163,8 +162,7 @@ Thread::Thread(ThreadPeriodicity periodicity, const TimeFrame& time, const std::
 }
 //=============================================================================
 Thread::Thread(const std::string& name)
-    : ThreadBase(TP_Message),
-      CerberusObject(CerberusObject::ObjectType::COBJ_Thread, name),
+    : ThreadBase(TP_Message, name),
       m_pthread(),
       m_retValue(0),
       m_tickCallback(&defaultTickCallback),
@@ -175,8 +173,7 @@ Thread::Thread(const std::string& name)
 }
 //=============================================================================
 Thread::Thread(ThreadPeriodicity periodicity, const std::string& name)
-    : ThreadBase(periodicity),
-      CerberusObject(CerberusObject::ObjectType::COBJ_Thread, name),
+    : ThreadBase(periodicity, name),
       m_pthread(),
       m_retValue(0),
       m_tickCallback(&defaultTickCallback),

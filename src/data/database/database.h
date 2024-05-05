@@ -9,7 +9,6 @@ namespace cerberus
     class Database
     {
        private:
-        bool m_ready;
         db::IDatabase* m_db;
 
        public:
@@ -17,17 +16,23 @@ namespace cerberus
 
         virtual ~Database();
 
-        bool isReady() const;
+        inline OpRes init(const std::string& parameters) { return m_db->init(parameters); }
 
-        OpRes init(const std::string& parameters);
+        inline void deinit() { m_db->deinit(); }
 
-        void deinit();
+        inline bool ready() { return m_db->ready(); }
 
-        OpRes command(const std::string& query);
+        inline OpRes command(const std::string& query) { return m_db->command(query); }
 
-        OpResData<DBTableBlock> queryBlock(const std::string& query);
+        inline OpResData<DBTableBlock> queryBlock(const std::string& query)
+        {
+            return m_db->queryBlock(query);
+        }
 
-        OpResData<DBTableProto> queryPrototype(const std::string& tableName);
+        inline OpResData<DBTableProto> queryPrototype(const std::string& tableName)
+        {
+            return m_db->queryPrototype(tableName);
+        }
     };
 
 }  // namespace cerberus

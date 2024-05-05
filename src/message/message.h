@@ -54,12 +54,16 @@ namespace cerberus
 
         bool isValid() const;
 
+        ByteBuffer toBuffer() const;
+
         virtual Clonable* clone() const;
 
         // Fill the fields.
         // Given value types must match with the actual value types
         // stored in the message, otherwise a cast exception
-        // for the corresponding slot will be thrown
+        // for the corresponding slot will be thrown.
+        // Furthermore, an exception will be thrown if the number of args
+        // does not match the number of slots in the message
         Message& fill(std::initializer_list<TypeWrapper> values);
 
         // Insert the specified values in the fields.

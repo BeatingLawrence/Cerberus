@@ -1,4 +1,5 @@
 #include <cerberus/cerberus.h>
+#include <cerberus/thread/player.h>
 #include <gtest/gtest.h>
 
 using namespace cerberus;
@@ -17,8 +18,9 @@ class myclass
     {
     }
 
-    static cerberus::OpRes inc(void* ctx)
+    static cerberus::OpRes inc(void* ctx, void* data)
     {
+        (void)data;
         ((myclass*)ctx)->print();
         ((myclass*)ctx)->increment();
         ((myclass*)ctx)->print();
@@ -26,9 +28,9 @@ class myclass
     }
 };
 
-static int actortest_standalone(cerberus_message msg, Thread* thr)
+static int playertest_standalone(cerberus_message msg, Thread* thr)
 {
-    logInfo("thread tick, arrived %u", msg->id());
+    logInfo("thread tick, received %u", msg->id());
 
     thr->terminate();
 
@@ -37,30 +39,34 @@ static int actortest_standalone(cerberus_message msg, Thread* thr)
     return 1;
 }
 
-TEST(actorTest, standalone)
+TEST(playerTest, standalone)
 {
-    cerberus::Thread thr("standaloneTestThread");
+    Thread thr("standaloneTestThread");
     thr.checkIn();
-    thr.provideTickCallback(actortest_standalone);
+    thr.provideTickCallback(playertest_standalone);
     thr.start();
     //
-    auto code = Cerberus::createThread("standalonethread");
+    Player p(false, "standalonethread");
+    p.checkIn();
+    p.start();
+
     myclass c;
 
-    auto m = Cerberus::messageConstruct(CERBERUS_MESSAGE_TASK_ID);
+    auto m = Cerberus::constructMessage(CERBERUS_MESSAGE_TASK_ID);
     m->getSlot("task")->to<TaskSlot>()->value({myclass::inc, &c});
     m->getSlot("client")->to<UInt64Slot>()->value(thr.id());
-    m->setRecipient(code);
+    m->setRecipient(p.id());
     Cerberus::send(m);
     //
     EXPECT_EQ(thr.join().value, 0);
+    p.join(true);
 }
 
-TEST(actorTest, threadPool)
+TEST(playerTest, threadPool)
 {
     myclass c;
 
-    auto m = Cerberus::messageConstruct(CERBERUS_MESSAGE_TASK_ID);
+    auto m = Cerberus::constructMessage(CERBERUS_MESSAGE_TASK_ID);
     m->getSlot("task")->to<TaskSlot>()->value({myclass::inc, &c});
     Cerberus::send(m);
 

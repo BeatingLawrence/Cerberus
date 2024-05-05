@@ -21,9 +21,9 @@
  *               In this way, the library is loaded in the process image space and is noted
  *               in the Cerberus register. After this operation, the LibLoader instance has just
  *               a reference to the shared library, but it has no ownership, so it cannot unload it anymore.
- *               The Cerberue framework will automatically unload all the shared objects when the deinit()
+ *               The Cerberus framework will automatically unload all the shared objects when deinit()
  *               will be called.
- *               When another thread will call load() on the same plugin file, the plugin will not be loaded,
+ *               When another thread calls load() on the same plugin file, the plugin will not be loaded,
  *               instead, the same reference will be gotten from the Cerberus framework register.
  *
  *               The swap() method:
@@ -75,7 +75,7 @@ namespace cerberus
             // This method only works in shared mode
             OpRes swap(const std::string& path);
 
-            // Reload the plugin. This method is equal to swpa(), just without changing path
+            // Reload the plugin. This method is equal to swap(), just without changing path
             OpRes reload();
 
             // Get the pointer to an object contained in the plugin.

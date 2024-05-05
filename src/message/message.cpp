@@ -78,6 +78,18 @@ Message& Message::setRecipient(HASH32 id)
 //=============================================================================
 bool Message::isValid() const { return (m_id != CERBERUS_INVALID_ID); }
 //=============================================================================
+ByteBuffer Message::toBuffer() const
+{
+    ByteBuffer ret;
+
+    for (auto& el : m_slots)
+    {
+        ret.append(el->toBuffer());
+    }
+
+    return ret;
+}
+//=============================================================================
 Clonable* Message::clone() const { return new Message(*this); }
 //=============================================================================
 Message& Message::fill(std::initializer_list<TypeWrapper> values)

@@ -4,7 +4,7 @@
 
 #include "src/data/database/dbdata.h"
 
-using namespace cerberus::data::database;
+using namespace cerberus;
 
 class DatabaseTest : public ::testing::Test
 {
@@ -15,7 +15,8 @@ class DatabaseTest : public ::testing::Test
     virtual void SetUp() override
     {
         return;
-        db = new SQLDatabase("postgresql://test:test@localhost:5432/testdb");
+        db = new SQLDatabase(DBB_PostgreSQL);
+        db->init("postgresql://test:test@localhost:5432/testdb");
         // connects to a local postgresql server with:
         //   username: test
         //   password: test
@@ -23,50 +24,46 @@ class DatabaseTest : public ::testing::Test
         //   database name: testdb
     };
 
-    virtual void TearDown() override { return;delete db; };
+    virtual void TearDown() override
+    {
+        return;
+        delete db;
+    };
 };
 
 TEST_F(DatabaseTest, connection)
 {
     GTEST_SKIP();
-    if (db->isFailed())
-    {
-        // logInfo(db->failureReason());
-        ASSERT_FALSE(true);
-    }
+
+    ASSERT_TRUE(db->ready());
 }
 
 TEST_F(DatabaseTest, createTable)
 {
     GTEST_SKIP();
-    if (db->isFailed())
-    {
-        // logInfo(db->failureReason());
-        ASSERT_FALSE(true);
-    }
+
+    ASSERT_TRUE(db->ready());
 
     DBTableProto prototype("test");
-    prototype.add("ID", SQLTablePrototype::SQLDataType::SDT_BigInt)
-        .add("name", SQLTablePrototype::SQLDataType::SDT_VarChar, 255)
-        .add("country", SQLTablePrototype::SQLDataType::SDT_VarChar, 255)
-        .add("heigth", SQLTablePrototype::SQLDataType::SDT_Double)
-        .add("drivingLicense", SQLTablePrototype::SQLDataType::SDT_Boolean);
+    prototype.add("ID", SQLDataType::SDT_BigInt)
+        .add("name", SQLDataType::SDT_VarChar, 255)
+        .add("country", SQLDataType::SDT_VarChar, 255)
+        .add("heigth", SQLDataType::SDT_Double)
+        .add("drivingLicense", SQLDataType::SDT_Boolean);
     ASSERT_EQ(db->createTable(prototype).res, cerberus::OR_OK);
 }
 
 TEST_F(DatabaseTest, insertInto)
 {
     GTEST_SKIP();
-    if (db->isFailed())
-    {
-        // logInfo(db->failureReason());
-        ASSERT_FALSE(true);
-    }
 
-    DBTableProto prototype("test");
-    ASSERT_EQ(db->queryPrototype(prototype).res, cerberus::OR_OK);
+    ASSERT_TRUE(db->ready());
+
+    auto proto = db->queryPrototype("test");
+    ASSERT_TRUE(proto.ok());
+
     DBTableBlock block("test");
-    block.setPrototype(prototype);
+    block.setPrototype(proto.value);
     DBRow row;
     row.append(1);
     row.append("Josh");
@@ -95,28 +92,25 @@ TEST_F(DatabaseTest, insertInto)
     row.append(1.88f);
     row.append(true);
     block.append(row);
-    ASSERT_EQ(db->insertBlock(block).res, cerberus::OR_OK);
+    ASSERT_TRUE(db->insertBlock(block).ok());
 }
 
 TEST_F(DatabaseTest, queryResult)
 {
     GTEST_SKIP();
-    if (db->isFailed())
-    {
-        // logInfo("test started with a failed database: ", db->failureReason().c_str());
-        ASSERT_FALSE(true);
-    }
 
-    DBTableBlock block;
-    ASSERT_EQ(db->querytable("test", block).res, cerberus::OR_OK);
-    EXPECT_TRUE(block.structured());
+    ASSERT_TRUE(db->ready());
 
-    for (auto&& type : block.prototype())
+    auto table = db->querytable("test");
+    ASSERT_TRUE(table.ok());
+    EXPECT_TRUE(table.value.structured());
+
+    for (auto&& type : table.value.prototype())
     {
         logInfo("col type %s", type.typeString().c_str());
     }
 
-    for (auto&& row : block)
+    for (auto&& row : table.value)
     {
         for (auto&& cell : row)
         {
@@ -126,25 +120,22 @@ TEST_F(DatabaseTest, queryResult)
         logInfo("=========");
     }
 
-    EXPECT_EQ(block[0][0].toInt(), 1);  // check columns
-    EXPECT_EQ(block[1][0].toInt(), 2);
-    EXPECT_EQ(block[2][0].toInt(), 3);
-    EXPECT_EQ(block[3][0].toInt(), 4);
+    EXPECT_EQ(table.value[0][0].toInt(), 1);  // check columns
+    EXPECT_EQ(table.value[1][0].toInt(), 2);
+    EXPECT_EQ(table.value[2][0].toInt(), 3);
+    EXPECT_EQ(table.value[3][0].toInt(), 4);
     //
-    EXPECT_EQ(block[0][4].toBool(), true);  // check columns
-    EXPECT_EQ(block[1][4].toBool(), true);
-    EXPECT_EQ(block[2][4].toBool(), false);
-    EXPECT_EQ(block[3][4].toBool(), true);
+    EXPECT_EQ(table.value[0][4].toBool(), true);  // check columns
+    EXPECT_EQ(table.value[1][4].toBool(), true);
+    EXPECT_EQ(table.value[2][4].toBool(), false);
+    EXPECT_EQ(table.value[3][4].toBool(), true);
 }
 
 TEST_F(DatabaseTest, dropTable)
 {
     GTEST_SKIP();
-    if (db->isFailed())
-    {
-        // logInfo(db->failureReason());
-        ASSERT_FALSE(true);
-    }
+
+    ASSERT_TRUE(db->ready());
 
     EXPECT_EQ(db->dropTable("test").res, cerberus::OR_OK);
 }

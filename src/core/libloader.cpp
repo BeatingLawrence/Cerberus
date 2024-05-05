@@ -3,7 +3,6 @@
 #include <dlfcn.h>
 
 #include "../cerberus.h"
-#include "cerberusregister.h"
 
 using namespace cerberus::core;
 
@@ -69,10 +68,7 @@ cerberus::OpRes LibLoader::load(const std::string& path, bool noreg)
 
         ret = close(m_handle);
 
-        if (ret.fail())
-        {
-            return ret;
-        }
+        if (ret.fail()) return ret;
     }
 
     m_handle = nullptr;
@@ -83,20 +79,14 @@ cerberus::OpRes LibLoader::load(const std::string& path, bool noreg)
     {
         ret = open(path);
 
-        if (ret.fail())
-        {
-            return ret;
-        }
+        if (ret.fail()) return ret;
 
         return OR_OK;
     }
 
     ret = open(path);
 
-    if (ret.fail())
-    {
-        return ret;
-    }
+    if (ret.fail()) return ret;
 
     logDebug("loaded plugin %s in process memory", path.c_str());
 
@@ -108,10 +98,7 @@ cerberus::OpRes LibLoader::load(const std::string& path, bool noreg)
         // it already exists
         ret = close(m_handle);
 
-        if (ret.fail())
-        {
-            return ret;
-        }
+        if (ret.fail()) return ret;
     }
 
     return OR_OK;
@@ -140,10 +127,7 @@ cerberus::OpRes LibLoader::swap(const std::string& path)
 
     auto ml = Cerberus::getPluginMutex(m_id);
 
-    if (!ml.isValid())
-    {
-        return OR_NotFound;
-    };
+    if (!ml.isValid()) return OR_NotFound;
 
     if (m_handle != Cerberus::checkPlugin(m_id)) return OR_NotFound;
 
@@ -151,17 +135,11 @@ cerberus::OpRes LibLoader::swap(const std::string& path)
 
     ret = close(m_handle);
 
-    if (ret.fail())
-    {
-        return ret;
-    }
+    if (ret.fail()) return ret;
 
     ret = open(path);
 
-    if (ret.fail())
-    {
-        return ret;
-    }
+    if (ret.fail()) return ret;
 
     logDebug("swapped plugin %s[old] with %s[new]", m_path.c_str(), path.c_str());
     m_path = path;
@@ -180,10 +158,8 @@ cerberus::LoaderFunc LibLoader::get(const std::string& symbol)
     if (!m_noreg)
     {
         ml = Cerberus::getPluginMutex(m_id);
-        if (!ml.isValid())
-        {
-            return {nullptr, MutexLocker()};
-        };
+
+        if (!ml.isValid()) return {nullptr, MutexLocker()};
     }
 
     void* p = dlsym(m_handle, symbol.c_str());

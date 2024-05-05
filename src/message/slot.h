@@ -321,7 +321,7 @@ namespace cerberus
 
         virtual Clonable* clone() const { return new ResultSlot(*this); };
 
-        virtual ByteBuffer toBuffer() const { throw cUsageErrorExc("OpRes is not convertible to a buffer"); };
+        virtual ByteBuffer toBuffer() const { return ByteBuffer(m_value.toStr()); };
     };
 
 }  // namespace cerberus

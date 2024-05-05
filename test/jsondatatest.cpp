@@ -28,10 +28,10 @@ TEST(jsonDataTest, create_generate)
     logInfo("JSON DATA: %s", s.c_str());
     //
     // generate JSON:
-    ByteBuffer bb;
-    EXPECT_TRUE(root.generate(bb).ok());
+    auto gen = root.generate();
+    EXPECT_TRUE(gen.ok());
 
-    logInfo("GENERATED JSON:\n%s", bb.toString().c_str());
+    logInfo("GENERATED JSON:\n%s", gen.value.toString().c_str());
 }
 
 TEST(jsonDataTest, parse)
@@ -51,9 +51,10 @@ TEST(jsonDataTest, copy_generate)
     File f("jsontest.json");
     ASSERT_TRUE(f.open().ok());
     ASSERT_TRUE(data.parse(f).ok());
-    ByteBuffer bb;
-    EXPECT_TRUE(data.generate(bb).ok());
-    logInfo("GENERATED JSON:\n%s", bb.toString().c_str());
+
+    auto gen = data.generate();
+    EXPECT_TRUE(gen.ok());
+    logInfo("GENERATED JSON:\n%s", gen.value.toString().c_str());
 }
 
 TEST(jsonDataTest, search)
@@ -70,7 +71,8 @@ TEST(jsonDataTest, search)
     found.toStr(s);
     logInfo("JSON DATA: %s", s.c_str());
     //
-    ByteBuffer bb;
-    EXPECT_TRUE(found.generate(bb).ok());
-    logInfo("GENERATED JSON:\n%s", bb.toString().c_str());
+
+    auto gen = data.generate();
+    EXPECT_TRUE(gen.ok());
+    logInfo("GENERATED JSON:\n%s", gen.value.toString().c_str());
 }

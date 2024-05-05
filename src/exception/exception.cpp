@@ -51,6 +51,10 @@ Exception::Exception(ExceptionType type, uint32_t line, const char* fileName, co
         case ET_Exception:
             m_error = "Generic exception";
             break;
+
+        case ET_Fatal:
+            m_error = "Fatal exception";
+            break;
     }
 
     if (fileName)

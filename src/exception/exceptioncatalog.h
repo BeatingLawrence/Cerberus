@@ -10,7 +10,7 @@
 #define cSystemExc(text, ...) \
     ::cerberus::Exception(cerberus::Exception::ET_System, __LINE__, __FILE__, text, ##__VA_ARGS__)
 
-#define cImplMissExc(text, ...)                                                             \
+#define cImplMissExc(text, ...)                                                                    \
     ::cerberus::Exception(cerberus::Exception::ET_MissingImplementation, __LINE__, __FILE__, text, \
                           ##__VA_ARGS__)
 
@@ -22,5 +22,8 @@
 
 #define cOpResExc(text, ...) \
     ::cerberus::Exception(cerberus::Exception::ET_OperationResult, 0, nullptr, text, ##__VA_ARGS__)
+
+#define cFatalExc(text, ...) \
+    ::cerberus::Exception(cerberus::Exception::ET_Fatal, __LINE__, __FILE__, text, ##__VA_ARGS__)
 
 #endif  // EXCEPTIONCATALOG_H

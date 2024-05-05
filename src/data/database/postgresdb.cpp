@@ -10,6 +10,17 @@ using namespace cerberus::db;
 using namespace cerberus;
 
 //=============================================================================
+void PostgresDB::_deinit()
+{
+    if (m_connection != nullptr)
+    {
+        delete m_connection;
+        m_connection = nullptr;
+    }
+
+    m_ready = false;
+}
+//=============================================================================
 PostgresDB::PostgresDB()
     : m_connection(nullptr)
 {
@@ -17,6 +28,8 @@ PostgresDB::PostgresDB()
 //=============================================================================
 OpRes PostgresDB::init(const string &parameters)
 {
+    if (m_ready) return OR_BadConditions;
+
     try
     {
         m_connection = new pqxx::connection(parameters.c_str());
@@ -26,20 +39,16 @@ OpRes PostgresDB::init(const string &parameters)
         return OpRes(OR_Failure, "PostgreSQL database init error", e.what());
     }
 
+    m_ready = true;
     return OR_OK;
 }
 //=============================================================================
-void PostgresDB::deinit()
-{
-    if (m_connection != nullptr)
-    {
-        delete m_connection;
-        m_connection = nullptr;
-    }
-}
+void PostgresDB::deinit() { _deinit(); }
 //=============================================================================
 OpRes PostgresDB::command(const string &query)
 {
+    if (!m_ready) return OR_BadConditions;
+
     try
     {
         pqxx::work w(*m_connection);
@@ -62,6 +71,8 @@ OpRes PostgresDB::command(const string &query)
 //=============================================================================
 OpResData<DBTableBlock> PostgresDB::queryBlock(const string &query)
 {
+    if (!m_ready) return OR_BadConditions;
+
     DBTableBlock ret;
 
     try
@@ -100,6 +111,8 @@ OpResData<DBTableBlock> PostgresDB::queryBlock(const string &query)
 //=============================================================================
 OpResData<DBTableProto> PostgresDB::queryPrototype(const string &tableName)
 {
+    if (!m_ready) return OR_BadConditions;
+
     if (tableName.empty()) return OR_WrongArgument;
 
     auto res = queryBlock(
@@ -129,6 +142,6 @@ OpResData<DBTableProto> PostgresDB::queryPrototype(const string &tableName)
     return res;
 }
 //=============================================================================
-PostgresDB::~PostgresDB() { deinit(); }
+PostgresDB::~PostgresDB() { _deinit(); }
 //=============================================================================
 #endif

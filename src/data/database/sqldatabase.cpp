@@ -1,5 +1,6 @@
 #include "sqldatabase.h"
 
+#include "../../exception/exception.h"
 #include "dbdata.h"
 
 using namespace cerberus;

@@ -1,7 +1,6 @@
 #include "cerberuscore.h"
 
 #include "../cerberus.h"
-#include "../network/socket.h"
 #include "../thread/thread.h"
 
 using namespace cerberus::core;
@@ -15,7 +14,7 @@ void CerberusCore::initializeThreadPool()
 
     for (SIZE i = 0; i < m_conf.threadPool; i++)
     {
-        auto t = new Actor(true);
+        auto t = new Player(true, CerberusUtils::strPrint("Player[%u]", i));
         t->setTaskEndCB(CerberusCore::taskEndCb, this).expect();
         m_pool.push_back(t);
     }
@@ -32,14 +31,34 @@ void CerberusCore::deinitializeThreadPool()
         el->join(true).expect();
         delete el;
     }
+
+    for (auto& el : m_reservedPool)
+    {
+        el->join(true).expect();
+        delete el;
+    }
 }
 //=============================================================================
-void CerberusCore::taskEndCb(void* ctx, Actor* thread, OpRes res)
+void CerberusCore::cleanupPlayer(Thread* t)
+{
+    for (auto it = m_reservedPool.begin(); it != m_reservedPool.end(); it++)
+    {
+        if ((*it) == t)
+        {
+            m_reservedPool.erase(it);
+            t->join(true);
+            delete t;
+            break;
+        }
+    }
+}
+//=============================================================================
+void CerberusCore::taskEndCb(void* ctx, Player* thread, OpRes res)
 {
     ((CerberusCore*)ctx)->_taskEndCb(thread, res);
 }
 //=============================================================================
-void CerberusCore::_taskEndCb(Actor* thread, OpRes res) { logInfo("Task end %s", res.reason.c_str()); }
+void CerberusCore::_taskEndCb(Player* thread, OpRes res) { logDebug("task end"); }
 //=============================================================================
 int CerberusCore::tick()
 {
@@ -49,18 +68,28 @@ int CerberusCore::tick()
 
     // Process message queue..
 
+    if (message->hasValidRecipient())
+    {
+        // normally forward
+        processMsg(message.ref());
+        return 0;
+    }
+
     switch (message->id())
     {
-        case CERBERUS_MESSAGE_SOCK_ID:
-            processSockMsg(message.ref());
-            break;
-
         case CERBERUS_MESSAGE_TASK_ID:
             processTaskMsg(message.ref());
             break;
 
-        default:
-            processMsg(message.ref());
+        case CERBERUS_MESSAGE_TASKEND_ID:
+            if (message->recipient() == id())
+            {
+                // recipient is the Cerberus core
+                auto player = (Player*)(message->getConstSlot("player")->to<VoidPSlot>()->value());
+                cleanupPlayer(player);
+            }
+            else
+                processMsg(message.ref());
             break;
     }
 
@@ -88,88 +117,17 @@ void CerberusCore::coolDown()
     logInfo("Stopping Cerberus core");
 }
 //=============================================================================
-void CerberusCore::processSockMsg(cerberus_message msg)
-{
-    if (msg->hasValidRecipient())
-    {
-        logError("specified an invalid socket ID");
-        return;
-    }
-
-    auto obj = Cerberus::rawObjById(msg->recipient());
-
-    if (obj.fail())
-    {
-        logError("specified socket ID cannot be found");
-        return;
-    }
-
-    CerberusObject* target = obj.value;
-
-    if (target->type() != COBJ_Socket)
-    {
-        logError("specified object type is not a socket");
-        return;
-    }
-
-    Socket* sock = target->to_p<Socket>();
-
-    if (!(sock->isConnected()))
-    {
-        sock->connect(msg->getConstSlot("host")->to<HostSlot>()->value());
-    }
-
-    sock->send(msg->getConstSlot("payload")->to<BufferSlot>()->value());
-}
-//=============================================================================
 void CerberusCore::processTaskMsg(cerberus_message msg)
 {
-    if (msg->hasValidRecipient())
-    {
-        // normal mode
-        auto obj = Cerberus::rawObjById(msg->recipient());
-
-        if (obj.fail())
-        {
-            logError("specified thread ID cannot be found");
-            return;
-        }
-
-        CerberusObject* target = obj.value;
-
-        if (target->type() != COBJ_Thread)
-        {
-            logError("specified object type is not a thread");
-            return;
-        }
-
-        Thread* act = target->to_p<Thread>();
-        act->addMessage(msg.ref());
-
-        return;
-    }
-
-    // thread pool mode
-
     auto tm = msg->getConstSlot("task")->to<TaskSlot>()->value();
     runTask(tm);
 }
 //=============================================================================
-void CerberusCore::processMsg(cerberus_message msg)
-{
-    if (!(msg->hasValidRecipient()))
-    {
-        logWarning("Destination of message is invalid, dropping");
-        return;
-    }
-
-    Cerberus::sendMsgToObj(msg->recipient(), msg.ref());
-}
+void CerberusCore::processMsg(cerberus_message msg) { Cerberus::sendMsgToObj(msg->recipient(), msg.ref()); }
 //=============================================================================
 void CerberusCore::runTask(Task t)
 {
-    // find an available actor to assign the task to
-
+    // find an available player to assign the task to
     for (auto&& el : m_pool)
     {
         if (el->end())
@@ -179,13 +137,19 @@ void CerberusCore::runTask(Task t)
         }
     }
 
-    throw cIllegalStateExc("Could not assign a task to the thread pool, %u threads are not enough",
-                           m_conf.threadPool);
+    // all players are busy, let's create a temporary one
+    auto p = new Player;
+    p->checkIn();
+    p->run(t.cb, t.ctx, t.data).expect();
+    m_reservedPool.push_back(p);
+
+    logDebug("Thread pool busy. A temporary thread has been created");
 }
 //=============================================================================
 CerberusCore::CerberusCore()
-    : cerberus::Thread(TP_Message, "Cerberus Core"),
-      m_pool()
+    : cerberus::Thread(TP_Message, "Cerberus core"),
+      m_pool(),
+      m_reservedPool()
 {
 }
 //=============================================================================

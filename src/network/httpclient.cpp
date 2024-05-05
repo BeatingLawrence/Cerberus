@@ -100,8 +100,8 @@ void HTTPClient::decodeChunkedData(ByteBuffer &data)
     data.assign(tmp);
 }
 //=============================================================================
-HTTPClient::HTTPClient(const std::string &name)
-    : Socket(core::CerberusObject::Socket_TCP, name),
+HTTPClient::HTTPClient()
+    : Socket(Socket::Socket_TCP),
       m_persistent(false),
       m_remote()
 {

@@ -1,26 +1,26 @@
-#ifndef CERBERUS_ACTOR_H
-#define CERBERUS_ACTOR_H
+#ifndef CERBERUS_PLAYER_H
+#define CERBERUS_PLAYER_H
 
 #include "thread.h"
 
 namespace cerberus
 {
-    class Actor final : public Thread
+    class Player final : public Thread
     {
        private:
-        actorCallback m_cb;
+        playerCallback m_cb;
         taskEndCallback m_endCb;
-        void *m_ctx, *m_endCbCtx;
+        void *m_ctx, *m_endCbCtx, *m_data;
         void sendTaskEndMsg(HASH32 recipient, OpRes res);
 
         virtual int tick() override;
 
        public:
-        Actor(bool manualTrigger = false, const std::string& name = "");
+        Player(bool manualTrigger = false, const std::string& name = "");
 
-        Actor(const Actor& other) = delete;
+        Player(const Player& other) = delete;
 
-        virtual ~Actor();
+        virtual ~Player();
 
         // check if the actor has done
         bool end();
@@ -32,10 +32,10 @@ namespace cerberus
         OpRes start();
 
         // assign a new task that will replace the current one
-        OpRes assign(actorCallback cb, void* ctx = nullptr);
+        OpRes assign(playerCallback cb, void* ctx = nullptr, void* data = nullptr);
 
         // assign a new task and run it
-        OpRes run(actorCallback cb, void* ctx = nullptr);
+        OpRes run(playerCallback cb, void* ctx = nullptr, void* data = nullptr);
 
         // set a new task-end callback. This function will be called
         // when the task ends and will contain the task result
@@ -44,4 +44,4 @@ namespace cerberus
 
 }  // namespace cerberus
 
-#endif  // CERBERUS_ACTOR_H
+#endif  // CERBERUS_PLAYER_H

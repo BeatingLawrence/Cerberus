@@ -8,7 +8,7 @@
  *
  */
 
-#include "../thread/actor.h"
+#include "../thread/player.h"
 #include "../thread/thread.h"
 #include "eventscheduler.h"
 
@@ -21,14 +21,16 @@ namespace cerberus
            private:
             CoreConf m_conf;
 
-            std::list<Actor*> m_pool;
+            std::list<Player*> m_pool;          // manual triggered
+            std::list<Player*> m_reservedPool;  // message triggered
 
             void initializeThreadPool();
             void deinitializeThreadPool();
 
-            static void taskEndCb(void* ctx, Actor* thread, OpRes res);
+            void cleanupPlayer(Thread* t);
 
-            void _taskEndCb(Actor* thread, OpRes res);
+            static void taskEndCb(void* ctx, Player* thread, OpRes res);
+            void _taskEndCb(Player* thread, OpRes res);
 
             virtual int tick() override;
 
@@ -36,7 +38,6 @@ namespace cerberus
 
             virtual void coolDown() override;
 
-            void processSockMsg(cerberus_message msg);
             void processTaskMsg(cerberus_message msg);
             void processMsg(cerberus_message msg);
 

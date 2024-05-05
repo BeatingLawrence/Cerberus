@@ -1,30 +1,32 @@
-#include "actor.h"
+#include "player.h"
 
 #include "../cerberus.h"
 
 using namespace cerberus;
 
 //=============================================================================
-void Actor::sendTaskEndMsg(HASH32 recipient, OpRes res)
+void Player::sendTaskEndMsg(HASH32 recipient, OpRes res)
 {
-    auto msg = Cerberus::messageConstruct(CERBERUS_MESSAGE_TASKEND_ID);
+    auto msg = Cerberus::constructMessage(CERBERUS_MESSAGE_TASKEND_ID);
     msg->getSlot("result")->to<ResultSlot>()->value(res);
+    msg->getSlot("player")->to<VoidPSlot>()->value(this);
     Cerberus::send(msg, recipient);
 }
 //=============================================================================
-int Actor::tick()
+int Player::tick()
 {
     if (isQueueEmpty())
     {
         // standard mode
         if (m_cb)
         {
-            auto res = m_cb(m_ctx);
+            auto res = m_cb(m_ctx, m_data);
             if (m_endCb)
             {
                 m_endCb(m_endCbCtx, this, res);
             }
         }
+
         return 0;
     }
 
@@ -38,16 +40,16 @@ int Actor::tick()
     if (!task.isValid()) return 0;
 
     // execute
-    auto res = task.cb(task.ctx);
+    auto res = task.cb(task.ctx, task.data);
 
     sendTaskEndMsg(client, res);
 
     return 0;
 }
 //=============================================================================
-Actor::~Actor() {}
+Player::~Player() {}
 //=============================================================================
-Actor::Actor(bool manualTrigger, const std::string &name)
+Player::Player(bool manualTrigger, const std::string &name)
     : Thread(manualTrigger ? TP_Trigger : TP_Message, name),
       m_cb(nullptr),
       m_endCb(nullptr),
@@ -56,35 +58,37 @@ Actor::Actor(bool manualTrigger, const std::string &name)
 {
 }
 //=============================================================================
-bool Actor::end() { return getPausedFlag(); }
+bool Player::end() { return getPausedFlag(); }
 //=============================================================================
-bool Actor::running() { return !end(); }
+bool Player::running() { return !end(); }
 //=============================================================================
-OpRes Actor::start()
+OpRes Player::start()
 {
     if (running()) return OR_TemporaryUnavailable;
     Thread::start();
     return OR_OK;
 }
 //=============================================================================
-OpRes Actor::assign(actorCallback cb, void *ctx)
+OpRes Player::assign(playerCallback cb, void *ctx, void *data)
 {
     if (running()) return OR_TemporaryUnavailable;
-    m_cb  = cb;
-    m_ctx = ctx;
+    m_cb   = cb;
+    m_ctx  = ctx;
+    m_data = data;
     return OR_OK;
 }
 //=============================================================================
-OpRes Actor::run(actorCallback cb, void *ctx)
+OpRes Player::run(playerCallback cb, void *ctx, void *data)
 {
     if (running()) return OR_TemporaryUnavailable;
-    m_cb  = cb;
-    m_ctx = ctx;
+    m_cb   = cb;
+    m_ctx  = ctx;
+    m_data = data;
     Thread::start();
     return OR_OK;
 }
 //=============================================================================
-OpRes Actor::setTaskEndCB(taskEndCallback cb, void *ctx)
+OpRes Player::setTaskEndCB(taskEndCallback cb, void *ctx)
 {
     if (running()) return OR_TemporaryUnavailable;
 

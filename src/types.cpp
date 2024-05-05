@@ -276,14 +276,12 @@ cerberus::OpRes &cerberus::OpRes::expect()
 //=============================================================================
 bool cerberus::OpRes::ok(const std::string &str)
 {
-    if (res == Result::OR_OK)
-    {
-        return true;
-    }
-    else if (!str.empty())
+    if (res == Result::OR_OK) return true;
+
+    if (!str.empty())
     {
         std::string err = str;
-        err += ", ";
+        err += ": ";
         err += errorString();
 
         if (!reason.empty()) err.append("\n").append(reason);
@@ -296,7 +294,7 @@ bool cerberus::OpRes::ok(const std::string &str)
 //=============================================================================
 bool cerberus::OpRes::fail(const std::string &str) { return !ok(str); }
 //=============================================================================
-std::string cerberus::OpRes::errorString()
+std::string cerberus::OpRes::errorString() const
 {
     switch (res)
     {
@@ -369,6 +367,15 @@ std::string cerberus::OpRes::errorString()
     }
 
     return "Undefined";
+}
+//=============================================================================
+std::string cerberus::OpRes::toStr() const
+{
+    std::string ret;
+    ret.append(errorString());
+    ret.append(": ");
+    ret.append(reason);
+    return ret;
 }
 //=============================================================================
 cerberus::OpRes &cerberus::OpRes::addOptional(Result opt)

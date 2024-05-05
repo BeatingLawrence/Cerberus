@@ -14,7 +14,7 @@ using namespace cerberus;
 static int testCallback_UDP(cerberus_message msg, Thread* thread)
 {
     logDebug("receiver thread routine entered");
-    auto socket = UDPSocket("UDP receiver");
+    auto socket = UDPSocket;
     cerberus::Host host("localhost:22012");
     socket.bind(host);
     ByteBuffer buf;
@@ -36,7 +36,7 @@ static int testCallback_UDP(cerberus_message msg, Thread* thread)
 static int testCallback_TCP(cerberus_message msg, Thread* thread)
 {
     logDebug("receiver thread routine entered");
-    auto socket = TCPSocket("TCP receiver");
+    auto socket = TCPSocket;
     socket.bind(cerberus::Host("localhost:33333"));
     socket.listen(3);
     ByteBuffer buf;
@@ -77,7 +77,7 @@ static int testCallback_TCP(cerberus_message msg, Thread* thread)
 static int testCallback_TCP_P2P(cerberus_message msg, Thread* thread)
 {
     logDebug("receiver thread routine entered");
-    auto socket = TCPP2PSocket("TCPP2P receiver");
+    auto socket = TCPP2PSocket;
     socket.bind(cerberus::Host("localhost:44444"));
 
     if (socket.connectP2P(Host("localhost:57829"), 2000).fail("connect error in thread callback"))
@@ -111,7 +111,7 @@ static int testCallback_TCP_P2P(cerberus_message msg, Thread* thread)
 static int testCallback_FTP(cerberus_message msg, Thread* thread)
 {
     logDebug("receiver thread routine entered");
-    auto socket = TCPSocket("FTP receiver");
+    auto socket = TCPSocket;
     socket.bind("localhost:54321");
     socket.listen(3);
     File file("ftp_socket_test_file_received.file", cerberus::FOM_ReadWriteTrunc);
@@ -153,7 +153,7 @@ TEST(socketTest, UDP)
     receiver.start();
     Thread::sleep(10);  // sleep THIS thread
     //
-    auto socket = UDPSocket("UDP transmitter");
+    auto socket = UDPSocket;
     ByteBuffer buf("Hello, World!");
     socket.sendTo(buf, "localhost:22012");
     socket.close();
@@ -168,7 +168,7 @@ TEST(socketTest, TCP)
     receiver.start();
     Thread::sleep(10);  // sleep THIS thread
     //
-    auto socket = TCPSocket("TCP transmitter");
+    auto socket = TCPSocket;
     logDebug("connecting..");
     ASSERT_EQ(socket.connect(cerberus::Host("localhost:33333")).res, cerberus::OR_OK);
     logDebug("connected");
@@ -186,7 +186,7 @@ TEST(socketTest, TCP_P2P)
     receiver.start();
     Thread::sleep(10);  // sleep THIS thread
     //
-    auto socket = TCPP2PSocket("TCPP2P transmitter");
+    auto socket = TCPP2PSocket;
     ASSERT_EQ(socket.bind(cerberus::Host("localhost:57829")).res, cerberus::OR_OK);
     ASSERT_TRUE(socket.connectP2P(cerberus::Host("localhost:44444"), 2000).ok("connect p2p failure"));
     ByteBuffer buf("Hello, World!");
@@ -212,7 +212,7 @@ TEST(socketTest, FTP)
         f.writeLine("Hello, World!");
     }
     //
-    auto socket = TCPSocket("FTP transmitter");
+    auto socket = TCPSocket;
     ASSERT_EQ(socket.bind("localhost").res, cerberus::OR_OK);
     ASSERT_EQ(socket.connect("localhost:54321").res, cerberus::OR_OK);
     f.resetCursor();
@@ -230,7 +230,7 @@ TEST(socketTest, FTP)
 
 TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and gets the web page
 {
-    auto socket = TCPSocket("TLS socket");
+    auto socket = TCPSocket;
     ASSERT_EQ(socket.TLS_init().res, cerberus::OR_OK);  // mark the socket as TLS
     socket.TLS_ignoreHangup(true).fail();
     logDebug("connecting..");
@@ -270,7 +270,7 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
 
 TEST(socketTest, HTTPClient)
 {
-    HTTPClient client("HTTP Client test");
+    HTTPClient client;
     client.TLS_init();
     client.setRemote("www.google.com:443");
     logDebug("connected");
@@ -289,6 +289,8 @@ TEST(socketTest, HTTPClient)
     EXPECT_TRUE(client.makeRequest(req).ok());
     logDebug("request sent");
     auto response = client.getResponse(1000, 200);
+
+    ASSERT_TRUE(response.ok("error while getting data"));
 
     EXPECT_TRUE(response.value.isOk());
 

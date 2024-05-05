@@ -27,7 +27,7 @@ using namespace cerberus;
 
 //=============================================================================
 Socket::Socket(SocketType type, int fd, SSL_CTX *ctx)
-    : CerberusObject(type),
+    : m_type(type),
       m_extern(true),
       m_maxConnections(DEFAULT_MAX_CONNECTIONS),
       m_fd(fd),
@@ -145,21 +145,19 @@ OpRes Socket::_connectP2P(const Host &dest, const TimeFrame &timeout)
 //=============================================================================
 Socket::TransportType Socket::transportType()
 {
-    switch (socketType())
+    switch (m_type)
     {
-        case CerberusObject::Socket_None:
+        case Socket_None:
             throw cIllegalArgExc("None type cannot be used");
-        case CerberusObject::Socket_UDP:
+        case Socket_UDP:
             return UDP;
-        case CerberusObject::Socket_TCP:
+        case Socket_TCP:
             return TCP;
-        case CerberusObject::Socket_TCPP2P:
+        case Socket_TCPP2P:
             return TCP;
-        case CerberusObject::Socket_HTTP:
-            throw cImplMissExc("HTTP sockets not implemented yet");
-        case CerberusObject::Socket_ICMP:
+        case Socket_ICMP:
             return ICMP;
-        case CerberusObject::Socket_IPC:
+        case Socket_IPC:
             return IPC;
     }
 
@@ -580,8 +578,8 @@ OpRes Socket::_TLS_shutdown(bool quick)
     return OR_OK;
 }
 //=============================================================================
-Socket::Socket(SocketType type, const std::string &name)
-    : CerberusObject(type, name),
+Socket::Socket(SocketType type)
+    : m_type(type),
       m_extern(false),
       m_maxConnections(DEFAULT_MAX_CONNECTIONS),
       m_fd(-1),
@@ -612,7 +610,6 @@ Socket::~Socket()
 {
     close();
     TLS_deinit();
-    checkOut();
 }
 //=============================================================================
 OpRes Socket::bind(const Host &iface)
@@ -752,7 +749,7 @@ OpRes Socket::recv(ByteBuffer &buffer) { return _recv(buffer, false); }
 //=============================================================================
 void Socket::setMaxConnections(size_t maxconn) { m_maxConnections = maxconn; }
 //=============================================================================
-bool Socket::isFailed() const { return (m_fd == -1) || (socketType() == Socket_None); }
+bool Socket::isFailed() const { return (m_fd == -1) || (m_type == Socket_None); }
 //=============================================================================
 bool Socket::isConnected() const
 {
@@ -1040,7 +1037,7 @@ OpRes Socket::sendTo(const ByteBuffer &buffer, const Host &dest, bool donotblock
 OpRes Socket::connectP2P(const Host &dest, const TimeFrame &timeout)
 {
     if (isFailed()) return OR_FailedInstance;
-    if (socketType() != Socket_TCPP2P || m_streamConnected) return OR_Unavailable;
+    if (m_type != Socket_TCPP2P || m_streamConnected) return OR_Unavailable;
 
     auto res = _connectP2P(dest, timeout);
 
@@ -1065,16 +1062,13 @@ OpRes Socket::listen(size_t maxconn)
 //=============================================================================
 Socket Socket::accept(Host &peer)
 {
-    if (isFailed() || transportType() != TCP || m_extern)
-    {
-        return {Socket_None, -1};
-    }
+    if (isFailed() || transportType() != TCP || m_extern) return {Socket_None, -1};
 
     auto fd = _accept(peer);
 
     if (fd.fail()) return {Socket_None, -1};
 
-    return {socketType(), static_cast<int>(fd.value)};
+    return {m_type, static_cast<int>(fd.value), m_sslCtx};
 }
 //=============================================================================
 Socket Socket::accept()

@@ -283,12 +283,6 @@ namespace cerberus
         ST_RESULT,
     };
 
-    struct SlotTemplate
-    {
-        SlotType type;
-        std::string name;
-    };
-
     enum WordMatch
     {
         WM_CaseSensitive,
@@ -643,8 +637,11 @@ namespace cerberus
         // If print is specified, the error string will be printed with the internal error info
         bool fail(const std::string& str = "");
 
-        // Translate the Result
-        std::string errorString();
+        // Translate the Result variable into a string
+        std::string errorString() const;
+
+        // Translate the entire Result into a string
+        std::string toStr() const;
 
         OpRes& addOptional(Result opt);
 
@@ -690,19 +687,20 @@ namespace cerberus
         };
     };
 
-    class Actor;
+    class Player;
     class Thread;
 
     typedef void (*timerCallback)();
     typedef int (*threadTickCallback)(cerberus_message, Thread*);
     typedef void (*threadCallback)();
-    typedef OpRes (*actorCallback)(void* ctx);
-    typedef void (*taskEndCallback)(void* ctx, Actor*, OpRes);
+    typedef OpRes (*playerCallback)(void* ctx, void* data);
+    typedef void (*taskEndCallback)(void* ctx, Player*, OpRes);
 
     struct Task
     {
-        actorCallback cb;
+        playerCallback cb;
         void* ctx;
+        void* data;
 
         bool isValid() { return cb; };
     };
@@ -823,11 +821,8 @@ namespace cerberus
         OpRes resolve();
     };
 
-    namespace data
-    {
-        class ByteBuffer;
-        class JsonData;
-    }  // namespace data
+    class ByteBuffer;
+    class JsonData;
 
     struct TypeWrapper
     {
@@ -842,6 +837,9 @@ namespace cerberus
             bool _bool;
             void* _voidp;
         };
+
+        TypeWrapper()                         = delete;  // not allowed
+        TypeWrapper(const TypeWrapper& other) = delete;
 
         TypeWrapper(BYTE v)
             : type(ST_BYTE),
@@ -875,7 +873,7 @@ namespace cerberus
             : type(ST_STRING),
               _voidp(&v){};
 
-        TypeWrapper(data::ByteBuffer& v)
+        TypeWrapper(ByteBuffer& v)
             : type(ST_BYTEBUFFER),
               _voidp(&v){};
 
@@ -883,7 +881,7 @@ namespace cerberus
             : type(ST_DICTIONARY),
               _voidp(&v){};
 
-        TypeWrapper(data::JsonData& v)
+        TypeWrapper(JsonData& v)
             : type(ST_JSON),
               _voidp(&v){};
     };

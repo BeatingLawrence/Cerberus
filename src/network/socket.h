@@ -1,14 +1,13 @@
 #ifndef CERBERUS_NETWORK_SOCKET_H
 #define CERBERUS_NETWORK_SOCKET_H
 
-#include "../core/cerberusobject.h"
 #include "../data/bytebuffer.h"
 #include "../time/timeframe.h"
 #include "../types.h"
 
-#define UDPSocket(n) cerberus::Socket(cerberus::core::CerberusObject::Socket_UDP, n)
-#define TCPSocket(n) cerberus::Socket(cerberus::core::CerberusObject::Socket_TCP, n)
-#define TCPP2PSocket(n) cerberus::Socket(cerberus::core::CerberusObject::Socket_TCPP2P, n)
+#define UDPSocket cerberus::Socket(cerberus::Socket::Socket_UDP)
+#define TCPSocket cerberus::Socket(cerberus::Socket::Socket_TCP)
+#define TCPP2PSocket cerberus::Socket(cerberus::Socket::Socket_TCPP2P)
 
 // A socket capable of great things!
 
@@ -23,9 +22,46 @@ namespace cerberus
 {
     class File;
 
-    class Socket : public core::CerberusObject
+    class Socket
     {
+       public:
+        enum SocketType : uint8_t
+        {
+            Socket_None,
+            Socket_UDP,
+            Socket_TCP,
+            Socket_TCPP2P,
+            Socket_ICMP,
+            Socket_IPC,
+        };
+
        private:
+        enum TransportType : uint8_t
+        {
+            TCP,
+            UDP,
+            ICMP,
+            IPC,
+        };
+
+        SocketType m_type;
+
+        bool m_extern;  // used for acceptable sockets
+        size_t m_maxConnections;
+
+        int m_fd;
+
+        bool m_streamConnected;
+
+        ByteBuffer m_recvBuffer;
+
+        SSL_CTX* m_sslCtx;  // for ssl
+        SSL* m_ssl;
+
+        Host m_bind;
+
+        // methods:
+
         Socket(SocketType type, int fd, SSL_CTX* ctx = nullptr);
 
         // This method creates a datagram socket and assigns the resulting file descriptor to
@@ -38,14 +74,6 @@ namespace cerberus
 
         // Receive until EOF
         void flushSocket(ByteBuffer& buffer);
-
-        enum TransportType
-        {
-            TCP,
-            UDP,
-            ICMP,
-            IPC,
-        };
 
         OpRes _connectP2P(const Host& dest, const TimeFrame& timeout);
 
@@ -78,27 +106,11 @@ namespace cerberus
 
         OpRes _TLS_shutdown(bool quick);
 
-        bool m_extern;  // used for acceptable sockets
-
-        size_t m_maxConnections;  // used for acceptable sockets
-
-        int m_fd;
-
-        bool m_streamConnected;
-
-        ByteBuffer m_recvBuffer;
-
-        SSL_CTX* m_sslCtx;  // for ssl
-        SSL* m_ssl;
-
-        Host m_bind;
-
        public:
-        Socket() = delete;
-
+        Socket()                    = delete;
         Socket(const Socket& other) = delete;
 
-        Socket(SocketType type, const std::string& name = std::string());
+        Socket(SocketType type);
 
         virtual ~Socket();
 
@@ -185,7 +197,7 @@ namespace cerberus
 
         // TLS-enabled sockets (stream):
 
-        // Check if the socket has an initted TLS context
+        // Check if the socket has an initted TLS context (i.e. TLS_Init() has been called)
         bool isTLS() const;
 
         // Initialize the TLS context. The socket is setup to negotiate the highest version

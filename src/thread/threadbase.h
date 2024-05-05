@@ -3,12 +3,13 @@
 
 #include <pthread.h>
 
+#include "../core/recordable.h"
 #include "../message/messagequeue.h"
 #include "../mutex/mutex.h"
 
 namespace cerberus
 {
-    class ThreadBase
+    class ThreadBase : public core::Recordable
     {
        private:
         mutable Mutex m_mutex;
@@ -29,7 +30,7 @@ namespace cerberus
 
         ThreadBase(ThreadBase&& other) = delete;
 
-        ThreadBase(ThreadPeriodicity periodicity);
+        ThreadBase(ThreadPeriodicity periodicity, const std::string& name);
 
         virtual ~ThreadBase();
 

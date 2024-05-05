@@ -22,7 +22,7 @@ namespace cerberus
         static void decodeChunkedData(ByteBuffer &data);
 
        public:
-        HTTPClient(const std::string &name = std::string());
+        HTTPClient();
 
         virtual ~HTTPClient();
 

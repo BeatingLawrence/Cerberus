@@ -1,5 +1,5 @@
-#ifndef CERBERUSOBJECT_H
-#define CERBERUSOBJECT_H
+#ifndef RECORDABLE_H
+#define RECORDABLE_H
 
 #include <cstdint>
 #include <string>
@@ -16,7 +16,7 @@ namespace cerberus
     {
         class CerberusRegister;
 
-        class CERBERUS_EXPORT CerberusObject
+        class CERBERUS_EXPORT Recordable
         {
             friend class ::cerberus::core::CerberusRegister;
             friend class ::cerberus::Cerberus;
@@ -26,25 +26,12 @@ namespace cerberus
             {
                 COBJ_Invalid,
                 COBJ_Thread,
-                COBJ_MessageTmplt,
-                COBJ_Socket,
                 // add more types here..
-            };
-
-            enum SocketType : uint8_t
-            {
-                Socket_None,
-                Socket_UDP,
-                Socket_TCP,
-                Socket_TCPP2P,
-                Socket_HTTP,
-                Socket_ICMP,
-                Socket_IPC,
             };
 
             // Return a string containing the object type (and socket type if present) and ID,
             // like "Thread ID:123456" or "Socket TCP ID:123456"
-            static std::string toStr(const CerberusObject& obj);
+            static std::string toStr(const Recordable& obj);
 
             // Same as above
             std::string toObjStr();
@@ -56,21 +43,17 @@ namespace cerberus
 
             std::string m_name;
 
-            SocketType m_socketType;
-
-            bool m_cerbManaged;
-
-            static std::string toThreadStr(const CerberusObject& obj);
+            static std::string toThreadStr(const Recordable& obj);
 
            protected:
-            CerberusObject(ObjectType type, const std::string& name = std::string());
-
-            CerberusObject(SocketType type, const std::string& name = std::string());
+            Recordable(ObjectType type, const std::string& name = std::string());
 
            public:
-            CerberusObject() = delete;
+            Recordable() = delete;
 
-            virtual ~CerberusObject();
+            Recordable(const Recordable& other) = default;
+
+            virtual ~Recordable();
 
             // Register this instance in the Cerberus framework register.
             // After this call, all other registered objects will be capable of
@@ -89,11 +72,10 @@ namespace cerberus
             // Returns the object type
             ObjectType type() const;
 
-            // Returns the socket type
-            SocketType socketType() const;
-
             // Returns the object name
             std::string name() const;
+
+            virtual void addMessage(cerberus_message message) = 0;
 
             // Performs a dynamic cast of this object into T. Throws an exception if the cast is not possible
             // Checking the object type() before casting is a good practice
@@ -152,4 +134,4 @@ namespace cerberus
     }  // namespace core
 }  // namespace cerberus
 
-#endif  // CERBERUSOBJECT_H
+#endif  // RECORDABLE_H

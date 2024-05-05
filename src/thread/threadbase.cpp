@@ -2,15 +2,16 @@
 
 #include <cstring>
 
-#include "../message/message.h"
+#include "../exception/exception.h"
+#include "../message/message.h"  // IWYU pragma: export
 #include "../mutex/mutexlocker.h"
-#include "src/exception/exception.h"
 
 using namespace cerberus;
 
 //=============================================================================
-ThreadBase::ThreadBase(ThreadPeriodicity periodicity)
-    : m_mutex(),
+ThreadBase::ThreadBase(ThreadPeriodicity periodicity, const std::string &name)
+    : Recordable(Recordable::ObjectType::COBJ_Thread, name),
+      m_mutex(),
       m_cond(),
       m_pausedFlag(true),
       m_terminateFlag(false),

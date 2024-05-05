@@ -16,7 +16,6 @@ namespace cerberus
 {
     namespace core
     {
-        class CerberusObject;
         class CerberusCore;
         class CerberusRegister;
         class CerberusLog;
@@ -108,7 +107,7 @@ namespace cerberus
     class CERBERUS_EXPORT Cerberus
     {
         friend class ::cerberus::core::CerberusCore;
-        friend class ::cerberus::core::CerberusObject;
+        friend class ::cerberus::core::Recordable;
         friend class ::cerberus::core::CerberusLog;
         friend class ::cerberus::core::LibLoader;
         friend class ::cerberus::Timer;
@@ -120,18 +119,14 @@ namespace cerberus
 
         // Register a given object and return its id
         // Return an invalid ID if the registering failed
-        static void registerObj(core::CerberusObject* object);
+        static void registerObj(core::Recordable* object);
 
         // Unregister an object by its id
         static void unregisterObj(HASH32 id);
 
         // Directly send a message to a cerberus object
         static void sendMsgToObj(HASH32 id, cerberus_message msg);
-
-        // Check if the given object is a Cerberus-managed object
-        static BoolOpRes isCerbManaged(HASH32 id);
-
-        static OpResData<core::CerberusObject*> rawObjById(HASH32 id);
+        static void sendMsgToObj(const std::string& name, cerberus_message msg);
 
         // =======================Plugin manager============================
 
@@ -174,15 +169,6 @@ namespace cerberus
         // Perform the de-init sequence of the Cerberus framework
         static void deinit();
 
-        // Send a message
-        static void send(cerberus_message message);
-
-        // Send a message ignoring the destination of message and using id instead
-        static void send(cerberus_message message, HASH32 recipientID);
-
-        // Send a message using the id of the given named object
-        static void send(cerberus_message message, const std::string& recipient);
-
         // Return a working default set of init parameters
         static CerberusInitConf cerberusDefaultParms();
 
@@ -193,38 +179,38 @@ namespace cerberus
         static void log(const std::string& str, LogLevel logLevel = LL_Info,
                         const std::string& author = std::string(), bool application = true);
 
+        // Send a message
+        static void send(cerberus_message message, HASH32 recipientID = CERBERUS_INVALID_ID);
+
+        // Send a message using the id of the given named object
+        static void send(cerberus_message message, const std::string& recipient);
+
         // ======================Public Register===========================
 
         // Retrieves an object ID by its name
-        static HASH32 objIdByName(const std::string& name);
+        static HASH32 idByName(const std::string& name);
 
         // ===========================Factory==============================
 
         // Retrieves a MessageTemplate by its ID
-        static MessageTemplate msgTemplateById(HASH32 id);
+        static OpResData<MessageTemplate> templateById(HASH32 id);
 
         // Retrieves a MessageTemplate by its name
-        static MessageTemplate msgTemplateByName(const std::string& name);
+        static OpResData<MessageTemplate> templateByName(const std::string& name);
 
         // Adds a template of the given message to the register, returning the chosen typeID
-        static HASH32 registerMessage(const Message& message, const std::string& name = std::string());
+        static OpResData<HASH32> registerMessage(const Message& message, const std::string& name);
+        static OpResData<HASH32> registerTemplate(const MessageTemplate& tmplt);
 
         // Factory of messages. A call to this method will return an empty but structured message.
         // This method will return an invalid message if ID was not found, or it will
         // throw an exception if the provided ID is not valid (invalid id or in reserved range)
-        static cerberus_message messageConstruct(HASH32 id);
+        static cerberus_message constructMessage(HASH32 id);
 
         // Factory of messages. A call to this method will return an empty but structured message.
         // This method will return an invalid message if name was not found,
         // or if it's not a Message name.
-        static cerberus_message messageConstruct(const std::string& name);
-
-        // Create a new CerberusObject into the Cerberus memory space.
-        // The Cerberus Framework has the ownership of the object and will manage
-        // its existance in memory. The application will be able to interact with it
-        // sending messages to it.
-        static HASH32 createThread(const std::string& name);
-        static HASH32 createSocket(core::CerberusObject::SocketType socketType, const std::string& name);
+        static cerberus_message constructMessage(const std::string& name);
     };
 }  // namespace cerberus
 
