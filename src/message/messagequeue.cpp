@@ -21,16 +21,16 @@ cerberus_message MessageQueue::next()
 {
     if (m_queue.empty()) return Message::create();
 
-    cerberus_message next(std::move(m_queue.front()));
+    cerberus_message next = m_queue.front();  // increment ref counter
     m_queue.pop_front();
-    return next.ref();
+    return std::move(next);
 }
 //=============================================================================
 cerberus_message MessageQueue::nextKeep() const
 {
     if (m_queue.empty()) return Message::create();
 
-    return std::move(m_queue.front());
+    return m_queue.front();  // copy constructor will deep-copy
 }
 //=============================================================================
 size_t MessageQueue::size() const { return m_queue.size(); }

@@ -459,10 +459,7 @@ namespace cerberus
         // copy constructor make a deep copy (safest)
         managed_ptr(const managed_ptr& other)
             : m_ptr((T*)(other.m_ptr->clone())),
-              m_refcount(new size_t(1))
-        {
-            (*m_refcount)++;
-        };
+              m_refcount(new size_t(1)){};
 
         managed_ptr(managed_ptr&& other)
             : m_ptr(other.m_ptr),
