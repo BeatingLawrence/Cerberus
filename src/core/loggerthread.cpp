@@ -12,20 +12,28 @@ int LoggerThread::tick()
 
     if (message->id() != CERBERUS_MESSAGE_LOG_ID || m_failed.load()) return 0;
 
-    if (m_logFile.writeLine(message->getSlotAt(0)->to<StringSlot>()->value()).fail())
+    auto str = message->getConstSlotAt(0)->to<StringSlot>()->value();
+
+    if (m_conf.fileMaxSize)  // log rotation enabled
+    {
+        SIZE s = str.size() + 1;  // add \n char
+
+        if ((m_currentSize + s) > m_conf.fileMaxSize)
+        {
+            archive();
+            if (m_failed.load()) return 0;
+        }
+
+        m_currentSize += s;
+    }
+
+    if (m_logFile.writeLine(str).fail())
     {
         m_failed.store(true);
         discardMessageQueue();
         m_logFile.close();
         return 0;
     }
-
-    if (!m_conf.fileMaxSize) return 0;  // rotation disabled
-
-    // increment file size
-    m_currentSize += message->getConstSlotAt(0)->to<StringSlot>()->value().size();
-
-    if (m_currentSize > m_conf.fileMaxSize) archive();
 
     return 0;
 }
@@ -109,7 +117,7 @@ void LoggerThread::archive()
 
     std::string logDir = m_conf.logDir;
 
-    m_logFile.move(logDir.append("/").append(archivedFileName)).ok("error while moving log file");
+    m_logFile.move(logDir.append("/").append(archivedFileName)).fail("error while moving log file");
 
     if (m_conf.logDirMaxSize) checkArchiveSize();
 
