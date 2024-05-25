@@ -80,25 +80,25 @@ bool Cerberus::updatePlugin(uint32_t id, const std::string &path, void *handle)
     return Cerberus::framework.reg.data->updatePlugin(id, path, handle);
 }
 //=============================================================================
-void Cerberus::startTimer(std::atomic_bool &bit, TimeFrame t, timerCallback callback)
+void Cerberus::startTimer(std::atomic_bool &bit, TimeFrame t, timerCallback cb, void *ctx)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, t, callback);
+    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, t, cb, ctx);
 }
 //=============================================================================
-void Cerberus::startTimer(std::atomic_bool &bit, DateTime d, TimeFrame t, timerCallback callback)
+void Cerberus::startTimer(std::atomic_bool &bit, DateTime d, TimeFrame t, timerCallback cb, void *ctx)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, d, t, callback);
+    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, d, t, cb, ctx);
 }
 //=============================================================================
-void Cerberus::startTimer(std::atomic_bool &bit, DateTime d, timerCallback callback)
+void Cerberus::startTimer(std::atomic_bool &bit, DateTime d, timerCallback cb, void *ctx)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, d, callback);
+    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, d, cb, ctx);
 }
 //=============================================================================
 void Cerberus::stopTimer(std::atomic_bool &bit)

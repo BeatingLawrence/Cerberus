@@ -107,7 +107,7 @@ void Thread::construct(ThreadPeriodicity periodicity, const TimeFrame& time, con
 {
     if (periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicMessage)
     {
-        if (!time.isValid()) throw cIllegalArgExc("Invalid time in Thread creation");
+        if (time.isNull()) throw cIllegalArgExc("Invalid time in Thread creation");
 
         m_time = time.splittedTime();
     }

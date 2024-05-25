@@ -117,7 +117,7 @@ OpRes Socket::_connectP2P(const Host &dest, const TimeFrame &timeout)
 
     Timer timer(timeout);
 
-    if (timeout.isValid()) timer.start();
+    if (!timeout.isNull()) timer.start();
 
     while (true)
     {
@@ -138,7 +138,7 @@ OpRes Socket::_connectP2P(const Host &dest, const TimeFrame &timeout)
                         CerberusUtils::strPrint("error in socket connectP2P: %s", strerror(errno))};
         }
 
-        if (timeout.isValid())
+        if (!timeout.isNull())
             if (!timer.isRunning()) return OR_TimedOut;
     }
 }
@@ -695,7 +695,7 @@ OpRes Socket::recv(ByteBuffer &buffer, const TimeFrame &timeout, const TimeFrame
 {
     if (isFailed()) return OR_FailedInstance;
 
-    if (!timeout.isValid()) return _recv(buffer, true);
+    if (timeout.isNull()) return _recv(buffer, true);
 
     ByteBuffer b;
     buffer.clear();
@@ -703,7 +703,7 @@ OpRes Socket::recv(ByteBuffer &buffer, const TimeFrame &timeout, const TimeFrame
 
     while (true)
     {
-        auto res = waitRead((first || !cycTimeout.isValid()) ? timeout : cycTimeout);
+        auto res = waitRead((first || cycTimeout.isNull()) ? timeout : cycTimeout);
 
         switch (res.res)
         {
@@ -775,7 +775,7 @@ OpRes Socket::waitRead(const TimeFrame &timeout)
     set.fd     = m_fd;
     set.events = POLLIN;
 
-    int ret = poll(&set, 1, timeout.isValid() ? timeout.toMilliseconds() : -1);
+    int ret = poll(&set, 1, timeout.isNull() ? -1 : timeout.toMilliseconds());
 
     if (ret == 0) return OR_TimedOut;  // timeout
 
@@ -803,7 +803,7 @@ OpRes Socket::waitWrite(const TimeFrame &timeout)
     set.fd     = m_fd;
     set.events = POLLOUT;
 
-    int ret = poll(&set, 1, timeout.isValid() ? timeout.toMilliseconds() : -1);
+    int ret = poll(&set, 1, timeout.isNull() ? -1 : timeout.toMilliseconds());
 
     if (ret == 0) return OR_TimedOut;  // timeout
 

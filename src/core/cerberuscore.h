@@ -8,12 +8,14 @@
  *
  */
 
-#include "../thread/player.h"
 #include "../thread/thread.h"
+#include "../thread/threadpool.h"
 #include "eventscheduler.h"
 
 namespace cerberus
 {
+    class Timer;
+
     namespace core
     {
         class CerberusCore : public cerberus::Thread
@@ -21,27 +23,17 @@ namespace cerberus
            private:
             CoreConf m_conf;
 
-            std::list<Player*> m_pool;          // manual triggered
-            std::list<Player*> m_reservedPool;  // message triggered
+            ThreadPool m_pool;
 
             void initializeThreadPool();
             void deinitializeThreadPool();
 
-            void cleanupPlayer(Thread* t);
-
-            static void taskEndCb(void* ctx, Player* thread, OpRes res);
-            void _taskEndCb(Player* thread, OpRes res);
-
             virtual int tick() override;
-
             virtual void warmUp() override;
-
             virtual void coolDown() override;
 
             void processTaskMsg(cerberus_message msg);
             void processMsg(cerberus_message msg);
-
-            void runTask(Task t);
 
            public:
             EventScheduler m_eventScheduler;

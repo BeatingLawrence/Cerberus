@@ -5,8 +5,9 @@
 using namespace cerberus;
 
 //=============================================================================
-void Timer::defaultTimeoutCallback()
+void Timer::defaultTimeoutCallback(void *ctx)
 {
+    (void)ctx;
     // noop
 }
 //=============================================================================
@@ -14,7 +15,8 @@ Timer::Timer()
     : m_running(false),
       m_periodic(false),
       m_time(),
-      m_callback(defaultTimeoutCallback)
+      m_callback(defaultTimeoutCallback),
+      m_ctx(nullptr)
 {
 }
 //=============================================================================
@@ -22,7 +24,8 @@ Timer::Timer(const TimeFrame &time, bool periodic)
     : m_running(false),
       m_periodic(periodic),
       m_time(time),
-      m_callback(defaultTimeoutCallback)
+      m_callback(defaultTimeoutCallback),
+      m_ctx(nullptr)
 {
 }
 //=============================================================================
@@ -33,9 +36,9 @@ void Timer::setTime(const TimeFrame &time) { m_time = time; }
 void Timer::start()
 {
     if (m_periodic)
-        Cerberus::startTimer(m_running, m_time, m_callback);
+        Cerberus::startTimer(m_running, m_time, m_callback, m_ctx);
     else
-        Cerberus::startTimer(m_running, DateTime::current().add(m_time), m_callback);
+        Cerberus::startTimer(m_running, DateTime::current().add(m_time), m_callback, m_ctx);
 }
 //=============================================================================
 void Timer::stop() { Cerberus::stopTimer(m_running); }
@@ -48,5 +51,9 @@ void Timer::reset()
 //=============================================================================
 bool Timer::isRunning() { return m_running; }
 //=============================================================================
-void Timer::provideTimeoutCallback(timerCallback callback) { m_callback = callback; }
+void Timer::provideTimeoutCallback(timerCallback callback, void *ctx)
+{
+    m_callback = callback;
+    m_ctx      = ctx;
+}
 //=============================================================================

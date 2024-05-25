@@ -22,6 +22,7 @@ class myclass
     {
         (void)data;
         ((myclass*)ctx)->print();
+        Thread::sleep(2000);
         ((myclass*)ctx)->increment();
         ((myclass*)ctx)->print();
         return cerberus::OR_OK;
@@ -62,13 +63,26 @@ TEST(playerTest, standalone)
     p.join(true);
 }
 
-TEST(playerTest, threadPool)
+TEST(playerTest, threadPool)  // to test dynamic thread management, set the thread pool to 1
 {
-    myclass c;
+    for (int i = 0; i < 5; i++)
+    {
+        myclass c1, c2;
 
-    auto m = Cerberus::constructMessage(CERBERUS_MESSAGE_TASK_ID);
-    m->getSlot("task")->to<TaskSlot>()->value({myclass::inc, &c});
-    Cerberus::send(m);
+        {
+            auto m = Cerberus::constructMessage(CERBERUS_MESSAGE_TASK_ID);
+            m->getSlot("task")->to<TaskSlot>()->value({myclass::inc, &c1});
+            Cerberus::send(m);
+        }
 
-    Thread::sleep(1000);
+        {
+            auto m = Cerberus::constructMessage(CERBERUS_MESSAGE_TASK_ID);
+            m->getSlot("task")->to<TaskSlot>()->value({myclass::inc, &c2});
+            Cerberus::send(m);
+        }
+
+        Thread::sleep(5000);
+    }
+
+    Thread::sleep(15000);
 }

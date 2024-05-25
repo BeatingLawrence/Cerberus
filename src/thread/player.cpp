@@ -23,7 +23,7 @@ int Player::tick()
             auto res = m_cb(m_ctx, m_data);
             if (m_endCb)
             {
-                m_endCb(m_endCbCtx, this, res);
+                m_endCb(m_endCbCtx, m_endCbData, res);
             }
         }
 
@@ -88,12 +88,13 @@ OpRes Player::run(playerCallback cb, void *ctx, void *data)
     return OR_OK;
 }
 //=============================================================================
-OpRes Player::setTaskEndCB(taskEndCallback cb, void *ctx)
+OpRes Player::setTaskEndCB(taskEndCallback cb, void *ctx, void *data)
 {
     if (running()) return OR_TemporaryUnavailable;
 
-    m_endCb    = cb;
-    m_endCbCtx = ctx;
+    m_endCb     = cb;
+    m_endCbCtx  = ctx;
+    m_endCbData = data;
     return OR_OK;
 }
 //=============================================================================

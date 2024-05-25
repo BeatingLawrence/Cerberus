@@ -98,7 +98,7 @@ TimeFrame::TimeFrame(uint64_t count, Unit unit)
     }
 }
 //=============================================================================
-bool TimeFrame::isValid() const { return (m_us != 0); }
+bool TimeFrame::isNull() const { return (m_us == 0); }
 //=============================================================================
 bool TimeFrame::isNegative() const { return m_negative; }
 //=============================================================================

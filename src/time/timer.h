@@ -18,8 +18,9 @@ namespace cerberus
         TimeFrame m_time;
 
         timerCallback m_callback;
+        void* m_ctx;
 
-        static void defaultTimeoutCallback();
+        static void defaultTimeoutCallback(void* ctx);
 
        public:
         Timer();
@@ -41,7 +42,7 @@ namespace cerberus
         bool isRunning();
 
         // Sets a callback to be executed when the timer expires
-        void provideTimeoutCallback(timerCallback callback);
+        void provideTimeoutCallback(timerCallback callback, void* ctx);
     };
 }  // namespace cerberus
 

@@ -10,7 +10,7 @@ namespace cerberus
        private:
         playerCallback m_cb;
         taskEndCallback m_endCb;
-        void *m_ctx, *m_endCbCtx, *m_data;
+        void *m_ctx, *m_endCbCtx, *m_data, *m_endCbData;
         void sendTaskEndMsg(HASH32 recipient, OpRes res);
 
         virtual int tick() override;
@@ -39,7 +39,7 @@ namespace cerberus
 
         // set a new task-end callback. This function will be called
         // when the task ends and will contain the task result
-        OpRes setTaskEndCB(taskEndCallback cb, void* ctx = nullptr);
+        OpRes setTaskEndCB(taskEndCallback cb, void* ctx = nullptr, void* data = nullptr);
     };
 
 }  // namespace cerberus

@@ -53,8 +53,8 @@ namespace cerberus
         // Construct a TimeFrame object
         TimeFrame(uint64_t count, Unit unit = U_MilliSecond);
 
-        // Return true if the instance is valid
-        bool isValid() const;
+        // Return true if the instance is null (i.e. equals to 0)
+        bool isNull() const;
 
         // Return true if the time value is negative
         bool isNegative() const;

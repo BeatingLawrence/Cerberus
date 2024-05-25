@@ -84,10 +84,9 @@ cerberus::cerberus_message ThreadBase::nextMessage()
 {
     MutexLocker locker(&m_mutex);
 
-    if (m_queue.size() == 1 && m_periodicity == TP_Message && !m_pausedFlag)
-    {
-        setPausedFlag(true);
-    }
+    if (m_queue.isEmpty()) return Message::create();  // invalid
+
+    if (m_queue.size() == 1 && m_periodicity == TP_Message && !m_pausedFlag) setPausedFlag(true);
 
     return m_queue.next().ref();
 }

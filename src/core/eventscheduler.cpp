@@ -26,17 +26,22 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
 
             if (now >= (*it).expiryDate)  // expired
             {
-                (*it).callback();
-
-                if ((*it).time.isValid())
+                if (!(*it).time.isNull())
+                {
                     // periodic timer
                     (*it).expiryDate = now.add((*it).time);
+
+                    (*it).callback((*it).ctx);  // call the callback
+                }
                 else
                 {
                     // one-shot timer
                     (*(*it).bit) = false;
                     m_timers.erase(it);
                     done = false;
+
+                    (*it).callback((*it).ctx);  // call the callback
+
                     break;
                 }
             }
@@ -46,13 +51,15 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
     return 0;
 }
 //=============================================================================
-void EventScheduler::addTimer(std::atomic_bool &bit, DateTime d, TimeFrame t, timerCallback callback)
+void EventScheduler::addTimer(std::atomic_bool &bit, DateTime d, TimeFrame t, timerCallback callback,
+                              void *ctx)
 {
     TimerData data  = {};
     data.bit        = &bit;
     data.expiryDate = d;
     data.time       = t;
     data.callback   = callback;
+    data.ctx        = ctx;
 
     MutexLocker locker(m_mutex);
 
@@ -64,6 +71,7 @@ void EventScheduler::addTimer(std::atomic_bool &bit, DateTime d, TimeFrame t, ti
             data.expiryDate = d;
             el.time         = t;
             el.callback     = callback;
+            el.ctx          = ctx;
             return;
         }
     }
@@ -89,19 +97,20 @@ EventScheduler::~EventScheduler()
     }
 }
 //=============================================================================
-void EventScheduler::startTimer(std::atomic_bool &bit, TimeFrame t, timerCallback callback)
+void EventScheduler::startTimer(std::atomic_bool &bit, TimeFrame t, timerCallback callback, void *ctx)
 {
-    addTimer(bit, DateTime::current().add(t), t, callback);
+    addTimer(bit, DateTime::current().add(t), t, callback, ctx);
 }
 //=============================================================================
-void EventScheduler::startTimer(std::atomic_bool &bit, DateTime d, TimeFrame t, timerCallback callback)
+void EventScheduler::startTimer(std::atomic_bool &bit, DateTime d, TimeFrame t, timerCallback callback,
+                                void *ctx)
 {
-    addTimer(bit, d, t, callback);
+    addTimer(bit, d, t, callback, ctx);
 }
 //=============================================================================
-void EventScheduler::startTimer(std::atomic_bool &bit, DateTime d, timerCallback callback)
+void EventScheduler::startTimer(std::atomic_bool &bit, DateTime d, timerCallback callback, void *ctx)
 {
-    addTimer(bit, d, TimeFrame(), callback);
+    addTimer(bit, d, TimeFrame(), callback, ctx);
 }
 //=============================================================================
 void EventScheduler::stopTimer(std::atomic_bool &bit)

@@ -687,11 +687,11 @@ namespace cerberus
     class Player;
     class Thread;
 
-    typedef void (*timerCallback)();
-    typedef int (*threadTickCallback)(cerberus_message, Thread*);
+    typedef void (*timerCallback)(void* ctx);
+    typedef int (*threadTickCallback)(cerberus_message msg, Thread* thr);
     typedef void (*threadCallback)();
     typedef OpRes (*playerCallback)(void* ctx, void* data);
-    typedef void (*taskEndCallback)(void* ctx, Player*, OpRes);
+    typedef void (*taskEndCallback)(void* ctx, void* data, OpRes result);
 
     struct Task
     {
