@@ -378,6 +378,7 @@ namespace cerberus
     struct CoreConf
     {
         SIZE threadPool;  // set the size of the Cerberus thread pool. a value of zero disables it
+        uint32_t backupThreadMaxTime;  // set the maximum time to keep backup threads alive (in ms)
     };
 
     struct CerberusInitConf
@@ -692,6 +693,27 @@ namespace cerberus
     typedef void (*threadCallback)();
     typedef OpRes (*playerCallback)(void* ctx, void* data);
     typedef void (*taskEndCallback)(void* ctx, void* data, OpRes result);
+
+    struct TimerData
+    {
+        DateTime delay;
+        TimeFrame time;
+        std::atomic_bool* bit;
+        timerCallback callback;
+        void* ctx;
+
+        bool isPeriodic() { return !time.isNull(); }
+        bool isDelayed() { return delay.isValid(); }
+        bool isValid() { return (isPeriodic() || isDelayed()) && bit; }
+    };
+
+    enum TimerType
+    {
+        TT_OneShot,   // timer counts until expiry and stops (default)
+        TT_Periodic,  // timer counts until expiry and then it restarts counting (it never stops)
+        TT_Delayed,   // timer counts until delay time and then it counts the time (it never stops)
+        TT_Alarm,     // timer counts until delay time and stops
+    };
 
     struct Task
     {

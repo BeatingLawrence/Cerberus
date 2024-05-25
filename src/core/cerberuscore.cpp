@@ -12,7 +12,7 @@ void CerberusCore::initializeThreadPool()
 
     logInfo("Building thread pool");
 
-    m_pool.build(m_conf.threadPool, 10000);
+    m_pool.build(m_conf.threadPool, m_conf.backupThreadMaxTime);
 }
 //=============================================================================
 void CerberusCore::deinitializeThreadPool()

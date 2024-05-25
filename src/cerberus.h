@@ -23,6 +23,7 @@ namespace cerberus
     }  // namespace core
 
     class Timer;
+    class Alarm;
 
     template <class T>
     struct FrameworkLock
@@ -111,6 +112,7 @@ namespace cerberus
         friend class ::cerberus::core::CerberusLog;
         friend class ::cerberus::core::LibLoader;
         friend class ::cerberus::Timer;
+        friend class ::cerberus::Alarm;
 
        private:
         static FrameworkData framework;
@@ -145,15 +147,8 @@ namespace cerberus
 
         // =======================Event scheduler===========================
 
-        // Start a new periodic timer that will fire every t time
-        static void startTimer(std::atomic_bool& bit, TimeFrame t, timerCallback cb, void* ctx);
-
-        // Start a new periodic timer that will fire at d (the first time) and then, every t time
-        static void startTimer(std::atomic_bool& bit, DateTime d, TimeFrame t, timerCallback cb, void* ctx);
-
-        // Start a new one-shot timer that will fire at d and then it will be removed from the
-        // references as stopTimer() were called
-        static void startTimer(std::atomic_bool& bit, DateTime d, timerCallback cb, void* ctx);
+        // Start a timer
+        static void startTimer(TimerData& data);
 
         // Stop a timer and remove it from references
         static void stopTimer(std::atomic_bool& bit);

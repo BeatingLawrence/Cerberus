@@ -45,8 +45,8 @@ DateTime::DateTime(uint32_t seconds, uint32_t nanoseconds)
 //=============================================================================
 bool DateTime::isValid() const
 {
-    return m_offset.isNull() || (m_time.tm_sec || m_time.tm_min || m_time.tm_hour || m_time.tm_mday ||
-                                 m_time.tm_mon || m_time.tm_year);
+    return !m_offset.isNull() || (m_time.tm_sec || m_time.tm_min || m_time.tm_hour || m_time.tm_mday ||
+                                  m_time.tm_mon || m_time.tm_year);
 }
 //=============================================================================
 bool DateTime::usingDst() const { return m_time.tm_isdst > 0; }

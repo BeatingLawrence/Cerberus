@@ -16,6 +16,8 @@ TEST(fileTest, creation)
 
 TEST(iniDataFileTest, read)  // BEFORE TEST, prepare a read.ini file containing the following data:
 {
+    if (File::existsAsFile("read.ini").fail()) GTEST_SKIP();
+
     IniDataFile file("read.ini");
     EXPECT_TRUE(file.load().ok());
     EXPECT_STREQ(file.read_string("string_value").value.c_str(), "this is a string");

@@ -13,9 +13,11 @@ namespace cerberus
        private:
         std::atomic_bool m_running;
 
-        bool m_periodic;
+        TimerType m_type;
 
         TimeFrame m_time;
+
+        DateTime m_delay;
 
         timerCallback m_callback;
         void* m_ctx;
@@ -25,19 +27,19 @@ namespace cerberus
        public:
         Timer();
 
-        Timer(const TimeFrame& time, bool periodic = false);
+        Timer(const TimeFrame& time, TimerType type = TT_OneShot, const DateTime& delay = DateTime());
 
         Timer(const Timer& other) = delete;
 
         ~Timer();
 
-        void setTime(const TimeFrame& time);
+        void setTime(const TimeFrame& time, const DateTime& delay = DateTime());
+
+        void setTime(const DateTime& delay);
 
         void start();
 
         void stop();
-
-        void reset();
 
         bool isRunning();
 

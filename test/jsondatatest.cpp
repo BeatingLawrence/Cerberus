@@ -4,6 +4,12 @@
 
 using namespace cerberus;
 
+static bool resources()
+{
+    // check for the testing resources
+    return File::existsAsFile("jsontest.json").ok();
+}
+
 TEST(jsonDataTest, create_generate)
 {
     JsonData root;
@@ -36,6 +42,8 @@ TEST(jsonDataTest, create_generate)
 
 TEST(jsonDataTest, parse)
 {
+    if (!resources()) GTEST_SKIP();
+
     JsonData data;
     File f("jsontest.json");
     ASSERT_TRUE(f.open().ok());
@@ -47,6 +55,8 @@ TEST(jsonDataTest, parse)
 
 TEST(jsonDataTest, copy_generate)
 {
+    if (!resources()) GTEST_SKIP();
+
     JsonData data;
     File f("jsontest.json");
     ASSERT_TRUE(f.open().ok());
@@ -59,6 +69,8 @@ TEST(jsonDataTest, copy_generate)
 
 TEST(jsonDataTest, search)
 {
+    if (!resources()) GTEST_SKIP();
+
     JsonData data;
     File f("jsontest.json");
     ASSERT_TRUE(f.open().ok());

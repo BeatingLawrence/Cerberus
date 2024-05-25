@@ -15,38 +15,21 @@ namespace cerberus
         class EventScheduler : public cerberus::Thread
         {
            private:
-            struct TimerData
-            {
-                std::atomic_bool* bit;
-                DateTime expiryDate;  // point in time when the timer will fire
-                TimeFrame time;       // amount of time between fires (if valid, timer is periodic)
-                timerCallback callback;
-                void* ctx;
-            };
-
             std::vector<TimerData> m_timers;
 
             Mutex m_mutex;
 
             virtual int tick() override;
 
-            void addTimer(std::atomic_bool& bit, DateTime d, TimeFrame t, timerCallback callback, void* ctx);
+            void addTimer(std::atomic_bool* bit, DateTime d, TimeFrame t, timerCallback callback, void* ctx);
 
            public:
             EventScheduler();
 
             virtual ~EventScheduler();
 
-            // Start a new periodic timer that will fire every t time
-            void startTimer(std::atomic_bool& bit, TimeFrame t, timerCallback callback, void* ctx);
-
-            // Start a new periodic timer that will fire at d (the first time) and then, every t time
-            void startTimer(std::atomic_bool& bit, DateTime d, TimeFrame t, timerCallback callback,
-                            void* ctx);
-
-            // Start a new one-shot timer that will fire at d and then it will be removed from the references
-            // as stopTimer() were called
-            void startTimer(std::atomic_bool& bit, DateTime d, timerCallback callback, void* ctx);
+            // Start a timer. The configuration depends on the validity of data members
+            void startTimer(TimerData& data);
 
             // Stop a timer and remove it from references
             void stopTimer(std::atomic_bool& bit);

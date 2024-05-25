@@ -80,25 +80,11 @@ bool Cerberus::updatePlugin(uint32_t id, const std::string &path, void *handle)
     return Cerberus::framework.reg.data->updatePlugin(id, path, handle);
 }
 //=============================================================================
-void Cerberus::startTimer(std::atomic_bool &bit, TimeFrame t, timerCallback cb, void *ctx)
+void Cerberus::startTimer(TimerData &data)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, t, cb, ctx);
-}
-//=============================================================================
-void Cerberus::startTimer(std::atomic_bool &bit, DateTime d, TimeFrame t, timerCallback cb, void *ctx)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, d, t, cb, ctx);
-}
-//=============================================================================
-void Cerberus::startTimer(std::atomic_bool &bit, DateTime d, timerCallback cb, void *ctx)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    Cerberus::framework.core.data->m_eventScheduler.startTimer(bit, d, cb, ctx);
+    Cerberus::framework.core.data->m_eventScheduler.startTimer(data);
 }
 //=============================================================================
 void Cerberus::stopTimer(std::atomic_bool &bit)
@@ -159,7 +145,8 @@ CerberusInitConf Cerberus::cerberusDefaultParms()
     toReturn.logSetup.appLogLevel  = LL_Error;
     toReturn.logSetup.cerbLogLevel = LL_Error;
 
-    toReturn.coreSetup.threadPool = 0;
+    toReturn.coreSetup.threadPool          = 0;
+    toReturn.coreSetup.backupThreadMaxTime = 10000;  // 10 seconds
 
 #ifdef WINDOWS_SYSTEM
     toReturn.logSetup.infoRole.foregroundColor    = TERMINAL_FOREGROUND_GREEN;

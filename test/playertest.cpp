@@ -22,7 +22,7 @@ class myclass
     {
         (void)data;
         ((myclass*)ctx)->print();
-        Thread::sleep(2000);
+        Thread::sleep(300);
         ((myclass*)ctx)->increment();
         ((myclass*)ctx)->print();
         return cerberus::OR_OK;
@@ -81,8 +81,8 @@ TEST(playerTest, threadPool)  // to test dynamic thread management, set the thre
             Cerberus::send(m);
         }
 
-        Thread::sleep(5000);
+        Thread::sleep(1000);
     }
 
-    Thread::sleep(15000);
+    Thread::sleep(5000);
 }

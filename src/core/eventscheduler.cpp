@@ -24,12 +24,12 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
                 continue;
             }
 
-            if (now >= (*it).expiryDate)  // expired
+            if (now >= (*it).delay)  // expired
             {
                 if (!(*it).time.isNull())
                 {
                     // periodic timer
-                    (*it).expiryDate = now.add((*it).time);
+                    (*it).delay = now.add((*it).time);
 
                     (*it).callback((*it).ctx);  // call the callback
                 }
@@ -51,27 +51,27 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
     return 0;
 }
 //=============================================================================
-void EventScheduler::addTimer(std::atomic_bool &bit, DateTime d, TimeFrame t, timerCallback callback,
+void EventScheduler::addTimer(std::atomic_bool *bit, DateTime d, TimeFrame t, timerCallback callback,
                               void *ctx)
 {
-    TimerData data  = {};
-    data.bit        = &bit;
-    data.expiryDate = d;
-    data.time       = t;
-    data.callback   = callback;
-    data.ctx        = ctx;
+    TimerData data = {};
+    data.bit       = bit;
+    data.delay     = d;
+    data.time      = t;
+    data.callback  = callback;
+    data.ctx       = ctx;
 
     MutexLocker locker(m_mutex);
 
     for (auto &&el : m_timers)
     {
-        if (el.bit == &bit)  // timer already in vector
+        if (el.bit == bit)  // timer already in vector
         {
-            (*el.bit)       = true;
-            data.expiryDate = d;
-            el.time         = t;
-            el.callback     = callback;
-            el.ctx          = ctx;
+            (*el.bit)   = true;
+            data.delay  = d;
+            el.time     = t;
+            el.callback = callback;
+            el.ctx      = ctx;
             return;
         }
     }
@@ -97,20 +97,19 @@ EventScheduler::~EventScheduler()
     }
 }
 //=============================================================================
-void EventScheduler::startTimer(std::atomic_bool &bit, TimeFrame t, timerCallback callback, void *ctx)
+void EventScheduler::startTimer(TimerData &data)
 {
-    addTimer(bit, DateTime::current().add(t), t, callback, ctx);
-}
-//=============================================================================
-void EventScheduler::startTimer(std::atomic_bool &bit, DateTime d, TimeFrame t, timerCallback callback,
-                                void *ctx)
-{
-    addTimer(bit, d, t, callback, ctx);
-}
-//=============================================================================
-void EventScheduler::startTimer(std::atomic_bool &bit, DateTime d, timerCallback callback, void *ctx)
-{
-    addTimer(bit, d, TimeFrame(), callback, ctx);
+    if (!data.isValid()) return;
+
+    if (data.isPeriodic())
+    {
+        if (data.isDelayed())
+            addTimer(data.bit, data.delay, data.time, data.callback, data.ctx);
+        else
+            addTimer(data.bit, DateTime::current().add(data.time), data.time, data.callback, data.ctx);
+    }
+    else
+        addTimer(data.bit, data.delay, TimeFrame(), data.callback, data.ctx);
 }
 //=============================================================================
 void EventScheduler::stopTimer(std::atomic_bool &bit)
