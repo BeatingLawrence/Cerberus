@@ -26,7 +26,7 @@
 using namespace cerberus;
 
 //=============================================================================
-Socket::Socket(SocketType type, int fd, SSL_CTX *ctx)
+Socket::Socket(SocketType type, int fd, const Host &remote, SSL_CTX *ctx)
     : m_type(type),
       m_extern(true),
       m_maxConnections(DEFAULT_MAX_CONNECTIONS),
@@ -35,7 +35,8 @@ Socket::Socket(SocketType type, int fd, SSL_CTX *ctx)
       m_recvBuffer(DEFAULT_RECV_BUFFER_SIZE),
       m_sslCtx(ctx),
       m_ssl(nullptr),
-      m_bind()
+      m_bind(),
+      m_remote(remote)
 {
     if (ctx != nullptr)
     {
@@ -221,7 +222,13 @@ OpRes Socket::_recv(ByteBuffer &buffer, bool donotblock)
 
     if (donotblock) flags |= MSG_DONTWAIT;
 
-    auto ret = ::recv(m_fd, m_recvBuffer.data(), m_recvBuffer.size(), flags);
+    sockaddr_in addr{};
+    socklen_t len = sizeof(sockaddr_in);
+
+    auto ret = ::recvfrom(m_fd, m_recvBuffer.data(), m_recvBuffer.size(), flags, (sockaddr *)&addr, &len);
+
+    m_remote.octet_networkOrder = addr.sin_addr.s_addr;
+    m_remote.port               = ntohs(addr.sin_port);
 
     if (ret == -1)
     {
@@ -767,6 +774,36 @@ bool Socket::isConnected() const
 //=============================================================================
 void Socket::setRecvBufferSize(size_t size) { m_recvBuffer.resize(size); }
 //=============================================================================
+const Host &Socket::remote() { return m_remote; }
+//=============================================================================
+OpRes Socket::canRead()
+{
+    if (isFailed()) return OR_FailedInstance;
+
+    pollfd set{};
+    set.fd     = m_fd;
+    set.events = POLLIN;
+
+    int ret = poll(&set, 1, 0);
+
+    if (ret == 0) return OR_TimedOut;  // timeout
+
+    if (ret == -1)
+    {
+        return {OR_SystemFailure, CerberusUtils::strPrint("error in poll: %s", strerror(errno))};
+    }
+
+    if (set.revents & POLLIN) return OR_OK;
+
+    if (set.revents & POLLERR) return OR_Failure;
+
+    if (set.revents & POLLHUP) return OR_Hangup;
+
+    if (set.revents & POLLNVAL) return OR_BadConditions;
+
+    return OR_Failure;
+}
+//=============================================================================
 OpRes Socket::waitRead(const TimeFrame &timeout)
 {
     if (isFailed()) return OR_FailedInstance;
@@ -1060,21 +1097,16 @@ OpRes Socket::listen(size_t maxconn)
     return OR_OK;
 }
 //=============================================================================
-Socket Socket::accept(Host &peer)
+Socket *Socket::accept()
 {
-    if (isFailed() || transportType() != TCP || m_extern) return {Socket_None, -1};
+    if (isFailed() || transportType() != TCP || m_extern) return nullptr;
 
-    auto fd = _accept(peer);
+    Host h;
+    auto fd = _accept(h);
 
-    if (fd.fail()) return {Socket_None, -1};
+    if (fd.fail()) return nullptr;
 
-    return {m_type, static_cast<int>(fd.value), m_sslCtx};
-}
-//=============================================================================
-Socket Socket::accept()
-{
-    Host peer;  // mock
-    return accept(peer);
+    return new Socket(m_type, static_cast<int>(fd.value), h, m_sslCtx);
 }
 //=============================================================================
 #ifdef LINUX_SYSTEM

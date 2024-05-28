@@ -88,13 +88,13 @@ cerberus::cerberus_message ThreadBase::nextMessage()
 
     if (m_queue.size() == 1 && m_periodicity == TP_Message && !m_pausedFlag) setPausedFlag(true);
 
-    return m_queue.next().ref();
+    return m_queue.next();
 }
 //=============================================================================
 cerberus::cerberus_message ThreadBase::nextMessageKeep() const
 {
     MutexLocker locker(&m_mutex);
-    return m_queue.nextKeep().ref();
+    return m_queue.nextKeep();
 }
 //=============================================================================
 void ThreadBase::discardMessageQueue()

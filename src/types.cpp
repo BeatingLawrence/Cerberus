@@ -342,7 +342,7 @@ std::string cerberus::OpRes::errorString() const
             return "Query failure";
         case OR_DBFailure:
             return "Database failure";
-        case OR_TableAlreadyPresent:
+        case OR_AlreadyPresent:
             return "Table already present";
         case OR_InvalidFile:
             return "Given file is not valid";

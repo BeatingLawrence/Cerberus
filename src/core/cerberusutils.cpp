@@ -463,6 +463,12 @@ MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
             tmplt.addSlotType(ST_VOIDP, "player");
             break;
 
+        case CERBERUS_MESSAGE_SOCKDATA_ID:
+            tmplt.addSlotType(ST_RESULT, "result");
+            tmplt.addSlotType(ST_HOST, "host");
+            tmplt.addSlotType(ST_BYTEBUFFER, "buffer");
+            break;
+
             // add here more message specializations..
 
         default:
@@ -483,6 +489,22 @@ HASH32 CerberusUtils::hash_fnv1a(const std::string& str)
         hash = hash ^ (HASH32)(*ch);
         hash = hash * FNV_PRIME;
         ch++;
+    }
+
+    return hash;
+}
+//=============================================================================
+HASH32 CerberusUtils::hash_fnv1a(const ByteBuffer& buf)
+{
+    // This method uses FNV1A algorithm
+    HASH32 hash   = FNV_OFFSET_BASIS;
+    const BYTE* b = buf.data();
+
+    for (SIZE i = 0; i < buf.size(); i++)
+    {
+        hash = hash ^ (HASH32)(*b);
+        hash = hash * FNV_PRIME;
+        b++;
     }
 
     return hash;

@@ -24,17 +24,6 @@ namespace cerberus
 
     class Socket
     {
-       public:
-        enum SocketType : uint8_t
-        {
-            Socket_None,
-            Socket_UDP,
-            Socket_TCP,
-            Socket_TCPP2P,
-            Socket_ICMP,
-            Socket_IPC,
-        };
-
        private:
         enum TransportType : uint8_t
         {
@@ -58,11 +47,11 @@ namespace cerberus
         SSL_CTX* m_sslCtx;  // for ssl
         SSL* m_ssl;
 
-        Host m_bind;
+        Host m_bind, m_remote;
 
         // methods:
 
-        Socket(SocketType type, int fd, SSL_CTX* ctx = nullptr);
+        explicit Socket(SocketType type, int fd, const Host& remote, SSL_CTX* ctx = nullptr);
 
         // This method creates a datagram socket and assigns the resulting file descriptor to
         // m_fd. Check is the socket isFailed() after this call
@@ -164,6 +153,12 @@ namespace cerberus
 
         // Set the buffer size used for recv calls, default is 512 bytes
         void setRecvBufferSize(size_t size);
+
+        // Get the last remote host that exchanged data with this socket
+        const Host& remote();
+
+        // Tell if there are bytes to be read
+        OpRes canRead();
 
         // Block until read operation is available.
         // Passing an invalid time will make the call block forever
@@ -281,20 +276,13 @@ namespace cerberus
         // not TCP, this method will return SO_Unavailable
         OpRes listen(size_t maxconn = 0);
 
-        // Block until a new connection is available and return the new socket.
-        // Return the requesting peer as an Host object
-        // If the instance of the socket was returned by an accept or the socket transport is
-        // not TCP, this method will return an invalid socket. If this instance is configured
-        // with TLS, the returned Socket will inherit the basic init settings used in the
-        // TLS_init() call previously
-        Socket accept(Host& peer);
-
         // Block until a new connection is available and return the new socket
         // If the instance of the socket was returned by an accept or the socket transport is
         // not TCP, this method will return an invalid socket. If this instance is configured
         // with TLS, the returned Socket will inherit the basic init settings used in the
         // TLS_init() call previously
-        Socket accept();
+        // [Ownership: caller]
+        Socket* accept();
 
 #ifdef LINUX_SYSTEM
         //  If cork == true then stop sending out frames with send()

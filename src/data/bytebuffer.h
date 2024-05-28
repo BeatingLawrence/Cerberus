@@ -25,10 +25,10 @@ namespace cerberus
 
        public:
         // Construct a ByteBuffer copying its content from a given buffer
-        explicit ByteBuffer(BYTE* buf, SIZE size);
+        explicit ByteBuffer(const BYTE* buf, SIZE size);
 
-        // Construct a ByteBuffer allocating size bytes. The buffer is not initialized and may contain
-        // garbage
+        // Construct a ByteBuffer allocating size bytes. The buffer
+        // is not initialized and may contain garbage value
         explicit ByteBuffer(SIZE size);
 
         // Construct a ByteBuffer allocating size bytes. The buffer is initialized using val value

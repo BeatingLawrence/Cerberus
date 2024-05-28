@@ -101,7 +101,7 @@ void HTTPClient::decodeChunkedData(ByteBuffer &data)
 }
 //=============================================================================
 HTTPClient::HTTPClient()
-    : Socket(Socket::Socket_TCP),
+    : Socket(Socket_TCP),
       m_persistent(false),
       m_remote()
 {

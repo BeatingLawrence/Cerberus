@@ -27,6 +27,7 @@ message(STATUS ${CMAKE_PROJECT_VERSION})
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+option(POSTGRESQL "postgresql backend support")
 
 set(CMAKE_DEBUG_POSTFIX -d)
 
@@ -41,7 +42,7 @@ file(GLOB_RECURSE src_files CONFIGURE_DEPENDS
     "src/*.h"
 )
 
-add_library(Cerberus SHARED
+add_library(Cerberus SHARED EXCLUDE_FROM_ALL
   ${src_files}
 )
 

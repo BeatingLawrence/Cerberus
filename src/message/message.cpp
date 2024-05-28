@@ -38,7 +38,7 @@ slot_ptr Message::getSlotAt(size_t index)
 {
     if (index >= m_slots.size()) throw cIllegalArgExc("Index out of boundaries");
 
-    return m_slots[index].ref();
+    return m_slots[index];
 }
 //=============================================================================
 slot_ptr Message::getConstSlotAt(size_t index) const
@@ -51,7 +51,7 @@ slot_ptr Message::getConstSlotAt(size_t index) const
 slot_ptr Message::getSlot(const std::string& name)
 {
     for (auto& el : m_slots)
-        if (CerberusUtils::areEqual(el->name(), name)) return el.ref();
+        if (CerberusUtils::areEqual(el->name(), name)) return el;
 
     throw cIllegalArgExc("Slot %s does not exist in this message", name.c_str());
 }

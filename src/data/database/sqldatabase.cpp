@@ -22,7 +22,7 @@ cerberus::OpRes SQLDatabase::createTable(DBTableProto& prototype)
 
     auto res = queryPrototype(name);
 
-    if (res.ok()) return OR_TableAlreadyPresent;
+    if (res.ok()) return OR_AlreadyPresent;
 
     if (res.res != OR_NotFound) return res;
 

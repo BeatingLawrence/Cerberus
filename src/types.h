@@ -28,8 +28,9 @@ namespace cerberus
     typedef uint8_t BYTE;
     typedef int64_t OFFSET;
     typedef uint32_t HASH32;
+    typedef HASH32 CHANDLE;
 
-    enum SQLDataType
+    enum SQLDataType : uint8_t
     {
         SDT_Undefined = 0,
         SDT_BigInt,    // 8 byte signed integer
@@ -45,7 +46,7 @@ namespace cerberus
         SDT_Money,     // fixed fractional precision (2 digits typically)
     };
 
-    enum DBBackend
+    enum DBBackend : uint8_t
     {
         DBB_PostgreSQL,
         DBB_Filesystem,
@@ -201,7 +202,7 @@ namespace cerberus
 
     struct CerbVersion
     {
-        enum VersionType
+        enum VersionType : uint8_t
         {
             Alpha,
             Beta,
@@ -215,7 +216,7 @@ namespace cerberus
         std::string text;
     };
 
-    enum FileType
+    enum FileType : uint8_t
     {
         FT_BLK,
         FT_CHR,
@@ -263,7 +264,7 @@ namespace cerberus
 #endif
     };
 
-    enum SlotType
+    enum SlotType : uint8_t
     {
         ST_UNDEFINED = 0,
         ST_BYTE,
@@ -283,13 +284,13 @@ namespace cerberus
         ST_RESULT,
     };
 
-    enum WordMatch
+    enum WordMatch : uint8_t
     {
         WM_CaseSensitive,
         WM_CaseInsensitive,
     };
 
-    enum FileOpenMode
+    enum FileOpenMode : uint8_t
     {
         FOM_Read = 0,         // Open the file for reading only; the file must exist
         FOM_ReadWrite,        // Open the file for reading and writing; the file must exist
@@ -300,7 +301,7 @@ namespace cerberus
                               // file
     };
 
-    enum ThreadPeriodicity
+    enum ThreadPeriodicity : uint8_t
     {
         TP_Message,
         TP_Periodic,
@@ -310,14 +311,24 @@ namespace cerberus
         TP_Trigger,
     };
 
-    enum Radix
+    enum SocketType : uint8_t
+    {
+        Socket_None,
+        Socket_UDP,
+        Socket_TCP,
+        Socket_TCPP2P,
+        Socket_ICMP,
+        Socket_IPC,
+    };
+
+    enum Radix : uint8_t
     {
         Decimal,
         Hexadecimal,
         Binary,
     };
 
-    enum LogLevel
+    enum LogLevel : uint8_t
     {
         LL_Info    = 0,
         LL_Warning = 1,
@@ -325,7 +336,7 @@ namespace cerberus
         LL_Debug   = 3,
     };
 
-    enum SSLShutdownState
+    enum SSLShutdownState : uint8_t
     {
         SSLSH_None,
         SSLSH_Sent,
@@ -379,6 +390,10 @@ namespace cerberus
     {
         SIZE threadPool;  // set the size of the Cerberus thread pool. a value of zero disables it
         uint32_t backupThreadMaxTime;  // set the maximum time to keep backup threads alive (in ms)
+
+        CoreConf()
+            : threadPool(0),
+              backupThreadMaxTime(0){};
     };
 
     struct CerberusInitConf
@@ -388,14 +403,14 @@ namespace cerberus
         bool useCiphers;  // enable cerberus to init and use the OpenSSL library
     };
 
-    enum HTTPVersion
+    enum HTTPVersion : uint8_t
     {
         HTTP_1_0,
         HTTP_1_1,
         HTTP_2,
     };
 
-    enum HTTPMethod
+    enum HTTPMethod : uint8_t
     {
         HTTP_GET,
         HTTP_POST,
@@ -432,6 +447,7 @@ namespace cerberus
             {
                 delete m_ptr;
                 delete m_refcount;
+                fprintf(stderr, "deleting\n");
             }
             else
                 (*m_refcount)--;
@@ -457,10 +473,14 @@ namespace cerberus
             m_refcount = new size_t(1);
         };
 
-        // copy constructor make a deep copy (safest)
+        // copy constructor make a shallow copy
         managed_ptr(const managed_ptr& other)
-            : m_ptr((T*)(other.m_ptr->clone())),
-              m_refcount(new size_t(1)){};
+            : m_ptr((T*)(other.m_ptr)),
+              m_refcount(other.m_refcount)
+        {
+            fprintf(stderr, "shallow copy\n");
+            (*m_refcount)++;
+        };
 
         managed_ptr(managed_ptr&& other)
             : m_ptr(other.m_ptr),
@@ -476,11 +496,12 @@ namespace cerberus
         managed_ptr<T> duplicate() { return managed_ptr<T>((T*)(m_ptr->clone())); };
 
         // just increment ref counter
-        managed_ptr<T> ref()
-        {
-            (*m_refcount)++;
-            return managed_ptr<T>((T*)m_ptr, m_refcount);
-        };
+        // managed_ptr<T> ref()
+        // {
+        //     fprintf(stderr, "ref\n");
+        //     (*m_refcount)++;
+        //     return managed_ptr<T>((T*)m_ptr, m_refcount);
+        // };
 
         T& operator*() const { return *((T*)m_ptr); };
 
@@ -553,6 +574,7 @@ namespace cerberus
         OR_NotEmpty,                  // [general] the item is not empty
         OR_Empty,                     // [general] the item is empty
         OR_Mismatch,                  // [general] the item does not match
+        OR_AlreadyPresent,            // [general] the item is already present
                                       //
         OR_EOF,                       // [file] EOF reached
                                       //
@@ -568,7 +590,6 @@ namespace cerberus
                                       //
         OR_QueryFailure,              // [database] query error
         OR_DBFailure,                 // [database] DB error
-        OR_TableAlreadyPresent,       // [database] the table is already present
                                       //
         OR_ThreadNotJoinable,         // [thread] the thread is not joinable
     };
@@ -707,7 +728,7 @@ namespace cerberus
         bool isValid() { return (isPeriodic() || isDelayed()) && bit; }
     };
 
-    enum TimerType
+    enum TimerType : uint8_t
     {
         TT_OneShot,   // timer counts until expiry and stops (default)
         TT_Periodic,  // timer counts until expiry and then it restarts counting (it never stops)
@@ -838,6 +859,33 @@ namespace cerberus
         // Resolve the given Host using the hostname member.
         // The resulting numeric IP address is written in the ip parameter
         OpRes resolve();
+    };
+
+    enum SockTransfer : uint8_t
+    {
+        Transfer_Bytes,  // the socket will receive up to buffersize bytes
+        Transfer_Time,   // the socket will keep calling recv() until timeout is reached
+    };
+
+    struct SockSettings
+    {
+        SocketType type;            // type of socket (Socket_TCP or Socket_UDP)
+        Host bind;                  // interface to bind the socket to
+        Host remote;                // remote host to keep the connection with
+        SockTransfer transferMode;  // socket data transfer mode
+
+        TimeFrame tout, cyctout;  // timeout values used for Transfer_time
+        SIZE maxpayload;          // recv buffer size of the socket
+
+        bool server;     // true if the socket is a server socket (passive)
+        size_t maxconn;  // maximum number of pending connection (for passive sockets only)
+
+        SockSettings()
+            : type(Socket_TCP),
+              transferMode(Transfer_Bytes),
+              maxpayload(0),
+              server(false),
+              maxconn(0){};
     };
 
     class ByteBuffer;

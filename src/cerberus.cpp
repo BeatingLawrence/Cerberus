@@ -227,6 +227,41 @@ void Cerberus::send(cerberus_message message, const std::string &recipient)
     Cerberus::framework.core.data->addMessage(message);
 }
 //=============================================================================
+OpResData<CHANDLE> Cerberus::newSock(const SockSettings &settings)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->newSock(settings);
+}
+//=============================================================================
+OpRes Cerberus::addSockListener(CHANDLE sock, HASH32 threadID)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->addSockListener(sock, threadID);
+}
+//=============================================================================
+OpRes Cerberus::addSockListener(CHANDLE sock, const std::string &threadName)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->addSockListener(sock, idByName(threadName));
+}
+//=============================================================================
+OpRes Cerberus::sockSend(CHANDLE sock, const ByteBuffer &buffer)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->sockSend(sock, buffer);
+}
+//=============================================================================
+OpRes Cerberus::removeSock(CHANDLE sock)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->removeSock(sock);
+}
+//=============================================================================
 HASH32 Cerberus::idByName(const std::string &name)
 {
     Cerberus::framework.reg.isReadySevere();

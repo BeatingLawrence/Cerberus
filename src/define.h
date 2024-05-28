@@ -53,9 +53,10 @@
 #define CERBERUS_REG_RANGE_START 256u  // the first ID outside the reserved range
 
 // Default templates:
-#define CERBERUS_MESSAGE_TERM_ID 1u     // sent to threads to signal termination
-#define CERBERUS_MESSAGE_LOG_ID 2u      // sent to the logger thread to log on file
-#define CERBERUS_MESSAGE_TASK_ID 3u     // sent to a player to start a task
-#define CERBERUS_MESSAGE_TASKEND_ID 4u  // sent from a player to signal a task end
+#define CERBERUS_MESSAGE_TERM_ID 1u      // sent to threads to signal termination
+#define CERBERUS_MESSAGE_LOG_ID 2u       // sent to the logger thread to log on file
+#define CERBERUS_MESSAGE_TASK_ID 3u      // sent to a player to start a task
+#define CERBERUS_MESSAGE_TASKEND_ID 4u   // sent from a player to signal a task end
+#define CERBERUS_MESSAGE_SOCKDATA_ID 5u  // sent by cerberus to listening threads
 
 #endif  // CERBERUS_DEFINE_H

@@ -135,7 +135,7 @@ void Thread::construct(ThreadPeriodicity periodicity, const TimeFrame& time, con
 #endif
 }
 //=============================================================================
-int Thread::tick() { return m_tickCallback(nextMessage().ref(), this); }
+int Thread::tick() { return m_tickCallback(nextMessage(), this); }
 //=============================================================================
 void Thread::warmUp() { m_warmUpCallback(); }
 //=============================================================================
