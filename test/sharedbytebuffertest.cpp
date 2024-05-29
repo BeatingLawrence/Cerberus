@@ -1,8 +1,7 @@
-#include <cerberus/cerberus.h>
-#include <cerberus/data/sharedbytebuffer.h>
+#include <cerberus.h>
+#include <data/bytebuffer.h>
+#include <data/sharedbytebuffer.h>
 #include <gtest/gtest.h>
-
-#include "cerberus/data/bytebuffer.h"
 
 using namespace cerberus;
 

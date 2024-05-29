@@ -435,10 +435,6 @@ namespace cerberus
         Clonable* m_ptr;
         size_t* m_refcount;
 
-        managed_ptr(T* ptr, size_t* refcount)
-            : m_ptr(ptr),
-              m_refcount(refcount){};
-
         void _destroy()
         {
             if (!m_refcount) return;
@@ -447,7 +443,6 @@ namespace cerberus
             {
                 delete m_ptr;
                 delete m_refcount;
-                fprintf(stderr, "deleting\n");
             }
             else
                 (*m_refcount)--;
@@ -465,24 +460,21 @@ namespace cerberus
             : m_ptr((Clonable*)ptr),
               m_refcount(nullptr)
         {
-            if (m_ptr == nullptr) throw std::exception();
-
             // T must inherit Clonable
             static_assert(std::is_convertible<T*, Clonable*>());
 
-            m_refcount = new size_t(1);
+            if (m_ptr) m_refcount = new size_t(1);
         };
 
         // copy constructor make a shallow copy
-        managed_ptr(const managed_ptr& other)
+        managed_ptr(const managed_ptr<T>& other)
             : m_ptr((T*)(other.m_ptr)),
               m_refcount(other.m_refcount)
         {
-            fprintf(stderr, "shallow copy\n");
-            (*m_refcount)++;
+            if (m_refcount) (*m_refcount)++;
         };
 
-        managed_ptr(managed_ptr&& other)
+        managed_ptr(managed_ptr<T>&& other)
             : m_ptr(other.m_ptr),
               m_refcount(other.m_refcount)
         {
@@ -493,15 +485,7 @@ namespace cerberus
         ~managed_ptr() { _destroy(); };
 
         // duplicate the data (deep copy)
-        managed_ptr<T> duplicate() { return managed_ptr<T>((T*)(m_ptr->clone())); };
-
-        // just increment ref counter
-        // managed_ptr<T> ref()
-        // {
-        //     fprintf(stderr, "ref\n");
-        //     (*m_refcount)++;
-        //     return managed_ptr<T>((T*)m_ptr, m_refcount);
-        // };
+        managed_ptr<T> duplicate() { return (T*)(m_ptr->clone()); };
 
         T& operator*() const { return *((T*)m_ptr); };
 
@@ -515,7 +499,76 @@ namespace cerberus
             _destroy();
             m_ptr      = other.m_ptr;
             m_refcount = other.m_refcount;
-            (*m_refcount)++;
+            if (m_refcount) (*m_refcount)++;
+            return *this;
+        };
+    };
+
+    template <typename T>
+    class unclonable_ptr
+    {
+        T* m_ptr;
+        size_t* m_refcount;
+
+        void _destroy()
+        {
+            if (!m_refcount) return;
+
+            if ((*m_refcount) == 1)
+            {
+                delete m_ptr;
+                delete m_refcount;
+            }
+            else
+                (*m_refcount)--;
+
+            m_ptr      = nullptr;
+            m_refcount = nullptr;
+        };
+
+       public:
+        unclonable_ptr()
+            : m_ptr(nullptr),
+              m_refcount(nullptr){};
+
+        unclonable_ptr(T* ptr)
+            : m_ptr(ptr),
+              m_refcount(nullptr)
+        {
+            if (m_ptr) m_refcount = new size_t(1);
+        };
+
+        // copy constructor make a shallow copy
+        unclonable_ptr(const unclonable_ptr<T>& other)
+            : m_ptr(other.m_ptr),
+              m_refcount(other.m_refcount)
+        {
+            if (m_refcount) (*m_refcount)++;
+        };
+
+        unclonable_ptr(unclonable_ptr<T>&& other)
+            : m_ptr(other.m_ptr),
+              m_refcount(other.m_refcount)
+        {
+            other.m_ptr      = nullptr;
+            other.m_refcount = nullptr;
+        };
+
+        ~unclonable_ptr() { _destroy(); };
+
+        T& operator*() const { return *((T*)m_ptr); };
+
+        T* operator->() const { return (T*)m_ptr; };
+
+        T* get() const { return (T*)m_ptr; };
+
+        // shared copy
+        managed_ptr<T>& operator=(const managed_ptr<T>& other)
+        {
+            _destroy();
+            m_ptr      = other.m_ptr;
+            m_refcount = other.m_refcount;
+            if (m_refcount) (*m_refcount)++;
             return *this;
         };
     };
@@ -523,9 +576,13 @@ namespace cerberus
     class Message;
     class BaseSlot;
 
-    typedef managed_ptr<class cerberus::Message> cerberus_message;
-    typedef managed_ptr<const class cerberus::Message> cerberus_const_message;
-    typedef managed_ptr<class cerberus::BaseSlot> slot_ptr;
+    typedef managed_ptr<::cerberus::Message> cerberus_message;
+    typedef managed_ptr<const ::cerberus::Message> cerberus_const_message;
+    typedef managed_ptr<::cerberus::BaseSlot> slot_ptr;
+
+    class Socket;
+
+    typedef unclonable_ptr<::cerberus::Socket> cerberus_socket;
 
     enum IniDataType : uint8_t
     {

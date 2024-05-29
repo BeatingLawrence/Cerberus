@@ -1,7 +1,7 @@
-#include <cerberus/cerberus.h>
-#include <cerberus/data/filesystem/directory.h>
-#include <cerberus/data/filesystem/file.h>
-#include <cerberus/data/filesystem/inidatafile.h>
+#include <cerberus.h>
+#include <data/filesystem/directory.h>
+#include <data/filesystem/file.h>
+#include <data/filesystem/inidatafile.h>
 #include <gtest/gtest.h>
 
 using namespace cerberus;

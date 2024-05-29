@@ -20,7 +20,6 @@ cmake_minimum_required(VERSION 3.14)
                                         Version
                                           ||
 #]]#                                      V
-
 project(Cerberus LANGUAGES CXX VERSION 2.0.0.1)
 message(STATUS ${CMAKE_PROJECT_VERSION})
 
@@ -32,24 +31,24 @@ option(POSTGRESQL "postgresql backend support")
 set(CMAKE_DEBUG_POSTFIX -d)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set(CMAKE_INSTALL_PREFIX "../Dist" CACHE PATH "..." FORCE)
+  set(CMAKE_INSTALL_PREFIX "../dist" CACHE PATH "framework build output directory" FORCE)
 endif()
 
 # =======================Cerberus library=========================
 
-file(GLOB_RECURSE src_files CONFIGURE_DEPENDS
+file(GLOB_RECURSE cerb_sources CONFIGURE_DEPENDS
     "src/*.cpp"
     "src/*.h"
 )
 
 add_library(Cerberus SHARED EXCLUDE_FROM_ALL
-  ${src_files}
+  ${cerb_sources}
 )
 
 set_property(   #delete install directory on clean
         TARGET Cerberus
         APPEND
-        PROPERTY ADDITIONAL_CLEAN_FILES "../Dist"
+        PROPERTY ADDITIONAL_CLEAN_FILES ${CMAKE_INSTALL_PREFIX}
 )
 
 set_target_properties(Cerberus PROPERTIES PREFIX "lib" IMPORT_PREFIX "lib")
@@ -66,16 +65,15 @@ install(DIRECTORY src/ DESTINATION include/cerberus FILES_MATCHING PATTERN "*.h"
 
 # =======================test executable==========================
 
-file(GLOB_RECURSE test_files CONFIGURE_DEPENDS
+file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS
     "test/*"
 )
 
 add_executable(test EXCLUDE_FROM_ALL
-  ${test_files}
+  ${test_sources}
 )
 
-target_include_directories(test PRIVATE "../Dist/include")
-target_link_directories(test PRIVATE "../Dist/lib")
+target_include_directories(test PRIVATE "src/")
 target_link_libraries(test LINK_PRIVATE Cerberus)
 
 # ================================================================

@@ -1,5 +1,5 @@
-#include <cerberus/cerberus.h>
-#include <cerberus/core/libloader.h>
+#include <cerberus.h>
+#include <core/libloader.h>
 #include <gtest/gtest.h>
 
 using namespace cerberus;

@@ -1,5 +1,5 @@
-#include <cerberus/cerberus.h>
-#include <cerberus/core/cerberusutils.h>
+#include <cerberus.h>
+#include <core/cerberusutils.h>
 #include <gtest/gtest.h>
 
 using namespace cerberus;

@@ -1,5 +1,5 @@
-#include <cerberus/cerberus.h>
-#include <cerberus/data/jsondata.h>
+#include <cerberus.h>
+#include <data/jsondata.h>
 #include <gtest/gtest.h>
 
 using namespace cerberus;

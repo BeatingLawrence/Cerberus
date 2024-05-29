@@ -94,7 +94,7 @@ OpRes CerberusCore::sockCB(void* ctx, void* data)
         {
             auto s = sock->sock->accept();
 
-            if (s) CerberusCore::processClient((CerberusCore*)ctx, s, sock->settings);
+            if (s.get()) CerberusCore::processClient((CerberusCore*)ctx, s.get(), sock->settings);
             // maybe send a message also?
             else
             {

@@ -5,9 +5,9 @@
 #include "../time/timeframe.h"
 #include "../types.h"
 
-#define UDPSocket cerberus::Socket(cerberus::Socket::Socket_UDP)
-#define TCPSocket cerberus::Socket(cerberus::Socket::Socket_TCP)
-#define TCPP2PSocket cerberus::Socket(cerberus::Socket::Socket_TCPP2P)
+#define UDPSocket() cerberus::Socket(cerberus::SocketType::Socket_UDP)
+#define TCPSocket() cerberus::Socket(cerberus::SocketType::Socket_TCP)
+#define TCPP2PSocket() cerberus::Socket(cerberus::SocketType::Socket_TCPP2P)
 
 // A socket capable of great things!
 
@@ -282,7 +282,7 @@ namespace cerberus
         // with TLS, the returned Socket will inherit the basic init settings used in the
         // TLS_init() call previously
         // [Ownership: caller]
-        Socket* accept();
+        cerberus_socket accept();
 
 #ifdef LINUX_SYSTEM
         //  If cork == true then stop sending out frames with send()

@@ -1097,7 +1097,7 @@ OpRes Socket::listen(size_t maxconn)
     return OR_OK;
 }
 //=============================================================================
-Socket *Socket::accept()
+cerberus_socket Socket::accept()
 {
     if (isFailed() || transportType() != TCP || m_extern) return nullptr;
 

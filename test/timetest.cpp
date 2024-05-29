@@ -1,7 +1,7 @@
-#include <cerberus/cerberus.h>
-#include <cerberus/time/datetime.h>
-#include <cerberus/time/timeframe.h>
+#include <cerberus.h>
 #include <gtest/gtest.h>
+#include <time/datetime.h>
+#include <time/timeframe.h>
 
 using namespace cerberus;
 

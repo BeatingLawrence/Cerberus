@@ -1,6 +1,6 @@
-#include <cerberus/cerberus.h>
-#include <cerberus/thread/player.h>
+#include <cerberus.h>
 #include <gtest/gtest.h>
+#include <thread/player.h>
 
 using namespace cerberus;
 

@@ -1,8 +1,7 @@
-#include <cerberus/cerberus.h>
-#include <cerberus/data/database/sqldatabase.h>
+#include <cerberus.h>
+#include <data/database/dbdata.h>
+#include <data/database/sqldatabase.h>
 #include <gtest/gtest.h>
-
-#include "src/data/database/dbdata.h"
 
 using namespace cerberus;
 

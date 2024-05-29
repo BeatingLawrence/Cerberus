@@ -1,6 +1,6 @@
 #include "testthread.h"
 
-#include <cerberus/cerberus.h>
+#include <cerberus.h>
 
 int TestThread::tick()
 {

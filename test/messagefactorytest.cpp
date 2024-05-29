@@ -1,6 +1,6 @@
-#include <cerberus/cerberus.h>
-#include <cerberus/message/messagetemplate.h>
+#include <cerberus.h>
 #include <gtest/gtest.h>
+#include <message/messagetemplate.h>
 
 TEST(messageFactoryTest, registering_message)
 {

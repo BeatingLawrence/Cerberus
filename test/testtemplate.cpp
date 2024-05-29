@@ -1,14 +1,8 @@
+#include <cerberus.h>
 #include <gtest/gtest.h>
-#include <cerberus/cerberus.h>
 
-TEST(testTemplate, aaa)
-{
-}
+TEST(testTemplate, aaa) {}
 
-TEST(testTemplate, bbb)
-{
-}
+TEST(testTemplate, bbb) {}
 
-TEST(testTemplate, ccc)
-{
-}
+TEST(testTemplate, ccc) {}

@@ -1,7 +1,7 @@
-#include <cerberus/cerberus.h>
-#include <cerberus/thread/thread.h>
-#include <cerberus/time/timer.h>
+#include <cerberus.h>
 #include <gtest/gtest.h>
+#include <thread/thread.h>
+#include <time/timer.h>
 
 using namespace cerberus;
 

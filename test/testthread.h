@@ -1,7 +1,7 @@
 #ifndef TESTTHREAD_H
 #define TESTTHREAD_H
 
-#include <cerberus/thread/thread.h>
+#include <thread/thread.h>
 
 class TestThread : public cerberus::Thread
 {

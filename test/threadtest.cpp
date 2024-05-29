@@ -1,5 +1,5 @@
-#include <cerberus/cerberus.h>
-#include <cerberus/core/cerberusregister.h>
+#include <cerberus.h>
+#include <core/cerberusregister.h>
 #include <gtest/gtest.h>
 
 #include "./testthread.h"
