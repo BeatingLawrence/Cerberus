@@ -724,24 +724,32 @@ OpRes Socket::recv(ByteBuffer &buffer, const TimeFrame &timeout, const TimeFrame
 
             case OR_Hangup:
                 flushSocket(buffer);
-                return {OR_Hangup, "poll returned hangup"};
+
+                if (buffer.isEmpty())
+                    return {OR_Hangup, "poll returned hangup"};
+                else
+                    return OpRes(OR_OK).addOptional(OR_Hangup);
 
             default:
                 return res;
         };
 
         res = Socket::_recv(b, false);
+        buffer += b;
 
         switch (res.res)
         {
             case OR_OK:
                 first = false;
-                buffer += b;
                 break;
 
             case OR_Hangup:
                 if (TLS_hasSession()) flushSocket(buffer);
-                return {OR_Hangup, "recv returned hangup"};
+
+                if (buffer.isEmpty())
+                    return {OR_Hangup, "recv returned hangup"};
+                else
+                    return OpRes(OR_OK).addOptional(OR_Hangup);
 
             case OR_TemporaryUnavailable:
                 continue;

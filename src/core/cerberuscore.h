@@ -40,7 +40,8 @@ namespace cerberus
 
             static OpRes sockCB(void* ctx, void* data);
 
-            static void processClient(CerberusCore* ctx, Socket* sock, const SockSettings& settings);
+            static void processClient(CerberusCore* ctx, Socket* sock, SockManager::SockData* parentData,
+                                      const SockSettings& settings);
 
            public:
             EventScheduler m_eventScheduler;

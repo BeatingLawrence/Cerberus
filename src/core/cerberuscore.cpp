@@ -18,7 +18,7 @@ void CerberusCore::initializeThreadPool()
 //=============================================================================
 void CerberusCore::deinitializeThreadPool()
 {
-    if (m_conf.threadPool == 0) return;
+    if (m_pool.size() == 0) return;
 
     logInfo("Deallocating thread pool");
 
@@ -66,6 +66,9 @@ void CerberusCore::coolDown()
     logInfo("Stopping event scheduler");
     m_eventScheduler.join(true);
 
+    logInfo("removing sockets");
+    m_socks.scheduleRemoval_all();
+
     deinitializeThreadPool();
 
     logInfo("Stopping Cerberus core");
@@ -88,14 +91,20 @@ OpRes CerberusCore::sockCB(void* ctx, void* data)
     {
         MutexLocker ml(sock->mutex);
 
-        if (sock->status != SockManager::SockData::Using) break;
+        if (sock->remove) break;
 
         if (sock->settings.server)
         {
+            if (sock->sock->canRead().fail()) continue;
+
             auto s = sock->sock->accept();
 
-            if (s.get()) CerberusCore::processClient((CerberusCore*)ctx, s.get(), sock->settings);
-            // maybe send a message also?
+            if (s.get())
+            {
+                s.ref();  // increment ref count
+                CerberusCore::processClient((CerberusCore*)ctx, s.get(), sock, sock->settings);
+                // maybe send a message also?
+            }
             else
             {
                 logError("Accept failed");
@@ -108,6 +117,8 @@ OpRes CerberusCore::sockCB(void* ctx, void* data)
 
         if (sock->settings.type == Socket_TCP && !sock->sock->isConnected())
         {
+            if (!sock->settings.remote.isValidRemote()) break;  // abort
+
             res = sock->sock->connect(sock->settings.remote);
             if (res.fail("sock connect fail in player")) break;
         }
@@ -145,25 +156,22 @@ OpRes CerberusCore::sockCB(void* ctx, void* data)
         }
     }
 
-    if (sock->status == SockManager::SockData::Remove)
-        // delete the socket
-        ((CerberusCore*)ctx)->m_socks.removeSock(sock);
-    else
-        sock->status = SockManager::SockData::Halted;
+    // delete the socket
+    ((CerberusCore*)ctx)->m_socks.removeSock(sock);
 
     return res;
 }
 //=============================================================================
-void CerberusCore::processClient(CerberusCore* ctx, Socket* sock, const SockSettings& settings)
+void CerberusCore::processClient(CerberusCore* ctx, Socket* sock, SockManager::SockData* parentData,
+                                 const SockSettings& settings)
 {
     SockSettings set(settings);
 
     set.bind   = Host();
+    set.remote = Host();
     set.server = false;
 
-    auto sockdata = ctx->m_socks.addTcp(set, sock);
-
-    sockdata->status = SockManager::SockData::Using;
+    auto sockdata = ctx->m_socks.newSockCopy(set, sock, parentData);
 
     Task t = {};
     t.cb   = CerberusCore::sockCB;
@@ -186,7 +194,7 @@ OpResData<CHANDLE> CerberusCore::newSock(const SockSettings& settings)
 {
     auto sock = m_socks.newSock(settings);
 
-    if (sock.fail()) return sock;
+    if (sock.fail()) return (OpRes)sock;
 
     sock.value->sock->setRecvBufferSize(settings.maxpayload);
 
@@ -210,8 +218,6 @@ OpResData<CHANDLE> CerberusCore::newSock(const SockSettings& settings)
         }
     }
 
-    sock.value->status = SockManager::SockData::Using;
-
     Task t = {};
     t.cb   = CerberusCore::sockCB;
     t.ctx  = this;
@@ -219,7 +225,7 @@ OpResData<CHANDLE> CerberusCore::newSock(const SockSettings& settings)
 
     m_pool.runTask(t);
 
-    return OR_OK;
+    return sock.value->handle;
 }
 //=============================================================================
 OpRes CerberusCore::addSockListener(CHANDLE sock, HASH32 threadID)
@@ -229,31 +235,8 @@ OpRes CerberusCore::addSockListener(CHANDLE sock, HASH32 threadID)
 //=============================================================================
 OpRes CerberusCore::sockSend(CHANDLE sock, const ByteBuffer& buffer)
 {
-    auto s = m_socks.getSock(sock);
-
-    if (s.fail()) return s;
-
-    s.value->mutex.lock();
-
-    auto res = s.value->sock->send(buffer);
-
-    s.value->mutex.unlock();
-
-    return res;
+    return m_socks.sockSend(sock, buffer);
 }
 //=============================================================================
-OpRes CerberusCore::removeSock(CHANDLE sock)
-{
-    auto s = m_socks.getSock(sock);
-
-    if (s.fail()) return s;
-
-    s.value->mutex.lock();
-
-    s.value->status = SockManager::SockData::Remove;
-
-    s.value->mutex.unlock();
-
-    return OR_OK;
-}
+OpRes CerberusCore::removeSock(CHANDLE sock) { return m_socks.scheduleRemoval(sock); }
 //=============================================================================

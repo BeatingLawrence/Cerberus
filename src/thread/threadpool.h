@@ -48,6 +48,9 @@ namespace cerberus
         void clear();
 
         void runTask(Task t);
+
+        // get pool size
+        size_t size();
     };
 }  // namespace cerberus
 

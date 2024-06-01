@@ -2,7 +2,6 @@
 
 #include "../mutex/mutexlocker.h"
 #include "cerberusutils.h"
-
 using namespace cerberus;
 
 //=============================================================================
@@ -14,7 +13,7 @@ SockManager::SockData *SockManager::createNewSocket(SocketType type)
 //=============================================================================
 SockManager::SockManager() {}
 //=============================================================================
-SockManager::~SockManager() {}
+SockManager::~SockManager() { clear(); }
 //=============================================================================
 OpResData<SockManager::SockData *> SockManager::newSock(const SockSettings &settings)
 {
@@ -38,6 +37,8 @@ OpResData<SockManager::SockData *> SockManager::newSock(const SockSettings &sett
 OpRes SockManager::removeSock(SockData *sock)
 {
     MutexLocker ml(m_mutex);
+    sock->mutex.lock();  // wait for other threads to finish using the socket
+    sock->mutex.unlock();
 
     for (auto it = m_sockets.begin(); it != m_sockets.end(); it++)
         if (sock == (*it))
@@ -52,34 +53,34 @@ OpRes SockManager::removeSock(SockData *sock)
 //=============================================================================
 OpRes SockManager::addListener(CHANDLE sock, HASH32 threadID)
 {
-    MutexLocker ml(m_mutex);
+    auto s = getSock(sock);
 
-    SockData *p = nullptr;
-
-    for (auto &&el : m_sockets)
-        if (el->handle == sock) p = el;
-
-    if (!p) return OR_NotFound;
-
-    MutexLocker ml2(p->mutex);
+    if (s.fail()) return s;
 
     // check if the thread is already in the list
 
-    for (auto &&el : p->threads)
-        if (el == threadID) return OR_AlreadyPresent;
+    for (auto &&el : s.value->threads)
+        if (el == threadID)
+        {
+            s.value->mutex.unlock();
+            return OR_AlreadyPresent;
+        }
 
-    p->threads.push_back(threadID);
+    s.value->threads.push_back(threadID);
+    s.value->mutex.unlock();
 
     return OR_OK;
 }
 //=============================================================================
-SockManager::SockData *SockManager::addTcp(const SockSettings &settings, Socket *sock)
+SockManager::SockData *SockManager::newSockCopy(const SockSettings &settings, Socket *sock,
+                                                SockData *parentData)
 {
-    if (sock == nullptr) return nullptr;
+    if (sock == nullptr || parentData == nullptr) return nullptr;
 
     auto p = new SockData(sock);
 
     p->settings = settings;
+    p->threads  = parentData->threads;
 
     MutexLocker ml(m_mutex);
 
@@ -97,8 +98,64 @@ OpResData<SockManager::SockData *> SockManager::getSock(CHANDLE sock)
     MutexLocker ml(m_mutex);
 
     for (auto &&el : m_sockets)
-        if (el->handle == sock) return el;
+        if (el->handle == sock)
+        {
+            el->mutex.lock();
+
+            if (el->remove)
+            {
+                el->mutex.unlock();
+                return OR_Unavailable;
+            }
+
+            return el;
+        }
 
     return OR_NotFound;
+}
+//=============================================================================
+OpRes SockManager::sockSend(CHANDLE sock, const ByteBuffer &buffer)
+{
+    auto s = getSock(sock);
+
+    if (s.fail()) return s;
+
+    auto res = s.value->sock->send(buffer);
+    s.value->mutex.unlock();
+
+    return res;
+}
+//=============================================================================
+OpRes SockManager::scheduleRemoval(CHANDLE sock)
+{
+    auto s = getSock(sock);
+
+    if (s.fail()) return s;
+
+    s.value->remove = true;
+    s.value->mutex.unlock();
+
+    return OR_OK;
+}
+//=============================================================================
+void SockManager::scheduleRemoval_all()
+{
+    MutexLocker ml(m_mutex);
+
+    for (auto &&el : m_sockets)
+    {
+        el->mutex.lock();
+        el->remove = true;
+        el->mutex.unlock();
+    }
+}
+//=============================================================================
+void SockManager::clear()
+{
+    MutexLocker ml(m_mutex);
+
+    for (auto &el : m_sockets) delete el;
+
+    m_sockets.clear();
 }
 //=============================================================================

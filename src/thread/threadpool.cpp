@@ -143,3 +143,9 @@ void ThreadPool::runTask(Task t)
     logDebug("temporary thread created");
 }
 //=============================================================================
+size_t ThreadPool::size()
+{
+    MutexLocker ml(m_poolMutex);
+    return m_pool.size();
+}
+//=============================================================================

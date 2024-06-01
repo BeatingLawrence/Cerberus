@@ -11,17 +11,11 @@ namespace cerberus
        public:
         struct SockData
         {
-            enum SockStatus : uint8_t
-            {
-                Using,
-                Halted,
-                Remove,
-            } status;
-
             Socket* sock;
             SockSettings settings;
 
             CHANDLE handle;
+            bool remove;
             Mutex mutex;
 
             std::list<HASH32> threads;
@@ -29,10 +23,14 @@ namespace cerberus
             SockData() = delete;
 
             SockData(SocketType type)
-                : sock(new Socket(type)){};
+                : sock(new Socket(type)),
+                  handle(0),
+                  remove(false) {};
 
             SockData(Socket* sock)
-                : sock(sock){};
+                : sock(sock),
+                  handle(0),
+                  remove(false) {};
 
             ~SockData() { delete sock; };
         };
@@ -50,13 +48,22 @@ namespace cerberus
 
         OpResData<SockData*> newSock(const SockSettings& settings);
 
+        // this method is usable only by the owner thread of the socket
         OpRes removeSock(SockData* sock);
 
         OpRes addListener(CHANDLE sock, HASH32 threadID);
 
-        SockData* addTcp(const SockSettings& settings, Socket* sock);
+        SockData* newSockCopy(const SockSettings& settings, Socket* sock, SockData* parentData);
 
         OpResData<SockData*> getSock(CHANDLE sock);
+
+        OpRes sockSend(CHANDLE sock, const ByteBuffer& buffer);
+
+        OpRes scheduleRemoval(CHANDLE sock);
+
+        void scheduleRemoval_all();
+
+        void clear();
     };
 }  // namespace cerberus
 
