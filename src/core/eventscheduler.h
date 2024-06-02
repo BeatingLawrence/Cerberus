@@ -4,7 +4,7 @@
 #include <atomic>
 #include <vector>
 
-#include "../mutex/mutex.h"
+#include "../thread/mutex.h"
 #include "../thread/thread.h"
 #include "../time/datetime.h"
 

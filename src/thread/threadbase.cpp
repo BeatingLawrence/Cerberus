@@ -4,7 +4,7 @@
 
 #include "../exception/exception.h"
 #include "../message/message.h"  // IWYU pragma: export
-#include "../mutex/mutexlocker.h"
+#include "mutexlocker.h"
 
 using namespace cerberus;
 

@@ -1,8 +1,8 @@
 #include "threadpool.h"
 
 #include "../cerberus.h"
-#include "../mutex/mutexlocker.h"
 #include "../time/timer.h"
+#include "mutexlocker.h"
 #include "player.h"
 
 using namespace cerberus;

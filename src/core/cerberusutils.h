@@ -100,6 +100,11 @@ namespace cerberus
         // If some non-textual character is found, this method returns true
         static bool normalize(std::string& str);
 
+        // Generate an hex string, where each byte of the buffer is represented
+        // as a two-digits hex number (e.g. 'aa').
+        // The string will not contain spaces
+        static std::string hex(const ByteBuffer& buffer);
+
         // Truncate the given string making it long at most size chars.
         // If size is bigger than (or equal to) the str size, the str string is returned
         static std::string truncStr(const std::string& str, SIZE size);

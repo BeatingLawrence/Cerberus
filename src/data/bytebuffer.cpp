@@ -40,9 +40,9 @@ void ByteBuffer::_clear()
     m_pos   = 0;
 }
 //=============================================================================
-cerberus::BYTE& ByteBuffer::getat(SIZE index) const { return *((unsigned char*)(m_bytes + index)); }
+cerberus::BYTE& ByteBuffer::getat(SIZE index) const { return *((BYTE*)(m_bytes + index)); }
 //=============================================================================
-ByteBuffer::ByteBuffer(const BYTE *buf, SIZE size)
+ByteBuffer::ByteBuffer(const BYTE* buf, SIZE size)
     : m_bytes(nullptr),
       m_size(0),
       m_pos(0)
@@ -152,9 +152,9 @@ Iterator<BYTE> ByteBuffer::end()
     return &getat(m_size);
 }
 //=============================================================================
-cerberus::BYTE* ByteBuffer::data() { return m_bytes; }
+const cerberus::BYTE* ByteBuffer::data(SIZE index) const { return m_bytes + index; }
 //=============================================================================
-const cerberus::BYTE* ByteBuffer::data() const { return m_bytes; }
+cerberus::BYTE* ByteBuffer::data(SIZE index) { return m_bytes + index; }
 //=============================================================================
 const cerberus::BYTE& ByteBuffer::at(SIZE index) const
 {
@@ -175,6 +175,8 @@ cerberus::BYTE& ByteBuffer::at(SIZE index)
 }
 //=============================================================================
 cerberus::BYTE& ByteBuffer::operator[](SIZE index) { return at(index); }
+//=============================================================================
+const cerberus::BYTE& ByteBuffer::operator[](SIZE index) const { return at(index); }
 //=============================================================================
 ByteBuffer& ByteBuffer::appendFrom(const BYTE* buffer, SIZE len)
 {
@@ -395,7 +397,7 @@ StringOpRes ByteBuffer::toNormalizedString() const
     return str;
 }
 //=============================================================================
-std::string ByteBuffer::toBinaryDumpString(uint32_t align) const
+std::string ByteBuffer::toBinaryDump(uint32_t align) const
 {
     std::string ret;
     uint32_t aligncounter = 0;
@@ -415,6 +417,8 @@ std::string ByteBuffer::toBinaryDumpString(uint32_t align) const
 
     return ret;
 }
+//=============================================================================
+std::string ByteBuffer::toHex() const { return CerberusUtils::hex(*this); }
 //=============================================================================
 IntOpRes ByteBuffer::search(const char* str) const
 {

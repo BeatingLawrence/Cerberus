@@ -59,19 +59,18 @@ namespace cerberus
         Iterator<BYTE> end();
 
         // Obtain the main pointer of the buffer.
-        BYTE* data();
-
-        // Obtain the main pointer of the buffer (const version).
-        const BYTE* data() const;
+        const BYTE* data(SIZE index = 0) const;
+        BYTE* data(SIZE index = 0);
 
         // Obtain a single element by reference.
         // An exception will be thrown if index >= size()
         const BYTE& at(SIZE index) const;
         BYTE& at(SIZE index);
 
-        // Obtain a single element by value.
+        // Obtain a single element by reference.
         // An exception will be thrown if index >= size()
         BYTE& operator[](SIZE index);
+        const BYTE& operator[](SIZE index) const;
 
         // Append len bytes read from the given buffer to this ByteBuffer.
         ByteBuffer& appendFrom(const BYTE* buffer, SIZE len);
@@ -158,10 +157,13 @@ namespace cerberus
         // This method uses CerberusUtils::normalize()
         StringOpRes toNormalizedString() const;
 
-        // Return the buffer content as a HEX binary data string
+        // Return the buffer content as an HEX binary data string
         // The align argument specifies the number of bytes written per raw.
         // A value of zero disables the alignment
-        std::string toBinaryDumpString(uint32_t align = 0) const;
+        std::string toBinaryDump(uint32_t align = 0) const;
+
+        // Return the buffer content as a contiguos HEX string
+        std::string toHex() const;
 
         // Search a sequence of chars and return its position in the size field.
         // If the given string is empty or if its size is larger than the buffer size,

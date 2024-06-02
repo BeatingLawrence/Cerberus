@@ -5,7 +5,7 @@
 
 #include "../core/recordable.h"
 #include "../message/messagequeue.h"
-#include "../mutex/mutex.h"
+#include "mutex.h"
 
 namespace cerberus
 {

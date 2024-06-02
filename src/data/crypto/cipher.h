@@ -2,6 +2,7 @@
 #define CERBERUS_DATA_CRYPTO_CIPHER_H
 
 #include "../../Cerberus_global.h"
+#include "../../types.h"
 
 typedef struct evp_md_ctx_st EVP_MD_CTX;
 typedef struct evp_cipher_ctx_st EVP_CIPHER_CTX;
@@ -15,26 +16,26 @@ namespace cerberus
     class CERBERUS_EXPORT Cipher
     {
        private:
-        EVP_MD_CTX* m_md_ctx;          // message-digest context
+        EVP_MD* m_sha256;  // message-digest tool
+
         EVP_CIPHER_CTX* m_cipher_ctx;  // cipher context
-        const EVP_MD* m_sha256;        // message-digest tool
-        const EVP_CIPHER* m_aes256;    // cipher tool
+        EVP_CIPHER* m_aes256;          // cipher tool
 
        public:
         Cipher();
 
+        Cipher(const Cipher& other) = delete;
+
         ~Cipher();
 
-        // Computes the SHA256 digest of the input buffer and puts the result in
-        // the output buffer which is automatically allocated (32bytes).
-        void computeDigest_SHA256(const ByteBuffer& input, ByteBuffer& digest);
+        // Compute the SHA256 digest of the input buffer
+        HASH256 computeDigest_SHA256(const ByteBuffer& input);
 
-        // Crypts the input buffer and puts the result in output buffer which is automatically allocated (with
-        // padding).
-        void encryptData_AES256(const ByteBuffer& input, const ByteBuffer& key, ByteBuffer& crypted);
+        // Encrypt the buffer and return the result
+        OpResData<ByteBuffer> encryptData_AES256(const ByteBuffer& buf, const KEY256& key);
 
-        // Decrypts the input buffer and puts the result in output buffer which is automatically allocated.
-        void decryptData_AES256(const ByteBuffer& input, const ByteBuffer& key, ByteBuffer& decrypted);
+        // Decrypt the buffer and return the result
+        OpResData<ByteBuffer> decryptData_AES256(const ByteBuffer& buf, const KEY256& key);
     };
 }  // namespace cerberus
 

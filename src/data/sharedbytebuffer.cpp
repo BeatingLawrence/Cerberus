@@ -1,11 +1,9 @@
 #include "sharedbytebuffer.h"
 
-#include <cstring>
-
 #include "bytebuffer.h"
 #include "src/data/bytebuffer.h"
-#include "src/mutex/mutex.h"
-#include "src/mutex/mutexlocker.h"
+#include "src/thread/mutex.h"
+#include "src/thread/mutexlocker.h"
 
 using namespace cerberus;
 

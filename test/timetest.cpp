@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <time/datetime.h>
 #include <time/timeframe.h>
+#include <time/timer.h>
 
 using namespace cerberus;
 
@@ -64,4 +65,20 @@ TEST(dateTimeTest, creation)
     logDebug(dt.usingDst() ? "USING DST" : "NOT USING DST");
 
     logDebug("timestamp %s", dt.toTimeStampString().c_str());
+}
+
+TEST(timerTest, timer)
+{
+    auto timer = Timer(TimeFrame(500, TimeFrame::U_MilliSecond));
+    timer.start();
+    logDebug("timer started");
+
+    while (timer.isRunning())
+    {
+        Thread::sleep(TimeFrame(1, TimeFrame::U_MilliSecond));
+    }
+
+    logDebug("timer ended");
+
+    //
 }

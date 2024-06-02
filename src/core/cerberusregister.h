@@ -5,8 +5,8 @@
 #include <string>
 
 #include "../message/messagetemplate.h"
-#include "../mutex/mutex.h"
-#include "../mutex/mutexlocker.h"
+#include "../thread/mutex.h"
+#include "../thread/mutexlocker.h"
 #include "recordable.h"
 
 namespace cerberus
@@ -23,7 +23,7 @@ namespace cerberus
                     : id(id),
                       handle(h),
                       path(p),
-                      mutex(){};
+                      mutex() {};
 
                 Plugin(Plugin&& other)
                     : id(other.id),

@@ -1,8 +1,8 @@
 #ifndef SOCKMANAGER_H
 #define SOCKMANAGER_H
 
-#include "../mutex/mutex.h"
 #include "../network/socket.h"
+#include "../thread/mutex.h"
 
 namespace cerberus
 {

@@ -3,6 +3,7 @@
 #include <openssl/evp.h>
 #include <openssl/ssl3.h>
 
+#include "../../exception/exception.h"
 #include "../bytebuffer.h"
 
 using namespace cerberus;
@@ -10,47 +11,66 @@ using namespace cerberus;
 //=============================================================================
 Cipher::Cipher()
 {
-    m_md_ctx     = EVP_MD_CTX_new();
-    m_cipher_ctx = EVP_CIPHER_CTX_new();
-    m_sha256     = EVP_sha256();
-    m_aes256     = EVP_aes_256_cbc();
+    m_sha256 = EVP_MD_fetch(NULL, "SHA256", NULL);  // fetch message-digest implementation
+
+    m_cipher_ctx = EVP_CIPHER_CTX_new();                         // create cipher context
+    m_aes256     = EVP_CIPHER_fetch(NULL, "AES-256-CBC", NULL);  // fetch cipher implementation
+
+    if (m_sha256 && m_cipher_ctx && m_aes256) return;
+
+    throw cSystemExc("Cipher context initialization failure");
 }
 //=============================================================================
 Cipher::~Cipher()
 {
-    EVP_MD_CTX_free(m_md_ctx);
-    EVP_CIPHER_CTX_free(m_cipher_ctx);
+    EVP_MD_free(m_sha256);  // free message-digest implementation
+
+    EVP_CIPHER_free(m_aes256);          // free cipher implementation
+    EVP_CIPHER_CTX_free(m_cipher_ctx);  // free cipher context
 }
 //=============================================================================
-void Cipher::computeDigest_SHA256(const ByteBuffer &input, ByteBuffer &digest)
+HASH256 Cipher::computeDigest_SHA256(const ByteBuffer &input)
 {
-    unsigned int outlen = 0;
-    EVP_DigestInit_ex(m_md_ctx, m_sha256, NULL);
-    EVP_DigestUpdate(m_md_ctx, input.data(), input.size());
-    digest.resize(32u);
-    EVP_DigestFinal_ex(m_md_ctx, digest.data(), &outlen);
+    unsigned char hash[EVP_MAX_MD_SIZE] = {};
+
+    if (!EVP_Digest(input.data(), input.size(), hash, NULL, m_sha256, NULL)) return HASH32();
+
+    return HASH256(hash, 32);  // truncate 32 bytes
 }
 //=============================================================================
-void Cipher::encryptData_AES256(const ByteBuffer &input, const ByteBuffer &key, ByteBuffer &crypted)
+OpResData<ByteBuffer> Cipher::encryptData_AES256(const ByteBuffer &input, const KEY256 &key)
 {
-    EVP_EncryptInit_ex(m_cipher_ctx, m_aes256, NULL, key.data(), NULL);
-    crypted.resize(((input.size() / 16) + 1) * 16);
-    int wrote          = 0;
-    unsigned char *out = crypted.data();
-    EVP_EncryptUpdate(m_cipher_ctx, &out[0], &wrote, input.data(), input.size());
-    int wrote2;
-    EVP_EncryptFinal_ex(m_cipher_ctx, &out[wrote], &wrote2);
+    ByteBuffer ret;
+    ret.resize(((input.size() / 16) + 1) * 16);
+
+    if (!EVP_CIPHER_CTX_reset(m_cipher_ctx)) return OR_Failure;
+    if (!EVP_EncryptInit_ex2(m_cipher_ctx, m_aes256, key.p(), NULL, NULL)) return OR_Failure;
+
+    int written = 0;
+    if (!EVP_EncryptUpdate(m_cipher_ctx, ret.data(), &written, input.data(), input.size())) return OR_Failure;
+
+    int final = 0;
+    if (!EVP_EncryptFinal_ex(m_cipher_ctx, ret.data(written), &final)) return OR_Failure;
+
+    return ret;
 }
 //=============================================================================
-void Cipher::decryptData_AES256(const ByteBuffer &input, const ByteBuffer &key, ByteBuffer &decrypted)
+OpResData<ByteBuffer> Cipher::decryptData_AES256(const ByteBuffer &input, const KEY256 &key)
 {
-    EVP_DecryptInit_ex(m_cipher_ctx, m_aes256, NULL, key.data(), NULL);
-    decrypted.resize(input.size());
-    int wrote          = 0;
-    unsigned char *out = decrypted.data();
-    EVP_DecryptUpdate(m_cipher_ctx, &out[0], &wrote, input.data(), input.size());
-    int wrote2;
-    EVP_DecryptFinal_ex(m_cipher_ctx, &out[wrote], &wrote2);
-    decrypted.resize(wrote + wrote2);
+    ByteBuffer ret;
+    ret.resize(input.size());
+
+    if (!EVP_CIPHER_CTX_reset(m_cipher_ctx)) return OR_Failure;
+    if (!EVP_DecryptInit_ex2(m_cipher_ctx, m_aes256, key.p(), NULL, NULL)) return OR_Failure;
+
+    int written = 0;
+    if (!EVP_DecryptUpdate(m_cipher_ctx, ret.data(), &written, input.data(), input.size())) return OR_Failure;
+
+    int final = 0;
+    if (!EVP_DecryptFinal_ex(m_cipher_ctx, ret.data(written), &final)) return OR_Failure;
+
+    ret.resize(written + final);
+
+    return ret;
 }
 //=============================================================================

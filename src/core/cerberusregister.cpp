@@ -5,7 +5,7 @@
 #include "../cerberus.h"
 #include "../define.h"
 #include "../exception/exception.h"
-#include "../mutex/mutexlocker.h"
+#include "../thread/mutexlocker.h"
 #include "recordable.h"
 
 #define hashFunc(str) CerberusUtils::hash_fnv1a(str)

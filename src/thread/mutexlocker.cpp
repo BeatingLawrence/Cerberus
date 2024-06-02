@@ -1,6 +1,6 @@
 #include "mutexlocker.h"
 
-#include "src/mutex/mutex.h"
+#include "src/thread/mutex.h"
 
 using namespace cerberus;
 

@@ -12,7 +12,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "mutex/mutexlocker.h"
+#include "thread/mutexlocker.h"
 #include "time/datetime.h"
 
 #define StringOpRes ::cerberus::OpResData<std::string>
@@ -29,6 +29,48 @@ namespace cerberus
     typedef int64_t OFFSET;
     typedef uint32_t HASH32;
     typedef HASH32 CHANDLE;
+
+    struct VAR_256_BITS
+    {
+        BYTE x[32];
+
+        VAR_256_BITS()
+            : x() {};
+
+        VAR_256_BITS(uint64_t val)
+            : x()
+        {
+            memmove(x, &val, sizeof(val));
+        };
+
+        VAR_256_BITS(const char* str)
+            : x()
+        {
+            if (!str) return;
+            for (uint8_t i = 0; i < sizeof(x); i++)
+            {
+                if (!(*str)) return;
+                x[i] = *str;
+                str++;
+            }
+        };
+
+        VAR_256_BITS(void* buf, size_t len)
+            : x()
+        {
+            if (len > sizeof(x)) len = sizeof(x);
+            memmove(x, buf, len);
+        };
+
+        VAR_256_BITS(const VAR_256_BITS& other) = default;
+
+        VAR_256_BITS& operator=(const VAR_256_BITS&) = default;
+
+        const unsigned char* p() const { return x; };
+    };
+
+    typedef VAR_256_BITS HASH256;
+    typedef VAR_256_BITS KEY256;
 
     enum SQLDataType : uint8_t
     {

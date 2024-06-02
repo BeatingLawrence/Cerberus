@@ -1,8 +1,8 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 
-#include "../mutex/mutex.h"
 #include "../types.h"
+#include "mutex.h"
 
 namespace cerberus
 {

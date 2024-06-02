@@ -1,6 +1,6 @@
 #include "sockmanager.h"
 
-#include "../mutex/mutexlocker.h"
+#include "../thread/mutexlocker.h"
 #include "cerberusutils.h"
 using namespace cerberus;
 

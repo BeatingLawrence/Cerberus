@@ -1,6 +1,6 @@
 #include "eventscheduler.h"
 
-#include "src/mutex/mutexlocker.h"
+#include "src/thread/mutexlocker.h"
 
 using namespace cerberus::core;
 

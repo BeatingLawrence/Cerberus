@@ -294,6 +294,18 @@ bool CerberusUtils::normalize(std::string& str)
     return ret;
 }
 //=============================================================================
+std::string CerberusUtils::hex(const ByteBuffer& buffer)
+{
+    std::string ret;
+
+    for (auto& el : buffer)
+    {
+        ret.append(strPrint("%02hhx", (uint8_t)el));
+    }
+
+    return ret;
+}
+//=============================================================================
 std::string CerberusUtils::truncStr(const std::string& str, SIZE size)
 {
     if (size >= str.size())
