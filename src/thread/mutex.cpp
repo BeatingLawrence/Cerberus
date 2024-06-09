@@ -87,7 +87,7 @@ bool Mutex::lock(bool block)
         {
             if (pthread_mutex_consistent(&m_pmutex))
             {
-                throw cerberusSystemExc("pthread_mutex_consistent error %s", strerror(ret));
+                throw cSystemExc("pthread_mutex_consistent error %s", strerror(ret));
             }
 
             logWarning("Mutex has been recovered from inconsistent state");
