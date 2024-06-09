@@ -19,8 +19,9 @@ namespace cerberus
         {
            private:
             timerCallback m_callback;
+            void* m_ctx;
 
-            static void defaultTimeoutCallback();
+            static void defaultTimeoutCallback(void* ctx);
 
             static void mainCallback(sigval val);
 
@@ -54,7 +55,7 @@ namespace cerberus
             bool isFailed();
 
             // Sets a callback to be executed when the timer expires
-            void provideTimeoutCallback(timerCallback callback);
+            void provideTimeoutCallback(timerCallback callback, void* ctx = nullptr);
         };
     }  // namespace time
 }  // namespace cerberus

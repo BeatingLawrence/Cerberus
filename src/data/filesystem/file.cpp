@@ -467,25 +467,49 @@ OpRes File::readChunk(ByteBuffer& bytes, SIZE chunksize) const
     return OR_OK;
 }
 //=============================================================================
-OpRes File::search(const std::string& sequence) const
+OpResData<ByteBuffer> File::readUntil(const ByteBuffer& sequence) const
 {
+    auto backup = getCursor();
+    auto seqpos = search(sequence);
+    if (seqpos.fail()) return seqpos;
+
+    seek(backup.value).expect();
+
+    ByteBuffer buf;
+    auto readret = readChunk(buf, seqpos.value - backup.value);
+    if (readret.fail()) return readret;
+
+    return buf;
+}
+//=============================================================================
+SizeOpRes File::search(const ByteBuffer& sequence) const
+{
+    if (sequence.isEmpty()) return OR_WrongArgument;
     if (!isOpen()) return OR_BadConditions;
     if (feof(m_file)) return OR_EOF;
 
     clearerr(m_file);
-    ByteBuffer buf(sequence.size());
+    char c          = 0;
+    size_t seqindex = 0;
+    size_t seqlast  = sequence.size() - 1;
 
     while (true)
     {
-        fread(buf.data(), buf.size(), 1, m_file);  // FIX
+        fread(&c, 1, 1, m_file);
 
         if (ferror(m_file)) return OR_Failure;
-
         if (feof(m_file)) return OR_NotFound;
 
-        if (c == '\n' || feof(m_file)) break;
-
-        line += c;
+        if (c == sequence[seqindex])
+        {
+            if (seqindex == seqlast) return getCursor().expect().value - sequence.size();
+            seqindex++;
+        }
+        else if (seqindex)
+        {
+            seekOffset(-1).expect();
+            seqindex = 0;
+        }
     }
 }
 //=============================================================================

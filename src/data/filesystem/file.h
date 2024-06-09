@@ -133,10 +133,17 @@ namespace cerberus
         // Read a chunk of data from the current cursor position
         OpRes readChunk(ByteBuffer& bytes, SIZE chunksize) const;
 
+        // Read a chunk of data from the current cursor position until a sequence is found.
+        // The read sequence is inserted into the returned buffer
+        OpResData<ByteBuffer> readUntil(const ByteBuffer& sequence) const;
+
         // Advance the cursor until the wanted sequence is found.
         // The position before this call is not reset, thus only the
-        // bytes after the cursor position are being searched
-        OpRes search(const std::string& sequence) const;
+        // bytes after the cursor position are searched.
+        // Please note: this method will return the sequence starting
+        // position but will leave the file cursor at the end of the sequence
+        // (the byte after the sequence, or EOF)
+        SizeOpRes search(const ByteBuffer& sequence) const;
 
         // Read a single line till \n or EOF
         // If the EOF is reached and the bytes read are zero, OR_EOF is returned

@@ -108,3 +108,32 @@ TEST(directoryTest, get)
     if (d.files().empty()) return;
     logInfo("path of first file: %s", d.files().front().completePath().toStr().c_str());
 }
+
+TEST(fileTest, search)
+{
+    {
+        File f("searchtest.txt");
+        f.setOpenMode(cerberus::FOM_ReadWriteTrunc);
+        ASSERT_TRUE(f.open().ok());
+
+        for (int i = 0; i < 20; i++) ASSERT_TRUE(f.writeLine("garbage").ok());
+
+        ASSERT_TRUE(f.write("/chewchew").ok());
+
+        for (int i = 0; i < 10; i++) ASSERT_TRUE(f.writeLine("garbage").ok());
+
+        f.close();
+    }
+
+    File f("searchtest.txt");
+    ASSERT_TRUE(f.open().ok());
+    auto pos = f.search("chewchew");
+
+    EXPECT_TRUE(pos.ok());
+
+    logInfo("position of chewchew: %llu", pos.value);
+
+    f.close();
+
+    EXPECT_EQ(pos.value, 161);
+}

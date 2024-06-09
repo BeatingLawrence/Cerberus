@@ -33,7 +33,7 @@ HASH256 Cipher::computeDigest_SHA256(const ByteBuffer &input)
 {
     unsigned char hash[EVP_MAX_MD_SIZE] = {};
 
-    if (!EVP_Digest(input.data(), input.size(), hash, NULL, m_sha256, NULL)) return HASH32();
+    if (!EVP_Digest(input.data(), input.size(), hash, NULL, m_sha256, NULL)) return HASH256();
 
     return HASH256(hash, 32);  // truncate 32 bytes
 }

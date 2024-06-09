@@ -1,6 +1,5 @@
 #include "systimer.h"
 #ifdef LINUX_SYSTEM
-#include <cerrno>
 #include <cstring>
 
 #include "src/cerberus.h"
@@ -8,15 +7,16 @@
 using namespace cerberus::time;
 
 //=============================================================================
-void SysTimer::defaultTimeoutCallback()
+void SysTimer::defaultTimeoutCallback(void *ctx)
 {
+    (void)ctx;
     // noop
 }
 //=============================================================================
 void SysTimer::mainCallback(sigval val)
 {
     ((SysTimer *)val.sival_ptr)->m_running = false;
-    ((SysTimer *)val.sival_ptr)->m_callback();
+    ((SysTimer *)val.sival_ptr)->m_callback(((SysTimer *)val.sival_ptr)->m_ctx);
 }
 //=============================================================================
 SysTimer::SysTimer()
@@ -50,6 +50,7 @@ SysTimer::~SysTimer()
 //=============================================================================
 SysTimer::SysTimer(const TimeFrame &time, bool periodic)
     : m_callback(&defaultTimeoutCallback),
+      m_ctx(),
       m_running(false),
       m_timerId(0),
       m_failed(false),
@@ -120,6 +121,6 @@ bool SysTimer::isRunning() { return m_running; }
 //=============================================================================
 bool SysTimer::isFailed() { return m_failed; }
 //=============================================================================
-void SysTimer::provideTimeoutCallback(timerCallback callback) { m_callback = callback; }
+void SysTimer::provideTimeoutCallback(timerCallback callback, void *ctx) { m_callback = callback; }
 //=============================================================================
 #endif

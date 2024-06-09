@@ -1,6 +1,6 @@
 #include <cerberus.h>
+#include <data/database/database.h>
 #include <data/database/dbdata.h>
-#include <data/database/sqldatabase.h>
 #include <gtest/gtest.h>
 
 using namespace cerberus;
@@ -8,13 +8,13 @@ using namespace cerberus;
 class DatabaseTest : public ::testing::Test
 {
    public:
-    SQLDatabase* db;
+    Database* db;
 
    protected:
     virtual void SetUp() override
     {
         return;
-        db = new SQLDatabase(DBB_PostgreSQL);
+        db = new Database(DBB_PostgreSQL);
         db->init("postgresql://test:test@localhost:5432/testdb");
         // connects to a local postgresql server with:
         //   username: test

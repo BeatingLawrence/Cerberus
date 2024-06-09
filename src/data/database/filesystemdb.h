@@ -13,18 +13,24 @@ namespace cerberus
             struct Table
             {
                 DBTableProto proto;
-                LSIZE start;  // position in file where the table begins
-                LSIZE data;   // position in file where the table data begins (relative to start)
+                LSIZE start;   // position in file where the table begins
+                LSIZE buffer;  // position in file where the table data begins
 
                 Table()
                     : proto(),
                       start(0),
-                      data(0) {};
+                      buffer(0){};
             };
 
             File m_file;
 
             std::vector<Table> m_tables;
+
+            StringOpRes _readStr();
+
+            DBMOD _getMod(const ByteBuffer& buf);
+
+            OpRes _parseTable();
 
             OpRes _load();
 

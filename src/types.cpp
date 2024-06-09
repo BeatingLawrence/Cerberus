@@ -238,6 +238,14 @@ cerberus::OpRes::OpRes(Result r, const std::string &reason, const std::string &r
     addInfo(reason2);
 }
 //=============================================================================
+cerberus::OpRes::OpRes(const OpRes &opres, const std::string &reason)
+    : res(opres.res),
+      reason(opres.reason),
+      optional(opres.optional)
+{
+    addInfo(reason);
+}
+//=============================================================================
 bool cerberus::OpRes::operator==(Result r) { return (res == r); }
 //=============================================================================
 bool cerberus::OpRes::operator!=(Result r) { return (res != r); }

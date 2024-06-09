@@ -92,23 +92,24 @@ namespace cerberus
     {
        public:
         DBColumn() = delete;
-        DBColumn(const std::string& name, DBDataType type, int mod = -1)
+        DBColumn(const std::string& name, DBDataType type, DBMOD mod = 0)
             : m_columnName(name),
               m_type(type),
-              m_mod(mod) {};
+              m_mod(mod){};
 
         std::string name() const { return m_columnName; };
+        void setName(const std::string& name) { m_columnName = name; };
 
         DBDataType type() const { return m_type; };
 
-        int mod() const { return m_mod; };
+        DBMOD mod() const { return m_mod; };
 
         std::string typeString() const { return CerberusUtils::fromDBDataType(m_type); };
 
        private:
         std::string m_columnName;
         DBDataType m_type;
-        int m_mod;
+        DBMOD m_mod;
     };
 
     class DBTableProto
@@ -120,7 +121,7 @@ namespace cerberus
        public:
         DBTableProto(const std::string& name = "");
 
-        DBTableProto& add(const std::string& name, DBDataType type, int mod = -1);
+        DBTableProto& add(const std::string& name, DBDataType type, DBMOD mod = 0);
 
         const DBColumn& operator[](int index) const;
         DBColumn& operator[](int index);
@@ -130,6 +131,7 @@ namespace cerberus
         size_t size() const;
 
         std::string name() const;
+        void setName(const std::string& name);
 
         Iterator<DBColumn> begin();
         Iterator<DBColumn> end();
@@ -177,7 +179,7 @@ namespace cerberus
 
         const DBTableProto& prototype() const;
 
-        DBTableBlock& addColumn(const std::string& name, DBDataType type, int mod = -1);
+        DBTableBlock& addColumn(const std::string& name, DBDataType type, DBMOD mod = 0);
 
         const DBRow& operator[](size_t pos) const;
         DBRow& operator[](size_t pos);

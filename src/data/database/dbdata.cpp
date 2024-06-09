@@ -36,7 +36,7 @@ DBTableProto::DBTableProto(const std::string& name)
     // noop
 }
 //=============================================================================
-DBTableProto& DBTableProto::add(const std::string& name, DBDataType type, int mod)
+DBTableProto& DBTableProto::add(const std::string& name, DBDataType type, DBMOD mod)
 {
     m_types.push_back({name, type, mod});
     return *this;
@@ -51,6 +51,8 @@ void DBTableProto::clear() { m_types.clear(); }
 size_t DBTableProto::size() const { return m_types.size(); }
 //=============================================================================
 std::string DBTableProto::name() const { return m_name; }
+//=============================================================================
+void DBTableProto::setName(const std::string& name) { m_name = name; }
 //=============================================================================
 Iterator<DBColumn> DBTableProto::begin() { return &(*m_types.begin()); }
 //=============================================================================
@@ -105,7 +107,7 @@ void DBTableBlock::assignRows(const DBTableBlock& other) { m_rows = other.m_rows
 //=============================================================================
 const DBTableProto& DBTableBlock::prototype() const { return m_prototype; }
 //=============================================================================
-DBTableBlock& DBTableBlock::addColumn(const ::std::string& name, DBDataType type, int mod)
+DBTableBlock& DBTableBlock::addColumn(const ::std::string& name, DBDataType type, DBMOD mod)
 {
     m_prototype.add(name, type, mod);
     return *this;
