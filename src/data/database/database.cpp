@@ -29,6 +29,6 @@ Database::Database(DBBackend backend)
 //=============================================================================
 Database::~Database()
 {
-    if (m_db) delete m_db;
+    if (m_db) delete m_db;  // deinit is performed inside the backend implementation
 }
 //=============================================================================

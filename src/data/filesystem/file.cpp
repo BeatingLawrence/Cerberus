@@ -409,7 +409,7 @@ OpRes File::read(ByteBuffer& bytes, LSIZE start) const
 
     if (res.fail()) return res;
 
-    uint64_t bytesToRead = size().value - start;
+    LSIZE bytesToRead = size().value - start;
 
     bytes.resize(bytesToRead);
 
@@ -465,6 +465,28 @@ OpRes File::readChunk(ByteBuffer& bytes, SIZE chunksize) const
     bytes.resize(ret);
 
     return OR_OK;
+}
+//=============================================================================
+OpRes File::search(const std::string& sequence) const
+{
+    if (!isOpen()) return OR_BadConditions;
+    if (feof(m_file)) return OR_EOF;
+
+    clearerr(m_file);
+    ByteBuffer buf(sequence.size());
+
+    while (true)
+    {
+        fread(buf.data(), buf.size(), 1, m_file);  // FIX
+
+        if (ferror(m_file)) return OR_Failure;
+
+        if (feof(m_file)) return OR_NotFound;
+
+        if (c == '\n' || feof(m_file)) break;
+
+        line += c;
+    }
 }
 //=============================================================================
 StringOpRes File::readLine() const

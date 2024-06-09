@@ -18,9 +18,9 @@ size_t DBRow::size() const { return m_values.size(); }
 //=============================================================================
 void DBRow::clear() { m_values.clear(); }
 //=============================================================================
-const DBCell& DBRow::operator[](size_t pos) const { return m_values[pos]; }
+const DBCell& DBRow::operator[](size_t pos) const { return m_values.at(pos); }
 //=============================================================================
-DBCell& DBRow::operator[](size_t pos) { return m_values[pos]; }
+DBCell& DBRow::operator[](size_t pos) { return m_values.at(pos); }
 //=============================================================================
 Iterator<DBCell> DBRow::begin() { return &(*m_values.begin()); }
 //=============================================================================
@@ -36,15 +36,15 @@ DBTableProto::DBTableProto(const std::string& name)
     // noop
 }
 //=============================================================================
-DBTableProto& DBTableProto::add(const std::string& name, SQLDataType type, int mod)
+DBTableProto& DBTableProto::add(const std::string& name, DBDataType type, int mod)
 {
     m_types.push_back({name, type, mod});
     return *this;
 }
 //=============================================================================
-const SQLColumn& DBTableProto::operator[](int index) const { return m_types[index]; }
+const DBColumn& DBTableProto::operator[](int index) const { return m_types.at(index); }
 //=============================================================================
-SQLColumn& DBTableProto::operator[](int index) { return m_types[index]; }
+DBColumn& DBTableProto::operator[](int index) { return m_types.at(index); }
 //=============================================================================
 void DBTableProto::clear() { m_types.clear(); }
 //=============================================================================
@@ -52,18 +52,13 @@ size_t DBTableProto::size() const { return m_types.size(); }
 //=============================================================================
 std::string DBTableProto::name() const { return m_name; }
 //=============================================================================
-Iterator<SQLColumn> DBTableProto::begin() { return &(*m_types.begin()); }
+Iterator<DBColumn> DBTableProto::begin() { return &(*m_types.begin()); }
 //=============================================================================
-Iterator<SQLColumn> DBTableProto::end() { return &(*m_types.end()); }
+Iterator<DBColumn> DBTableProto::end() { return &(*m_types.end()); }
 //=============================================================================
-ConstIterator<SQLColumn> DBTableProto::begin() const { return &(*m_types.begin()); }
+ConstIterator<DBColumn> DBTableProto::begin() const { return &(*m_types.begin()); }
 //=============================================================================
-ConstIterator<SQLColumn> DBTableProto::end() const { return &(*m_types.end()); }
-//=============================================================================
-DBTableBlock::DBTableBlock()
-    : m_prototype("")
-{
-}
+ConstIterator<DBColumn> DBTableProto::end() const { return &(*m_types.end()); }
 //=============================================================================
 DBTableBlock::DBTableBlock(const std::string& name)
     : m_prototype(name)
@@ -75,24 +70,22 @@ DBTableBlock::DBTableBlock(const DBTableProto& proto)
 {
 }
 //=============================================================================
+DBTableBlock::DBTableBlock(const DBRow& row) { m_rows.push_back(row); }
+//=============================================================================
 DBTableBlock::~DBTableBlock() {}
 //=============================================================================
-bool DBTableBlock::append(const DBRow& row)
+OpRes DBTableBlock::append(const DBRow& row)
 {
     if (structured())
-        if (row.size() != m_prototype.size())
-        {
-            logError("Refusing to append a row to a block of different structure");
-            return false;
-        }
+        if (row.size() != m_prototype.size()) return {OR_WrongArgument, "row and proto size mismatch"};
 
     m_rows.push_back(row);
-    return true;
+    return OR_OK;
 }
 //=============================================================================
 size_t DBTableBlock::size() const { return m_rows.size(); }
 //=============================================================================
-bool DBTableBlock::empty() const { return size() == 0; }
+bool DBTableBlock::empty() const { return m_rows.empty(); }
 //=============================================================================
 void DBTableBlock::clear()
 {
@@ -100,7 +93,7 @@ void DBTableBlock::clear()
     clearStructure();
 }
 //=============================================================================
-bool DBTableBlock::structured() const { return (m_prototype.size() != 0); }
+bool DBTableBlock::structured() const { return m_prototype.size(); }
 //=============================================================================
 void DBTableBlock::clearStructure() { m_prototype.clear(); }
 //=============================================================================
@@ -108,17 +101,19 @@ void DBTableBlock::clearRows() { m_rows.clear(); }
 //=============================================================================
 void DBTableBlock::setPrototype(const DBTableProto& prototype) { m_prototype = prototype; }
 //=============================================================================
-DBTableProto DBTableBlock::prototype() const { return m_prototype; }
+void DBTableBlock::assignRows(const DBTableBlock& other) { m_rows = other.m_rows; }
 //=============================================================================
-DBTableBlock& DBTableBlock::addColumn(const ::std::string& name, SQLDataType type, int mod)
+const DBTableProto& DBTableBlock::prototype() const { return m_prototype; }
+//=============================================================================
+DBTableBlock& DBTableBlock::addColumn(const ::std::string& name, DBDataType type, int mod)
 {
     m_prototype.add(name, type, mod);
     return *this;
 }
 //=============================================================================
-const DBRow& DBTableBlock::operator[](size_t pos) const { return m_rows[pos]; }
+const DBRow& DBTableBlock::operator[](size_t pos) const { return m_rows.at(pos); }
 //=============================================================================
-DBRow& DBTableBlock::operator[](size_t pos) { return m_rows[pos]; }
+DBRow& DBTableBlock::operator[](size_t pos) { return m_rows.at(pos); }
 //=============================================================================
 bool DBTableBlock::operator==(const DBTableBlock& other) const
 {

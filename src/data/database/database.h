@@ -33,6 +33,17 @@ namespace cerberus
         {
             return m_db->queryPrototype(tableName);
         }
+
+        inline OpRes createTable(DBTableProto& prototype) { return m_db->createTable(prototype); }
+
+        inline OpRes insertBlock(const DBTableBlock& block) { return m_db->insertBlock(block); }
+
+        inline OpRes dropTable(const std::string& table) { return m_db->dropTable(table); }
+
+        inline OpResData<DBTableBlock> querytable(const std::string& tableName)
+        {
+            return m_db->querytable(tableName);
+        }
     };
 
 }  // namespace cerberus

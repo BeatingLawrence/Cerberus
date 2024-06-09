@@ -72,20 +72,20 @@ namespace cerberus
     typedef VAR_256_BITS HASH256;
     typedef VAR_256_BITS KEY256;
 
-    enum SQLDataType : uint8_t
+    enum DBDataType : uint8_t
     {
-        SDT_Undefined = 0,
-        SDT_BigInt,    // 8 byte signed integer
-        SDT_Int,       // 4 byte signed integer
-        SDT_SmallInt,  // 2 byte signed integer
-        SDT_Real,      // 4 byte signed float
-        SDT_Double,    // 8 byte signed float
-        SDT_Boolean,   // bool
-        SDT_Bit,       // fixed length bit array
-        SDT_VarBit,    // variable length bit array
-        SDT_Char,      // fixed length char array
-        SDT_VarChar,   // variable length char array
-        SDT_Money,     // fixed fractional precision (2 digits typically)
+        DDT_Undefined = 0,
+        DDT_BigInt,    // 8 byte signed integer
+        DDT_Int,       // 4 byte signed integer
+        DDT_SmallInt,  // 2 byte signed integer
+        DDT_Real,      // 4 byte signed float
+        DDT_Double,    // 8 byte signed float
+        DDT_Boolean,   // bool (1 byte)
+        DDT_Bit,       // fixed length bit array (needs modifier)
+        DDT_VarBit,    // variable length bit array (needs modifier)
+        DDT_Char,      // fixed length char array (needs modifier)
+        DDT_VarChar,   // variable length char array (needs modifier)
+        DDT_Money,     // fixed fractional precision (2 digits typically)
     };
 
     enum DBBackend : uint8_t

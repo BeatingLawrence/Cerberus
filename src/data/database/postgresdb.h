@@ -33,6 +33,14 @@ namespace cerberus
 
             virtual OpResData<DBTableProto> queryPrototype(const string& tableName);
 
+            virtual OpRes createTable(DBTableProto& prototype);
+
+            virtual OpRes insertBlock(const DBTableBlock& block);
+
+            virtual OpRes dropTable(const std::string& table);
+
+            virtual OpResData<DBTableBlock> querytable(const std::string& tableName);
+
             virtual ~PostgresDB();
         };
     }  // namespace db

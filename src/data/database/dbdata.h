@@ -21,11 +21,8 @@
 
 namespace cerberus
 {
-    class SQLDatabase;
-
     class DBCell
     {
-       private:
         std::string m_value;
 
        public:
@@ -64,7 +61,6 @@ namespace cerberus
 
     class DBRow
     {
-       private:
         std::vector<DBCell> m_values;
 
        public:
@@ -92,43 +88,42 @@ namespace cerberus
         ConstIterator<DBCell> end() const;
     };
 
-    struct SQLColumn
+    struct DBColumn
     {
        public:
-        SQLColumn() = delete;
-        SQLColumn(const std::string& name, SQLDataType type, int mod = -1)
+        DBColumn() = delete;
+        DBColumn(const std::string& name, DBDataType type, int mod = -1)
             : m_columnName(name),
               m_type(type),
-              m_mod(mod){};
+              m_mod(mod) {};
 
         std::string name() const { return m_columnName; };
 
-        SQLDataType type() const { return m_type; };
+        DBDataType type() const { return m_type; };
 
         int mod() const { return m_mod; };
 
-        std::string typeString() const { return CerberusUtils::fromSQLDataType(m_type); };
+        std::string typeString() const { return CerberusUtils::fromDBDataType(m_type); };
 
        private:
         std::string m_columnName;
-        SQLDataType m_type;
+        DBDataType m_type;
         int m_mod;
     };
 
     class DBTableProto
     {
-       private:
         std::string m_name;  // the table name
 
-        std::vector<SQLColumn> m_types;
+        std::vector<DBColumn> m_types;
 
        public:
         DBTableProto(const std::string& name = "");
 
-        DBTableProto& add(const std::string& name, SQLDataType type, int mod = -1);
+        DBTableProto& add(const std::string& name, DBDataType type, int mod = -1);
 
-        const SQLColumn& operator[](int index) const;
-        SQLColumn& operator[](int index);
+        const DBColumn& operator[](int index) const;
+        DBColumn& operator[](int index);
 
         void clear();
 
@@ -136,34 +131,33 @@ namespace cerberus
 
         std::string name() const;
 
-        Iterator<SQLColumn> begin();
-        Iterator<SQLColumn> end();
+        Iterator<DBColumn> begin();
+        Iterator<DBColumn> end();
 
-        ConstIterator<SQLColumn> begin() const;
-        ConstIterator<SQLColumn> end() const;
+        ConstIterator<DBColumn> begin() const;
+        ConstIterator<DBColumn> end() const;
     };
 
     class DBTableBlock
     {
-        friend class cerberus::SQLDatabase;
-
-       private:
         std::vector<DBRow> m_rows;
 
         DBTableProto m_prototype;
 
        public:
-        DBTableBlock();
+        DBTableBlock() = default;
+
+        DBTableBlock(const DBTableBlock& other) = default;
 
         DBTableBlock(const std::string& name);
 
         DBTableBlock(const DBTableProto& proto);
 
-        DBTableBlock(const DBTableBlock& other) = default;
+        DBTableBlock(const DBRow& row);
 
         ~DBTableBlock();
 
-        bool append(const DBRow& row);
+        OpRes append(const DBRow& row);
 
         size_t size() const;
 
@@ -179,9 +173,11 @@ namespace cerberus
 
         void setPrototype(const DBTableProto& prototype);
 
-        DBTableProto prototype() const;
+        void assignRows(const DBTableBlock& other);
 
-        DBTableBlock& addColumn(const std::string& name, SQLDataType type, int mod = -1);
+        const DBTableProto& prototype() const;
+
+        DBTableBlock& addColumn(const std::string& name, DBDataType type, int mod = -1);
 
         const DBRow& operator[](size_t pos) const;
         DBRow& operator[](size_t pos);

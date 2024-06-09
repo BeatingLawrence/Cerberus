@@ -23,7 +23,7 @@ namespace cerberus
             bool m_ready;
 
             IDatabase()
-                : m_ready(false){};
+                : m_ready(false) {};
 
            public:
             virtual OpRes init(const std::string& parameters) = 0;
@@ -38,7 +38,15 @@ namespace cerberus
 
             virtual OpResData<DBTableProto> queryPrototype(const string& tableName) = 0;
 
-            virtual ~IDatabase(){};
+            virtual OpRes createTable(DBTableProto& prototype) = 0;
+
+            virtual OpRes insertBlock(const DBTableBlock& block) = 0;
+
+            virtual OpRes dropTable(const std::string& table) = 0;
+
+            virtual OpResData<DBTableBlock> querytable(const std::string& tableName) = 0;
+
+            virtual ~IDatabase() {};
         };
     }  // namespace db
 }  // namespace cerberus

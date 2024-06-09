@@ -146,11 +146,11 @@ namespace cerberus
         // Get the complete absolute path
         static StringOpRes completePath(const std::string& path);
 
-        // Transform the SQL type contained in string in a SQLDataType value
-        static SQLDataType toSQLDataType(const std::string& type);
+        // Transform the SQL type contained in string in a DBDataType value
+        static DBDataType toDBDataType(const std::string& type);
 
         // Transform the given SQL data type to a string valid for databases
-        static std::string fromSQLDataType(SQLDataType type);
+        static std::string fromDBDataType(DBDataType type);
     };
 }  // namespace cerberus
 

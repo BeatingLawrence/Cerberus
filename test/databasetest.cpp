@@ -44,11 +44,11 @@ TEST_F(DatabaseTest, createTable)
     ASSERT_TRUE(db->ready());
 
     DBTableProto prototype("test");
-    prototype.add("ID", SQLDataType::SDT_BigInt)
-        .add("name", SQLDataType::SDT_VarChar, 255)
-        .add("country", SQLDataType::SDT_VarChar, 255)
-        .add("heigth", SQLDataType::SDT_Double)
-        .add("drivingLicense", SQLDataType::SDT_Boolean);
+    prototype.add("ID", DBDataType::DDT_BigInt)
+        .add("name", DBDataType::DDT_VarChar, 255)
+        .add("country", DBDataType::DDT_VarChar, 255)
+        .add("heigth", DBDataType::DDT_Double)
+        .add("drivingLicense", DBDataType::DDT_Boolean);
     ASSERT_EQ(db->createTable(prototype).res, cerberus::OR_OK);
 }
 

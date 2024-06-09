@@ -533,87 +533,87 @@ StringOpRes CerberusUtils::completePath(const std::string& path)
     return ret;
 }
 //=============================================================================
-SQLDataType CerberusUtils::toSQLDataType(const std::string& type)
+DBDataType CerberusUtils::toDBDataType(const std::string& type)
 {
     if (type.compare("bigint") == 0)
-        return SQLDataType::SDT_BigInt;
+        return DBDataType::DDT_BigInt;
 
     else if (type.compare("integer") == 0)
-        return SQLDataType::SDT_Int;
+        return DBDataType::DDT_Int;
 
     else if (type.compare("smallint") == 0)
-        return SQLDataType::SDT_SmallInt;
+        return DBDataType::DDT_SmallInt;
 
     else if (type.compare("real") == 0)
-        return SQLDataType::SDT_Real;
+        return DBDataType::DDT_Real;
 
     else if (type.compare("double precision") == 0)
-        return SQLDataType::SDT_Double;
+        return DBDataType::DDT_Double;
 
     else if (type.compare("boolean") == 0)
-        return SQLDataType::SDT_Boolean;
+        return DBDataType::DDT_Boolean;
 
     else if (type.compare("money") == 0)
-        return SQLDataType::SDT_Money;
+        return DBDataType::DDT_Money;
 
     else if (CerberusUtils::contains(type, "character"))
     {
         if (CerberusUtils::contains(type, "varying"))
-            return SQLDataType::SDT_VarChar;
+            return DBDataType::DDT_VarChar;
 
         else
-            return SQLDataType::SDT_Char;
+            return DBDataType::DDT_Char;
     }
     else if (CerberusUtils::contains(type, "bit"))
     {
         if (CerberusUtils::contains(type, "varying"))
-            return SQLDataType::SDT_VarBit;
+            return DBDataType::DDT_VarBit;
 
         else
-            return SQLDataType::SDT_Bit;
+            return DBDataType::DDT_Bit;
     }
 
-    return SQLDataType::SDT_Undefined;
+    return DBDataType::DDT_Undefined;
 }
 //=============================================================================
-std::string CerberusUtils::fromSQLDataType(SQLDataType type)
+std::string CerberusUtils::fromDBDataType(DBDataType type)
 {
     switch (type)
     {
-        case SQLDataType::SDT_Undefined:
+        case DBDataType::DDT_Undefined:
             return "";
 
-        case SQLDataType::SDT_Int:
+        case DBDataType::DDT_Int:
             return "integer";
 
-        case SQLDataType::SDT_SmallInt:
+        case DBDataType::DDT_SmallInt:
             return "smallint";
 
-        case SQLDataType::SDT_BigInt:
+        case DBDataType::DDT_BigInt:
             return "bigint";
 
-        case SQLDataType::SDT_Real:
+        case DBDataType::DDT_Real:
             return "real";
 
-        case SQLDataType::SDT_Double:
+        case DBDataType::DDT_Double:
             return "double precision";
 
-        case SQLDataType::SDT_Boolean:
+        case DBDataType::DDT_Boolean:
             return "boolean";
 
-        case SQLDataType::SDT_Bit:
+        case DBDataType::DDT_Bit:
             return "bit";
 
-        case SQLDataType::SDT_VarBit:
+        case DBDataType::DDT_VarBit:
             return "bit varying";
 
-        case SQLDataType::SDT_Char:
+        case DBDataType::DDT_Char:
             return "char";
 
-        case SQLDataType::SDT_VarChar:
+        case DBDataType::DDT_VarChar:
             return "char varying";
 
-        case SQLDataType::SDT_Money:
+        case DBDataType::DDT_Money:
             return "money";
     }
 
