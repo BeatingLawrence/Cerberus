@@ -142,7 +142,7 @@ OpResData<DBTableProto> PostgresDB::queryPrototype(const string &tableName)
     return res;
 }
 //=============================================================================
-OpRes PostgresDB::createTable(DBTableProto &prototype)  // PURE SQL
+OpRes PostgresDB::createTable(const DBTableProto &prototype)  // PURE SQL
 {
     auto name = prototype.name();
 
@@ -162,8 +162,7 @@ OpRes PostgresDB::createTable(DBTableProto &prototype)  // PURE SQL
     {
         auto type = el.type();
 
-        if (type == DBDataType::SDT_Bit || type == DBDataType::SDT_VarBit ||
-            type == DBDataType::SDT_Char ||
+        if (type == DBDataType::SDT_Bit || type == DBDataType::SDT_VarBit || type == DBDataType::SDT_Char ||
             type == DBDataType::SDT_VarChar)  // check if the mod parameter should be printed
         {
             cmd +=

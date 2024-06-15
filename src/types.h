@@ -23,6 +23,12 @@
 #define FloatOpRes ::cerberus::OpResData<long double>
 #define SizeOpRes ::cerberus::OpResData<::cerberus::LSIZE>
 
+#define condret(cond)                       \
+    {                                       \
+        auto _result = cond;                \
+        if (_result.fail()) return _result; \
+    }
+
 namespace cerberus
 {
     typedef uint32_t SIZE;
@@ -38,7 +44,7 @@ namespace cerberus
         BYTE x[32];
 
         VAR_256_BITS()
-            : x(){};
+            : x() {};
 
         VAR_256_BITS(uint64_t val)
             : x()
@@ -438,7 +444,7 @@ namespace cerberus
 
         CoreConf()
             : threadPool(0),
-              backupThreadMaxTime(0){};
+              backupThreadMaxTime(0) {};
     };
 
     struct CerberusInitConf
@@ -499,7 +505,7 @@ namespace cerberus
        public:
         managed_ptr()
             : m_ptr(nullptr),
-              m_refcount(nullptr){};
+              m_refcount(nullptr) {};
 
         managed_ptr(T* ptr)
             : m_ptr((Clonable*)ptr),
@@ -580,7 +586,7 @@ namespace cerberus
        public:
         unclonable_ptr()
             : m_ptr(nullptr),
-              m_refcount(nullptr){};
+              m_refcount(nullptr) {};
 
         unclonable_ptr(T* ptr)
             : m_ptr(ptr),
@@ -793,15 +799,15 @@ namespace cerberus
 
         OpResData(Result r, const std::string& reason = "", const std::string& reason2 = "")
             : OpRes(r, reason, reason2),
-              value(){};
+              value() {};
 
         OpResData(const T& value)
             : OpRes(OR_OK),
-              value(value){};
+              value(value) {};
 
         OpResData(const OpRes& res)
             : OpRes(res),
-              value(){};
+              value() {};
 
         OpResData<T>& expect(const std::string& str)
         {
@@ -1001,7 +1007,7 @@ namespace cerberus
               transferMode(Transfer_Bytes),
               maxpayload(0),
               server(false),
-              maxconn(0){};
+              maxconn(0) {};
     };
 
     class ByteBuffer;
@@ -1026,47 +1032,47 @@ namespace cerberus
 
         TypeWrapper(BYTE v)
             : type(ST_BYTE),
-              _byte(v){};
+              _byte(v) {};
 
         TypeWrapper(int32_t v)
             : type(ST_INT32),
-              _int32(v){};
+              _int32(v) {};
 
         TypeWrapper(int64_t v)
             : type(ST_INT64),
-              _int64(v){};
+              _int64(v) {};
 
         TypeWrapper(float v)
             : type(ST_FLOAT),
-              _float(v){};
+              _float(v) {};
 
         TypeWrapper(double v)
             : type(ST_DOUBLE),
-              _double(v){};
+              _double(v) {};
 
         TypeWrapper(bool v)
             : type(ST_BOOL),
-              _bool(v){};
+              _bool(v) {};
 
         TypeWrapper(void* v)
             : type(ST_VOIDP),
-              _voidp(v){};
+              _voidp(v) {};
 
         TypeWrapper(std::string& v)
             : type(ST_STRING),
-              _voidp(&v){};
+              _voidp(&v) {};
 
         TypeWrapper(ByteBuffer& v)
             : type(ST_BYTEBUFFER),
-              _voidp(&v){};
+              _voidp(&v) {};
 
         TypeWrapper(Dictionary& v)
             : type(ST_DICTIONARY),
-              _voidp(&v){};
+              _voidp(&v) {};
 
         TypeWrapper(JsonData& v)
             : type(ST_JSON),
-              _voidp(&v){};
+              _voidp(&v) {};
     };
 
 }  // namespace cerberus

@@ -562,6 +562,17 @@ OpRes File::seekOffset(int64_t pos) const
     return OR_OK;
 }
 //=============================================================================
+OpRes File::seekToEOF() const
+{
+    if (!isOpen()) return OR_BadConditions;
+
+    clearerr(m_file);
+
+    if (fseek(m_file, 0, SEEK_END) == -1) return {OR_Failure, strerror(errno)};
+
+    return OR_OK;
+}
+//=============================================================================
 void File::resetCursor() const { ::rewind(m_file); }
 //=============================================================================
 SizeOpRes File::getCursor() const

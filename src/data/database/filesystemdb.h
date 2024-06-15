@@ -12,14 +12,16 @@ namespace cerberus
         {
             struct Table
             {
+                HASH32 tableID;
                 DBTableProto proto;
-                LSIZE start;   // position in file where the table begins
+                LSIZE start;   // position in file where the table header begins
                 LSIZE buffer;  // position in file where the table data begins
 
                 Table()
-                    : proto(),
+                    : tableID(0),
+                      proto(),
                       start(0),
-                      buffer(0){};
+                      buffer(0) {};
             };
 
             File m_file;
@@ -34,6 +36,8 @@ namespace cerberus
 
             OpRes _load();
 
+            OpRes _buildHeader(const DBTableProto& prototype);
+
            public:
             FilesystemDB();
 
@@ -47,7 +51,7 @@ namespace cerberus
 
             virtual OpResData<DBTableProto> queryPrototype(const string& tableName);
 
-            virtual OpRes createTable(DBTableProto& prototype);
+            virtual OpRes createTable(const DBTableProto& prototype);
 
             virtual OpRes insertBlock(const DBTableBlock& block);
 

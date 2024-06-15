@@ -102,6 +102,41 @@ cerberus::OpRes FilesystemDB::_load()
     }
 }
 //=============================================================================
+cerberus::OpRes FilesystemDB::_buildHeader(const DBTableProto &proto)
+{
+    // xyyyyyyyy[...][0]table_name[0]col1_name[0]col2_name[...][0]buffer
+
+    ByteBuffer buf;
+    buf.appendString("//");
+
+    for (auto &&el : proto)
+    {
+        buf.appendChar(el.type());
+        DBMOD mod = el.mod();
+        buf.append_4b(&mod);
+    }
+
+    buf.appendChar(0);
+    buf.appendString(proto.name());
+    buf.appendChar(0);
+
+    for (auto &&el : proto)
+    {
+        buf.appendString(el.name());
+        buf.appendChar(0);
+    }
+
+    uint64_t size = 0;
+    buf.append_8b(&size);  // reserve 8 bytes for the size field
+
+    condret(m_file.seekToEOF());  // check this
+    condret(m_file.write(buf));
+
+    // finish this method
+    //
+    return OR_OK;
+}
+//=============================================================================
 FilesystemDB::FilesystemDB()
     : m_file(FOM_ReadWrite, true)
 {
@@ -137,9 +172,16 @@ cerberus::OpResData<cerberus::DBTableProto> FilesystemDB::queryPrototype(const s
     throw cImplMissExc("queryPrototype is not implemented yet");
 }
 //=============================================================================
-cerberus::OpRes FilesystemDB::createTable(DBTableProto &prototype)
+cerberus::OpRes FilesystemDB::createTable(const DBTableProto &prototype)
 {
-    throw cImplMissExc("createTable is not implemented yet");
+    // verify if the table already exists
+
+    HASH32 id = CerberusUtils::hash_fnv1a(prototype.name());
+
+    for (auto &&el : m_tables)
+        if (el.tableID == id) return OR_AlreadyPresent;
+
+    return _buildHeader(prototype);
 }
 //=============================================================================
 cerberus::OpRes FilesystemDB::insertBlock(const DBTableBlock &block)

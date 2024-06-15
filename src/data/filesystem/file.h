@@ -156,6 +156,9 @@ namespace cerberus
         // Move the cursor back or forth according to the sign of the parameter pos
         OpRes seekOffset(int64_t pos) const;
 
+        // Move the cursor to the end of file
+        OpRes seekToEOF() const;
+
         // Reset the cursor moving it to the beginning of the file
         void resetCursor() const;
 

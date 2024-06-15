@@ -33,7 +33,7 @@ namespace cerberus
 
             virtual OpResData<DBTableProto> queryPrototype(const string& tableName);
 
-            virtual OpRes createTable(DBTableProto& prototype);
+            virtual OpRes createTable(const DBTableProto& prototype);
 
             virtual OpRes insertBlock(const DBTableBlock& block);
 

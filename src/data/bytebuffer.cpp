@@ -278,6 +278,8 @@ ByteBuffer& ByteBuffer::appendString(const char* str)
     return *this;
 }
 //=============================================================================
+ByteBuffer& ByteBuffer::appendString(const std::string str) { return appendString(str.c_str()); }
+//=============================================================================
 ByteBuffer& ByteBuffer::appendChar(char c)
 {
     _resize(m_size + 1);
@@ -286,6 +288,14 @@ ByteBuffer& ByteBuffer::appendChar(char c)
 
     return *this;
 }
+//=============================================================================
+ByteBuffer& ByteBuffer::append_2b(void* src) { return appendFrom((const BYTE*)src, 2); }
+//=============================================================================
+ByteBuffer& ByteBuffer::append_4b(void* src) { return appendFrom((const BYTE*)src, 4); }
+//=============================================================================
+ByteBuffer& ByteBuffer::append_8b(void* src) { return appendFrom((const BYTE*)src, 8); }
+//=============================================================================
+ByteBuffer& ByteBuffer::append_16b(void* src) { return appendFrom((const BYTE*)src, 16); }
 //=============================================================================
 cerberus::SIZE ByteBuffer::size() const { return m_size; }
 //=============================================================================

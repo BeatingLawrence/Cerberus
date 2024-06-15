@@ -114,10 +114,16 @@ namespace cerberus
         // Append the given c-string str to the end of this buffer.
         // The string must end with a \0, that will NOT be appended.
         ByteBuffer& appendString(const char* str);
+        ByteBuffer& appendString(const std::string str);
 
-        // Appens the given char to the end of this buffer.
+        // Append the given char to the end of this buffer.
         // The size will be incremented by one.
         ByteBuffer& appendChar(char c);
+
+        ByteBuffer& append_2b(void* src);   // Append 2 bytes buffer
+        ByteBuffer& append_4b(void* src);   // Append 4 bytes buffer
+        ByteBuffer& append_8b(void* src);   // Append 8 bytes buffer
+        ByteBuffer& append_16b(void* src);  // Append 16 bytes buffer
 
         // Get the current buffer size
         SIZE size() const;
