@@ -365,18 +365,10 @@ SizeOpRes File::size() const
         return st.value.size;
     }
 
-    auto backup = ftell(m_file);
-
-    auto ret = fseek(m_file, 0L, SEEK_END);
-
-    if (ret == -1) return OR_Failure;
-
-    auto size = ftell(m_file);
-
-    ret = fseek(m_file, backup, SEEK_SET);
-
-    if (ret == -1) return OR_Failure;
-
+    auto backup = getCursor().expect().value;
+    condret(seekToEOF());
+    auto size = getCursor().expect().value;
+    condret(seek(backup));
     return (LSIZE)size;
 }
 //=============================================================================
@@ -490,7 +482,7 @@ OpRes File::readChunk(ByteBuffer& bytes, SIZE chunksize) const
     return OR_OK;
 }
 //=============================================================================
-OpResData<ByteBuffer> File::readUntil(const ByteBuffer& sequence) const
+OpResData<ByteBuffer> File::readUntil(const ByteBuffer& sequence) const  // please test
 {
     auto backup = getCursor();
     auto seqpos = search(sequence);
@@ -603,9 +595,7 @@ SizeOpRes File::getCursor() const
     if (!isOpen()) return OR_BadConditions;
 
     auto pos = ftell(m_file);
-
     if (pos == -1) return {OR_Failure, strerror(errno)};
-
     return (LSIZE)pos;
 }
 //=============================================================================

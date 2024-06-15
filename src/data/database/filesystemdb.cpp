@@ -24,7 +24,7 @@ cerberus::OpResData<string> FilesystemDB::_readStr()
 //=============================================================================
 cerberus::DBMOD FilesystemDB::_getMod(const ByteBuffer &buf)
 {
-    if (buf.size() != 8) return 0;
+    if (buf.size() != 8) throw cIllegalArgExc("_getMod() called with wrong args");
     DBMOD ret = 0;
     ret |= ((DBMOD)buf[7]);
     ret |= ((DBMOD)buf[6]) << 8;
@@ -40,37 +40,36 @@ cerberus::DBMOD FilesystemDB::_getMod(const ByteBuffer &buf)
 cerberus::OpRes FilesystemDB::_parseTable()
 {
     ByteBuffer buf;
-    OpRes r;
 
     while (true)
     {
-        r = m_file.readChunk(buf, 1);
-        if (r.fail()) return r;
+        condret(m_file.readChunk(buf, 1));
 
         DBDataType type = (DBDataType)buf.at(0);
 
         if (type == 0) break;  // first [0] delimiter found
 
-        r = m_file.readChunk(buf, 8);
-        if (r.fail()) return {r, "error while parsing typeID"};
+        condret_str(m_file.readChunk(buf, 8), "error while parsing typeID");
 
         DBMOD mod = _getMod(buf);
-
         m_tables.back().proto.add("", type, mod);
     }
 
     auto str = _readStr();
-    if (str.fail()) return {str, "error while parsing table name"};
+    condret_str(str, "error while parsing table name");
+
     m_tables.back().proto.setName(str.value);  // table name
 
     for (auto &&el : m_tables.back().proto)
     {
         str = _readStr();
-        if (str.fail()) return {str, "error while parsing column name"};
+        condret_str(str, "error while parsing column name");
         el.setName(str.value);
     }
 
     m_tables.back().buffer = m_file.getCursor().expect().value;
+
+    // todo: increment the cursor until the end of the buffer
 
     return OR_OK;
 }
@@ -96,9 +95,7 @@ cerberus::OpRes FilesystemDB::_load()
         tab.header = res.value;
         m_tables.push_back(tab);
 
-        auto parseRes = _parseTable();
-
-        if (parseRes.fail()) return parseRes;
+        condret(_parseTable());
     }
 }
 //=============================================================================
@@ -129,11 +126,8 @@ cerberus::OpRes FilesystemDB::_buildHeader(const DBTableProto &proto)
     uint64_t size = 0;
     buf.append_8b(&size);  // reserve 8 bytes for the size field
 
-    condret(m_file.seekToEOF());  // check this
-    condret(m_file.write(buf));
+    condret(m_file.writeExpand(buf));
 
-    // finish this method
-    //
     return OR_OK;
 }
 //=============================================================================
@@ -181,7 +175,13 @@ cerberus::OpRes FilesystemDB::createTable(const DBTableProto &prototype)
     for (auto &&el : m_tables)
         if (el.tableID == id) return OR_AlreadyPresent;
 
-    return _buildHeader(prototype);
+    LSIZE h = m_file.size().expect().value;
+    auto r  = _buildHeader(prototype);
+    LSIZE b = m_file.size().expect().value - 5;  // back <sizebytes(4)> EOF byte
+
+    m_tables.push_back({id, prototype, h, b});
+
+    return OR_OK;
 }
 //=============================================================================
 cerberus::OpRes FilesystemDB::insertBlock(const DBTableBlock &block)

@@ -22,6 +22,12 @@ namespace cerberus
                       proto(),
                       header(0),
                       buffer(0){};
+
+                Table(HASH32 id, const DBTableProto& proto, LSIZE h, LSIZE b)
+                    : tableID(id),
+                      proto(proto),
+                      header(h),
+                      buffer(b){};
             };
 
             File m_file;
