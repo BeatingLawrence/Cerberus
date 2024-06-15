@@ -193,18 +193,16 @@ OpResData<FileMetadata> cerberus::File::stat(const std::string& path)
     return metadata;
 }
 //=============================================================================
-File::File(FileOpenMode openMode, bool binaryMode)
+File::File(FileOpenMode openMode)
     : m_path(),
-      m_binaryMode(binaryMode),
       m_openMode(openMode),
       m_file(nullptr),
       m_fd(-1)
 {
 }
 //=============================================================================
-File::File(const Path& path, FileOpenMode openMode, bool binaryMode)
+File::File(const Path& path, FileOpenMode openMode)
     : m_path(path),
-      m_binaryMode(binaryMode),
       m_openMode(openMode),
       m_file(nullptr),
       m_fd(-1)
@@ -213,7 +211,6 @@ File::File(const Path& path, FileOpenMode openMode, bool binaryMode)
 //=============================================================================
 File::File(const File& other)
     : m_path(other.m_path),
-      m_binaryMode(other.m_binaryMode),
       m_openMode(other.m_openMode),
       m_file(nullptr),
       m_fd(-1)
@@ -222,7 +219,6 @@ File::File(const File& other)
 //=============================================================================
 File::File(File&& other)
     : m_path(other.m_path),
-      m_binaryMode(other.m_binaryMode),
       m_openMode(other.m_openMode),
       m_file(other.m_file),
       m_fd(other.m_fd)
@@ -233,9 +229,8 @@ File::File(File&& other)
 //=============================================================================
 File& File::operator=(const File& other)
 {
-    m_path       = other.m_path;
-    m_binaryMode = other.m_binaryMode;
-    m_openMode   = other.m_openMode;
+    m_path     = other.m_path;
+    m_openMode = other.m_openMode;
     return *this;
 }
 //=============================================================================
@@ -284,10 +279,10 @@ Path File::path() const { return m_path; }
 //=============================================================================
 Path File::completePath() const { return CerberusUtils::completePath(m_path.toStr()).value; }
 //=============================================================================
-void File::setOpenMode(FileOpenMode openMode, bool binaryMode)
+void File::setOpenMode(FileOpenMode openMode)
 {
-    m_openMode   = openMode;
-    m_binaryMode = binaryMode;
+    if (isOpen()) throw cIllegalStateExc("cannot alter the open mode of an open file");
+    m_openMode = openMode;
 }
 //=============================================================================
 std::string File::getOpenModeString()
@@ -310,7 +305,7 @@ std::string File::getOpenModeString()
             break;
     }
 
-    if (m_binaryMode) ret += "b";
+    ret += "b";
 
     return ret;
 }
@@ -399,6 +394,34 @@ OpRes File::write(const ByteBuffer& bytes)
 OpRes File::writeLine(const std::string& line)
 {
     return write(CerberusUtils::strPrint("%s\n", line.c_str()).c_str());
+}
+//=============================================================================
+OpRes File::writeExpand(const ByteBuffer& bytes)
+{
+    if (!isOpen()) return OR_BadConditions;
+
+    FileOpenMode fombackup = m_openMode;
+    LSIZE cursorbackup     = getCursor().expect().value;
+
+    if (m_openMode != FOM_ReadWriteAppend)
+    {
+        // reopen for appending
+        close();
+
+        setOpenMode(FOM_ReadWriteAppend);
+        condret(open());
+
+        write(bytes);
+        close();
+
+        setOpenMode(fombackup);
+        condret(open());
+        condret(seek(cursorbackup));
+        return OR_OK;
+    }
+
+    write(bytes);
+    return OR_OK;
 }
 //=============================================================================
 OpRes File::read(ByteBuffer& bytes, LSIZE start) const

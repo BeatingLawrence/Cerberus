@@ -137,3 +137,27 @@ TEST(fileTest, search)
 
     EXPECT_EQ(pos.value, 161);
 }
+
+TEST(fileTest, writeBehindEOF)
+{
+    {
+        File f("writeBehindEOFTest.txt");
+        f.setOpenMode(cerberus::FOM_ReadWriteTrunc);
+        ASSERT_TRUE(f.open().ok());
+
+        for (int i = 0; i < 20; i++) ASSERT_TRUE(f.writeLine("Hello!").ok());
+
+        f.close();
+    }
+
+    File f("writeBehindEOFTest.txt");  // size 140
+
+    ASSERT_TRUE(f.open().ok());
+    EXPECT_TRUE(f.writeExpand("one more line\n").ok("write fail"));
+
+    EXPECT_EQ(f.size().value, 154);  // this uses cursor
+
+    f.close();
+
+    EXPECT_EQ(f.size().value, 154);  // this uses stat()
+}

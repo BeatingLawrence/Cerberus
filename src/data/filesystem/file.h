@@ -21,8 +21,6 @@ namespace cerberus
        private:
         Path m_path;
 
-        bool m_binaryMode;
-
         FileOpenMode m_openMode;
 
         FILE* m_file;
@@ -66,8 +64,8 @@ namespace cerberus
         static OpResData<FileMetadata> stat(const std::string& path);
 
         // Create a File instance
-        File(FileOpenMode openMode = FOM_Read, bool binaryMode = false);
-        File(const Path& path, FileOpenMode openMode = FOM_Read, bool binaryMode = false);
+        File(FileOpenMode openMode = FOM_Read);
+        File(const Path& path, FileOpenMode openMode = FOM_Read);
 
         File(const File& other);
         File(File&& other);
@@ -82,10 +80,11 @@ namespace cerberus
         // Set the path of the file
         void path(const Path& path);
 
-        // Set the openMode of the file
-        void setOpenMode(FileOpenMode openMode, bool binaryMode = false);
+        // Set the open mode of the file. This method will throw
+        // an exception if the file is already open
+        void setOpenMode(FileOpenMode openMode);
 
-        // Know if the instance can write with the currently set openMode
+        // Tell if the instance can write with the currently set open mode
         bool canWrite() const;
 
         // Get the filename associated to this instance
@@ -123,6 +122,12 @@ namespace cerberus
 
         // Write a single line of text on file
         OpRes writeLine(const std::string& line = "");
+
+        // Write the buffer at the end of the file, effectively increasing its size.
+        // This method temporary closes and reopen the file with append flag if that
+        // was not present while opening. After that, it reopens the file again with the
+        // previous open mode.
+        OpRes writeExpand(const ByteBuffer& bytes);
 
         // Read the file starting from start pos till the end of file
         OpRes read(ByteBuffer& bytes, LSIZE start = 0) const;

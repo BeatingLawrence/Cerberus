@@ -93,7 +93,7 @@ cerberus::OpRes FilesystemDB::_load()
         }
 
         Table tab;
-        tab.start = res.value;
+        tab.header = res.value;
         m_tables.push_back(tab);
 
         auto parseRes = _parseTable();
@@ -138,7 +138,7 @@ cerberus::OpRes FilesystemDB::_buildHeader(const DBTableProto &proto)
 }
 //=============================================================================
 FilesystemDB::FilesystemDB()
-    : m_file(FOM_ReadWrite, true)
+    : m_file(FOM_ReadWrite)
 {
 }
 //=============================================================================

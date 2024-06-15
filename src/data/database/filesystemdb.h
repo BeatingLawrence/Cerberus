@@ -14,14 +14,14 @@ namespace cerberus
             {
                 HASH32 tableID;
                 DBTableProto proto;
-                LSIZE start;   // position in file where the table header begins
+                LSIZE header;  // position in file where the table header begins
                 LSIZE buffer;  // position in file where the table data begins
 
                 Table()
                     : tableID(0),
                       proto(),
-                      start(0),
-                      buffer(0) {};
+                      header(0),
+                      buffer(0){};
             };
 
             File m_file;
