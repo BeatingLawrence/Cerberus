@@ -197,11 +197,11 @@ ByteBuffer& ByteBuffer::assignFrom(const BYTE* buffer, SIZE len)
     return *this;
 }
 //=============================================================================
-const ByteBuffer& ByteBuffer::copyTo(BYTE* buffer, SIZE maxLen) const
+const ByteBuffer& ByteBuffer::copyTo(void* buffer, SIZE maxLen) const
 {
     if (m_size == 0 || !m_bytes) return *this;
 
-    if (maxLen)
+    if (maxLen && maxLen <= m_size)
         memmove(buffer, m_bytes, maxLen);
     else
         memmove(buffer, m_bytes, m_size);

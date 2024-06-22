@@ -21,13 +21,19 @@ namespace cerberus
                     : tableID(0),
                       proto(),
                       header(0),
-                      buffer(0){};
+                      buffer(0) {};
 
                 Table(HASH32 id, const DBTableProto& proto, LSIZE h, LSIZE b)
                     : tableID(id),
                       proto(proto),
                       header(h),
-                      buffer(b){};
+                      buffer(b) {};
+            };
+
+            struct Buf_Size
+            {
+                ByteBuffer buf;
+                LSIZE size;
             };
 
             File m_file;
@@ -43,6 +49,17 @@ namespace cerberus
             OpRes _load();
 
             OpRes _buildHeader(const DBTableProto& prototype);
+
+            // LSIZE _byteAlign(LSIZE bits);    // align bits number to 8
+            LSIZE _qceil(LSIZE x, LSIZE y);  // computed quotient an ceil it
+
+            uint8_t _reqbytes(LSIZE num);  // required bytes to represent num
+
+            OpResData<Buf_Size> _parseFieldRaw(DBDataType type, DBMOD mod);
+
+            OpResData<DBCell> _parseField(DBDataType type, DBMOD mod);
+
+            OpResData<DBTableBlock> _getTable(Table* tab);
 
            public:
             FilesystemDB();
@@ -63,7 +80,7 @@ namespace cerberus
 
             virtual OpRes dropTable(const std::string& table);
 
-            virtual OpResData<DBTableBlock> querytable(const std::string& tableName);
+            inline virtual OpResData<DBTableBlock> querytable(const std::string& tableName);
 
             virtual ~FilesystemDB();
         };

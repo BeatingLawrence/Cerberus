@@ -1,14 +1,140 @@
 #include "dbdata.h"
 
-#include <inttypes.h>
-
 #include <cstdlib>
-
-#include "../../core/cerberusutils.h"
-#include "src/cerberus.h"
 
 using namespace cerberus;
 
+//=============================================================================
+void DBCell::_fromBitArray(const std::vector<bool>& arr)
+{
+    m_value.clear();
+
+    bitmask mask;
+    uint8_t i = 0;
+
+    for (auto&& el : arr)
+    {
+        mask.set(i, el);
+
+        if (i == 7)
+        {
+            i = 0;
+            m_value.appendChar(mask.bits);
+            mask.reset();
+        }
+        else
+            i++;
+    }
+
+    if (i) m_value.appendChar(mask.bits);
+}
+//=============================================================================
+DBCell::DBCell(int64_t value)
+    : m_value((BYTE*)&value, sizeof(value)),
+      m_size()
+{
+}
+//=============================================================================
+DBCell::DBCell(int32_t value)
+    : m_value((BYTE*)&value, sizeof(value)),
+      m_size()
+{
+}
+//=============================================================================
+DBCell::DBCell(float value)
+    : m_value((BYTE*)&value, sizeof(value)),
+      m_size()
+{
+}
+//=============================================================================
+DBCell::DBCell(long double value)
+    : m_value((BYTE*)&value, sizeof(value)),
+      m_size()
+{
+}
+//=============================================================================
+DBCell::DBCell(bool value)
+    : m_value((BYTE*)&value, sizeof(value)),
+      m_size()
+{
+}
+//=============================================================================
+DBCell::DBCell(const std::vector<bool>& value)
+    : m_value(),
+      m_size()
+{
+    _fromBitArray(value);
+}
+//=============================================================================
+DBCell::DBCell(const std::string& str)
+    : m_value(str),
+      m_size()
+{
+}
+//=============================================================================
+DBCell::DBCell(const ByteBuffer& raw, LSIZE size)
+    : m_value(raw),
+      m_size(size)
+{
+}
+//=============================================================================
+void DBCell::set(const std::string& value) { m_value = value; }
+//=============================================================================
+void DBCell::set(int64_t value) { m_value.assignFrom((BYTE*)&value, sizeof(value)); }
+//=============================================================================
+void DBCell::set(long double value) { m_value.assignFrom((BYTE*)&value, sizeof(value)); }
+//=============================================================================
+void DBCell::set(bool value) { m_value.assignFrom((BYTE*)&value, sizeof(value)); }
+//=============================================================================
+void DBCell::set(const std::vector<bool>& value) { _fromBitArray(value); }
+//=============================================================================
+ByteBuffer& DBCell::raw() { return m_value; }
+//=============================================================================
+const ByteBuffer& DBCell::raw() const { return m_value; }
+//=============================================================================
+int64_t DBCell::toInt() const
+{
+    int64_t ret = 0;
+    m_value.copyTo(&ret, sizeof(ret));
+    return ret;
+}
+//=============================================================================
+long double DBCell::toReal() const
+{
+    long double ret = 0.0f;
+    m_value.copyTo(&ret, sizeof(ret));
+    return ret;
+}
+//=============================================================================
+bool DBCell::toBool() const
+{
+    bool ret = false;
+    m_value.copyTo(&ret, sizeof(ret));
+    return ret;
+}
+//=============================================================================
+std::vector<bool> DBCell::toBits() const
+{
+    if (m_value.isEmpty()) return std::vector<bool>();
+
+    std::vector<bool> ret;
+
+    for (auto&& el : m_value)
+    {
+        bitmask mask(el);
+
+        for (int i = 0; i < 8; i++)
+        {
+            ret.push_back(mask[i]);
+        }
+    }
+
+    return ret;
+}
+//=============================================================================
+bool DBCell::isEqual(const DBCell& other) const { return m_value == other.m_value; }
+//=============================================================================
+//=============================================================================
 //=============================================================================
 DBRow::~DBRow() {}
 //=============================================================================
@@ -29,6 +155,8 @@ Iterator<DBCell> DBRow::end() { return &(*m_values.end()); }
 ConstIterator<DBCell> DBRow::begin() const { return &(*m_values.begin()); }
 //=============================================================================
 ConstIterator<DBCell> DBRow::end() const { return &(*m_values.end()); }
+//=============================================================================
+//=============================================================================
 //=============================================================================
 DBTableProto::DBTableProto(const std::string& name)
     : m_name(name)
@@ -61,6 +189,8 @@ Iterator<DBColumn> DBTableProto::end() { return &(*m_types.end()); }
 ConstIterator<DBColumn> DBTableProto::begin() const { return &(*m_types.begin()); }
 //=============================================================================
 ConstIterator<DBColumn> DBTableProto::end() const { return &(*m_types.end()); }
+//=============================================================================
+//=============================================================================
 //=============================================================================
 DBTableBlock::DBTableBlock(const std::string& name)
     : m_prototype(name)
@@ -145,124 +275,4 @@ Iterator<DBRow> DBTableBlock::end() { return &(*m_rows.end()); }
 ConstIterator<DBRow> DBTableBlock::begin() const { return &(*m_rows.begin()); }
 //=============================================================================
 ConstIterator<DBRow> DBTableBlock::end() const { return &(*m_rows.end()); }
-//=============================================================================
-DBCell::DBCell(const std::string& raw)
-    : m_value(raw)
-{
-}
-//=============================================================================
-DBCell::DBCell(const char* value)
-    : m_value(value)
-{
-}
-//=============================================================================
-DBCell::DBCell(int64_t value) { set(value); }
-//=============================================================================
-DBCell::DBCell(int value) { set(int64_t(value)); }
-//=============================================================================
-DBCell::DBCell(unsigned int value) { set(int64_t(value)); }
-//=============================================================================
-DBCell::DBCell(double value) { set(value); }
-//=============================================================================
-DBCell::DBCell(float value) { set((double)value); }
-//=============================================================================
-DBCell::DBCell(bool value) { set(value); }
-//=============================================================================
-DBCell::DBCell(const std::vector<bool>& value) { set(value); }
-//=============================================================================
-void DBCell::set(const std::string& value) { m_value = value; }
-//=============================================================================
-void DBCell::set(int64_t value) { m_value = CerberusUtils::strPrint("%" PRId64, value); }
-//=============================================================================
-void DBCell::set(double value) { m_value = CerberusUtils::strPrint("%lf", value); }
-//=============================================================================
-void DBCell::set(bool value)
-{
-    if (value)
-        m_value = "true";
-    else
-        m_value = "false";
-}
-//=============================================================================
-void DBCell::set(const std::vector<bool>& value)
-{
-    m_value = "";
-
-    for (auto&& el : value)
-    {
-        if (el)
-            m_value += "1";
-        else
-            m_value += "0";
-    }
-}
-//=============================================================================
-std::string DBCell::raw() const { return m_value; }
-//=============================================================================
-int64_t DBCell::toInt() const
-{
-    int64_t ret = strtoll(m_value.c_str(), nullptr, 10);
-
-    if (errno == ERANGE)
-    {
-        logError("INT64 limit reached during string to int conversion");
-        return 0;
-    }
-
-    return ret;
-}
-//=============================================================================
-double DBCell::toFloat() const
-{
-    double ret = strtod(m_value.c_str(), nullptr);
-
-    if (errno == ERANGE)
-    {
-        logError("double limit reached during string to double conversion");
-        return 0.0f;
-    }
-
-    return ret;
-}
-//=============================================================================
-bool DBCell::toBool() const
-{
-    auto str = CerberusUtils::toLower(m_value);
-
-    if (str.compare("t") == 0 || str.compare("true") == 0)
-        return true;
-
-    else if (str.compare("f") == 0 || str.compare("false") == 0)
-        return false;
-
-    logError("called toBool() on a non-boolean SQLCell, value %s not recognized", m_value.c_str());
-    return false;
-}
-//=============================================================================
-std::vector<bool> DBCell::toBits() const
-{
-    std::vector<bool> ret;
-
-    for (auto&& el : m_value)
-    {
-        if (el == '0')
-            ret.push_back(false);
-
-        else if (el == '1')
-            ret.push_back(true);
-
-        else
-        {
-            logError("called toBits() on a SQLCell that does not contain any bit");
-            std::vector<bool> fail;
-            return fail;
-        }
-    }
-
-    return ret;
-}
-//=============================================================================
-bool DBCell::isEqual(const DBCell& other) const { return m_value.compare(other.m_value) == 0; }
-//=============================================================================
-bool DBCell::isEqual(const std::string& str) const { return m_value.compare(str) == 0; }
 //=============================================================================

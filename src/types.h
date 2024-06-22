@@ -50,7 +50,7 @@ namespace cerberus
         BYTE x[32];
 
         VAR_256_BITS()
-            : x(){};
+            : x() {};
 
         VAR_256_BITS(uint64_t val)
             : x()
@@ -87,6 +87,32 @@ namespace cerberus
     typedef VAR_256_BITS HASH256;
     typedef VAR_256_BITS KEY256;
 
+    struct bitmask
+    {
+        bitmask(uint8_t bits = 0)
+            : bits(bits) {};
+
+        uint8_t bits;
+
+        // bit 0 is LSB
+        bool operator[](uint8_t i)
+        {
+            if (i > 7) return false;
+            return bits & ((uint8_t)0x1 << i);
+        };
+
+        void set(uint8_t i, bool val = true)
+        {
+            if (i > 7) return;
+            if (val)
+                bits |= (uint8_t)0x1 << i;
+            else
+                bits &= ~((uint8_t)0x1 << i);
+        };
+
+        void reset() { bits = 0; };
+    };
+
     enum DBDataType : uint8_t
     {
         DDT_Undefined = 0,
@@ -100,7 +126,7 @@ namespace cerberus
         DDT_VarBit    = 8,   // [var] variable length bit array (needs modifier)
         DDT_Char      = 9,   // [fix] fixed length char array (needs modifier)
         DDT_VarChar   = 10,  // [var] variable length char array (needs modifier)
-        DDT_Money     = 11,  // [fix] fixed fractional precision (2 digits typically)
+        DDT_Money     = 11,  // [fix] fixed fractional precision (2 digits typically, 4 bytes)
     };
 
     enum DBBackend : uint8_t
@@ -450,7 +476,7 @@ namespace cerberus
 
         CoreConf()
             : threadPool(0),
-              backupThreadMaxTime(0){};
+              backupThreadMaxTime(0) {};
     };
 
     struct CerberusInitConf
@@ -511,7 +537,7 @@ namespace cerberus
        public:
         managed_ptr()
             : m_ptr(nullptr),
-              m_refcount(nullptr){};
+              m_refcount(nullptr) {};
 
         managed_ptr(T* ptr)
             : m_ptr((Clonable*)ptr),
@@ -592,7 +618,7 @@ namespace cerberus
        public:
         unclonable_ptr()
             : m_ptr(nullptr),
-              m_refcount(nullptr){};
+              m_refcount(nullptr) {};
 
         unclonable_ptr(T* ptr)
             : m_ptr(ptr),
@@ -803,17 +829,21 @@ namespace cerberus
     {
         T value;
 
-        OpResData(Result r, const std::string& reason = "", const std::string& reason2 = "")
-            : OpRes(r, reason, reason2),
-              value(){};
+        OpResData(Result r)
+            : OpRes(r),
+              value() {};
 
         OpResData(const T& value)
             : OpRes(OR_OK),
-              value(value){};
+              value(value) {};
 
-        OpResData(const OpRes& res)
+        OpResData(const OpRes& res, const std::string& reason = "", const std::string& reason2 = "")
             : OpRes(res),
-              value(){};
+              value()
+        {
+            addInfo(reason);
+            addInfo(reason2);
+        };
 
         OpResData<T>& expect(const std::string& str)
         {
@@ -1013,7 +1043,7 @@ namespace cerberus
               transferMode(Transfer_Bytes),
               maxpayload(0),
               server(false),
-              maxconn(0){};
+              maxconn(0) {};
     };
 
     class ByteBuffer;
@@ -1038,47 +1068,47 @@ namespace cerberus
 
         TypeWrapper(BYTE v)
             : type(ST_BYTE),
-              _byte(v){};
+              _byte(v) {};
 
         TypeWrapper(int32_t v)
             : type(ST_INT32),
-              _int32(v){};
+              _int32(v) {};
 
         TypeWrapper(int64_t v)
             : type(ST_INT64),
-              _int64(v){};
+              _int64(v) {};
 
         TypeWrapper(float v)
             : type(ST_FLOAT),
-              _float(v){};
+              _float(v) {};
 
         TypeWrapper(double v)
             : type(ST_DOUBLE),
-              _double(v){};
+              _double(v) {};
 
         TypeWrapper(bool v)
             : type(ST_BOOL),
-              _bool(v){};
+              _bool(v) {};
 
         TypeWrapper(void* v)
             : type(ST_VOIDP),
-              _voidp(v){};
+              _voidp(v) {};
 
         TypeWrapper(std::string& v)
             : type(ST_STRING),
-              _voidp(&v){};
+              _voidp(&v) {};
 
         TypeWrapper(ByteBuffer& v)
             : type(ST_BYTEBUFFER),
-              _voidp(&v){};
+              _voidp(&v) {};
 
         TypeWrapper(Dictionary& v)
             : type(ST_DICTIONARY),
-              _voidp(&v){};
+              _voidp(&v) {};
 
         TypeWrapper(JsonData& v)
             : type(ST_JSON),
-              _voidp(&v){};
+              _voidp(&v) {};
     };
 
 }  // namespace cerberus

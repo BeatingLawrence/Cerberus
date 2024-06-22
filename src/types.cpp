@@ -404,6 +404,7 @@ bool cerberus::OpRes::hasOptional(Result opt)
 //=============================================================================
 cerberus::OpRes &cerberus::OpRes::addInfo(const std::string &str)
 {
+    if (str.empty()) return *this;
     reason.append(", ");
     reason.append(str);
     return *this;

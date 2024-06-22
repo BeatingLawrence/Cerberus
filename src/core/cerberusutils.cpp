@@ -1,5 +1,7 @@
 #include "cerberusutils.h"
 
+#include <inttypes.h>
+
 #include <algorithm>
 #include <cstdarg>
 #include <cstdlib>
@@ -58,11 +60,11 @@ std::string CerberusUtils::strPrint_valist(std::string format, va_list list)
     return ret;
 }
 //=============================================================================
-std::string CerberusUtils::strPrint_uint(uint64_t v) { return strPrint("%lli", v); }
+std::string CerberusUtils::strPrint_uint(uint64_t v) { return strPrint("%" PRIu64, v); }
 //=============================================================================
-std::string CerberusUtils::strPrint_int(int64_t v) { return strPrint("%llu", v); }
+std::string CerberusUtils::strPrint_int(int64_t v) { return strPrint("%" PRIi64, v); }
 //=============================================================================
-std::string CerberusUtils::strPrint_float(double v) { return strPrint("%Lf", v); }
+std::string CerberusUtils::strPrint_float(long double v) { return strPrint("%Lf", v); }
 //=============================================================================
 std::string CerberusUtils::toLower(const std::string& str)
 {

@@ -18,45 +18,46 @@
 
 #include "../../core/cerberusutils.h"
 #include "../../types.h"
+#include "../bytebuffer.h"
 
 namespace cerberus
 {
     class DBCell
     {
-        std::string m_value;
+        ByteBuffer m_value;
+        LSIZE m_size;
+
+        void _fromBitArray(const std::vector<bool>& arr);
 
        public:
         DBCell() = default;
 
-        DBCell(double value);
+        DBCell(int64_t value);
+        DBCell(int32_t value);
         DBCell(float value);
+        DBCell(long double value);
         DBCell(bool value);
         DBCell(const std::vector<bool>& value);
-        DBCell(int64_t value);
-        DBCell(int value);
-        DBCell(unsigned int value);
-        DBCell(const std::string& raw);
-        DBCell(const char* value);
+        DBCell(const std::string& str);
+        DBCell(const ByteBuffer& raw, LSIZE size = 0);
 
         void set(const std::string& value);
         void set(int64_t value);
-        void set(double value);
+        void set(long double value);
         void set(bool value);
         void set(const std::vector<bool>& value);
 
-        std::string raw() const;
+        ByteBuffer& raw();
+        const ByteBuffer& raw() const;
 
         int64_t toInt() const;
-
-        double toFloat() const;
-
+        long double toReal() const;
         bool toBool() const;
-
         std::vector<bool> toBits() const;
 
-        bool isEqual(const DBCell& other) const;
+        LSIZE size() const;
 
-        bool isEqual(const std::string& str) const;
+        bool isEqual(const DBCell& other) const;
     };
 
     class DBRow
@@ -95,7 +96,7 @@ namespace cerberus
         DBColumn(const std::string& name, DBDataType type, DBMOD mod = 0)
             : m_columnName(name),
               m_type(type),
-              m_mod(mod){};
+              m_mod(mod) {};
 
         std::string name() const { return m_columnName; };
         void setName(const std::string& name) { m_columnName = name; };

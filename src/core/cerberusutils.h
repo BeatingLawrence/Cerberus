@@ -30,7 +30,7 @@ namespace cerberus
         static std::string strPrint_valist(std::string format, va_list list);
         static std::string strPrint_uint(uint64_t v);
         static std::string strPrint_int(int64_t v);
-        static std::string strPrint_float(double v);
+        static std::string strPrint_float(long double v);
 
         // Return the lower case version of str
         static std::string toLower(const std::string& str);
