@@ -137,13 +137,33 @@ namespace cerberus
 
     struct Path : private std::list<std::string>
     {
-        Path() = default;
+        bool absolute;
 
-        Path(const std::string& path) { fromStr(path); }
-        Path(const char* path) { fromStr(path); }
+        Path()
+            : absolute(false) {};
+
+        Path(const std::string& path)
+            : absolute(false)
+        {
+            fromStr(path);
+        }
+
+        Path(const char* path)
+            : absolute(false)
+        {
+            fromStr(path);
+        }
 
         using std::list<std::string>::back;
         using std::list<std::string>::empty;
+        using std::list<std::string>::pop_back;
+        using std::list<std::string>::pop_front;
+
+        void clear()
+        {
+            absolute = false;
+            std::list<std::string>::clear();
+        };
 
         void append(const std::string& str) { push_back(str); }
 
@@ -158,13 +178,15 @@ namespace cerberus
         {
             std::string ret;
 
-            for (auto el = begin(), en = --end(); el != en; el++)
+            if (absolute) ret.append("/");
+
+            for (auto&& el : *this)
             {
-                ret.append((*el));
+                ret.append(el);
                 ret.append("/");
             }
 
-            ret.append(back());
+            ret.pop_back();  // remove last '/'
 
             return ret;
         }
@@ -174,6 +196,8 @@ namespace cerberus
             clear();
             std::string tmp;
 
+            absolute = str.front() == '/';
+
             for (auto& el : str)
             {
                 if (el == '/')
@@ -182,9 +206,7 @@ namespace cerberus
                     tmp.clear();
                 }
                 else
-                {
                     tmp.push_back(el);
-                }
             }
 
             if (!tmp.empty()) push_back(tmp);

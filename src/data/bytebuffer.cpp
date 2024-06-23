@@ -42,7 +42,7 @@ void ByteBuffer::_clear()
 //=============================================================================
 cerberus::BYTE& ByteBuffer::getat(SIZE index) const { return *((BYTE*)(m_bytes + index)); }
 //=============================================================================
-ByteBuffer::ByteBuffer(const BYTE* buf, SIZE size)
+ByteBuffer::ByteBuffer(const void* buf, SIZE size)
     : m_bytes(nullptr),
       m_size(0),
       m_pos(0)
@@ -178,7 +178,7 @@ cerberus::BYTE& ByteBuffer::operator[](SIZE index) { return at(index); }
 //=============================================================================
 const cerberus::BYTE& ByteBuffer::operator[](SIZE index) const { return at(index); }
 //=============================================================================
-ByteBuffer& ByteBuffer::appendFrom(const BYTE* buffer, SIZE len)
+ByteBuffer& ByteBuffer::appendFrom(const void* buffer, SIZE len)
 {
     ByteBuffer buf(len);
     BYTE* p = buf.data();
@@ -189,7 +189,7 @@ ByteBuffer& ByteBuffer::appendFrom(const BYTE* buffer, SIZE len)
     return *this;
 }
 //=============================================================================
-ByteBuffer& ByteBuffer::assignFrom(const BYTE* buffer, SIZE len)
+ByteBuffer& ByteBuffer::assignFrom(const void* buffer, SIZE len)
 {
     clear();
     appendFrom(buffer, len);
@@ -258,6 +258,8 @@ ByteBuffer ByteBuffer::subBuffer(SIZE pos) const
 
     return ret;
 }
+//=============================================================================
+ByteBuffer ByteBuffer::trim(SIZE len) const { return std::move(subBuffer(0, len)); }
 //=============================================================================
 ByteBuffer& ByteBuffer::appendString(const char* str)
 {

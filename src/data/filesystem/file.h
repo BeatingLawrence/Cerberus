@@ -29,6 +29,11 @@ namespace cerberus
 
         std::string getOpenModeString();
 
+        OpRes _seek(LSIZE pos) const;
+
+        File(int fd, const Path& path,
+             FileOpenMode openMode);  // used internally, set openmode to FOM_ReadWrite
+
        public:
         // Check wether a regular file exists on filesystem
         // This method returns:
@@ -63,6 +68,18 @@ namespace cerberus
         // Stat the file or directory
         static OpResData<FileMetadata> stat(const std::string& path);
 
+        // Open a new temp file and return it.
+        // If path is not empty, it must refer to the directory where
+        // the file will be created. If path is empty, P_tmpdir macro will be used
+        static File tmpFile(const Path& path = Path(), FileOpenMode openMode = FOM_ReadWrite);
+
+        // Copy len bytes from src file to the dst file.
+        // If len is equal to 0, the copy will continue till EOF (of any file)
+        // The current cursor state of both files will be used.
+        // Please note that this method uses in-kernel data transfer when possible,
+        // and so it's much more efficient and faster.
+        static OpRes zeroCopy(File& src, File& dst, LSIZE len = 0);
+
         // Create a File instance
         File(FileOpenMode openMode = FOM_Read);
         File(const Path& path, FileOpenMode openMode = FOM_Read);
@@ -96,6 +113,9 @@ namespace cerberus
         // Get the complete absolute path of the file
         Path completePath() const;
 
+        // Get the directory path
+        Path directory() const;
+
         // Check if the file is currently open
         bool isOpen() const;
 
@@ -107,6 +127,9 @@ namespace cerberus
 
         // Close the file if open
         void close();
+
+        // Close the current file and reopen it
+        OpRes reopen();
 
         // Close the file if open, and remove it from filesystem
         OpRes remove();
@@ -128,6 +151,10 @@ namespace cerberus
         // was not present while opening. After that, it reopens the file again with the
         // previous open mode.
         OpRes writeExpand(const ByteBuffer& bytes);
+
+        // Insert the given buffer at the cursor position, increasing the file size.
+        // This method makes use of tempfile
+        OpRes insert(const ByteBuffer& bytes);
 
         // Read the file starting from start pos till the end of file
         OpRes read(ByteBuffer& bytes, LSIZE start = 0) const;

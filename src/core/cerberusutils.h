@@ -151,6 +151,12 @@ namespace cerberus
 
         // Transform the given SQL data type to a string valid for databases
         static std::string fromDBDataType(DBDataType type);
+
+        // Compute the quotient and ceil it
+        static LSIZE qceil(LSIZE dividend, LSIZE divisor);
+
+        // Tell the number of required bytes to represent the number num
+        static uint8_t reqBytes(LSIZE num);
     };
 }  // namespace cerberus
 

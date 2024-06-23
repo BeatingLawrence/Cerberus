@@ -161,3 +161,60 @@ TEST(fileTest, writeBehindEOF)
 
     EXPECT_EQ(f.size().value, 154);  // this uses stat()
 }
+
+TEST(fileTest, tempFile)
+{
+    {
+        auto f = File::tmpFile();  // generate a temp file
+
+        EXPECT_TRUE(f.writeLine("this file is temporary").ok());
+    }  // automatically closed (and deleted) on stack unwind
+
+    auto f = File::tmpFile();
+
+    EXPECT_TRUE(f.writeLine("this file was temporary but now its not").ok());
+
+    f.move("nontempfile.txt").expect();
+
+    f.close();
+}
+
+TEST(fileTest, insertion_readUntil)
+{
+    {
+        auto f = File("insertionTest.txt");
+        f.setOpenMode(cerberus::FOM_ReadWriteTrunc);
+        ASSERT_TRUE(f.open().ok());
+        for (int i = 0; i < 100; i++) EXPECT_TRUE(f.writeLine("this file  is  temporary").ok());  // 25 b
+    }
+
+    auto f = File("insertionTest.txt");
+    f.setOpenMode(cerberus::FOM_ReadWrite);
+    ASSERT_TRUE(f.open().ok());
+
+    ASSERT_TRUE(f.seek(100).ok());
+    ASSERT_TRUE(f.insert("THIS_IS_INSERTED").ok());
+
+    f.close();
+
+    ASSERT_TRUE(f.open().ok());
+    auto pos = f.search("THIS_IS_INSERTED");
+
+    EXPECT_TRUE(pos.ok());
+
+    logInfo("position of token: %llu", pos.value);
+
+    f.close();
+
+    EXPECT_EQ(pos.value, 100);
+
+    // readUntil test
+    ASSERT_TRUE(f.open().ok());
+    auto rr = f.readUntil("THIS_IS_INSERTED");
+    ASSERT_TRUE(rr.ok());
+
+    EXPECT_EQ(rr.value.size(), 100);
+
+    logInfo("readUntil returned %u bytes: %s", rr.value.size(), rr.value.toString().c_str());
+    f.close();
+}

@@ -50,6 +50,8 @@ namespace cerberus
         ByteBuffer& raw();
         const ByteBuffer& raw() const;
 
+        ByteBuffer serialize(DBDataType type) const;
+
         int64_t toInt() const;
         long double toReal() const;
         bool toBool() const;
@@ -59,6 +61,8 @@ namespace cerberus
 
         bool isEqual(const DBCell& other) const;
     };
+
+    class DBTableProto;
 
     class DBRow
     {
@@ -78,6 +82,8 @@ namespace cerberus
         size_t size() const;
 
         void clear();
+
+        ByteBuffer serialize(const DBTableProto& proto) const;
 
         const DBCell& operator[](size_t pos) const;
         DBCell& operator[](size_t pos);
@@ -107,6 +113,8 @@ namespace cerberus
 
         std::string typeString() const { return CerberusUtils::fromDBDataType(m_type); };
 
+        bool operator==(const DBColumn& other) const;
+
        private:
         std::string m_columnName;
         DBDataType m_type;
@@ -130,6 +138,8 @@ namespace cerberus
         void clear();
 
         size_t size() const;
+
+        bool isEqual(const DBTableProto& other) const;
 
         std::string name() const;
         void setName(const std::string& name);
@@ -177,6 +187,12 @@ namespace cerberus
         void setPrototype(const DBTableProto& prototype);
 
         void assignRows(const DBTableBlock& other);
+
+        bool verify() const;
+
+        bool verify(const DBTableProto& proto) const;
+
+        ByteBuffer serialize(const DBTableProto& proto) const;
 
         const DBTableProto& prototype() const;
 

@@ -6,7 +6,6 @@
 
 #include "../../cerberus.h"
 #include "../../core/cerberusutils.h"
-#include "directory.h"
 
 #ifdef WINDOWS_SYSTEM
 #include <windows.h>
@@ -16,6 +15,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #endif
+
+#define MAXIMUM_COPY_BLOCKSIZE 4096u  // 4k block size
 
 using namespace cerberus;
 
@@ -193,6 +194,59 @@ OpResData<FileMetadata> cerberus::File::stat(const std::string& path)
     return metadata;
 }
 //=============================================================================
+File File::tmpFile(const Path& path, FileOpenMode openMode)
+{
+    Path pth = path;
+    if (pth.empty()) pth.fromStr(P_tmpdir);
+
+    pth.append("XXXXXX");
+    std::string pstring(pth.toStr());
+
+    // this will overwrite 'XXXXXX'
+    int newfd = ::mkostemp(pstring.data(), openMode == FOM_ReadWriteAppend ? O_APPEND : 0);
+
+    if (newfd == -1) throw cSystemExc("mkstemp error: %s", strerror(errno));
+
+    return std::move(File(newfd, Path(pstring), openMode));
+}
+//=============================================================================
+OpRes File::zeroCopy(File& src, File& dst, LSIZE len)
+{
+#if defined(WINDOWS_SYSTEM)
+    throw cerberusImplementationMissExc("zerocopy implementation missing");
+
+#elif defined(LINUX_SYSTEM)
+    throw cerberusImplementationMissExc("zerocopy implementation missing");
+
+#elif defined(APPLE_SYSTEM)
+    // user-space copy for macos, sadly..
+
+    LSIZE blocksize = MAXIMUM_COPY_BLOCKSIZE;
+    if (len && len < blocksize) blocksize = len;
+    ByteBuffer buf;
+
+    while (true)  // maybe we can put this code in a userCopy() static function
+    {
+        auto r = src.readChunk(buf, blocksize);
+        if (r.res == OR_Failure) return r;
+
+        if (r.res == OR_EOF) break;
+
+        condret(dst.write(buf));
+
+        if (!len) continue;  // if len == 0 do not count
+
+        len -= blocksize;
+        if (len < blocksize) blocksize = len;
+
+        if (len == 0) break;
+    }
+
+#endif
+
+    return OR_OK;
+}
+//=============================================================================
 File::File(FileOpenMode openMode)
     : m_path(),
       m_openMode(openMode),
@@ -279,6 +333,13 @@ Path File::path() const { return m_path; }
 //=============================================================================
 Path File::completePath() const { return CerberusUtils::completePath(m_path.toStr()).value; }
 //=============================================================================
+Path File::directory() const
+{
+    auto path = completePath();
+    path.pop_back();
+    return path;
+}
+//=============================================================================
 void File::setOpenMode(FileOpenMode openMode)
 {
     if (isOpen()) throw cIllegalStateExc("cannot alter the open mode of an open file");
@@ -310,6 +371,32 @@ std::string File::getOpenModeString()
     return ret;
 }
 //=============================================================================
+OpRes File::_seek(LSIZE pos) const
+{
+    if (fseeko(m_file, (off_t)pos, SEEK_SET) == -1)
+        return {OR_Failure, CerberusUtils::strPrint("fseek fail: %s", strerror(errno))};
+
+    return OR_OK;
+}
+//=============================================================================
+File::File(int fd, const Path& path, FileOpenMode openMode)
+    : m_path(path),
+      m_openMode(openMode),
+      m_file(NULL),
+      m_fd(fd)
+{
+    m_file = ::fdopen(m_fd, getOpenModeString().c_str());
+
+    if (m_file == NULL)
+    {
+        auto err = errno;
+        ::close(m_fd);  // RAII
+        throw cSystemExc("fdopen error: %s", strerror(err));
+    }
+
+    resetCursor();  // fdopen does not set cursor to zero
+}
+//=============================================================================
 void File::path(const Path& path) { m_path = path; }
 //=============================================================================
 bool File::isOpen() const { return m_file != NULL; }
@@ -337,6 +424,12 @@ void File::close()
 
     m_file = nullptr;
     m_fd   = -1;
+}
+//=============================================================================
+OpRes File::reopen()
+{
+    File::close();
+    return File::open();
 }
 //=============================================================================
 OpRes File::remove()
@@ -368,7 +461,7 @@ SizeOpRes File::size() const
     auto backup = getCursor().expect().value;
     condret(seekToEOF());
     auto size = getCursor().expect().value;
-    condret(seek(backup));
+    condret(_seek(backup));
     return (LSIZE)size;
 }
 //=============================================================================
@@ -413,6 +506,29 @@ OpRes File::writeExpand(const ByteBuffer& bytes)
     }
 
     write(bytes);
+    return OR_OK;
+}
+//=============================================================================
+OpRes File::insert(const ByteBuffer& bytes)
+{
+    if (!isOpen()) return OR_BadConditions;
+
+    auto dir = directory();
+    auto tmp = tmpFile(dir, FOM_ReadWriteAppend);  // the file will be enlarged
+
+    LSIZE inspoint = getCursor().expect().value;
+
+    resetCursor();  // now position is 0
+
+    condret(zeroCopy(*this, tmp, inspoint));  // copy inspoint bytes
+    condret(tmp.write(bytes));                // add the buffer
+    condret(zeroCopy(*this, tmp));            // copy remaining bytes
+
+    // overwrite this file with the temporary one
+    condret(File::move(tmp.completePath().toStr(), completePath().toStr()));
+
+    condret(reopen());
+
     return OR_OK;
 }
 //=============================================================================
@@ -473,22 +589,22 @@ OpRes File::readChunk(ByteBuffer& bytes, SIZE chunksize) const
 
     auto ret = fread(bytes.data(), 1, chunksize, m_file);
 
+    bytes.resize(ret);
+
     if (ferror(m_file)) return OR_Failure;
 
     if (ret == 0 && feof(m_file)) return OR_EOF;
 
-    bytes.resize(ret);
-
     return OR_OK;
 }
 //=============================================================================
-OpResData<ByteBuffer> File::readUntil(const ByteBuffer& sequence) const  // please test
+OpResData<ByteBuffer> File::readUntil(const ByteBuffer& sequence) const
 {
     auto backup = getCursor();
     auto seqpos = search(sequence);
-    if (seqpos.fail()) return seqpos;
-
     seek(backup.value).expect();
+
+    if (seqpos.fail()) return seqpos;
 
     ByteBuffer buf;
     auto readret = readChunk(buf, seqpos.value - backup.value);
@@ -559,11 +675,7 @@ OpRes File::seek(cerberus::LSIZE pos) const
 
     if (pos >= size().value) return OR_WrongArgument;
 
-    auto ret = fseek(m_file, pos, SEEK_SET);
-
-    if (ret == -1) return OR_Failure;
-
-    return OR_OK;
+    return _seek(pos);
 }
 //=============================================================================
 OpRes File::seekOffset(int64_t pos) const
@@ -572,7 +684,7 @@ OpRes File::seekOffset(int64_t pos) const
 
     clearerr(m_file);
 
-    if (fseek(m_file, pos, SEEK_CUR) == -1) return {OR_Failure, strerror(errno)};
+    if (fseeko(m_file, (off_t)pos, SEEK_CUR) == -1) return {OR_Failure, strerror(errno)};
 
     return OR_OK;
 }
@@ -583,7 +695,7 @@ OpRes File::seekToEOF() const
 
     clearerr(m_file);
 
-    if (fseek(m_file, 0, SEEK_END) == -1) return {OR_Failure, strerror(errno)};
+    if (fseeko(m_file, (off_t)0, SEEK_END) == -1) return {OR_Failure, strerror(errno)};
 
     return OR_OK;
 }
@@ -594,8 +706,8 @@ SizeOpRes File::getCursor() const
 {
     if (!isOpen()) return OR_BadConditions;
 
-    auto pos = ftell(m_file);
-    if (pos == -1) return {OR_Failure, strerror(errno)};
+    auto pos = ftello(m_file);
+    if (pos == (off_t)-1) return {OR_Failure, strerror(errno)};
     return (LSIZE)pos;
 }
 //=============================================================================

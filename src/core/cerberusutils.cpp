@@ -622,3 +622,23 @@ std::string CerberusUtils::fromDBDataType(DBDataType type)
     return "";
 }
 //=============================================================================
+LSIZE CerberusUtils::qceil(LSIZE dividend, LSIZE divisor)
+{
+    return dividend / divisor + (dividend % divisor != 0);
+}
+//=============================================================================
+uint8_t CerberusUtils::reqBytes(LSIZE num)
+{
+    if (!num) return 1;
+
+    LSIZE mask = (LSIZE)0xFF << 56;
+
+    for (uint8_t i = 8; i != 0; i--)
+    {
+        if (num & mask) return i;
+        mask >>= 8;
+    }
+
+    return 1;
+}
+//=============================================================================

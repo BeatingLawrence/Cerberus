@@ -113,7 +113,7 @@ TEST_F(DatabaseTest, queryResult)
     {
         for (auto&& cell : row)
         {
-            logInfo("%s", cell.raw().c_str());
+            logInfo("%s", cell.raw().toString().c_str());
         }
 
         logInfo("=========");

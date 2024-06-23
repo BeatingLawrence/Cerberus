@@ -25,7 +25,7 @@ namespace cerberus
 
        public:
         // Construct a ByteBuffer copying its content from a given buffer
-        explicit ByteBuffer(const BYTE* buf, SIZE size);
+        ByteBuffer(const void* buf, SIZE size);
 
         // Construct a ByteBuffer allocating size bytes. The buffer
         // is not initialized and may contain garbage value
@@ -34,7 +34,7 @@ namespace cerberus
         // Construct a ByteBuffer allocating size bytes. The buffer is initialized using val value
         ByteBuffer(SIZE size, BYTE val);
 
-        // Construct an invalid ByteBuffer, no buffer memory allocation is performed
+        // Construct an empty ByteBuffer, no buffer memory allocation is performed
         ByteBuffer();
 
         // Construct a ByteBuffer from another one. This operation will shallow-copy the buffer
@@ -73,10 +73,10 @@ namespace cerberus
         const BYTE& operator[](SIZE index) const;
 
         // Append len bytes read from the given buffer to this ByteBuffer.
-        ByteBuffer& appendFrom(const BYTE* buffer, SIZE len);
+        ByteBuffer& appendFrom(const void* buffer, SIZE len);
 
         // Assign the content of the given buffer to this ByteBuffer. Existing content will be discarded.
-        ByteBuffer& assignFrom(const BYTE* buffer, SIZE len);
+        ByteBuffer& assignFrom(const void* buffer, SIZE len);
 
         // Copy the content of this ByteBuffer to the given buffer. No more than maxLen bytes will be
         // copied. If maxLen is 0, all the content of this ByteBuffer will be copied
@@ -110,6 +110,10 @@ namespace cerberus
         // the buffer If the pos is greater than or equal to the size, this call will return an empty
         // buffer.
         ByteBuffer subBuffer(SIZE pos) const;
+
+        // Return another ByteBuffer that is equal to this except for the size that now
+        // is trimmed to len bytes.
+        ByteBuffer trim(SIZE len) const;
 
         // Append the given c-string str to the end of this buffer.
         // The string must end with a \0, that will NOT be appended.

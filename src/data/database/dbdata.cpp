@@ -2,6 +2,8 @@
 
 #include <cstdlib>
 
+#include "../../exception/exception.h"
+
 using namespace cerberus;
 
 //=============================================================================
@@ -92,6 +94,50 @@ ByteBuffer& DBCell::raw() { return m_value; }
 //=============================================================================
 const ByteBuffer& DBCell::raw() const { return m_value; }
 //=============================================================================
+ByteBuffer DBCell::serialize(DBDataType type) const
+{
+    switch (type)
+    {
+        case DDT_BigInt:
+        case DDT_Double:
+            return m_value.trim(8);
+
+        case DDT_Int:
+        case DDT_Real:
+        case DDT_Money:
+            return m_value.trim(4);
+
+        case DDT_SmallInt:
+            return m_value.trim(2);
+
+        case DDT_Boolean:
+            return m_value.trim(1);
+
+        case DDT_Bit:
+        case DDT_Char:
+            return m_value;
+
+        case DDT_VarBit:
+        {
+            ByteBuffer bb;
+            bb.appendFrom(&m_size, CerberusUtils::reqBytes(m_size));
+            return bb.append(m_value.trim(CerberusUtils::qceil(m_size, 8)));
+        }
+
+        case DDT_VarChar:
+        {
+            ByteBuffer bb;
+            bb.appendFrom(&m_size, CerberusUtils::reqBytes(m_size));
+            return bb.append(m_value.trim(m_size));
+        }
+
+        default:
+            break;
+    }
+
+    throw cIllegalArgExc("unknown type");
+}
+//=============================================================================
 int64_t DBCell::toInt() const
 {
     int64_t ret = 0;
@@ -144,6 +190,19 @@ size_t DBRow::size() const { return m_values.size(); }
 //=============================================================================
 void DBRow::clear() { m_values.clear(); }
 //=============================================================================
+ByteBuffer DBRow::serialize(const DBTableProto& proto) const
+{
+    ByteBuffer buf;
+    int i = 0;
+
+    for (auto&& el : *this)
+    {
+        buf.append(el.serialize(proto[i].type()));
+        i++;
+    }
+    return buf;
+}
+//=============================================================================
 const DBCell& DBRow::operator[](size_t pos) const { return m_values.at(pos); }
 //=============================================================================
 DBCell& DBRow::operator[](size_t pos) { return m_values.at(pos); }
@@ -177,6 +236,11 @@ DBColumn& DBTableProto::operator[](int index) { return m_types.at(index); }
 void DBTableProto::clear() { m_types.clear(); }
 //=============================================================================
 size_t DBTableProto::size() const { return m_types.size(); }
+//=============================================================================
+bool DBTableProto::isEqual(const DBTableProto& other) const
+{
+    return m_name == other.m_name && m_types == other.m_types;
+}
 //=============================================================================
 std::string DBTableProto::name() const { return m_name; }
 //=============================================================================
@@ -235,6 +299,21 @@ void DBTableBlock::setPrototype(const DBTableProto& prototype) { m_prototype = p
 //=============================================================================
 void DBTableBlock::assignRows(const DBTableBlock& other) { m_rows = other.m_rows; }
 //=============================================================================
+bool DBTableBlock::verify() const { return verify(m_prototype); }
+//=============================================================================
+bool DBTableBlock::verify(const DBTableProto& proto) const
+{
+    return true;  // PLEASE IMPLEMENT THIS
+#pragma GCC warning "implement this method"
+}
+//=============================================================================
+ByteBuffer DBTableBlock::serialize(const DBTableProto& proto) const
+{
+    ByteBuffer buf;
+    for (auto&& el : *this) buf.append(el.serialize(proto));
+    return buf;
+}
+//=============================================================================
 const DBTableProto& DBTableBlock::prototype() const { return m_prototype; }
 //=============================================================================
 DBTableBlock& DBTableBlock::addColumn(const ::std::string& name, DBDataType type, DBMOD mod)
@@ -275,4 +354,9 @@ Iterator<DBRow> DBTableBlock::end() { return &(*m_rows.end()); }
 ConstIterator<DBRow> DBTableBlock::begin() const { return &(*m_rows.begin()); }
 //=============================================================================
 ConstIterator<DBRow> DBTableBlock::end() const { return &(*m_rows.end()); }
+//=============================================================================
+bool DBColumn::operator==(const DBColumn& other) const
+{
+    return m_columnName == other.m_columnName && m_type == other.m_type && m_mod == other.m_mod;
+}
 //=============================================================================

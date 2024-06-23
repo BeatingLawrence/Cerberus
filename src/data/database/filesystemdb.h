@@ -50,16 +50,13 @@ namespace cerberus
 
             OpRes _buildHeader(const DBTableProto& prototype);
 
-            // LSIZE _byteAlign(LSIZE bits);    // align bits number to 8
-            LSIZE _qceil(LSIZE x, LSIZE y);  // computed quotient an ceil it
-
-            uint8_t _reqbytes(LSIZE num);  // required bytes to represent num
-
             OpResData<Buf_Size> _parseFieldRaw(DBDataType type, DBMOD mod);
 
             OpResData<DBCell> _parseField(DBDataType type, DBMOD mod);
 
             OpResData<DBTableBlock> _getTable(Table* tab);
+
+            OpRes _insertBlock(Table* tab, const DBTableBlock& block);
 
            public:
             FilesystemDB();

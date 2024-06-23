@@ -136,29 +136,6 @@ OpRes FilesystemDB::_buildHeader(const DBTableProto &proto)
     return OR_OK;
 }
 //=============================================================================
-// LSIZE FilesystemDB::_byteAlign(LSIZE bits)
-// {
-//     if (bits % 8) bits += (8 - (bits % 8));
-//     return bits;
-// }
-//=============================================================================
-LSIZE FilesystemDB::_qceil(LSIZE x, LSIZE y) { return x / y + (x % y != 0); }
-//=============================================================================
-uint8_t FilesystemDB::_reqbytes(LSIZE num)
-{
-    if (!num) return 1;
-
-    LSIZE mask = (LSIZE)0xFF << 56;
-
-    for (uint8_t i = 8; i != 0; i--)
-    {
-        if (num & mask) return i;
-        mask >>= 8;
-    }
-
-    return 1;
-}
-//=============================================================================
 OpResData<FilesystemDB::Buf_Size> FilesystemDB::_parseFieldRaw(DBDataType type, DBMOD mod)
 {
     ByteBuffer buf;
@@ -169,7 +146,7 @@ OpResData<FilesystemDB::Buf_Size> FilesystemDB::_parseFieldRaw(DBDataType type, 
         case DDT_Double:
         {
             condret(m_file.readChunk(buf, 8));
-            return Buf_Size(buf, 0);
+            return Buf_Size{buf, 0};
         }
 
         case DDT_Int:
@@ -177,51 +154,51 @@ OpResData<FilesystemDB::Buf_Size> FilesystemDB::_parseFieldRaw(DBDataType type, 
         case DDT_Money:
         {
             condret(m_file.readChunk(buf, 4));
-            return Buf_Size(buf, 0);
+            return Buf_Size{buf, 0};
         }
 
         case DDT_SmallInt:
         {
             condret(m_file.readChunk(buf, 2));
-            return Buf_Size(buf, 0);
+            return Buf_Size{buf, 0};
         }
 
         case DDT_Boolean:
         {
             condret(m_file.readChunk(buf, 1));
-            return Buf_Size(buf, 0);
+            return Buf_Size{buf, 0};
         }
 
         case DDT_Bit:
         {
-            condret(m_file.readChunk(buf, _qceil(mod, 8)));
-            return Buf_Size(buf, 0);
+            condret(m_file.readChunk(buf, CerberusUtils::qceil(mod, 8)));
+            return Buf_Size{buf, 0};
         }
 
         case DDT_Char:
         {
             condret(m_file.readChunk(buf, mod));
-            return Buf_Size(buf, 0);
+            return Buf_Size{buf, 0};
         }
 
         case DDT_VarBit:
         {
-            LSIZE bytes = _reqbytes(mod);  // required bytes to represent the number
+            LSIZE bytes = CerberusUtils::reqBytes(mod);  // required bytes to represent the number
 
             condret(m_file.readChunk(buf, bytes));  // read field header (actual number of bits)
             LSIZE actualBits = 0;
             buf.copyTo(&actualBits, sizeof(actualBits));
 
-            bytes = _qceil(actualBits, 8);  // allocated bytes
+            bytes = CerberusUtils::qceil(actualBits, 8);  // allocated bytes
 
             condret(m_file.readChunk(buf, bytes));
 
-            return Buf_Size(buf, actualBits);
+            return Buf_Size{buf, actualBits};
         }
 
         case DDT_VarChar:
         {
-            LSIZE bytes = _reqbytes(mod);  // required bytes to represent the number
+            LSIZE bytes = CerberusUtils::reqBytes(mod);  // required bytes to represent the number
 
             condret(m_file.readChunk(buf, bytes));  // read field header (actual number of bytes)
             LSIZE actualBytes = 0;
@@ -229,7 +206,7 @@ OpResData<FilesystemDB::Buf_Size> FilesystemDB::_parseFieldRaw(DBDataType type, 
 
             condret(m_file.readChunk(buf, actualBytes));
 
-            return Buf_Size(buf, actualBytes);
+            return Buf_Size{buf, actualBytes};
         }
 
         default:
@@ -279,6 +256,28 @@ OpResData<DBTableBlock> FilesystemDB::_getTable(Table *tab)
     return block;
 }
 //=============================================================================
+OpRes FilesystemDB::_insertBlock(Table *tab, const DBTableBlock &block)
+{
+    if (!block.verify(tab->proto)) return {OR_WrongType, "verify() returned false"};
+
+    condret(m_file.seek(tab->buffer + 8));  // position the cursor at the beginning of the actual buffer
+
+    ByteBuffer buf = block.serialize(tab->proto);  // generate the block of data
+
+    condret(m_file.insert(buf));
+
+    // update the line count field
+    condret(m_file.read(buf, tab->buffer, 8));
+    LSIZE linecount = 0;
+    buf.copyTo(&linecount);
+    linecount += block.size();
+
+    condret(m_file.seek(tab->buffer));
+    condret(m_file.write({&linecount, 8}));
+
+    return OR_OK;
+}
+//=============================================================================
 FilesystemDB::FilesystemDB()
     : m_file(FOM_ReadWrite)
 {
@@ -290,9 +289,7 @@ OpRes FilesystemDB::init(const string &parameters)
 
     m_file.path(parameters);
 
-    auto res = m_file.open();
-
-    if (res.fail()) return res;
+    condret(m_file.open());
 
     return _load();
 }
@@ -301,7 +298,7 @@ void FilesystemDB::deinit() { m_file.close(); }
 //=============================================================================
 OpRes FilesystemDB::command(const string &query)
 {
-    throw cUsageErrorExc("Could not give a command to the \"Filesystem\" database backend");
+    throw cUsageErrorExc("cannot give a command to the \"Filesystem\" DB backend");
 }
 //=============================================================================
 OpResData<DBTableBlock> FilesystemDB::queryBlock(const string &query)
@@ -311,11 +308,20 @@ OpResData<DBTableBlock> FilesystemDB::queryBlock(const string &query)
 //=============================================================================
 OpResData<DBTableProto> FilesystemDB::queryPrototype(const string &tableName)
 {
-    throw cImplMissExc("queryPrototype is not implemented yet");
+    if (m_file.isOpen()) return OR_BadConditions;
+
+    auto id = HASH_FUNC(tableName);
+
+    for (auto &&el : m_tables)
+        if (el.tableID == id) return el.proto;
+
+    return OR_NotFound;
 }
 //=============================================================================
 OpRes FilesystemDB::createTable(const DBTableProto &prototype)
 {
+    if (m_file.isOpen()) return OR_BadConditions;
+
     // verify if the table already exists
 
     HASH32 id = HASH_FUNC(prototype.name());
@@ -334,13 +340,22 @@ OpRes FilesystemDB::createTable(const DBTableProto &prototype)
 //=============================================================================
 OpRes FilesystemDB::insertBlock(const DBTableBlock &block)
 {
-    throw cImplMissExc("insertBlock is not implemented yet");
+    if (m_file.isOpen()) return OR_BadConditions;
+
+    HASH32 id = HASH_FUNC(block.prototype().name());
+
+    for (auto &&el : m_tables)
+        if (el.tableID == id) return _insertBlock(&el, block);
+
+    return OR_NotFound;
 }
 //=============================================================================
 OpRes FilesystemDB::dropTable(const string &table) { throw cImplMissExc("dropTable is not implemented yet"); }
 //=============================================================================
 OpResData<DBTableBlock> FilesystemDB::querytable(const string &tableName)
 {
+    if (m_file.isOpen()) return OR_BadConditions;
+
     auto id = HASH_FUNC(tableName);
 
     for (auto &&el : m_tables)
