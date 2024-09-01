@@ -91,6 +91,7 @@ ByteBuffer Message::toBuffer() const
 }
 //=============================================================================
 Clonable* Message::clone() const { return new Message(*this); }
+/*
 //=============================================================================
 Message& Message::fill(std::initializer_list<TypeWrapper> values)
 {
@@ -197,4 +198,5 @@ Message& Message::insert(std::initializer_list<TypeWrapper> values)
 
     return *this;
 }
+*/
 //=============================================================================

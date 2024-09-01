@@ -1,5 +1,5 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef CERBERUS_TYPES_H
+#define CERBERUS_TYPES_H
 
 #ifndef WINDOWS_SYSTEM
 #include <sys/stat.h>
@@ -369,25 +369,28 @@ namespace cerberus
 #endif
     };
 
-    enum SlotType : uint8_t
-    {
-        ST_UNDEFINED = 0,
-        ST_BYTE,
-        ST_INT32,
-        ST_INT64,
-        ST_UINT64,
-        ST_FLOAT,
-        ST_DOUBLE,
-        ST_BOOL,
-        ST_VOIDP,
-        ST_STRING,
-        ST_BYTEBUFFER,
-        ST_DICTIONARY,
-        ST_JSON,
-        ST_HOST,
-        ST_TASK,
-        ST_RESULT,
-    };
+    // enum SlotType : uint8_t
+    // {
+    //     ST_UNDEFINED = 0,
+    //     ST_CUSTOM,  // used for custom slot types
+
+    //     // cerberus-defines slot types:
+    //     ST_BYTE,
+    //     ST_INT32,
+    //     ST_INT64,
+    //     ST_UINT64,
+    //     ST_FLOAT,
+    //     ST_DOUBLE,
+    //     ST_BOOL,
+    //     ST_VOIDP,
+    //     ST_STRING,
+    //     ST_BYTEBUFFER,
+    //     ST_DICTIONARY,
+    //     ST_JSON,
+    //     ST_HOST,
+    //     ST_TASK,
+    //     ST_RESULT,
+    // };
 
     enum WordMatch : uint8_t
     {
@@ -1071,6 +1074,7 @@ namespace cerberus
     class ByteBuffer;
     class JsonData;
 
+    /*
     struct TypeWrapper
     {
         SlotType type;
@@ -1133,5 +1137,7 @@ namespace cerberus
               _voidp(&v) {};
     };
 
+    */
+
 }  // namespace cerberus
-#endif  // TYPES_H
+#endif  // CERBERUS_TYPES_H

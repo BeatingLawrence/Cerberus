@@ -22,9 +22,6 @@ namespace cerberus
        public:
         virtual ~BaseSlot();
 
-        // Get the type
-        virtual SlotType type() const;
-
         // Get the name
         std::string name() const;
 
@@ -34,6 +31,9 @@ namespace cerberus
         virtual Clonable* clone() const = 0;
 
         virtual ByteBuffer toBuffer() const = 0;
+
+        virtual slot_ptr newslot() = 0;  // allocates T, used for factory
+        slot_ptr newslot(const std::string name);
 
         // Perform a dynamic cast of this object into T.
         // An exception will be thrown if cast is invalid.
@@ -61,18 +61,18 @@ namespace cerberus
        protected:
         T m_value;
 
-        Slot(const T& value = T(), const std::string& name = "")
+        Slot(const T& value, const std::string& name = "")
             : BaseSlot(name),
-              m_value(value){};
+              m_value(value) {};
 
         Slot(const Slot& other) = default;
+
+        Slot() = delete;
 
         Slot& operator=(const Slot& other) = delete;
 
        public:
-        Slot() = delete;
-
-        virtual ~Slot(){};
+        virtual ~Slot() {};
 
         const T& value() const { return m_value; };
 
@@ -81,16 +81,35 @@ namespace cerberus
         void value(const T& value) { m_value = value; };
     };
 
+    // This macro allows the application to define a new slot type using a given C-struct
+
+#define new_slot_from_cstruct(slot_type, c_struct)                                                     \
+    struct slot_type : public Slot<c_struct>                                                           \
+    {                                                                                                  \
+        slot_type(const c_struct& value = {}, const std::string& name = "")                            \
+            : Slot<c_struct>(value, name) {};                                                          \
+        static slot_ptr create(const c_struct& value = {}, const std::string& name = "")               \
+        {                                                                                              \
+            return new slot_type(value, name);                                                         \
+        };                                                                                             \
+        virtual slot_ptr newslot() { return create(); };                                               \
+        virtual Clonable* clone() const { return new slot_type(*this); };                              \
+        virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(c_struct)); }; \
+    };
+
+    //====================================================================================
+
     struct CERBERUS_EXPORT BoolSlot : public Slot<bool>
     {
         BoolSlot(bool value = false, const std::string& name = "")
-            : Slot<bool>(value, name){};
-        virtual SlotType type() const { return ST_BOOL; };
+            : Slot<bool>(value, name) {};
 
         static slot_ptr create(bool value = false, const std::string& name = "")
         {
             return new BoolSlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new BoolSlot(*this); };
 
@@ -100,13 +119,14 @@ namespace cerberus
     struct CERBERUS_EXPORT BufferSlot : public Slot<ByteBuffer>
     {
         BufferSlot(const ByteBuffer& value = ByteBuffer(), const std::string& name = "")
-            : Slot<ByteBuffer>(value, name){};
-        virtual SlotType type() const { return ST_BYTEBUFFER; };
+            : Slot<ByteBuffer>(value, name) {};
 
         static slot_ptr create(const ByteBuffer& value = ByteBuffer(), const std::string& name = "")
         {
             return new BufferSlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new BufferSlot(*this); };
 
@@ -116,13 +136,14 @@ namespace cerberus
     struct CERBERUS_EXPORT ByteSlot : public Slot<BYTE>
     {
         ByteSlot(BYTE value = 0, const std::string& name = "")
-            : Slot<BYTE>(value, name){};
-        virtual SlotType type() const { return ST_BYTE; };
+            : Slot<BYTE>(value, name) {};
 
         static slot_ptr create(BYTE value = 0, const std::string& name = "")
         {
             return new ByteSlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new ByteSlot(*this); };
 
@@ -132,13 +153,14 @@ namespace cerberus
     struct CERBERUS_EXPORT DictionarySlot : public Slot<Dictionary>
     {
         DictionarySlot(Dictionary value = Dictionary(), const std::string& name = "")
-            : Slot<Dictionary>(value, name){};
-        virtual SlotType type() const { return ST_DICTIONARY; };
+            : Slot<Dictionary>(value, name) {};
 
         static slot_ptr create(const Dictionary& value = Dictionary(), const std::string& name = "")
         {
             return new DictionarySlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new DictionarySlot(*this); };
 
@@ -148,13 +170,14 @@ namespace cerberus
     struct CERBERUS_EXPORT DoubleSlot : public Slot<double>
     {
         DoubleSlot(double value = 0.0f, const std::string& name = "")
-            : Slot<double>(value, name){};
-        virtual SlotType type() const { return ST_DOUBLE; };
+            : Slot<double>(value, name) {};
 
         static slot_ptr create(double value = 0.0f, const std::string& name = "")
         {
             return new DoubleSlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new DoubleSlot(*this); };
 
@@ -164,13 +187,14 @@ namespace cerberus
     struct CERBERUS_EXPORT FloatSlot : public Slot<float>
     {
         FloatSlot(float value = 0.0f, const std::string& name = "")
-            : Slot<float>(value, name){};
-        virtual SlotType type() const { return ST_FLOAT; };
+            : Slot<float>(value, name) {};
 
         static slot_ptr create(float value = 0.0f, const std::string& name = "")
         {
             return new FloatSlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new FloatSlot(*this); };
 
@@ -180,13 +204,14 @@ namespace cerberus
     struct CERBERUS_EXPORT Int32Slot : public Slot<int32_t>
     {
         Int32Slot(int32_t value = 0, const std::string& name = "")
-            : Slot<int32_t>(value, name){};
-        virtual SlotType type() const { return ST_INT32; };
+            : Slot<int32_t>(value, name) {};
 
         static slot_ptr create(int32_t value = 0, const std::string& name = "")
         {
             return new Int32Slot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new Int32Slot(*this); };
 
@@ -196,13 +221,14 @@ namespace cerberus
     struct CERBERUS_EXPORT Int64Slot : public Slot<int64_t>
     {
         Int64Slot(int64_t value = 0, const std::string& name = "")
-            : Slot<int64_t>(value, name){};
-        virtual SlotType type() const { return ST_INT64; };
+            : Slot<int64_t>(value, name) {};
 
         static slot_ptr create(int64_t value = 0, const std::string& name = "")
         {
             return new Int64Slot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new Int64Slot(*this); };
 
@@ -212,13 +238,14 @@ namespace cerberus
     struct CERBERUS_EXPORT UInt64Slot : public Slot<uint64_t>
     {
         UInt64Slot(uint64_t value = 0, const std::string& name = "")
-            : Slot<uint64_t>(value, name){};
-        virtual SlotType type() const { return ST_UINT64; };
+            : Slot<uint64_t>(value, name) {};
 
         static slot_ptr create(uint64_t value = 0, const std::string& name = "")
         {
             return new UInt64Slot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new UInt64Slot(*this); };
 
@@ -228,13 +255,14 @@ namespace cerberus
     struct CERBERUS_EXPORT JsonSlot : public Slot<JsonData>
     {
         JsonSlot(JsonData value = JsonData(), const std::string& name = "")
-            : Slot<JsonData>(value, name){};
-        virtual SlotType type() const { return ST_JSON; };
+            : Slot<JsonData>(value, name) {};
 
         static slot_ptr create(const JsonData& value = JsonData(), const std::string& name = "")
         {
             return new JsonSlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new JsonSlot(*this); };
 
@@ -247,13 +275,14 @@ namespace cerberus
     struct CERBERUS_EXPORT StringSlot : public Slot<std::string>
     {
         StringSlot(std::string value = std::string(), const std::string& name = "")
-            : Slot<std::string>(value, name){};
-        virtual SlotType type() const { return ST_STRING; };
+            : Slot<std::string>(value, name) {};
 
         static slot_ptr create(const std::string& value = std::string(), const std::string& name = "")
         {
             return new StringSlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new StringSlot(*this); };
 
@@ -263,13 +292,14 @@ namespace cerberus
     struct CERBERUS_EXPORT VoidPSlot : public Slot<void*>
     {
         VoidPSlot(void* value = nullptr, const std::string& name = "")
-            : Slot<void*>(value, name){};
-        virtual SlotType type() const { return ST_VOIDP; };
+            : Slot<void*>(value, name) {};
 
         static slot_ptr create(void* value = nullptr, const std::string& name = "")
         {
             return new VoidPSlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new VoidPSlot(*this); };
 
@@ -279,13 +309,14 @@ namespace cerberus
     struct CERBERUS_EXPORT HostSlot : public Slot<Host>
     {
         HostSlot(const Host& value = Host(), const std::string& name = "")
-            : Slot<Host>(value, name){};
-        virtual SlotType type() const { return ST_HOST; };
+            : Slot<Host>(value, name) {};
 
         static slot_ptr create(const Host& value = Host(), const std::string& name = "")
         {
             return new HostSlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new HostSlot(*this); };
 
@@ -295,13 +326,14 @@ namespace cerberus
     struct CERBERUS_EXPORT TaskSlot : public Slot<Task>
     {
         TaskSlot(Task value = {}, const std::string& name = "")
-            : Slot<Task>(value, name){};
-        virtual SlotType type() const { return ST_TASK; };
+            : Slot<Task>(value, name) {};
 
         static slot_ptr create(Task value = {}, const std::string& name = "")
         {
             return new TaskSlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new TaskSlot(*this); };
 
@@ -311,13 +343,14 @@ namespace cerberus
     struct CERBERUS_EXPORT ResultSlot : public Slot<OpRes>
     {
         ResultSlot(OpRes value = OpRes(), const std::string& name = "")
-            : Slot<OpRes>(value, name){};
-        virtual SlotType type() const { return ST_RESULT; };
+            : Slot<OpRes>(value, name) {};
 
         static slot_ptr create(OpRes value = OpRes(), const std::string& name = "")
         {
             return new ResultSlot(value, name);
         };
+
+        virtual slot_ptr newslot() { return create(); };
 
         virtual Clonable* clone() const { return new ResultSlot(*this); };
 

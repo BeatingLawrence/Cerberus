@@ -33,7 +33,7 @@ namespace cerberus
             FrameworkLock& lock;
 
             FrameworkLocker(FrameworkLock& lock)
-                : lock(lock){};
+                : lock(lock) {};
 
             ~FrameworkLocker() { lock.end(); };
         };
@@ -47,7 +47,7 @@ namespace cerberus
         FrameworkLock()
             : ready(false),
               usage(0),
-              data(nullptr){};
+              data(nullptr) {};
 
         FrameworkLock(const FrameworkLock& other) = delete;
 
@@ -195,18 +195,21 @@ namespace cerberus
 
         // ======================Public Register===========================
 
-        // Retrieves an object ID by its name
+        // Retrieve an object ID by its name
         static HASH32 idByName(const std::string& name);
 
         // ===========================Factory==============================
 
-        // Retrieves a MessageTemplate by its ID
+        // Retrieve a MessageTemplate by its ID
         static OpResData<MessageTemplate> templateById(HASH32 id);
 
-        // Retrieves a MessageTemplate by its name
+        // Retrieve a MessageTemplate by its name
         static OpResData<MessageTemplate> templateByName(const std::string& name);
 
-        // Adds a template of the given message to the register, returning the chosen typeID
+        // Retrieve a message ID from its name
+        static HASH32 msgIdByName(const std::string& name);
+
+        // Add a template of the given message to the register, returning the chosen typeID
         static OpResData<HASH32> registerMessage(const Message& message, const std::string& name);
         static OpResData<HASH32> registerTemplate(const MessageTemplate& tmplt);
 

@@ -213,10 +213,10 @@ File File::tmpFile(const Path& path, FileOpenMode openMode)
 OpRes File::zeroCopy(File& src, File& dst, LSIZE len)
 {
 #if defined(WINDOWS_SYSTEM)
-    throw cerberusImplementationMissExc("zerocopy implementation missing");
+    throw cImplMissExc("zerocopy implementation missing");
 
 #elif defined(LINUX_SYSTEM)
-    throw cerberusImplementationMissExc("zerocopy implementation missing");
+    throw cImplMissExc("zerocopy implementation missing");
 
 #elif defined(APPLE_SYSTEM)
     // user-space copy for macos, sadly..

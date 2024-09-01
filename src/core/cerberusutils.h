@@ -131,9 +131,6 @@ namespace cerberus
         // This method fails if the supplied string is not a number
         static OpRes cleanNumber(std::string& str);
 
-        // Construct a new Slot
-        static slot_ptr newSlot(SlotType type, const std::string& name = "");
-
         // Construct a standard message template
         static MessageTemplate standardTemplate(HASH32 id);
 

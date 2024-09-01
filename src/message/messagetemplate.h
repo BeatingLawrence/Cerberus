@@ -18,13 +18,7 @@ namespace cerberus
 
     class CERBERUS_EXPORT MessageTemplate
     {
-        struct SlotTemplate
-        {
-            SlotType type;
-            std::string name;
-        };
-
-        std::vector<SlotTemplate> m_types;
+        std::vector<slot_ptr> m_types;
         std::string m_name;
 
        public:
@@ -33,24 +27,30 @@ namespace cerberus
         // Construct an empty template
         MessageTemplate();
 
+        // Copy constructor
         MessageTemplate(const MessageTemplate& other) = default;
 
-        // Constructs an empty template with a name
+        // Construct an empty template with a name
         MessageTemplate(const std::string& name);
 
-        // Constructs a template taking data from a message
+        // Construct a template taking data from a message
         MessageTemplate(const Message& message, const std::string& name);
 
-        // Adds a single slot type at the end of the template
-        MessageTemplate& addSlotType(SlotType type, const std::string& name = "");
+        // Add a single slot type at the end of the template
+        MessageTemplate& addSlotType(slot_ptr type, const std::string& name = "");
 
-        // Returns the slot type at the index position
-        SlotTemplate getSlotAt(size_t index) const;
+        // Return the slot at the index position
+        slot_ptr getSlotAt(size_t index) const;
 
-        // Returns the number of slots contained in this template
+        // Return the number of slots contained in this template
         size_t count() const;
 
+        // Return the name of the template
         std::string name() const;
+
+        // Iterators
+        ConstIterator<slot_ptr> begin() const;
+        ConstIterator<slot_ptr> end() const;
     };
 }  // namespace cerberus
 

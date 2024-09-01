@@ -394,65 +394,6 @@ OpRes CerberusUtils::cleanNumber(std::string& str)
     return OR_OK;
 }
 //=============================================================================
-slot_ptr CerberusUtils::newSlot(SlotType type, const std::string& name)
-{
-    slot_ptr ret;
-
-    switch (type)
-    {
-        case ST_BYTE:
-            ret = ByteSlot::create();
-            break;
-        case ST_INT32:
-            ret = Int32Slot::create();
-            break;
-        case ST_INT64:
-            ret = Int64Slot::create();
-            break;
-        case ST_FLOAT:
-            ret = FloatSlot::create();
-            break;
-        case ST_DOUBLE:
-            ret = DoubleSlot::create();
-            break;
-        case ST_BOOL:
-            ret = BoolSlot::create();
-            break;
-        case ST_VOIDP:
-            ret = VoidPSlot::create();
-            break;
-        case ST_STRING:
-            ret = StringSlot::create();
-            break;
-        case ST_BYTEBUFFER:
-            ret = BufferSlot::create();
-            break;
-        case ST_DICTIONARY:
-            ret = DictionarySlot::create();
-            break;
-        case ST_JSON:
-            ret = JsonSlot::create();
-            break;
-        case ST_UINT64:
-            ret = UInt64Slot::create();
-            break;
-        case ST_HOST:
-            ret = HostSlot::create();
-            break;
-        case ST_TASK:
-            ret = TaskSlot::create();
-            break;
-        case ST_RESULT:
-            ret = ResultSlot::create();
-            break;
-        default:
-            throw cIllegalArgExc("Unknown slot type");
-    }
-
-    ret->name(name);
-    return ret;
-}
-//=============================================================================
 MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
 {
     MessageTemplate tmplt;
@@ -460,7 +401,7 @@ MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
     switch (id)
     {
         case CERBERUS_MESSAGE_LOG_ID:
-            tmplt.addSlotType(ST_STRING);
+            tmplt.addSlotType(StringSlot::create());
             break;
 
         case CERBERUS_MESSAGE_TERM_ID:
@@ -468,19 +409,19 @@ MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
             break;
 
         case CERBERUS_MESSAGE_TASK_ID:
-            tmplt.addSlotType(ST_UINT64, "client");
-            tmplt.addSlotType(ST_TASK, "task");
+            tmplt.addSlotType(UInt64Slot::create(0, "client"));
+            tmplt.addSlotType(TaskSlot::create({}, "task"));
             break;
 
         case CERBERUS_MESSAGE_TASKEND_ID:
-            tmplt.addSlotType(ST_RESULT, "result");
-            tmplt.addSlotType(ST_VOIDP, "player");
+            tmplt.addSlotType(ResultSlot::create(OpRes(), "result"));
+            tmplt.addSlotType(VoidPSlot::create(nullptr, "player"));
             break;
 
         case CERBERUS_MESSAGE_SOCKDATA_ID:
-            tmplt.addSlotType(ST_RESULT, "result");
-            tmplt.addSlotType(ST_HOST, "host");
-            tmplt.addSlotType(ST_BYTEBUFFER, "buffer");
+            tmplt.addSlotType(ResultSlot::create(OpRes(), "result"));
+            tmplt.addSlotType(HostSlot::create(Host(), "host"));
+            tmplt.addSlotType(BufferSlot::create(ByteBuffer(), "buffer"));
             break;
 
             // add here more message specializations..

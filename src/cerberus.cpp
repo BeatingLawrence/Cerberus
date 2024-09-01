@@ -285,6 +285,13 @@ OpResData<MessageTemplate> Cerberus::templateByName(const std::string &name)
     return Cerberus::framework.reg.data->msgTemplateByName(name);
 }
 //=============================================================================
+HASH32 Cerberus::msgIdByName(const std::string &name)
+{
+    Cerberus::framework.reg.isReadySevere();
+    auto locker = Cerberus::framework.reg.getLocker();
+    return Cerberus::framework.reg.data->msgTemplateByName(name).expect().value.id;
+}
+//=============================================================================
 OpResData<HASH32> Cerberus::registerMessage(const Message &message, const std::string &name)
 {
     auto tmplt = MessageTemplate(message, name);
@@ -313,11 +320,7 @@ cerberus_message Cerberus::constructMessage(HASH32 id)
 
     cerberus_message message = Message::create(id);
 
-    for (size_t i = 0; i < tmplt.value.count(); i++)
-    {
-        message->addSlot(
-            CerberusUtils::newSlot(tmplt.value.getSlotAt(i).type, tmplt.value.getSlotAt(i).name));
-    }
+    for (auto &&el : tmplt.value) message->addSlot(el->newslot(el->name()));
 
     return message;
 }
@@ -332,11 +335,7 @@ cerberus_message Cerberus::constructMessage(const std::string &name)
 
     cerberus_message message = Message::create(tmplt.value.id);
 
-    for (size_t i = 0; i < tmplt.value.count(); i++)
-    {
-        message->addSlot(
-            CerberusUtils::newSlot(tmplt.value.getSlotAt(i).type, tmplt.value.getSlotAt(i).name));
-    }
+    for (auto &&el : tmplt.value) message->addSlot(el->newslot(el->name()));
 
     return message;
 }

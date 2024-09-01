@@ -58,6 +58,7 @@ namespace cerberus
 
         virtual Clonable* clone() const;
 
+        /*
         // Fill the fields.
         // Given value types must match with the actual value types
         // stored in the message, otherwise a cast exception
@@ -71,6 +72,8 @@ namespace cerberus
         // clears the message first, deleting all slots and then re-creates them
         // one by one using the given type and value.
         Message& insert(std::initializer_list<TypeWrapper> values);
+
+        */
     };
 }  // namespace cerberus
 
