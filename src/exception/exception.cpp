@@ -21,39 +21,39 @@ Exception::Exception(ExceptionType type, uint32_t line, const char* fileName, co
     switch (type)
     {
         case ET_IllegalArgument:
-            m_error = "Illegal argument exception";
+            m_error = "Illegal argument";
             break;
 
         case ET_IllegalState:
-            m_error = "Illegal state exception";
+            m_error = "Illegal state";
             break;
 
         case ET_System:
-            m_error = "System exception";
+            m_error = "System error";
             break;
 
         case ET_MissingImplementation:
-            m_error = "Missing implementation exception";
+            m_error = "Missing implementation";
             break;
 
         case ET_InvalidCast:
-            m_error = "Invalid cast exception";
+            m_error = "Invalid cast";
             break;
 
         case ET_UsageError:
-            m_error = "Usage error exception";
+            m_error = "Usage error";
             break;
 
         case ET_OperationResult:
-            m_error = "Operation exception";
+            m_error = "Operation error";
             break;
 
         case ET_Exception:
-            m_error = "Generic exception";
+            m_error = "Generic error";
             break;
 
         case ET_Fatal:
-            m_error = "Fatal exception";
+            m_error = "Fatal error";
             break;
     }
 

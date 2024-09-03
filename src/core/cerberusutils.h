@@ -90,6 +90,9 @@ namespace cerberus
         // Check if str1 ends with c char
         static bool endsWith(const std::string& str, char c);
 
+        // Check if str matches the given regex pattern.
+        static OpRes patternMatch(const std::string& str, const std::string& pattern);
+
         // Replace all the occurrences of find in str with replace
         static void replaceAll(std::string& str, const std::string& find, const std::string& replace);
 
@@ -118,6 +121,18 @@ namespace cerberus
         // If token was not found, the returned string will be empty.
         // The token is searched from the start of the string
         static std::string substrFrom(const std::string& str, const std::string& token);
+
+        // Return a substring of str that starts at pos 0 and ends at pattern pos (excluded)
+        // If pattern was not found, str will be returned.
+        // If invert is false, the search is performed from the start of str, from the end otherwise
+        static StringOpRes substrUntil_regex(const std::string& str, const std::string& pattern,
+                                             bool invert = false);
+
+        // Return a substring of str that starts at pattern pos (excluded) and ends at str end
+        // If pattern was not found, the returned string will be empty
+        // If invert is false, the search is performed from the start of str, from the end otherwise
+        static StringOpRes substrFrom_regex(const std::string& str, const std::string& pattern,
+                                            bool invert = false);
 
         // Splits the given str in two pieces at the given token (that is excluded from both).
         // If token was not found, all str will be placed in the left string returned, and the

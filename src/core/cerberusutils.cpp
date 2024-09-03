@@ -3,6 +3,7 @@
 #include <inttypes.h>
 
 #include <algorithm>
+#include <boost/regex.hpp>
 #include <cstdarg>
 #include <cstdlib>
 #include <cstring>
@@ -266,6 +267,25 @@ bool CerberusUtils::endsWith(const std::string& str, char c)
     return (str.back() == c);
 }
 //=============================================================================
+OpRes CerberusUtils::patternMatch(const std::string& str, const std::string& pattern)
+{
+    if (str.empty()) return OR_Empty;
+
+    try
+    {
+        boost::regex r(pattern);
+        boost::smatch m;
+
+        if (boost::regex_match(str, m, r)) return OR_OK;
+    }
+    catch (std::exception& e)
+    {
+        return {OR_Failure, e.what()};
+    }
+
+    return OR_NotFound;
+}
+//=============================================================================
 void CerberusUtils::replaceAll(std::string& str, const std::string& find, const std::string& replace)
 {
     size_t start = 0;
@@ -318,22 +338,72 @@ std::string CerberusUtils::truncStr(const std::string& str, SIZE size)
     return str.substr(0, size);
 }
 //=============================================================================
-std::string CerberusUtils::substrUntil(const std::string& str, const std::string& token)
+std::string CerberusUtils::substrUntil(const std::string& str, const std::string& pattern)
 {
-    auto found = str.find(token);
+    auto found = str.find(pattern);
 
     if (found == std::string::npos) return str;
 
     return str.substr(0, found);
 }
 //=============================================================================
-std::string CerberusUtils::substrFrom(const std::string& str, const std::string& token)
+std::string CerberusUtils::substrFrom(const std::string& str, const std::string& pattern)
 {
-    auto found = str.find(token);
+    auto found = str.find(pattern);
 
     if (found == std::string::npos) return "";
 
-    return str.substr(found + token.size());
+    return str.substr(found + pattern.size());
+}
+//=============================================================================
+StringOpRes CerberusUtils::substrUntil_regex(const std::string& str, const std::string& pattern, bool invert)
+{
+    if (str.empty()) return OR_Empty;
+
+    try
+    {
+        boost::regex r(pattern);
+        boost::smatch m;
+
+        if (boost::regex_search(str, m, r))
+        {
+            // at least one match found
+
+            uint32_t pos = m[invert ? m.size() - 1 : 0].first - str.begin();
+            return str.substr(0, pos);
+        }
+    }
+    catch (std::exception& e)
+    {
+        return {OR_Failure, e.what()};
+    }
+
+    return OR_NotFound;
+}
+//=============================================================================
+StringOpRes CerberusUtils::substrFrom_regex(const std::string& str, const std::string& pattern, bool invert)
+{
+    if (str.empty()) return OR_Empty;
+
+    try
+    {
+        boost::regex r(pattern);
+        boost::smatch m;
+
+        if (boost::regex_search(str, m, r))
+        {
+            // at least one match found
+
+            uint32_t pos = m[invert ? m.size() - 1 : 0].second - str.begin();
+            return str.substr(pos);
+        }
+    }
+    catch (std::exception& e)
+    {
+        return {OR_Failure, e.what()};
+    }
+
+    return OR_NotFound;
 }
 //=============================================================================
 DoubleString CerberusUtils::split(const std::string& str, const std::string& token)
