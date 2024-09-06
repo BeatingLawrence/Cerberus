@@ -484,6 +484,63 @@ bool ByteBuffer::endsWith(const ByteBuffer& buffer) const
     return true;
 }
 //=============================================================================
+IntOpRes ByteBuffer::locate(const ByteBuffer& match)
+{
+    if (match.isEmpty()) return OR_WrongArgument;
+    if (isEmpty()) return OR_NotFound;
+
+    SIZE i = 0, ret = 0;
+
+    while (!isEnd())
+    {
+        if (getat(m_pos) == match.at(i))
+        {
+            if (i == 0) ret = m_pos;  // backup pos of first char
+
+            i++;
+            next();
+
+            if (i == match.size()) return ret;
+        }
+        else if (i)
+            i = 0;
+        else
+            next();
+    }
+
+    return OR_NotFound;
+}
+//=============================================================================
+OpRes ByteBuffer::replace(const ByteBuffer& match, const ByteBuffer& replace)
+{
+    ByteBuffer temp;
+    resetCursor();
+
+    auto m = locate(match);
+    if (m.fail()) return OR_NotFound;
+
+    temp.appendFrom(data(), m.value);
+    temp.append(replace);
+
+    SIZE old;
+
+    while (true)
+    {
+        old = m_pos;
+        m   = locate(match);
+        if (m.fail()) break;
+
+        temp.appendFrom(data(old), m.value - old);
+        temp.append(replace);
+    }
+
+    temp.appendFrom(data(old), m_pos - old);
+
+    assign(temp);
+
+    return OR_OK;
+}
+//=============================================================================
 std::string ByteBuffer::getLine() const
 {
     std::string ret;
@@ -491,9 +548,9 @@ std::string ByteBuffer::getLine() const
     char c    = 0;
     char prev = 0;
 
-    while (m_pos != m_size)
+    while (!isEnd())
     {
-        c = *(m_bytes + m_pos);
+        c = getat(m_pos);
 
         if (c == '\n')
         {
@@ -502,12 +559,12 @@ std::string ByteBuffer::getLine() const
                 ret.pop_back();  // remove the \r
             }
 
-            m_pos++;
+            next();
             break;
         }
 
         ret.push_back(c);
-        m_pos++;
+        next();
         prev = c;
     }
 

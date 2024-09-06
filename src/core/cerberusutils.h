@@ -96,6 +96,11 @@ namespace cerberus
         // Replace all the occurrences of find in str with replace
         static void replaceAll(std::string& str, const std::string& find, const std::string& replace);
 
+        // Same as above but using regex. This version returns another
+        // string avoiding any modification to the original
+        static StringOpRes replaceAll_regex(const std::string& str, const std::string& pattern,
+                                            const std::string& replace);
+
         // Normalize the given string. After the normalization the string will contain pure text
         // and will be printable on a terminal or a text file safely.
         // line-terminating characters are replaced with \n or \r\n

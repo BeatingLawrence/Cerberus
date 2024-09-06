@@ -26,3 +26,11 @@ TEST(utilityTest, regex)
     EXPECT_STREQ("hello", CerberusUtils::substrUntil_regex(s, "(\\,\\ )").expect().value.c_str());
     EXPECT_STREQ("suite", CerberusUtils::substrFrom_regex(s, "(t\\ )").expect().value.c_str());
 }
+
+TEST(utilityTest, buffer_replace)
+{
+    ByteBuffer b("hello, this is a buffer and the words have to be replaced in this buffer");
+    auto res = b.replace("buffer", "book");
+    EXPECT_TRUE(res.ok());
+    logInfo(b.toString());
+}

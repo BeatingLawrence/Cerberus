@@ -206,12 +206,10 @@ FloatOpRes CerberusUtils::stringToDouble(const std::string& str)
 bool CerberusUtils::isAlpha(const std::string& str)
 {
     for (auto&& ch : str)
-    {
         if ((ch >= 65 && ch <= 90) || (ch >= 97 && ch <= 122))
         {
             return true;
         }
-    }
 
     return false;
 }
@@ -228,12 +226,10 @@ bool CerberusUtils::startsWith(const std::string& str1, const std::string& str2)
     if (str2.size() > str1.size()) return false;
 
     for (int i = 0; i < str2.size(); i++)
-    {
         if (str1[i] != str2[i])
         {
             return false;
         }
-    }
 
     return true;
 }
@@ -251,12 +247,10 @@ bool CerberusUtils::endsWith(const std::string& str1, const std::string& str2)
     int diff = str1.size() - str2.size();
 
     for (int i = 0; i < str2.size(); i++)
-    {
         if (str1[diff + i] != str2[i])
         {
             return false;
         }
-    }
 
     return true;
 }
@@ -293,7 +287,22 @@ void CerberusUtils::replaceAll(std::string& str, const std::string& find, const 
     while ((start = str.find(find, start)) != std::string::npos)
     {
         str.replace(start, find.length(), replace);
-        start += replace.length();  // Handles case where 'to' is a substring of 'from'
+        start += replace.length();
+    }
+}
+//=============================================================================
+StringOpRes replaceAll_regex(const std::string& str, const std::string& pattern, const std::string& replace)
+{
+    if (str.empty()) return OR_Empty;
+
+    try
+    {
+        boost::regex r(pattern);
+        return boost::regex_replace(str, r, replace);
+    }
+    catch (std::exception& e)
+    {
+        return {OR_Failure, e.what()};
     }
 }
 //=============================================================================
@@ -305,13 +314,11 @@ bool CerberusUtils::normalize(std::string& str)
     CerberusUtils::replaceAll(str, "\n", "\\n\n");
 
     for (auto&& el : str)
-    {
         if ((el < 32 || el > 126) && el != '\n' && el != 0)
         {
             el  = '#';
             ret = true;
         }
-    }
 
     return ret;
 }
@@ -320,10 +327,7 @@ std::string CerberusUtils::hex(const ByteBuffer& buffer)
 {
     std::string ret;
 
-    for (auto& el : buffer)
-    {
-        ret.append(strPrint("%02hhx", (uint8_t)el));
-    }
+    for (auto& el : buffer) ret.append(strPrint("%02hhx", (uint8_t)el));
 
     return ret;
 }

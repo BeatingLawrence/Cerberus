@@ -62,12 +62,12 @@ namespace cerberus
         const BYTE* data(SIZE index = 0) const;
         BYTE* data(SIZE index = 0);
 
-        // Obtain a single element by reference.
+        // Obtain a single byte by reference.
         // An exception will be thrown if index >= size()
         const BYTE& at(SIZE index) const;
         BYTE& at(SIZE index);
 
-        // Obtain a single element by reference.
+        // Obtain a single byte by reference.
         // An exception will be thrown if index >= size()
         BYTE& operator[](SIZE index);
         const BYTE& operator[](SIZE index) const;
@@ -187,6 +187,17 @@ namespace cerberus
         // Check if the buffer ends with the given buffer
         bool endsWith(const ByteBuffer& buffer) const;
 
+        // Locate the first occurrence of 'match' after the current cursor position.
+        // This method alters the cursor, leaving it at the byte after the match, but returns
+        // the position of the first character of match.
+        // If no match is found, OR_NotFound is returned
+        IntOpRes locate(const ByteBuffer& match);
+
+        // Replace all the occurrences of 'match' with 'replace'.
+        // The operation is done since the start of the buffer, thus the cursor position is not used.
+        // The result of the operation is returned, e.g. NotFound if no match is found
+        OpRes replace(const ByteBuffer& match, const ByteBuffer& replace);
+
         // =========================CURSOR METHODS===========================
 
         // Return data until one of the following sequences is found:
@@ -195,7 +206,7 @@ namespace cerberus
         // This method uses the cursor, and increments it automatically before return
         std::string getLine() const;
 
-        // Increment the cursor until a non blank char is found (space | TAB)
+        // Increment the cursor until a non blank char is found ^(space | TAB | LF | CR)
         const ByteBuffer& consumeBlank() const;
 
         // Increment the cursor until a sequence specified by regex is found.
