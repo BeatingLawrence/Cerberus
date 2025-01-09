@@ -27,6 +27,8 @@ namespace cerberus
 
             virtual void deinit();
 
+            virtual bool ready() const;
+
             virtual OpRes command(const string& query);
 
             virtual OpResData<DBTableBlock> queryBlock(const string& query);

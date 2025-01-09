@@ -26,7 +26,7 @@ PostgresDB::PostgresDB()
 {
 }
 //=============================================================================
-OpRes PostgresDB::init(const string &parameters)
+OpRes PostgresDB::init(const string& parameters)
 {
     if (m_ready) return OR_BadConditions;
 
@@ -45,7 +45,9 @@ OpRes PostgresDB::init(const string &parameters)
 //=============================================================================
 void PostgresDB::deinit() { _deinit(); }
 //=============================================================================
-OpRes PostgresDB::command(const string &query)
+bool PostgresDB::ready() const {}  // IMPLEMENT THIS METHOD
+//=============================================================================
+OpRes PostgresDB::command(const string& query)
 {
     if (!m_ready) return OR_BadConditions;
 
@@ -69,7 +71,7 @@ OpRes PostgresDB::command(const string &query)
     return OR_OK;
 }
 //=============================================================================
-OpResData<DBTableBlock> PostgresDB::queryBlock(const string &query)
+OpResData<DBTableBlock> PostgresDB::queryBlock(const string& query)
 {
     if (!m_ready) return OR_BadConditions;
 
@@ -81,11 +83,11 @@ OpResData<DBTableBlock> PostgresDB::queryBlock(const string &query)
         pqxx::result res = w.exec(query);
         w.commit();
 
-        for (auto &&row : res)
+        for (auto&& row : res)
         {
             DBRow r;
 
-            for (auto &&val : row)
+            for (auto&& val : row)
             {
                 r.append(val.c_str());
             }
@@ -109,7 +111,7 @@ OpResData<DBTableBlock> PostgresDB::queryBlock(const string &query)
     return ret;
 }
 //=============================================================================
-OpResData<DBTableProto> PostgresDB::queryPrototype(const string &tableName)
+OpResData<DBTableProto> PostgresDB::queryPrototype(const string& tableName)
 {
     if (!m_ready) return OR_BadConditions;
 
@@ -142,7 +144,7 @@ OpResData<DBTableProto> PostgresDB::queryPrototype(const string &tableName)
     return res;
 }
 //=============================================================================
-OpRes PostgresDB::createTable(const DBTableProto &prototype)  // PURE SQL
+OpRes PostgresDB::createTable(const DBTableProto& prototype)  // PURE SQL
 {
     auto name = prototype.name();
 
@@ -158,7 +160,7 @@ OpRes PostgresDB::createTable(const DBTableProto &prototype)  // PURE SQL
     cmd += prototype.name();
     cmd += " ( ";
 
-    for (auto &&el : prototype)
+    for (auto&& el : prototype)
     {
         auto type = el.type();
 
@@ -180,7 +182,7 @@ OpRes PostgresDB::createTable(const DBTableProto &prototype)  // PURE SQL
     return command(cmd);
 }
 //=============================================================================
-OpRes PostgresDB::insertBlock(const DBTableBlock &block)  // PURE SQL
+OpRes PostgresDB::insertBlock(const DBTableBlock& block)  // PURE SQL
 {
     if (block.prototype().name().empty()) return OR_WrongArgument;
 
@@ -188,7 +190,7 @@ OpRes PostgresDB::insertBlock(const DBTableBlock &block)  // PURE SQL
     cmd += block.prototype().name();
     cmd += " VALUES ";
 
-    for (auto &&row : block)
+    for (auto&& row : block)
     {
         cmd += '(';
 
@@ -222,12 +224,12 @@ OpRes PostgresDB::insertBlock(const DBTableBlock &block)  // PURE SQL
     return command(cmd);
 }
 //=============================================================================
-OpRes PostgresDB::dropTable(const string &table)  // PURE SQL
+OpRes PostgresDB::dropTable(const string& table)  // PURE SQL
 {
     return command(CerberusUtils::strPrint("DROP TABLE %s;", table.c_str()));
 }
 //=============================================================================
-OpResData<DBTableBlock> PostgresDB::querytable(const string &tableName)  // PURE SQL
+OpResData<DBTableBlock> PostgresDB::querytable(const string& tableName)  // PURE SQL
 {
     auto proto = queryPrototype(tableName);
 

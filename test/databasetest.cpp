@@ -5,7 +5,9 @@
 
 using namespace cerberus;
 
-class DatabaseTest : public ::testing::Test
+//==========================Postgres backend tests============================
+
+class PGDatabaseTest : public ::testing::Test
 {
    public:
     Database* db;
@@ -30,14 +32,14 @@ class DatabaseTest : public ::testing::Test
     };
 };
 
-TEST_F(DatabaseTest, connection)
+TEST_F(PGDatabaseTest, connection)
 {
     GTEST_SKIP();
 
     ASSERT_TRUE(db->ready());
 }
 
-TEST_F(DatabaseTest, createTable)
+TEST_F(PGDatabaseTest, createTable)
 {
     GTEST_SKIP();
 
@@ -52,7 +54,7 @@ TEST_F(DatabaseTest, createTable)
     ASSERT_EQ(db->createTable(prototype).res, cerberus::OR_OK);
 }
 
-TEST_F(DatabaseTest, insertInto)
+TEST_F(PGDatabaseTest, insertInto)
 {
     GTEST_SKIP();
 
@@ -94,7 +96,7 @@ TEST_F(DatabaseTest, insertInto)
     ASSERT_TRUE(db->insertBlock(block).ok());
 }
 
-TEST_F(DatabaseTest, queryResult)
+TEST_F(PGDatabaseTest, queryResult)
 {
     GTEST_SKIP();
 
@@ -130,11 +132,94 @@ TEST_F(DatabaseTest, queryResult)
     EXPECT_EQ(table.value[3][4].toBool(), true);
 }
 
-TEST_F(DatabaseTest, dropTable)
+TEST_F(PGDatabaseTest, dropTable)
 {
     GTEST_SKIP();
 
     ASSERT_TRUE(db->ready());
 
     EXPECT_EQ(db->dropTable("test").res, cerberus::OR_OK);
+}
+
+//=========================Filesystem backend tests===========================
+
+class FSDatabaseTest : public ::testing::Test
+{
+   public:
+    Database* db;
+
+   protected:
+    virtual void SetUp() override
+    {
+        db = new Database(DBB_Filesystem);
+        db->init("testdb.cdb");
+    };
+
+    virtual void TearDown() override { delete db; };
+};
+
+TEST_F(FSDatabaseTest, createTable)
+{
+    ASSERT_TRUE(db->ready());
+
+    // table creation
+
+    if (false)
+    {
+        DBTableProto prototype("test");
+        prototype.add("ID", DBDataType::DDT_BigInt)
+            .add("name", DBDataType::DDT_VarChar, 255)
+            .add("country", DBDataType::DDT_VarChar, 255)
+            .add("heigth", DBDataType::DDT_Double)
+            .add("drivingLicense", DBDataType::DDT_Boolean);
+        EXPECT_TRUE(db->createTable(prototype).ok("createTable error"));
+    }
+
+    // data addition
+
+    if (false)
+    {
+        auto proto = db->queryPrototype("test");
+        EXPECT_TRUE(proto.ok("queryproto error"));
+
+        DBTableBlock block(proto.value);
+        DBRow row;
+        row.append(1);
+        row.append("Josh");
+        row.append("USA");
+        row.append(1.6f);
+        row.append(true);
+        block.append(row);
+        EXPECT_TRUE(db->insertBlock(block).ok("insert block error"));
+    }
+
+    // query section
+
+    if (true)
+    {
+        auto r = db->queryPrototype("test");
+        EXPECT_TRUE(r.ok("queryprototype error"));
+
+        logInfo("Table prototype:");
+        for (auto&& el : r.value)
+        {
+            logInfo("COL \"%s\", %s(%u)", el.name().c_str(), el.typeString().c_str(), el.mod());
+        }
+
+        logInfo("Content:");
+
+        auto block = db->querytable("test");
+        EXPECT_TRUE(block.ok("querytable error"));
+
+        for (auto&& row : block.value)
+        {
+            std::string rr;
+            for (auto&& cell : row)
+            {
+                rr.append(cell.raw().toHex());
+                rr += " ";
+            }
+            logInfo("%s", rr.c_str());
+        }
+    }
 }

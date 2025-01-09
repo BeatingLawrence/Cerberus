@@ -82,6 +82,10 @@ namespace cerberus
         // copied. If maxLen is 0, all the content of this ByteBuffer will be copied
         const ByteBuffer& copyTo(void* buffer, SIZE maxLen = 0) const;
 
+        // Copy the content of the given buffer to this instance of ByteBuffer. No more than maxLen bytes
+        // will be copied. Note that the size of the ByteBuffer will not be altered if maxLen is smaller
+        const ByteBuffer& copyFrom(void* buffer, SIZE len);
+
         // Checks if this ByteBuffer instance is equal to other
         bool operator==(const ByteBuffer& other) const;
 

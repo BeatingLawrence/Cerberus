@@ -19,18 +19,12 @@ namespace cerberus
     {
         class IDatabase
         {
-           protected:
-            bool m_ready;
-
-            IDatabase()
-                : m_ready(false) {};
-
            public:
             virtual OpRes init(const std::string& parameters) = 0;
 
             virtual void deinit() = 0;
 
-            inline bool ready() const { return m_ready; };
+            virtual bool ready() const = 0;
 
             virtual OpRes command(const string& command) = 0;
 

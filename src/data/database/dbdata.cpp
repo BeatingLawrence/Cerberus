@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 
+#include "../../cerberus.h"
 #include "../../exception/exception.h"
 
 using namespace cerberus;
@@ -32,55 +33,54 @@ void DBCell::_fromBitArray(const std::vector<bool>& arr)
 }
 //=============================================================================
 DBCell::DBCell(int64_t value)
-    : m_value((BYTE*)&value, sizeof(value)),
-      m_size()
+    : m_value((BYTE*)&value, sizeof(value))
 {
 }
 //=============================================================================
 DBCell::DBCell(int32_t value)
-    : m_value((BYTE*)&value, sizeof(value)),
-      m_size()
+    : m_value((BYTE*)&value, sizeof(value))
 {
 }
 //=============================================================================
 DBCell::DBCell(float value)
-    : m_value((BYTE*)&value, sizeof(value)),
-      m_size()
+    : m_value((BYTE*)&value, sizeof(value))
 {
 }
 //=============================================================================
 DBCell::DBCell(long double value)
-    : m_value((BYTE*)&value, sizeof(value)),
-      m_size()
+    : m_value((BYTE*)&value, sizeof(value))
 {
 }
 //=============================================================================
 DBCell::DBCell(bool value)
-    : m_value((BYTE*)&value, sizeof(value)),
-      m_size()
+    : m_value((BYTE*)&value, sizeof(value))
 {
 }
 //=============================================================================
 DBCell::DBCell(const std::vector<bool>& value)
-    : m_value(),
-      m_size()
+    : m_value()
 {
     _fromBitArray(value);
 }
 //=============================================================================
 DBCell::DBCell(const std::string& str)
-    : m_value(str),
-      m_size()
+    : m_value(str)
 {
 }
 //=============================================================================
-DBCell::DBCell(const ByteBuffer& raw, LSIZE size)
-    : m_value(raw),
-      m_size(size)
+DBCell::DBCell(const char* str)
+    : m_value(str)
 {
 }
 //=============================================================================
-void DBCell::set(const std::string& value) { m_value = value; }
+DBCell::DBCell(const ByteBuffer& raw)
+    : m_value(raw)
+{
+}
+//=============================================================================
+void DBCell::set(const std::string& str) { m_value = str; }
+//=============================================================================
+void DBCell::set(const char* str) { m_value = str; }
 //=============================================================================
 void DBCell::set(int64_t value) { m_value.assignFrom((BYTE*)&value, sizeof(value)); }
 //=============================================================================
@@ -94,7 +94,7 @@ ByteBuffer& DBCell::raw() { return m_value; }
 //=============================================================================
 const ByteBuffer& DBCell::raw() const { return m_value; }
 //=============================================================================
-ByteBuffer DBCell::serialize(DBDataType type) const
+ByteBuffer DBCell::serialize(DBDataType type, DBMOD mod) const
 {
     switch (type)
     {
@@ -119,16 +119,21 @@ ByteBuffer DBCell::serialize(DBDataType type) const
 
         case DDT_VarBit:
         {
+            SIZE s = m_value.size();
             ByteBuffer bb;
-            bb.appendFrom(&m_size, CerberusUtils::reqBytes(m_size));
-            return bb.append(m_value.trim(CerberusUtils::qceil(m_size, 8)));
+            bb.appendFrom(&s, CerberusUtils::reqBytes(s));
+            return bb.append(m_value.trim(CerberusUtils::qceil(s, 8)));
         }
 
         case DDT_VarChar:
         {
-            ByteBuffer bb;
-            bb.appendFrom(&m_size, CerberusUtils::reqBytes(m_size));
-            return bb.append(m_value.trim(m_size));
+            logDebug("varchar ser [%s] %s", m_value.toString().c_str(), m_value.toHex().c_str());
+            uint8_t req = CerberusUtils::reqBytes(mod);
+            ByteBuffer bb(req, 0);
+            SIZE s = m_value.size() > mod ? mod : m_value.size();
+            bb.copyFrom(&s, req);
+            bb.append(m_value);
+            return bb;
         }
 
         default:
@@ -190,6 +195,12 @@ size_t DBRow::size() const { return m_values.size(); }
 //=============================================================================
 void DBRow::clear() { m_values.clear(); }
 //=============================================================================
+bool DBRow::verify(const DBTableProto& proto) const
+{
+#pragma GCC warning "implement verify method"
+    return true;
+}
+//=============================================================================
 ByteBuffer DBRow::serialize(const DBTableProto& proto) const
 {
     ByteBuffer buf;
@@ -197,7 +208,11 @@ ByteBuffer DBRow::serialize(const DBTableProto& proto) const
 
     for (auto&& el : *this)
     {
-        buf.append(el.serialize(proto[i].type()));
+        auto bb = el.serialize(proto[i].type(), proto[i].mod());
+
+        logDebug("serializing cell %u %u %u %s", i, proto[i].type(), bb.size(), bb.toHex().c_str());
+
+        buf.append(bb);
         i++;
     }
     return buf;
@@ -303,8 +318,10 @@ bool DBTableBlock::verify() const { return verify(m_prototype); }
 //=============================================================================
 bool DBTableBlock::verify(const DBTableProto& proto) const
 {
-    return true;  // PLEASE IMPLEMENT THIS
-#pragma GCC warning "implement this method"
+    for (auto&& el : *this)
+        if (!el.verify(proto)) return false;
+
+    return true;
 }
 //=============================================================================
 ByteBuffer DBTableBlock::serialize(const DBTableProto& proto) const

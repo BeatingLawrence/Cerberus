@@ -44,17 +44,17 @@ namespace cerberus
 
             DBMOD _getMod(const ByteBuffer& buf);
 
-            OpRes _parseTable();
+            OpRes _parseTableHeader(Table& tab);
 
             OpRes _load();
 
-            OpRes _buildHeader(const DBTableProto& prototype);
+            OpRes _buildHeader(const DBTableProto& prototype, Table& tab);
 
             OpResData<Buf_Size> _parseFieldRaw(DBDataType type, DBMOD mod);
 
             OpResData<DBCell> _parseField(DBDataType type, DBMOD mod);
 
-            OpResData<DBTableBlock> _getTable(Table* tab);
+            OpResData<DBTableBlock> _getTable(Table& tab);
 
             OpRes _insertBlock(Table* tab, const DBTableBlock& block);
 
@@ -65,9 +65,11 @@ namespace cerberus
 
             virtual void deinit();
 
+            virtual bool ready() const;
+
             virtual OpRes command(const string& query);
 
-            virtual OpResData<DBTableBlock> queryBlock(const string& query);
+            virtual OpResData<DBTableBlock> queryBlock(const string& query);  // not impl
 
             virtual OpResData<DBTableProto> queryPrototype(const string& tableName);
 
@@ -75,7 +77,7 @@ namespace cerberus
 
             virtual OpRes insertBlock(const DBTableBlock& block);
 
-            virtual OpRes dropTable(const std::string& table);
+            virtual OpRes dropTable(const std::string& table);  // not impl
 
             inline virtual OpResData<DBTableBlock> querytable(const std::string& tableName);
 

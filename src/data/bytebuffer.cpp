@@ -209,6 +209,15 @@ const ByteBuffer& ByteBuffer::copyTo(void* buffer, SIZE maxLen) const
     return *this;
 }
 //=============================================================================
+const ByteBuffer& ByteBuffer::copyFrom(void* buffer, SIZE len)
+{
+    if (m_size < len) _resize(len);
+
+    memmove(m_bytes, buffer, len);
+
+    return *this;
+}
+//=============================================================================
 bool ByteBuffer::operator==(const ByteBuffer& other) const { return isEqual(other); }
 //=============================================================================
 bool ByteBuffer::operator!=(const ByteBuffer& other) const { return !isEqual(other); }
@@ -259,7 +268,14 @@ ByteBuffer ByteBuffer::subBuffer(SIZE pos) const
     return ret;
 }
 //=============================================================================
-ByteBuffer ByteBuffer::trim(SIZE len) const { return std::move(subBuffer(0, len)); }
+ByteBuffer ByteBuffer::trim(SIZE len) const
+{
+    ByteBuffer ret(len, 0);
+    if (!m_bytes || !m_size || !len) return ret;
+
+    copyTo(ret.data(), len);
+    return std::move(ret);
+}
 //=============================================================================
 ByteBuffer& ByteBuffer::appendString(const char* str)
 {

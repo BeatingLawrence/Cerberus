@@ -673,7 +673,7 @@ OpRes File::seek(cerberus::LSIZE pos) const
 {
     if (!isOpen()) return OR_BadConditions;
 
-    if (pos >= size().value) return OR_WrongArgument;
+    if (pos > size().expect().value) return OR_WrongArgument;
 
     return _seek(pos);
 }

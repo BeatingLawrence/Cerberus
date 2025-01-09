@@ -25,7 +25,6 @@ namespace cerberus
     class DBCell
     {
         ByteBuffer m_value;
-        LSIZE m_size;
 
         void _fromBitArray(const std::vector<bool>& arr);
 
@@ -39,9 +38,11 @@ namespace cerberus
         DBCell(bool value);
         DBCell(const std::vector<bool>& value);
         DBCell(const std::string& str);
-        DBCell(const ByteBuffer& raw, LSIZE size = 0);
+        DBCell(const char* str);
+        DBCell(const ByteBuffer& raw);
 
-        void set(const std::string& value);
+        void set(const std::string& str);
+        void set(const char* str);
         void set(int64_t value);
         void set(long double value);
         void set(bool value);
@@ -50,7 +51,7 @@ namespace cerberus
         ByteBuffer& raw();
         const ByteBuffer& raw() const;
 
-        ByteBuffer serialize(DBDataType type) const;
+        ByteBuffer serialize(DBDataType type, DBMOD mod) const;
 
         int64_t toInt() const;
         long double toReal() const;
@@ -82,6 +83,8 @@ namespace cerberus
         size_t size() const;
 
         void clear();
+
+        bool verify(const DBTableProto& proto) const;
 
         ByteBuffer serialize(const DBTableProto& proto) const;
 
