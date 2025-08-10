@@ -146,21 +146,22 @@ TEST_F(PGDatabaseTest, dropTable)
 class FSDatabaseTest : public ::testing::Test
 {
    public:
-    Database* db;
+    Database db;
+
+    FSDatabaseTest()
+        : db(DBB_Filesystem) {};
 
    protected:
-    virtual void SetUp() override
-    {
-        db = new Database(DBB_Filesystem);
-        db->init("testdb.cdb");
-    };
+    virtual void SetUp() override {};
 
-    virtual void TearDown() override { delete db; };
+    virtual void TearDown() override {};
 };
 
 TEST_F(FSDatabaseTest, createTable)
 {
-    ASSERT_TRUE(db->ready());
+    ASSERT_TRUE(db.init("testdb.cdb").ok("init error"));
+
+    ASSERT_TRUE(db.ready());
 
     // table creation
 
@@ -172,14 +173,14 @@ TEST_F(FSDatabaseTest, createTable)
             .add("country", DBDataType::DDT_VarChar, 255)
             .add("heigth", DBDataType::DDT_Double)
             .add("drivingLicense", DBDataType::DDT_Boolean);
-        EXPECT_TRUE(db->createTable(prototype).ok("createTable error"));
+        EXPECT_TRUE(db.createTable(prototype).ok("createTable error"));
     }
 
     // data addition
 
     if (false)
     {
-        auto proto = db->queryPrototype("test");
+        auto proto = db.queryPrototype("test");
         EXPECT_TRUE(proto.ok("queryproto error"));
 
         DBTableBlock block(proto.value);
@@ -190,14 +191,14 @@ TEST_F(FSDatabaseTest, createTable)
         row.append(1.6f);
         row.append(true);
         block.append(row);
-        EXPECT_TRUE(db->insertBlock(block).ok("insert block error"));
+        EXPECT_TRUE(db.insertBlock(block).ok("insert block error"));
     }
 
     // query section
 
     if (true)
     {
-        auto r = db->queryPrototype("test");
+        auto r = db.queryPrototype("test");
         EXPECT_TRUE(r.ok("queryprototype error"));
 
         logInfo("Table prototype:");
@@ -208,7 +209,7 @@ TEST_F(FSDatabaseTest, createTable)
 
         logInfo("Content:");
 
-        auto block = db->querytable("test");
+        auto block = db.querytable("test");
         EXPECT_TRUE(block.ok("querytable error"));
 
         for (auto&& row : block.value)
