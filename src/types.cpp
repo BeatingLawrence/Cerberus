@@ -604,6 +604,6 @@ void cerberus::FileMetadata::fromStat(const struct stat& stat_struct)
 //=============================================================================
 cerberus::SocketCloser::~SocketCloser()
 {
-    if (sock) sock->close();
+    if (socket) socket->close();
 }
 //=============================================================================

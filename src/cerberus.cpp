@@ -24,7 +24,7 @@ using namespace cerberus::core;
 FrameworkData Cerberus::framework;
 
 //=============================================================================
-void Cerberus::registerObj(Recordable *object)
+void Cerberus::registerObj(Recordable* object)
 {
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
@@ -45,14 +45,14 @@ void Cerberus::sendMsgToObj(HASH32 id, cerberus_message msg)
     Cerberus::framework.reg.data->sendMsgToObj(id, msg);
 }
 //=============================================================================
-void Cerberus::sendMsgToObj(const std::string &name, cerberus_message msg)
+void Cerberus::sendMsgToObj(const std::string& name, cerberus_message msg)
 {
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
     Cerberus::framework.reg.data->sendMsgToObj(name, msg);
 }
 //=============================================================================
-HASH32 Cerberus::addPlugin(void *handle, const std::string &path, bool &exists)
+HASH32 Cerberus::addPlugin(void* handle, const std::string& path, bool& exists)
 {
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
@@ -66,28 +66,28 @@ MutexLocker Cerberus::getPluginMutex(HASH32 id)
     return Cerberus::framework.reg.data->getPluginMutex(id);
 }
 //=============================================================================
-void *Cerberus::checkPlugin(HASH32 id)
+void* Cerberus::checkPlugin(HASH32 id)
 {
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
     return Cerberus::framework.reg.data->checkPlugin(id);
 }
 //=============================================================================
-bool Cerberus::updatePlugin(uint32_t id, const std::string &path, void *handle)
+bool Cerberus::updatePlugin(uint32_t id, const std::string& path, void* handle)
 {
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
     return Cerberus::framework.reg.data->updatePlugin(id, path, handle);
 }
 //=============================================================================
-void Cerberus::startTimer(TimerData &data)
+void Cerberus::startTimer(TimerData& data)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
     Cerberus::framework.core.data->m_eventScheduler.startTimer(data);
 }
 //=============================================================================
-void Cerberus::stopTimer(std::atomic_bool &bit)
+void Cerberus::stopTimer(std::atomic_bool& bit)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
@@ -96,7 +96,7 @@ void Cerberus::stopTimer(std::atomic_bool &bit)
 //=============================================================================
 //=================================INTERFACE===================================
 //=============================================================================
-void Cerberus::init(const CerberusInitConf &parms)
+void Cerberus::init(const CerberusInitConf& parms)
 {
     Cerberus::framework.construct(parms);
 
@@ -204,7 +204,7 @@ CerbVersion Cerberus::cerberusVersion()
     return ret;
 }
 //=============================================================================
-void Cerberus::log(const std::string &str, LogLevel logLevel, const std::string &author, bool application)
+void Cerberus::log(const std::string& str, LogLevel logLevel, const std::string& author, bool application)
 {
     if (!Cerberus::framework.log.isReady()) return;  // abort log
     auto locker = Cerberus::framework.log.getLocker();
@@ -219,7 +219,7 @@ void Cerberus::send(cerberus_message message, HASH32 recipientID)
     Cerberus::framework.core.data->addMessage(message);
 }
 //=============================================================================
-void Cerberus::send(cerberus_message message, const std::string &recipient)
+void Cerberus::send(cerberus_message message, const std::string& recipient)
 {
     message->setRecipient(idByName(recipient));
     Cerberus::framework.core.isReadySevere();
@@ -227,42 +227,42 @@ void Cerberus::send(cerberus_message message, const std::string &recipient)
     Cerberus::framework.core.data->addMessage(message);
 }
 //=============================================================================
-OpResData<CHANDLE> Cerberus::newSock(const SockSettings &settings)
+OpResData<CHANDLE> Cerberus::newSocket(const SocketSettings& settings)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->newSock(settings);
+    return Cerberus::framework.core.data->newSocket(settings);
 }
 //=============================================================================
-OpRes Cerberus::addSockListener(CHANDLE sock, HASH32 threadID)
+OpRes Cerberus::addSocketListener(CHANDLE socket, HASH32 threadID)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->addSockListener(sock, threadID);
+    return Cerberus::framework.core.data->addSocketListener(socket, threadID);
 }
 //=============================================================================
-OpRes Cerberus::addSockListener(CHANDLE sock, const std::string &threadName)
+OpRes Cerberus::addSocketListener(CHANDLE socket, const std::string& threadName)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->addSockListener(sock, idByName(threadName));
+    return Cerberus::framework.core.data->addSocketListener(socket, idByName(threadName));
 }
 //=============================================================================
-OpRes Cerberus::sockSend(CHANDLE sock, const ByteBuffer &buffer)
+OpRes Cerberus::socketSend(CHANDLE socket, const ByteBuffer& buffer)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->sockSend(sock, buffer);
+    return Cerberus::framework.core.data->socketSend(socket, buffer);
 }
 //=============================================================================
-OpRes Cerberus::removeSock(CHANDLE sock)
+OpRes Cerberus::removeSocket(CHANDLE socket)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->removeSock(sock);
+    return Cerberus::framework.core.data->removeSocket(socket);
 }
 //=============================================================================
-HASH32 Cerberus::idByName(const std::string &name)
+HASH32 Cerberus::idByName(const std::string& name)
 {
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
@@ -278,21 +278,21 @@ OpResData<MessageTemplate> Cerberus::templateById(uint32_t id)
     return Cerberus::framework.reg.data->msgTemplateById(id);
 }
 //=============================================================================
-OpResData<MessageTemplate> Cerberus::templateByName(const std::string &name)
+OpResData<MessageTemplate> Cerberus::templateByName(const std::string& name)
 {
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
     return Cerberus::framework.reg.data->msgTemplateByName(name);
 }
 //=============================================================================
-HASH32 Cerberus::msgIdByName(const std::string &name)
+HASH32 Cerberus::msgIdByName(const std::string& name)
 {
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
     return Cerberus::framework.reg.data->msgTemplateByName(name).expect().value.id;
 }
 //=============================================================================
-OpResData<HASH32> Cerberus::registerMessage(const Message &message, const std::string &name)
+OpResData<HASH32> Cerberus::registerMessage(const Message& message, const std::string& name)
 {
     auto tmplt = MessageTemplate(message, name);
 
@@ -302,7 +302,7 @@ OpResData<HASH32> Cerberus::registerMessage(const Message &message, const std::s
     return Cerberus::framework.reg.data->addMsgTemplate(tmplt);
 }
 //=============================================================================
-OpResData<HASH32> Cerberus::registerTemplate(const MessageTemplate &tmplt)
+OpResData<HASH32> Cerberus::registerTemplate(const MessageTemplate& tmplt)
 {
     Cerberus::framework.reg.isReadySevere();
     auto locker = Cerberus::framework.reg.getLocker();
@@ -320,12 +320,12 @@ cerberus_message Cerberus::constructMessage(HASH32 id)
 
     cerberus_message message = Message::create(id);
 
-    for (auto &&el : tmplt.value) message->addSlot(el->newslot(el->name()));
+    for (auto&& el : tmplt.value) message->addSlot(el->newslot(el->name()));
 
     return message;
 }
 //=============================================================================
-cerberus_message Cerberus::constructMessage(const std::string &name)
+cerberus_message Cerberus::constructMessage(const std::string& name)
 {
     if (name.empty()) return Message::create();
 
@@ -335,14 +335,14 @@ cerberus_message Cerberus::constructMessage(const std::string &name)
 
     cerberus_message message = Message::create(tmplt.value.id);
 
-    for (auto &&el : tmplt.value) message->addSlot(el->newslot(el->name()));
+    for (auto&& el : tmplt.value) message->addSlot(el->newslot(el->name()));
 
     return message;
 }
 //=============================================================================
 //=============================FrameworkData===================================
 //=============================================================================
-void FrameworkData::construct(const CerberusInitConf &conf)
+void FrameworkData::construct(const CerberusInitConf& conf)
 {
     if (core.isReady()) throw cUsageErrorExc("attempt to construct the framework multiple times");
 

@@ -1,21 +1,21 @@
-#include "sockmanager.h"
+#include "socketmanager.h"
 
 #include "../thread/mutexlocker.h"
 #include "cerberusutils.h"
 using namespace cerberus;
 
 //=============================================================================
-SockManager::SockData *SockManager::createNewSocket(SocketType type)
+SocketManager::SocketData *SocketManager::createNewSocket(SocketType type)
 {
     if (type != Socket_TCP && type != Socket_UDP) return nullptr;
-    return new SockData(type);
+    return new SocketData(type);
 }
 //=============================================================================
-SockManager::SockManager() {}
+SocketManager::SocketManager() {}
 //=============================================================================
-SockManager::~SockManager() { clear(); }
+SocketManager::~SocketManager() { clear(); }
 //=============================================================================
-OpResData<SockManager::SockData *> SockManager::newSock(const SockSettings &settings)
+OpResData<SocketManager::SocketData *> SocketManager::newSocket(const SocketSettings &settings)
 {
     auto p = createNewSocket(settings.type);
 
@@ -34,26 +34,26 @@ OpResData<SockManager::SockData *> SockManager::newSock(const SockSettings &sett
     return p;
 }
 //=============================================================================
-OpRes SockManager::removeSock(SockData *sock)
+OpRes SocketManager::removeSocket(SocketData *socket)
 {
     MutexLocker ml(m_mutex);
-    sock->mutex.lock();  // wait for other threads to finish using the socket
-    sock->mutex.unlock();
+    socket->mutex.lock();  // wait for other threads to finish using the socket
+    socket->mutex.unlock();
 
     for (auto it = m_sockets.begin(); it != m_sockets.end(); it++)
-        if (sock == (*it))
+        if (socket == (*it))
         {
             m_sockets.erase(it);
-            delete sock;
+            delete socket;
             return OR_OK;
         }
 
     return OR_NotFound;
 }
 //=============================================================================
-OpRes SockManager::addListener(CHANDLE sock, HASH32 threadID)
+OpRes SocketManager::addListener(CHANDLE socket, HASH32 threadID)
 {
-    auto s = getSock(sock);
+    auto s = getSocket(socket);
 
     if (s.fail()) return s;
 
@@ -72,12 +72,12 @@ OpRes SockManager::addListener(CHANDLE sock, HASH32 threadID)
     return OR_OK;
 }
 //=============================================================================
-SockManager::SockData *SockManager::newSockCopy(const SockSettings &settings, Socket *sock,
-                                                SockData *parentData)
+SocketManager::SocketData *SocketManager::newSocketCopy(const SocketSettings &settings, Socket *socket,
+                                                        SocketData *parentData)
 {
-    if (sock == nullptr || parentData == nullptr) return nullptr;
+    if (socket == nullptr || parentData == nullptr) return nullptr;
 
-    auto p = new SockData(sock);
+    auto p = new SocketData(socket);
 
     p->settings = settings;
     p->threads  = parentData->threads;
@@ -93,12 +93,12 @@ SockManager::SockData *SockManager::newSockCopy(const SockSettings &settings, So
     return p;
 }
 //=============================================================================
-OpResData<SockManager::SockData *> SockManager::getSock(CHANDLE sock)
+OpResData<SocketManager::SocketData *> SocketManager::getSocket(CHANDLE socket)
 {
     MutexLocker ml(m_mutex);
 
     for (auto &&el : m_sockets)
-        if (el->handle == sock)
+        if (el->handle == socket)
         {
             el->mutex.lock();
 
@@ -114,21 +114,21 @@ OpResData<SockManager::SockData *> SockManager::getSock(CHANDLE sock)
     return OR_NotFound;
 }
 //=============================================================================
-OpRes SockManager::sockSend(CHANDLE sock, const ByteBuffer &buffer)
+OpRes SocketManager::socketSend(CHANDLE socket, const ByteBuffer &buffer)
 {
-    auto s = getSock(sock);
+    auto s = getSocket(socket);
 
     if (s.fail()) return s;
 
-    auto res = s.value->sock->send(buffer);
+    auto res = s.value->s->send(buffer);
     s.value->mutex.unlock();
 
     return res;
 }
 //=============================================================================
-OpRes SockManager::scheduleRemoval(CHANDLE sock)
+OpRes SocketManager::scheduleRemoval(CHANDLE socket)
 {
-    auto s = getSock(sock);
+    auto s = getSocket(socket);
 
     if (s.fail()) return s;
 
@@ -138,7 +138,7 @@ OpRes SockManager::scheduleRemoval(CHANDLE sock)
     return OR_OK;
 }
 //=============================================================================
-void SockManager::scheduleRemoval_all()
+void SocketManager::scheduleRemoval_all()
 {
     MutexLocker ml(m_mutex);
 
@@ -150,7 +150,7 @@ void SockManager::scheduleRemoval_all()
     }
 }
 //=============================================================================
-void SockManager::clear()
+void SocketManager::clear()
 {
     MutexLocker ml(m_mutex);
 

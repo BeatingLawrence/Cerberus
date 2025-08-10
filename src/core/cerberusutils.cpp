@@ -492,7 +492,7 @@ MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
             tmplt.addSlotType(VoidPSlot::create(nullptr, "player"));
             break;
 
-        case CERBERUS_MESSAGE_SOCKDATA_ID:
+        case CERBERUS_MESSAGE_SOCKETDATA_ID:
             tmplt.addSlotType(ResultSlot::create(OpRes(), "result"));
             tmplt.addSlotType(HostSlot::create(Host(), "host"));
             tmplt.addSlotType(BufferSlot::create(ByteBuffer(), "buffer"));

@@ -837,17 +837,17 @@ namespace cerberus
 
     struct SocketCloser
     {
-        Socket* sock;
+        Socket* socket;
 
         SocketCloser(Socket* s = nullptr)
-            : sock(s)
+            : socket(s)
         {
         }
 
         SocketCloser(const SocketCloser& other)            = delete;
         SocketCloser& operator=(const SocketCloser& other) = delete;
 
-        void assignSocket(Socket* s) { sock = s; }
+        void assignSocket(Socket* s) { socket = s; }
 
         ~SocketCloser();
     };
@@ -1100,18 +1100,18 @@ namespace cerberus
         OpRes resolve();
     };
 
-    enum SockTransfer : uint8_t
+    enum SocketTransfer : uint8_t
     {
         Transfer_Bytes,  // the socket will receive up to buffersize bytes
         Transfer_Time,   // the socket will keep calling recv() until timeout is reached
     };
 
-    struct SockSettings
+    struct SocketSettings
     {
         SocketType type;            // type of socket (Socket_TCP or Socket_UDP)
         Host bind;                  // interface to bind the socket to
         Host remote;                // remote host to keep the connection with
-        SockTransfer transferMode;  // socket data transfer mode
+        SocketTransfer transferMode;  // socket data transfer mode
 
         TimeFrame tout, cyctout;  // timeout values used for Transfer_time
         SIZE maxpayload;          // recv buffer size of the socket
@@ -1119,7 +1119,7 @@ namespace cerberus
         bool server;     // true if the socket is a server socket (passive)
         size_t maxconn;  // maximum number of pending connection (for passive sockets only)
 
-        SockSettings()
+        SocketSettings()
             : type(Socket_TCP),
               transferMode(Transfer_Bytes),
               maxpayload(0),

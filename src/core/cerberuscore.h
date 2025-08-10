@@ -11,7 +11,7 @@
 #include "../thread/thread.h"
 #include "../thread/threadpool.h"
 #include "eventscheduler.h"
-#include "sockmanager.h"
+#include "socketmanager.h"
 
 namespace cerberus
 {
@@ -26,7 +26,7 @@ namespace cerberus
 
             ThreadPool m_pool;
 
-            SockManager m_socks;
+            SocketManager m_sockets;
 
             void initializeThreadPool();
             void deinitializeThreadPool();
@@ -38,10 +38,10 @@ namespace cerberus
             void processTaskMsg(cerberus_message msg);
             void processMsg(cerberus_message msg);
 
-            static OpRes sockCB(void* ctx, void* data);
+            static OpRes socketCB(void* ctx, void* data);
 
-            static void processClient(CerberusCore* ctx, Socket* sock, SockManager::SockData* parentData,
-                                      const SockSettings& settings);
+            static void processClient(CerberusCore* ctx, Socket* socket,
+                                      SocketManager::SocketData* parentData, const SocketSettings& settings);
 
            public:
             EventScheduler m_eventScheduler;
@@ -55,16 +55,16 @@ namespace cerberus
             //=====================SOCKETS========================
 
             // Create a new socket in the Cerberus memory space
-            OpResData<CHANDLE> newSock(const SockSettings& settings);
+            OpResData<CHANDLE> newSocket(const SocketSettings& settings);
 
             // Add a listener to the specified socket
-            OpRes addSockListener(CHANDLE sock, HASH32 threadID);
+            OpRes addSocketListener(CHANDLE socket, HASH32 threadID);
 
             // Send out a buffer using the specified managed socket
-            OpRes sockSend(CHANDLE sock, const ByteBuffer& buffer);
+            OpRes socketSend(CHANDLE socket, const ByteBuffer& buffer);
 
             // Remove the specified socket
-            OpRes removeSock(CHANDLE sock);
+            OpRes removeSocket(CHANDLE socket);
         };
     }  // namespace core
 }  // namespace cerberus
