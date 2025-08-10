@@ -1,5 +1,5 @@
-#ifndef CERBERUS_EXCEPTION_EXCEPTION_H
-#define CERBERUS_EXCEPTION_EXCEPTION_H
+#ifndef CERBERUS_EXCEPTION_H
+#define CERBERUS_EXCEPTION_H
 
 #include <cstdint>
 #include <exception>
@@ -44,4 +44,4 @@ namespace cerberus
         virtual const char* what() const noexcept;
     };
 }  // namespace cerberus
-#endif  // CERBERUS_EXCEPTION_EXCEPTION_H
+#endif  // CERBERUS_EXCEPTION_H

@@ -14,6 +14,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "exception/exception.h"
 #include "thread/mutexlocker.h"
 #include "time/datetime.h"
 
@@ -545,11 +546,11 @@ namespace cerberus
 
         void _destroy()
         {
-            if (!m_refcount) return;
+            if (!consistent()) return;
 
             if ((*m_refcount) == 1)
             {
-                delete m_ptr;
+                if (m_ptr) delete m_ptr;
                 delete m_refcount;
             }
             else
@@ -557,30 +558,38 @@ namespace cerberus
 
             m_ptr      = nullptr;
             m_refcount = nullptr;
-        };
+        }
+
+        void _check()
+        {
+            if (!consistent()) throw cIllegalStateExc("managed_ptr not valid");
+        }
 
        public:
-        managed_ptr()
-            : m_ptr(nullptr),
-              m_refcount(nullptr) {};
+        bool consistent() const noexcept { return m_ptr && m_refcount; }
 
-        managed_ptr(T* ptr)
-            : m_ptr((Clonable*)ptr),
+        explicit managed_ptr(T* ptr = nullptr)
+            : m_ptr(static_cast<Clonable*>(ptr)),
               m_refcount(nullptr)
         {
             // T must inherit Clonable
-            static_assert(std::is_convertible<T*, Clonable*>());
+            static_assert(std::is_convertible_v<T*, Clonable*>, "T must inherit Clonable");
 
-            if (m_ptr) m_refcount = new size_t(1);
-        };
+            if (m_ptr)
+            {
+                m_refcount = new size_t(1);
+                if (!consistent())
+                    throw cSystemExc("managed_ptr not consistent, failed allocation of refcounter");
+            }
+        }
 
         // copy constructor make a shallow copy
         managed_ptr(const managed_ptr<T>& other)
-            : m_ptr((T*)(other.m_ptr)),
+            : m_ptr(other.m_ptr),
               m_refcount(other.m_refcount)
         {
-            if (m_refcount) (*m_refcount)++;
-        };
+            if (consistent()) (*m_refcount)++;
+        }
 
         managed_ptr(managed_ptr<T>&& other)
             : m_ptr(other.m_ptr),
@@ -588,34 +597,81 @@ namespace cerberus
         {
             other.m_ptr      = nullptr;
             other.m_refcount = nullptr;
-        };
+        }
 
-        ~managed_ptr() { _destroy(); };
-
-        // duplicate the data (deep copy)
-        managed_ptr<T> duplicate() { return (T*)(m_ptr->clone()); };
-
-        T& operator*() const { return *((T*)m_ptr); };
-
-        T* operator->() const { return (T*)m_ptr; };
-
-        T* get() const { return (T*)m_ptr; };
-
-        managed_ptr<T>& ref()
+        // Move assignment operator
+        managed_ptr& operator=(managed_ptr&& other) noexcept
         {
-            if (m_refcount) (*m_refcount)++;
-            return *this;
-        };
+            if (this == &other) return *this;
 
-        // shared copy
-        managed_ptr<T>& operator=(const managed_ptr<T>& other)
-        {
             _destroy();
+
             m_ptr      = other.m_ptr;
             m_refcount = other.m_refcount;
-            if (m_refcount) (*m_refcount)++;
+
+            other.m_ptr      = nullptr;
+            other.m_refcount = nullptr;
             return *this;
-        };
+        }
+
+        // shared copy
+        managed_ptr<T>& operator=(const managed_ptr<T>& other) noexcept
+        {
+            if (this == &other) return *this;
+
+            _check();
+            _destroy();
+
+            m_ptr      = other.m_ptr;
+            m_refcount = other.m_refcount;
+
+            if (consistent()) (*m_refcount)++;
+            return *this;
+        }
+
+        ~managed_ptr() { _destroy(); }
+
+        // duplicate the data (deep copy)
+        managed_ptr<T> duplicate() const
+        {
+            if (consistent())
+            {
+                T* p = dynamic_cast<T*>(m_ptr->clone());
+                if (!p) throw cInvalidCastExc("invalid cast while cloning");
+                return managed_ptr<T>(p);
+            }
+            else
+                throw cIllegalStateExc("wrapped pointer must be non-null");
+        }
+
+        T* get() const { return dynamic_cast<T*>(m_ptr); }
+
+        T& operator*() const
+        {
+            if (!consistent()) throw cIllegalStateExc("managed_ptr not valid");
+            return *(get());
+        }
+
+        T* operator->() const
+        {
+            if (!consistent()) throw cIllegalStateExc("managed_ptr not valid");
+            return get();
+        }
+
+        // stops managing the pointer, returning the wrapped underlying pointer
+        T* disown()
+        {
+            if (!consistent()) throw cIllegalStateExc("managed_ptr not valid");
+
+            if (*m_refcount != 1) cIllegalStateExc("disowning managed_ptr must be unique");
+
+            delete m_refcount;
+            m_refcount = nullptr;
+
+            T* ret = static_cast<T*>(m_ptr);
+            m_ptr  = nullptr;
+            return ret;
+        }
     };
 
     template <typename T>

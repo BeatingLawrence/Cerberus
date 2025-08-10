@@ -106,7 +106,7 @@ namespace cerberus
 
         static slot_ptr create(bool value = false, const std::string& name = "")
         {
-            return new BoolSlot(value, name);
+            return slot_ptr(new BoolSlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -123,7 +123,7 @@ namespace cerberus
 
         static slot_ptr create(const ByteBuffer& value = ByteBuffer(), const std::string& name = "")
         {
-            return new BufferSlot(value, name);
+            return slot_ptr(new BufferSlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -140,7 +140,7 @@ namespace cerberus
 
         static slot_ptr create(BYTE value = 0, const std::string& name = "")
         {
-            return new ByteSlot(value, name);
+            return slot_ptr(new ByteSlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -157,7 +157,7 @@ namespace cerberus
 
         static slot_ptr create(const Dictionary& value = Dictionary(), const std::string& name = "")
         {
-            return new DictionarySlot(value, name);
+            return slot_ptr(new DictionarySlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -174,7 +174,7 @@ namespace cerberus
 
         static slot_ptr create(double value = 0.0f, const std::string& name = "")
         {
-            return new DoubleSlot(value, name);
+            return slot_ptr(new DoubleSlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -191,7 +191,7 @@ namespace cerberus
 
         static slot_ptr create(float value = 0.0f, const std::string& name = "")
         {
-            return new FloatSlot(value, name);
+            return slot_ptr(new FloatSlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -208,7 +208,7 @@ namespace cerberus
 
         static slot_ptr create(int32_t value = 0, const std::string& name = "")
         {
-            return new Int32Slot(value, name);
+            return slot_ptr(new Int32Slot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -225,7 +225,7 @@ namespace cerberus
 
         static slot_ptr create(int64_t value = 0, const std::string& name = "")
         {
-            return new Int64Slot(value, name);
+            return slot_ptr(new Int64Slot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -242,7 +242,7 @@ namespace cerberus
 
         static slot_ptr create(uint64_t value = 0, const std::string& name = "")
         {
-            return new UInt64Slot(value, name);
+            return slot_ptr(new UInt64Slot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -259,7 +259,7 @@ namespace cerberus
 
         static slot_ptr create(const JsonData& value = JsonData(), const std::string& name = "")
         {
-            return new JsonSlot(value, name);
+            return slot_ptr(new JsonSlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -279,7 +279,7 @@ namespace cerberus
 
         static slot_ptr create(const std::string& value = std::string(), const std::string& name = "")
         {
-            return new StringSlot(value, name);
+            return slot_ptr(new StringSlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -296,7 +296,7 @@ namespace cerberus
 
         static slot_ptr create(void* value = nullptr, const std::string& name = "")
         {
-            return new VoidPSlot(value, name);
+            return slot_ptr(new VoidPSlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -313,7 +313,7 @@ namespace cerberus
 
         static slot_ptr create(const Host& value = Host(), const std::string& name = "")
         {
-            return new HostSlot(value, name);
+            return slot_ptr(new HostSlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -330,7 +330,7 @@ namespace cerberus
 
         static slot_ptr create(Task value = {}, const std::string& name = "")
         {
-            return new TaskSlot(value, name);
+            return slot_ptr(new TaskSlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };
@@ -347,7 +347,7 @@ namespace cerberus
 
         static slot_ptr create(OpRes value = OpRes(), const std::string& name = "")
         {
-            return new ResultSlot(value, name);
+            return slot_ptr(new ResultSlot(value, name));
         };
 
         virtual slot_ptr newslot() { return create(); };

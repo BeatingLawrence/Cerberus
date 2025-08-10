@@ -8,7 +8,7 @@
 using namespace cerberus;
 
 //=============================================================================
-cerberus_message Message::create(HASH32 typeID) { return new Message(typeID); }
+cerberus_message Message::create(HASH32 typeID) { return cerberus_message(new Message(typeID)); }
 //=============================================================================
 Message::Message(HASH32 typeID)
     : m_slots(),

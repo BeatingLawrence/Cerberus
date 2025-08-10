@@ -27,7 +27,7 @@ cerberus::Host::Host()
 {
 }
 //=============================================================================
-cerberus::Host::Host(const std::string &str)
+cerberus::Host::Host(const std::string& str)
     : octet_networkOrder(ADDR_ANY),
       port(0),
       resolved(false)
@@ -35,7 +35,7 @@ cerberus::Host::Host(const std::string &str)
     if (!fromString(str)) logError("Host %s is invalid", str.c_str());
 }
 //=============================================================================
-cerberus::Host::Host(const char *str)
+cerberus::Host::Host(const char* str)
     : octet_networkOrder(ADDR_ANY),
       port(0),
       resolved(false)
@@ -43,7 +43,7 @@ cerberus::Host::Host(const char *str)
     if (!fromString(str)) logError("Host %s is invalid", str);
 }
 //=============================================================================
-cerberus::Host cerberus::Host::stringToHost(const std::string &str)
+cerberus::Host cerberus::Host::stringToHost(const std::string& str)
 {
     Host ret{};
     ret.port = Host::getPort(str);
@@ -122,7 +122,7 @@ cerberus::Host cerberus::Host::stringToHost(const std::string &str)
     return ret;
 }
 //=============================================================================
-uint16_t cerberus::Host::getPort(const std::string &str)
+uint16_t cerberus::Host::getPort(const std::string& str)
 {
     auto col    = str.find_last_of(':');
     int portint = 0;
@@ -141,7 +141,7 @@ uint16_t cerberus::Host::getPort(const std::string &str)
     return portint;
 }
 //=============================================================================
-bool cerberus::Host::fromString(const std::string &str)
+bool cerberus::Host::fromString(const std::string& str)
 {
     auto h = Host::stringToHost(str);
 
@@ -173,7 +173,7 @@ bool cerberus::Host::hasPort() const { return port != 0; }
 //=============================================================================
 cerberus::OpRes cerberus::Host::resolve()
 {
-    addrinfo *res = nullptr;
+    addrinfo* res = nullptr;
     addrinfo info;
     info.ai_family    = AF_INET;
     info.ai_socktype  = 0;
@@ -187,7 +187,7 @@ cerberus::OpRes cerberus::Host::resolve()
 
     if (ret == 0)
     {
-        sockaddr_in *addr  = (sockaddr_in *)(res->ai_addr);
+        sockaddr_in* addr  = (sockaddr_in*)(res->ai_addr);
         octet_networkOrder = addr->sin_addr.s_addr;
         resolved           = true;
         freeaddrinfo(res);
@@ -231,14 +231,14 @@ cerberus::OpRes::OpRes()
 {
 }
 //=============================================================================
-cerberus::OpRes::OpRes(Result r, const std::string &reason, const std::string &reason2)
+cerberus::OpRes::OpRes(Result r, const std::string& reason, const std::string& reason2)
     : res(r),
       reason(reason)
 {
     addInfo(reason2);
 }
 //=============================================================================
-cerberus::OpRes::OpRes(const OpRes &opres, const std::string &reason)
+cerberus::OpRes::OpRes(const OpRes& opres, const std::string& reason)
     : res(opres.res),
       reason(opres.reason),
       optional(opres.optional)
@@ -250,21 +250,21 @@ bool cerberus::OpRes::operator==(Result r) { return (res == r); }
 //=============================================================================
 bool cerberus::OpRes::operator!=(Result r) { return (res != r); }
 //=============================================================================
-cerberus::OpRes &cerberus::OpRes::expect(const std::string &str)
+cerberus::OpRes& cerberus::OpRes::expect(const std::string& str)
 {
     if (fail()) throw cOpResExc(str.c_str());
 
     return *this;
 }
 //=============================================================================
-cerberus::OpRes &cerberus::OpRes::expect(Result reason, const std::string &str)
+cerberus::OpRes& cerberus::OpRes::expect(Result reason, const std::string& str)
 {
     if (fail() && res == reason) throw cOpResExc(str.c_str());
 
     return *this;
 }
 //=============================================================================
-cerberus::OpRes &cerberus::OpRes::expect()
+cerberus::OpRes& cerberus::OpRes::expect()
 {
     if (fail())
     {
@@ -282,7 +282,7 @@ cerberus::OpRes &cerberus::OpRes::expect()
     return *this;
 }
 //=============================================================================
-bool cerberus::OpRes::ok(const std::string &str)
+bool cerberus::OpRes::ok(const std::string& str)
 {
     if (res == Result::OR_OK) return true;
 
@@ -300,7 +300,7 @@ bool cerberus::OpRes::ok(const std::string &str)
     return false;
 }
 //=============================================================================
-bool cerberus::OpRes::fail(const std::string &str) { return !ok(str); }
+bool cerberus::OpRes::fail(const std::string& str) { return !ok(str); }
 //=============================================================================
 std::string cerberus::OpRes::errorString() const
 {
@@ -386,7 +386,7 @@ std::string cerberus::OpRes::toStr() const
     return ret;
 }
 //=============================================================================
-cerberus::OpRes &cerberus::OpRes::addOptional(Result opt)
+cerberus::OpRes& cerberus::OpRes::addOptional(Result opt)
 {
     optional.push_back(opt);
     return *this;
@@ -394,7 +394,7 @@ cerberus::OpRes &cerberus::OpRes::addOptional(Result opt)
 //=============================================================================
 bool cerberus::OpRes::hasOptional(Result opt)
 {
-    for (auto &el : optional)
+    for (auto& el : optional)
     {
         if (el == opt) return true;
     }
@@ -402,7 +402,7 @@ bool cerberus::OpRes::hasOptional(Result opt)
     return false;
 }
 //=============================================================================
-cerberus::OpRes &cerberus::OpRes::addInfo(const std::string &str)
+cerberus::OpRes& cerberus::OpRes::addInfo(const std::string& str)
 {
     if (str.empty()) return *this;
     reason.append(", ");
@@ -410,16 +410,16 @@ cerberus::OpRes &cerberus::OpRes::addInfo(const std::string &str)
     return *this;
 }
 //=============================================================================
-StringOpRes cerberus::Dictionary::getFieldValue(const std::string &key, WordMatch match) const
+StringOpRes cerberus::Dictionary::getFieldValue(const std::string& key, WordMatch match) const
 {
-    for (auto &el : (*this))
+    for (auto& el : (*this))
     {
         if (CerberusUtils::areEqual(el.key, key, match)) return el.val;
     }
     return OR_NotFound;
 }
 //=============================================================================
-cerberus::OpRes cerberus::Dictionary::getFieldMatch(const std::string &key, const std::string &value,
+cerberus::OpRes cerberus::Dictionary::getFieldMatch(const std::string& key, const std::string& value,
                                                     WordMatch keymatch, WordMatch valmatch) const
 {
     auto res = getFieldValue(key, keymatch);
@@ -443,19 +443,19 @@ std::string cerberus::Dictionary::getValueAt(SIZE index) const
     return at(index).val;
 }
 //=============================================================================
-cerberus::Dictionary &cerberus::Dictionary::addKey(const std::string &key, const std::string &value)
+cerberus::Dictionary& cerberus::Dictionary::addKey(const std::string& key, const std::string& value)
 {
     push_back({key, value});
     return *this;
 }
 //=============================================================================
-cerberus::DictLine &cerberus::Dictionary::get(SIZE index)
+cerberus::DictLine& cerberus::Dictionary::get(SIZE index)
 {
     if (index >= size()) throw cIllegalArgExc("Index out of bounds");
     return at(index);
 }
 //=============================================================================
-cerberus::DictLine &cerberus::Dictionary::get(const std::string &key, WordMatch match)
+cerberus::DictLine& cerberus::Dictionary::get(const std::string& key, WordMatch match)
 {
     for (auto it = begin(); it < end(); it++)
     {
@@ -465,7 +465,7 @@ cerberus::DictLine &cerberus::Dictionary::get(const std::string &key, WordMatch 
     throw cIllegalArgExc("Name not found");
 }
 //=============================================================================
-bool cerberus::Dictionary::exists(const std::string &key, WordMatch match)
+bool cerberus::Dictionary::exists(const std::string& key, WordMatch match)
 {
     for (auto it = begin(); it < end(); it++)
     {
@@ -479,7 +479,7 @@ std::string cerberus::Dictionary::toString() const
 {
     std::string ret;
 
-    for (auto &el : (*this))
+    for (auto& el : (*this))
     {
         ret.append(el.key);
         ret.append(": ");
@@ -491,7 +491,7 @@ std::string cerberus::Dictionary::toString() const
 }
 //=============================================================================
 #if defined(LINUX_SYSTEM)
-void cerberus::FileMetadata::fromStat(const struct statx &stat_struct)
+void cerberus::FileMetadata::fromStat(const struct statx& stat_struct)
 {
     // time
     accTime.fromTimespec(stat_struct.stx_atime.tv_sec, stat_struct.stx_atime.tv_nsec);
@@ -546,7 +546,7 @@ void cerberus::FileMetadata::fromStat(const struct statx &stat_struct)
     ownGID = stat_struct.stx_gid;
 }
 #elif defined(APPLE_SYSTEM)
-void cerberus::FileMetadata::fromStat(const struct stat &stat_struct)
+void cerberus::FileMetadata::fromStat(const struct stat& stat_struct)
 {
     // time
     accTime.fromTimespec(stat_struct.st_atimespec.tv_sec, stat_struct.st_atimespec.tv_nsec);
