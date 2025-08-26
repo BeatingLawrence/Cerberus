@@ -60,6 +60,11 @@ HTTPData &HTTPData::removeHeaderField(const std::string &name)
 HTTPData &HTTPData::setPayload(const ByteBuffer &payload)
 {
     m_payload = payload;
+    return *this;
+}
+//=============================================================================
+HTTPData &HTTPData::updatePayloadSizeHeader()
+{
     setPayloadSize(m_payload.size());
     return *this;
 }
@@ -198,8 +203,7 @@ ByteBuffer HTTPRequest::data() const
 //=============================================================================
 HTTPResponse::HTTPResponse()
     : version(HTTP_1_1),
-      statusCode(0),
-      message("UNDEFINED")
+      statusCode(0)
 
 {
 }
@@ -247,4 +251,13 @@ ByteBuffer HTTPResponse::data() const
 }
 //=============================================================================
 bool HTTPResponse::isOk() { return statusCode != 0 && statusCode < 400; }
+//=============================================================================
+void HTTPResponse::clear()
+{
+    statusCode = 0;
+    message.clear();
+    HTTPData::clear();
+}
+//=============================================================================
+bool HTTPResponse::isNull() { return statusCode == 0; }
 //=============================================================================

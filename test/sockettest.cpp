@@ -233,7 +233,7 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
     socket.TLS_ignoreHangup(true).fail();
     logDebug("connecting..");
     cerberus::Host h("www.google.com:443");
-    ASSERT_EQ(socket.connect(h).res, cerberus::OR_OK);
+    ASSERT_TRUE(socket.connect(h).ok("Internet socket tests require internet connection"));
     logDebug("connected with encryption: PROTO: %s CIPHER: %s", socket.TLS_getProtocolName().value.c_str(),
              socket.TLS_getCipherName().value.c_str());
     logDebug("sending get request");
@@ -253,7 +253,7 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
     ByteBuffer buf;
     socket.setRecvBufferSize(8192);
     logDebug("receiving");
-    auto r = socket.recv(buf, 1000, 300);
+    auto r = socket.recv_cyc(buf, 1000, 300);
 
     EXPECT_TRUE(r.ok("recv fail"));
 
@@ -271,7 +271,6 @@ TEST(socketTest, HTTPClient)
     HTTPClient client;
     client.TLS_init();
     client.setRemote("www.google.com:443");
-    logDebug("connected");
     HTTPRequest req;
     req.setup(cerberus::HTTP_GET, "/", cerberus::HTTP_1_1)
         .addHeaderField("Host", "www.google.com")
@@ -284,7 +283,7 @@ TEST(socketTest, HTTPClient)
     logDebug("data to be sent:");
     logDebug(req.data().toNormalizedString().value.c_str());
     //
-    EXPECT_TRUE(client.makeRequest(req).ok());
+    EXPECT_TRUE(client.makeRequest(req).ok("Internet socket tests require internet connection"));
     logDebug("request sent");
     auto response = client.getResponse(1000, 200);
 

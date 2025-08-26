@@ -605,3 +605,10 @@ void JsonData::toStr(std::string &str, uint8_t level) const
     str.append("\n").append(indent).append("end");
 }
 //=============================================================================
+SIZE JsonData::memfp() const
+{
+    SIZE s = sizeof(JsonData);
+    for (auto &el : m_elements) s += el.memfp();
+    return s;
+}
+//=============================================================================

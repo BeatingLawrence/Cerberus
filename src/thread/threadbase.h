@@ -4,7 +4,6 @@
 #include <pthread.h>
 
 #include "../core/recordable.h"
-#include "../message/messagequeue.h"
 #include "mutex.h"
 
 namespace cerberus
@@ -16,12 +15,12 @@ namespace cerberus
 
         pthread_cond_t m_cond;
 
-        MessageQueue m_queue;
-
-        bool m_pausedFlag, m_terminateFlag, m_dead;
+        bool m_pausedFlag, m_terminateFlag, m_dead, m_rescheduling;
 
         // Call this method with the mutex locked!
         void setPausedFlag(bool state);
+
+        virtual void newMsg_first() override;
 
        protected:
         ThreadBase() = delete;
@@ -42,21 +41,15 @@ namespace cerberus
 
         bool getPausedFlag() const;
 
-        cerberus_message nextMessage();
-
-        cerberus_message nextMessageKeep() const;
-
-        void discardMessageQueue();
-
-        bool isQueueEmpty() const;
-
         void dead();
 
+        void reschedule();
+
+        void resetRescheduling();
+
+        bool isRescheduling();
+
        public:
-        void addMessage(cerberus_message message);
-
-        size_t messageCount() const;
-
         void start();
 
         void stop();

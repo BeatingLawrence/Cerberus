@@ -73,9 +73,9 @@ namespace cerberus
 
         static int defaultTickCallback(cerberus_message msg, Thread* thread);
 
-        static void defaultWarmUpCallback();
+        static void defaultWarmUpCallback(Thread* thread);
 
-        static void defaultCoolDownCallback();
+        static void defaultCoolDownCallback(Thread* thread);
 
         void wait();
 

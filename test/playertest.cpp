@@ -63,7 +63,7 @@ TEST(playerTest, standalone)
     p.join(true);
 }
 
-TEST(playerTest, threadPool)  // to test dynamic thread management, set the thread pool to 1
+TEST(playerTest, threadPool)  // to test dynamic thread allocation, set the thread pool to 1
 {
     for (int i = 0; i < 5; i++)
     {
@@ -84,5 +84,5 @@ TEST(playerTest, threadPool)  // to test dynamic thread management, set the thre
         Thread::sleep(1000);
     }
 
-    Thread::sleep(5000);
+    Thread::sleep(3000);  // give time to the tester to see the "temporary thread removed" log
 }

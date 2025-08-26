@@ -27,6 +27,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 option(POSTGRESQL "postgresql backend support")
+option(GOOGLETEST "googletest support")
 
 set(CMAKE_DEBUG_POSTFIX -d)
 
@@ -66,13 +67,8 @@ install(DIRECTORY src/ DESTINATION include/cerberus FILES_MATCHING PATTERN "*.h"
 
 # =======================test executable==========================
 
-file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS
-    "test/*"
-)
-
-add_executable(test EXCLUDE_FROM_ALL
-  ${test_sources}
-)
+file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS "test/*")
+add_executable(test EXCLUDE_FROM_ALL ${test_sources})
 
 target_include_directories(test PRIVATE "src/")
 target_link_libraries(test LINK_PRIVATE Cerberus)
@@ -89,15 +85,15 @@ if(MSVC)
 
     target_compile_definitions(Cerberus PRIVATE WINDOWS_SYSTEM)
 
-    target_include_directories(test PUBLIC
-        "./gtest/include"
-    )
+    if(GOOGLETEST)
+        target_include_directories(test PUBLIC "./gtest/include")
 
-    find_library(GTEST_LIBRARY NAMES gtest PATHS "./gtest/lib" PATH_SUFFIXES lib)
-    find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "./gtest/lib" PATH_SUFFIXES lib)
+        find_library(GTEST_LIBRARY NAMES gtest PATHS "./gtest/lib" PATH_SUFFIXES lib)
+        find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "./gtest/lib" PATH_SUFFIXES lib)
 
-    if((GTEST_LIBRARY STREQUAL "GTEST_LIBRARY-NOTFOUND") OR (GTEST_MAIN_LIBRARY STREQUAL "GTEST_MAIN_LIBRARY-NOTFOUND"))
-        message(FATAL_ERROR "GTest library needed on Windows system! Please Read README.md")
+        if((GTEST_LIBRARY STREQUAL "GTEST_LIBRARY-NOTFOUND") OR (GTEST_MAIN_LIBRARY STREQUAL "GTEST_MAIN_LIBRARY-NOTFOUND"))
+            message(FATAL_ERROR "Pre-compiled GTest library needed on Windows system! Please Read README.md")
+        endif()
     endif()
 
     #postgres support
@@ -113,13 +109,13 @@ if(MSVC)
 
 elseif(UNIX)
 
+    message(STATUS "On Linux/MACOSX system")
+
     if(APPLE)
         target_compile_definitions(Cerberus PRIVATE APPLE_SYSTEM)
     else()
         target_compile_definitions(Cerberus PRIVATE LINUX_SYSTEM)
     endif()
-
-    message(STATUS "On Linux/MACOSX system")
 
     target_include_directories(Cerberus PUBLIC
         "/usr/include"          #for Linux
@@ -140,10 +136,17 @@ elseif(UNIX)
     #OPEN-SSL
     target_link_libraries(Cerberus LINK_PRIVATE ssl crypto)
 
-    find_library(GTEST_LIBRARY NAMES gtest PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
-    find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
+    if(GOOGLETEST)
+        find_library(GTEST_LIBRARY NAMES gtest PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
+        find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
 
+        if((GTEST_LIBRARY STREQUAL "GTEST_LIBRARY-NOTFOUND") OR (GTEST_MAIN_LIBRARY STREQUAL "GTEST_MAIN_LIBRARY-NOTFOUND"))
+            message(FATAL_ERROR "GTest library not found!")
+        endif()
+    endif()
 endif()
 
-target_link_libraries(test LINK_PRIVATE ${GTEST_LIBRARY})
-target_link_libraries(test LINK_PRIVATE ${GTEST_MAIN_LIBRARY})
+if(GOOGLETEST)
+    target_link_libraries(test LINK_PRIVATE ${GTEST_LIBRARY})
+    target_link_libraries(test LINK_PRIVATE ${GTEST_MAIN_LIBRARY})
+endif()

@@ -15,7 +15,7 @@ void Player::sendTaskEndMsg(HASH32 recipient, OpRes res)
 //=============================================================================
 int Player::tick()
 {
-    if (isQueueEmpty())
+    if (!hasMessage())
     {
         // standard mode
         if (m_cb)
@@ -31,7 +31,7 @@ int Player::tick()
     }
 
     // message mode
-    auto msg = nextMessage();
+    auto msg = next();
     if (msg->id() != CERBERUS_MESSAGE_TASK_ID) return 0;
 
     auto client = msg->getSlot("client")->to<UInt64Slot>()->value();

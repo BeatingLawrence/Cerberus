@@ -698,7 +698,7 @@ OpRes Socket::send(const ByteBuffer &buffer, bool donotblock)
     return OR_OK;
 }
 //=============================================================================
-OpRes Socket::recv(ByteBuffer &buffer, const TimeFrame &timeout, const TimeFrame &cycTimeout)
+OpRes Socket::recv_cyc(ByteBuffer &buffer, const TimeFrame &timeout, const TimeFrame &cyc)
 {
     if (isFailed()) return OR_FailedInstance;
 
@@ -710,7 +710,7 @@ OpRes Socket::recv(ByteBuffer &buffer, const TimeFrame &timeout, const TimeFrame
 
     while (true)
     {
-        auto res = waitRead((first || cycTimeout.isNull()) ? timeout : cycTimeout);
+        auto res = waitRead((first || cyc.isNull()) ? timeout : cyc);
 
         switch (res.res)
         {
@@ -758,6 +758,53 @@ OpRes Socket::recv(ByteBuffer &buffer, const TimeFrame &timeout, const TimeFrame
                 return res;
         };
     }
+}
+//=============================================================================
+OpRes Socket::recv(ByteBuffer &buffer, const TimeFrame &timeout)
+{
+    if (isFailed()) return OR_FailedInstance;
+
+    if (timeout.isNull()) return _recv(buffer, true);
+
+    auto res = waitRead(timeout);
+
+    switch (res.res)
+    {
+        case OR_OK:
+            break;  // continue execution
+
+        case OR_TimedOut:
+            if (TLS_hasSession()) flushSocket(buffer);
+            if (buffer.size() == 0) return OR_TimedOut;
+            return OR_OK;
+
+        case OR_Hangup:
+            flushSocket(buffer);
+
+            if (buffer.isEmpty())
+                return {OR_Hangup, "poll returned hangup"};
+            else
+                return OpRes(OR_OK).addOptional(OR_Hangup);
+
+        default:
+            return res;
+    };
+
+    res = Socket::_recv(buffer, false);
+
+    switch (res.res)
+    {
+        case OR_Hangup:
+            if (TLS_hasSession()) flushSocket(buffer);
+
+            if (buffer.isEmpty())
+                return {OR_Hangup, "recv returned hangup"};
+            else
+                return OpRes(OR_OK).addOptional(OR_Hangup);
+
+        default:
+            return res;
+    };
 }
 //=============================================================================
 OpRes Socket::recv(ByteBuffer &buffer) { return _recv(buffer, false); }
@@ -1107,14 +1154,14 @@ OpRes Socket::listen(size_t maxconn)
 //=============================================================================
 cerberus_socket Socket::accept()
 {
-    if (isFailed() || transportType() != TCP || m_extern) return nullptr;
+    if (isFailed() || transportType() != TCP || m_extern) return cerberus_socket();  // nullptr, unconsistent
 
     Host h;
     auto fd = _accept(h);
 
-    if (fd.fail()) return nullptr;
+    if (fd.fail()) return cerberus_socket();
 
-    return new Socket(m_type, static_cast<int>(fd.value), h, m_sslCtx);
+    return cerberus_socket(new Socket(m_type, static_cast<int>(fd.value), h, m_sslCtx));
 }
 //=============================================================================
 #ifdef LINUX_SYSTEM
@@ -1280,7 +1327,7 @@ OpRes Socket::recv(File &file, const TimeFrame &timeout, const TimeFrame &cycTim
     if (transportType() != TCP) return OR_Unavailable;
 
     ByteBuffer buffer;
-    OpRes ret = recv(buffer, timeout, cycTimeout);
+    OpRes ret = recv_cyc(buffer, timeout, cycTimeout);
 
     if (!buffer.isEmpty())
     {

@@ -72,10 +72,10 @@ OpRes SocketManager::addListener(CHANDLE socket, HASH32 threadID)
     return OR_OK;
 }
 //=============================================================================
-SocketManager::SocketData *SocketManager::newSocketCopy(const SocketSettings &settings, Socket *socket,
-                                                        SocketData *parentData)
+SocketManager::SocketData *SocketManager::newSocketCopy(const SocketSettings &settings,
+                                                        cerberus_socket socket, SocketData *parentData)
 {
-    if (socket == nullptr || parentData == nullptr) return nullptr;
+    if (!socket.consistent() || parentData == nullptr) return nullptr;
 
     auto p = new SocketData(socket);
 
@@ -118,7 +118,7 @@ OpRes SocketManager::socketSend(CHANDLE socket, const ByteBuffer &buffer)
 {
     auto s = getSocket(socket);
 
-    if (s.fail()) return s;
+    condret(s);
 
     auto res = s.value->s->send(buffer);
     s.value->mutex.unlock();

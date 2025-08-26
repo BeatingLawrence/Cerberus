@@ -136,6 +136,20 @@ namespace cerberus
         DBB_Filesystem,
     };
 
+    enum MemorySize : size_t
+    {
+        MEM_1K   = 1024,
+        MEM_2K   = 2048,
+        MEM_4K   = 4096,
+        MEM_8K   = 8192,
+        MEM_16K  = 16384,
+        MEM_32K  = 32768,
+        MEM_64K  = 65536,
+        MEM_128K = 131072,
+        MEM_256K = 262144,
+        MEM_512K = 524288,
+    };
+
     struct Path : private std::list<std::string>
     {
         bool absolute;
@@ -370,29 +384,6 @@ namespace cerberus
 #endif
     };
 
-    // enum SlotType : uint8_t
-    // {
-    //     ST_UNDEFINED = 0,
-    //     ST_CUSTOM,  // used for custom slot types
-
-    //     // cerberus-defines slot types:
-    //     ST_BYTE,
-    //     ST_INT32,
-    //     ST_INT64,
-    //     ST_UINT64,
-    //     ST_FLOAT,
-    //     ST_DOUBLE,
-    //     ST_BOOL,
-    //     ST_VOIDP,
-    //     ST_STRING,
-    //     ST_BYTEBUFFER,
-    //     ST_DICTIONARY,
-    //     ST_JSON,
-    //     ST_HOST,
-    //     ST_TASK,
-    //     ST_RESULT,
-    // };
-
     enum WordMatch : uint8_t
     {
         WM_CaseSensitive,
@@ -437,8 +428,9 @@ namespace cerberus
         Binary,
     };
 
-    enum LogLevel : uint8_t
+    enum LogLevel : int8_t
     {
+        LL_Silent  = -1,
         LL_Info    = 0,
         LL_Warning = 1,
         LL_Error   = 2,
@@ -535,13 +527,18 @@ namespace cerberus
     struct Clonable
     {
         virtual ~Clonable() {}
-        virtual Clonable* clone() const = 0;
+        virtual Clonable* clone() const = 0;  // return a copy-constructed instance of this
+        virtual SIZE memfp() const      = 0;  // return the memory footprint of this
     };
+
+    // -------------------------------------------------------------------------------
+    // -------------------------------MANAGED PTR-------------------------------------
+    // -------------------------------------------------------------------------------
 
     template <typename T>
     class managed_ptr
     {
-        Clonable* m_ptr;
+        T* m_ptr;
         size_t* m_refcount;
 
         void _destroy()
@@ -560,7 +557,7 @@ namespace cerberus
             m_refcount = nullptr;
         }
 
-        void _check()
+        void _check() const
         {
             if (!consistent()) throw cIllegalStateExc("managed_ptr not valid");
         }
@@ -569,17 +566,18 @@ namespace cerberus
         bool consistent() const noexcept { return m_ptr && m_refcount; }
 
         explicit managed_ptr(T* ptr = nullptr)
-            : m_ptr(static_cast<Clonable*>(ptr)),
+            : m_ptr(ptr),
               m_refcount(nullptr)
         {
-            // T must inherit Clonable
-            static_assert(std::is_convertible_v<T*, Clonable*>, "T must inherit Clonable");
-
             if (m_ptr)
             {
+                if (dynamic_cast<T*>(m_ptr) == nullptr) throw cInvalidCastExc("invalid pointer type");
+
+                if (dynamic_cast<Clonable*>(m_ptr) == nullptr)
+                    throw cInvalidCastExc("pointer is not a Clonable");
+
                 m_refcount = new size_t(1);
-                if (!consistent())
-                    throw cSystemExc("managed_ptr not consistent, failed allocation of refcounter");
+                if (!consistent()) throw cSystemExc("failed allocation of refcounter");
             }
         }
 
@@ -636,43 +634,54 @@ namespace cerberus
         {
             if (consistent())
             {
-                T* p = dynamic_cast<T*>(m_ptr->clone());
-                if (!p) throw cInvalidCastExc("invalid cast while cloning");
+                T* p = dynamic_cast<T*>(static_cast<Clonable*>(m_ptr)->clone());
+                if (!p) throw cInvalidCastExc("cloned type is not valid");
                 return managed_ptr<T>(p);
             }
             else
-                throw cIllegalStateExc("wrapped pointer must be non-null");
+                return managed_ptr<T>();  // return unconsistent pointer
         }
 
-        T* get() const { return dynamic_cast<T*>(m_ptr); }
+        T* get() const { return m_ptr; }
 
         T& operator*() const
         {
-            if (!consistent()) throw cIllegalStateExc("managed_ptr not valid");
+            _check();
             return *(get());
         }
 
         T* operator->() const
         {
-            if (!consistent()) throw cIllegalStateExc("managed_ptr not valid");
+            _check();
             return get();
         }
 
         // stops managing the pointer, returning the wrapped underlying pointer
         T* disown()
         {
-            if (!consistent()) throw cIllegalStateExc("managed_ptr not valid");
+            _check();
 
-            if (*m_refcount != 1) cIllegalStateExc("disowning managed_ptr must be unique");
+            // assert that the instance count equals 1
+            if (*m_refcount != 1) cIllegalStateExc("a disowning managed_ptr must be unique");
 
             delete m_refcount;
             m_refcount = nullptr;
 
-            T* ret = static_cast<T*>(m_ptr);
+            T* ret = get();
             m_ptr  = nullptr;
             return ret;
         }
+
+        SIZE memFootprint() const
+        {
+            SIZE s = static_cast<Clonable*>(m_ptr)->memfp();
+            return s + sizeof(managed_ptr);
+        }
     };
+
+    // -------------------------------------------------------------------------------
+    // -----------------------------UNCLONABLE PTR------------------------------------
+    // -------------------------------------------------------------------------------
 
     template <typename T>
     class unclonable_ptr
@@ -682,11 +691,11 @@ namespace cerberus
 
         void _destroy()
         {
-            if (!m_refcount) return;
+            if (!consistent()) return;
 
             if ((*m_refcount) == 1)
             {
-                delete m_ptr;
+                if (m_ptr) delete m_ptr;
                 delete m_refcount;
             }
             else
@@ -694,27 +703,36 @@ namespace cerberus
 
             m_ptr      = nullptr;
             m_refcount = nullptr;
-        };
+        }
+
+        void _check() const
+        {
+            if (!consistent()) throw cIllegalStateExc("unclonable_ptr not valid");
+        }
 
        public:
-        unclonable_ptr()
-            : m_ptr(nullptr),
-              m_refcount(nullptr) {};
+        bool consistent() const noexcept { return m_ptr && m_refcount; }
 
-        unclonable_ptr(T* ptr)
+        explicit unclonable_ptr(T* ptr = nullptr)
             : m_ptr(ptr),
               m_refcount(nullptr)
         {
-            if (m_ptr) m_refcount = new size_t(1);
-        };
+            if (m_ptr)
+            {
+                if (dynamic_cast<T*>(m_ptr) == nullptr) throw cInvalidCastExc("invalid pointer type");
+
+                m_refcount = new size_t(1);
+                if (!consistent()) throw cSystemExc("failed allocation of refcounter");
+            }
+        }
 
         // copy constructor make a shallow copy
         unclonable_ptr(const unclonable_ptr<T>& other)
             : m_ptr(other.m_ptr),
               m_refcount(other.m_refcount)
         {
-            if (m_refcount) (*m_refcount)++;
-        };
+            if (consistent()) (*m_refcount)++;
+        }
 
         unclonable_ptr(unclonable_ptr<T>&& other)
             : m_ptr(other.m_ptr),
@@ -722,31 +740,69 @@ namespace cerberus
         {
             other.m_ptr      = nullptr;
             other.m_refcount = nullptr;
-        };
+        }
 
-        ~unclonable_ptr() { _destroy(); };
-
-        T& operator*() const { return *((T*)m_ptr); };
-
-        T* operator->() const { return (T*)m_ptr; };
-
-        T* get() const { return (T*)m_ptr; };
-
-        unclonable_ptr<T>& ref()
+        // Move assignment operator
+        unclonable_ptr& operator=(unclonable_ptr&& other) noexcept
         {
-            if (m_refcount) (*m_refcount)++;
-            return *this;
-        };
+            if (this == &other) return *this;
 
-        // shared copy
-        unclonable_ptr<T>& operator=(const unclonable_ptr<T>& other)
-        {
             _destroy();
+
             m_ptr      = other.m_ptr;
             m_refcount = other.m_refcount;
-            if (m_refcount) (*m_refcount)++;
+
+            other.m_ptr      = nullptr;
+            other.m_refcount = nullptr;
             return *this;
-        };
+        }
+
+        // shared copy
+        unclonable_ptr<T>& operator=(const unclonable_ptr<T>& other) noexcept
+        {
+            if (this == &other) return *this;
+
+            _check();
+            _destroy();
+
+            m_ptr      = other.m_ptr;
+            m_refcount = other.m_refcount;
+
+            if (consistent()) (*m_refcount)++;
+            return *this;
+        }
+
+        ~unclonable_ptr() { _destroy(); }
+
+        T* get() const { return m_ptr; }
+
+        T& operator*() const
+        {
+            _check();
+            return *(get());
+        }
+
+        T* operator->() const
+        {
+            _check();
+            return get();
+        }
+
+        // stops managing the pointer, returning the wrapped underlying pointer
+        T* disown()
+        {
+            _check();
+
+            // assert that the instance count equals 1
+            if (*m_refcount != 1) cIllegalStateExc("a disowning unclonable_ptr must be unique");
+
+            delete m_refcount;
+            m_refcount = nullptr;
+
+            T* ret = get();
+            m_ptr  = nullptr;
+            return ret;
+        }
     };
 
     class Message;
@@ -799,8 +855,8 @@ namespace cerberus
         OR_SystemFailure,             // [general] a system error occurred
         OR_BadConditions,             // [general] bad conditions encountered when processing the operation
         OR_NotFound,                  // [general] the item was not found
-        OR_TemporaryUnavailable,      // [general] the requested operation is not available at the
-                                      // moment, retry later
+        OR_TemporaryUnavailable,      // [general] the requested operation is not available at the moment
+        OR_NotEnoughData,             // [general] the requested operation requires more data
         OR_InvalidFile,               // [general] the provided file instance is not valid
         OR_Duplicate,                 // [general] the item is a duplicate
         OR_WrongType,                 // [general] the item type is wrong
@@ -902,6 +958,8 @@ namespace cerberus
         bool hasOptional(Result opt);
 
         OpRes& addInfo(const std::string& str);
+
+        SIZE memfp() const;
     };
 
     // The OpResData template class is useful to exchange some custom data alongside with the result
@@ -945,12 +1003,11 @@ namespace cerberus
         };
     };
 
-    class Player;
     class Thread;
 
     typedef void (*timerCallback)(void* ctx);
     typedef int (*threadTickCallback)(cerberus_message msg, Thread* thr);
-    typedef void (*threadCallback)();
+    typedef void (*threadCallback)(Thread* thr);
     typedef OpRes (*playerCallback)(void* ctx, void* data);
     typedef void (*taskEndCallback)(void* ctx, void* data, OpRes result);
 
@@ -987,6 +1044,7 @@ namespace cerberus
     struct DictLine
     {
         std::string key, val;
+        SIZE sz() const { return key.capacity() + val.capacity() + (sizeof(std::string) * 2); }
     };
 
     class Dictionary : public std::vector<DictLine>
@@ -1029,6 +1087,9 @@ namespace cerberus
 
         // Print all the lines of the dictionary on a string
         std::string toString() const;
+
+        // Return the allocated memory
+        SIZE memfp() const;
     };
 
     struct Host
@@ -1108,9 +1169,9 @@ namespace cerberus
 
     struct SocketSettings
     {
-        SocketType type;            // type of socket (Socket_TCP or Socket_UDP)
-        Host bind;                  // interface to bind the socket to
-        Host remote;                // remote host to keep the connection with
+        SocketType type;              // type of socket (Socket_TCP or Socket_UDP)
+        Host bind;                    // interface to bind the socket to
+        Host remote;                  // remote host to keep the connection with
         SocketTransfer transferMode;  // socket data transfer mode
 
         TimeFrame tout, cyctout;  // timeout values used for Transfer_time
@@ -1129,71 +1190,6 @@ namespace cerberus
 
     class ByteBuffer;
     class JsonData;
-
-    /*
-    struct TypeWrapper
-    {
-        SlotType type;
-        union
-        {
-            BYTE _byte;
-            int32_t _int32;
-            int64_t _int64;
-            float _float;
-            double _double;
-            bool _bool;
-            void* _voidp;
-        };
-
-        TypeWrapper()                         = delete;  // not allowed
-        TypeWrapper(const TypeWrapper& other) = delete;
-
-        TypeWrapper(BYTE v)
-            : type(ST_BYTE),
-              _byte(v) {};
-
-        TypeWrapper(int32_t v)
-            : type(ST_INT32),
-              _int32(v) {};
-
-        TypeWrapper(int64_t v)
-            : type(ST_INT64),
-              _int64(v) {};
-
-        TypeWrapper(float v)
-            : type(ST_FLOAT),
-              _float(v) {};
-
-        TypeWrapper(double v)
-            : type(ST_DOUBLE),
-              _double(v) {};
-
-        TypeWrapper(bool v)
-            : type(ST_BOOL),
-              _bool(v) {};
-
-        TypeWrapper(void* v)
-            : type(ST_VOIDP),
-              _voidp(v) {};
-
-        TypeWrapper(std::string& v)
-            : type(ST_STRING),
-              _voidp(&v) {};
-
-        TypeWrapper(ByteBuffer& v)
-            : type(ST_BYTEBUFFER),
-              _voidp(&v) {};
-
-        TypeWrapper(Dictionary& v)
-            : type(ST_DICTIONARY),
-              _voidp(&v) {};
-
-        TypeWrapper(JsonData& v)
-            : type(ST_JSON),
-              _voidp(&v) {};
-    };
-
-    */
 
 }  // namespace cerberus
 #endif  // CERBERUS_TYPES_H

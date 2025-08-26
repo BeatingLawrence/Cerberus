@@ -2,6 +2,7 @@
 
 #include "src/cerberus.h"
 #include "src/core/cerberusutils.h"
+#include "src/types.h"
 
 using namespace cerberus;
 
@@ -80,84 +81,22 @@ cerberus::OpRes HTTPClient::getStatus(const ByteBuffer &statusLine, HTTPResponse
     return OR_OK;
 }
 //=============================================================================
-void HTTPClient::decodeChunkedData(ByteBuffer &data)
+OpResData<HTTPResponse> HTTPClient::_parseResponseHeader(const ByteBuffer &buf)  // FIX AND IMPROVE THIS
+                                                                                 // METHOD
 {
-    data.resetCursor();
-    ByteBuffer tmp;
-
-    while (true)
-    {
-        auto str = data.getLine();  // get until \r\n
-        int size = CerberusUtils::stringToInt(str, Radix::Hexadecimal).value;
-
-        if (size == 0) break;
-
-        tmp.append(data.read(size));
-        data.seek(data.pos() + 2);
-    }
-
-    data.resetCursor();
-    data.assign(tmp);
-}
-//=============================================================================
-HTTPClient::HTTPClient()
-    : Socket(Socket_TCP),
-      m_persistent(false),
-      m_remote()
-{
-    setRecvBufferSize(8192);  // 8K buffer size
-}
-//=============================================================================
-HTTPClient::~HTTPClient() {}
-//=============================================================================
-void HTTPClient::setRemote(const Host &host) { m_remote = host; }
-//=============================================================================
-void HTTPClient::persistent(bool persistent) { m_persistent = persistent; }
-//=============================================================================
-cerberus::OpRes HTTPClient::makeRequest(const HTTPRequest &request)
-{
-    if (!Socket::isConnected())
-    {
-        auto r = _connect();
-        if (r.fail()) return r;
-    }
-
-    auto ret = Socket::send(request.data());
-
-    if (ret.fail()) close();
-
-    return ret;
-}
-//=============================================================================
-cerberus::OpResData<HTTPResponse> HTTPClient::getResponse(const TimeFrame &timeout,
-                                                          const TimeFrame &cycTimeout)
-{
-    if (!Socket::isConnected()) return OR_BadConditions;
-
-    SocketCloser closer;
-    if (!m_persistent) closer.assignSocket(this);
-
-    ByteBuffer buf;
-
-    {
-        auto res = Socket::recv(buf, timeout, cycTimeout);
-        if (res.fail())
-        {
-            if (res.res != OR_Hangup || buf.isEmpty()) return res;
-        }
-    }
-
     // fix the parsing, HTTP may have not a body
 
     // find the gap between header and payload
     auto res = buf.search("\r\n\r\n");
-    if (res.fail()) return {OR_WrongData, CerberusUtils::truncStr(buf.toString(), 1000)};
+    if (res.fail())
+        return {OR_WrongData, "cannot find /r/n/r/n pattern", CerberusUtils::truncStr(buf.toString(), 1000)};
 
     SIZE gap = res.value;
 
     // find the status line end
     res = buf.search("\r\n");
-    if (res.fail()) return {OR_WrongData, CerberusUtils::truncStr(buf.toString(), 1000)};
+    if (res.fail())
+        return {OR_WrongData, "cannot find status line end", CerberusUtils::truncStr(buf.toString(), 1000)};
 
     SIZE sle = res.value;
 
@@ -185,6 +124,110 @@ cerberus::OpResData<HTTPResponse> HTTPClient::getResponse(const TimeFrame &timeo
     return data;
 }
 //=============================================================================
+void HTTPClient::decodeChunkedData(ByteBuffer &data)
+{
+    data.resetCursor();
+    ByteBuffer tmp;
+
+    while (true)
+    {
+        auto str = data.getLine();  // get until \r\n
+        int size = CerberusUtils::stringToInt(str, Radix::Hexadecimal).value;
+
+        if (size == 0) break;
+
+        tmp.append(data.read(size));
+        data.seek(data.pos() + 2);
+    }
+
+    data.resetCursor();
+    data.assign(tmp);
+}
+//=============================================================================
+HTTPClient::HTTPClient(size_t bufsize)
+    : Socket(Socket_TCP),
+      m_persistent(false),
+      m_remote()
+{
+    setRecvBufferSize(bufsize);
+}
+//=============================================================================
+HTTPClient::~HTTPClient() {}
+//=============================================================================
+void HTTPClient::setRemote(const Host &host) { m_remote = host; }
+//=============================================================================
+void HTTPClient::persistent(bool persistent) { m_persistent = persistent; }
+//=============================================================================
+cerberus::OpRes HTTPClient::makeRequest(const HTTPRequest &request)
+{
+    if (!Socket::isConnected())
+    {
+        auto r = _connect();
+        if (r.fail()) return r;
+    }
+
+    m_currentStreamResponse.clear();
+
+    auto ret = Socket::send(request.data());
+
+    if (ret.fail()) close();
+
+    return ret;
+}
+//=============================================================================
+cerberus::OpResData<HTTPResponse> HTTPClient::getResponse(const TimeFrame &timeout, const TimeFrame &cyc)
+{
+    if (!Socket::isConnected()) return OR_BadConditions;
+
+    ByteBuffer buf;
+
+    {
+        SocketCloser closer;
+        if (!m_persistent) closer.assignSocket(this);
+
+        auto res = Socket::recv_cyc(buf, timeout, cyc);
+        condret(res);
+    }
+
+    return _parseResponseHeader(buf);
+}
+//=============================================================================
+cerberus::OpResData<HTTPResponse> HTTPClient::getStream(const TimeFrame &timeout)
+{
+    if (!m_persistent) return OR_Unavailable;
+    if (!Socket::isConnected()) return OR_BadConditions;
+
+    ByteBuffer buf;
+
+    if (m_currentStreamResponse.isNull())  // no header yet
+    {
+        condret(Socket::recv(buf, timeout));
+
+        auto respHead = _parseResponseHeader(buf);
+
+        while (respHead.res == OR_NotEnoughData && buf.size() < 1024 * 32)  // 32K buffer is the limit
+        {
+            ByteBuffer buf2;
+            condret(Socket::recv(buf, timeout));
+            buf += buf2;
+            respHead = _parseResponseHeader(buf);
+        }
+
+        condret(respHead);
+
+        m_currentStreamResponse = respHead.value;
+        return m_currentStreamResponse;
+    }
+
+    // header already got, so now the stream data are received
+
+    condret(Socket::recv(buf, timeout));  // receive just a block of data
+
+    // return the original response header information with payload updated
+    m_currentStreamResponse.setPayload(buf);
+    return m_currentStreamResponse;
+}
+//=============================================================================
 cerberus::OpResData<HTTPResponse> HTTPClient::get(const HTTPRequest &request, const TimeFrame &timeout,
                                                   const TimeFrame &cycTimeout)
 {
@@ -192,4 +235,6 @@ cerberus::OpResData<HTTPResponse> HTTPClient::get(const HTTPRequest &request, co
     if (r.fail()) return r;
     return getResponse(timeout, cycTimeout);
 }
+//=============================================================================
+OpRes HTTPClient::disconnect() { return Socket::close(); }
 //=============================================================================

@@ -8,7 +8,7 @@ using namespace cerberus::core;
 //=============================================================================
 int LoggerThread::tick()
 {
-    cerberus_message message = nextMessage();
+    cerberus_message message = next();
 
     if (message->id() != CERBERUS_MESSAGE_LOG_ID || m_failed.load()) return 0;
 
@@ -30,7 +30,7 @@ int LoggerThread::tick()
     if (m_logFile.writeLine(str).fail())
     {
         m_failed.store(true);
-        discardMessageQueue();
+        clear();
         m_logFile.close();
         return 0;
     }

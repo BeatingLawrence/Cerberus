@@ -3,7 +3,6 @@
 #include "../exception/exceptioncatalog.h"
 #include "slot.h"
 #include "src/data/bytebuffer.h"
-#include "src/data/jsondata.h"
 
 using namespace cerberus;
 
@@ -11,11 +10,18 @@ using namespace cerberus;
 cerberus_message Message::create(HASH32 typeID) { return cerberus_message(new Message(typeID)); }
 //=============================================================================
 Message::Message(HASH32 typeID)
-    : m_slots(),
-      m_id(typeID),
+    : m_id(typeID),
       m_recipientId(CERBERUS_INVALID_ID)
 {
     // noop
+}
+//=============================================================================
+Message::Message(const Message& other)
+    : m_id(other.m_id),
+      m_recipientId(other.m_recipientId)
+{
+    // deep-copy all slots
+    for (auto& el : other.m_slots) m_slots.push_back(el.duplicate());
 }
 //=============================================================================
 Message::~Message() {}
@@ -81,18 +87,20 @@ bool Message::isValid() const { return (m_id != CERBERUS_INVALID_ID); }
 ByteBuffer Message::toBuffer() const
 {
     ByteBuffer ret;
-
-    for (auto& el : m_slots)
-    {
-        ret.append(el->toBuffer());
-    }
-
+    for (auto& el : m_slots) ret.append(el->toBuffer());
     return ret;
 }
 //=============================================================================
 Clonable* Message::clone() const { return new Message(*this); }
-/*
 //=============================================================================
+SIZE Message::memfp() const
+{
+    SIZE s = sizeof(Message);
+    for (auto&& el : m_slots) s += el.memFootprint();
+    return s;
+}
+//=============================================================================
+/*
 Message& Message::fill(std::initializer_list<TypeWrapper> values)
 {
     if (values.size() != m_slots.size()) throw cIllegalArgExc("fill() called with a wrong number of args");

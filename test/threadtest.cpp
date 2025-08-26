@@ -1,10 +1,28 @@
 #include <cerberus.h>
 #include <core/cerberusregister.h>
 #include <gtest/gtest.h>
-
-#include "./testthread.h"
+#include <thread/thread.h>
 
 using namespace cerberus;
+
+class TestThread : public cerberus::Thread
+{
+   private:
+    virtual int tick() override
+    {
+        tlogInfo("TICK");
+        return 10;
+    }
+
+    virtual void warmUp() override { tlogInfo("Warm-up"); }
+    virtual void coolDown() override { tlogInfo("Cool-down"); }
+
+   public:
+    TestThread(const char* name)
+        : cerberus::Thread(cerberus::ThreadPeriodicity::TP_Periodic, 500, name)
+    {
+    }
+};
 
 TEST(threadTest, simple_thread_creation_destruction)
 {
@@ -33,9 +51,9 @@ static int testCallback(cerberus_message msg, Thread* thread)
     return 20;
 }
 
-static void testWarmUpCallback() { logInfo("Warm-up Callback"); }
+static void testWarmUpCallback(Thread* thread) { logInfo("Warm-up Callback"); }
 
-static void testCoolDownCallback() { logInfo("Cool-down Callback"); }
+static void testCoolDownCallback(Thread* thread) { logInfo("Cool-down Callback"); }
 
 TEST(threadTest, thread_callback)
 {
@@ -56,7 +74,7 @@ static int pingTestCallback(cerberus_message msg, Thread* thread)
     static char b = 10;
     static char c = 20;
 
-    if (msg->isValid())
+    if (msg.consistent())
     {
         logInfo(CerberusUtils::strPrint("PONG! %u %u %u",
                                         msg->getSlotAt(0)->to<cerberus::ByteSlot>()->value(),

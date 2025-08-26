@@ -11,7 +11,7 @@ namespace cerberus
        public:
         struct SocketData
         {
-            Socket* s;
+            cerberus_socket s;
             SocketSettings settings;
 
             CHANDLE handle;
@@ -27,12 +27,10 @@ namespace cerberus
                   handle(0),
                   remove(false) {};
 
-            SocketData(Socket* socket)
+            SocketData(cerberus_socket socket)
                 : s(socket),
                   handle(0),
                   remove(false) {};
-
-            ~SocketData() { delete s; };
         };
 
        private:
@@ -53,7 +51,8 @@ namespace cerberus
 
         OpRes addListener(CHANDLE socket, HASH32 threadID);
 
-        SocketData* newSocketCopy(const SocketSettings& settings, Socket* socket, SocketData* parentData);
+        SocketData* newSocketCopy(const SocketSettings& settings, cerberus_socket socket,
+                                  SocketData* parentData);
 
         OpResData<SocketData*> getSocket(CHANDLE socket);
 

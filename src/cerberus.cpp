@@ -102,7 +102,7 @@ void Cerberus::init(const CerberusInitConf& parms)
 
     Cerberus::framework.start();
 
-    logInfo("Cerberus init completed");
+    logDebug("Cerberus init completed");
 
     if (parms.useCiphers)
     {

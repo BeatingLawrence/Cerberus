@@ -11,7 +11,7 @@ void CerberusCore::initializeThreadPool()
 {
     if (m_conf.threadPool == 0) return;
 
-    logInfo("Building thread pool");
+    logDebug("Building thread pool");
 
     m_pool.build(m_conf.threadPool, m_conf.backupThreadMaxTime);
 }
@@ -20,14 +20,14 @@ void CerberusCore::deinitializeThreadPool()
 {
     if (m_pool.size() == 0) return;
 
-    logInfo("Deallocating thread pool");
+    logDebug("Deallocating thread pool");
 
     m_pool.clear();
 }
 //=============================================================================
 int CerberusCore::tick()
 {
-    cerberus_message message = nextMessage();
+    cerberus_message message = next();
 
     if (!(message->isValid())) return 0;
 
@@ -55,7 +55,7 @@ void CerberusCore::warmUp()
 {
     logInfo("Starting Core Thread");
 
-    logInfo("Starting Event Scheduler");
+    logDebug("Starting Event Scheduler");
     m_eventScheduler.start();
 
     initializeThreadPool();
@@ -63,15 +63,15 @@ void CerberusCore::warmUp()
 //=============================================================================
 void CerberusCore::coolDown()
 {
-    logInfo("Stopping event scheduler");
+    logDebug("Stopping event scheduler");
     m_eventScheduler.join(true);
 
-    logInfo("removing sockets");
+    logDebug("removing sockets");
     m_sockets.scheduleRemoval_all();
 
     deinitializeThreadPool();
 
-    logInfo("Stopping Cerberus core");
+    logInfo("Stopping Core Thread");
 }
 //=============================================================================
 void CerberusCore::processTaskMsg(cerberus_message msg)
@@ -84,25 +84,24 @@ void CerberusCore::processMsg(cerberus_message msg) { Cerberus::sendMsgToObj(msg
 //=============================================================================
 OpRes CerberusCore::socketCB(void* ctx, void* data)
 {
-    auto socket = (SocketManager::SocketData*)data;
+    auto sdata = static_cast<SocketManager::SocketData*>(data);
     OpRes res(OR_OK);
 
     while (true)
     {
-        MutexLocker ml(socket->mutex);
+        MutexLocker ml(sdata->mutex);
 
-        if (socket->remove) break;
+        if (sdata->remove) break;
 
-        if (socket->settings.server)
+        if (sdata->settings.server)
         {
-            if (socket->s->canRead().fail()) continue;
+            if (sdata->s->canRead().fail()) continue;
 
-            auto s = socket->s->accept();
+            auto s = sdata->s->accept();
 
-            if (s.get())
+            if (s.consistent())
             {
-                s.ref();  // increment ref count
-                CerberusCore::processClient((CerberusCore*)ctx, s.get(), socket, socket->settings);
+                CerberusCore::processClient((CerberusCore*)ctx, s, sdata, sdata->settings);
                 // maybe send a message also?
             }
             else
@@ -115,41 +114,41 @@ OpRes CerberusCore::socketCB(void* ctx, void* data)
             continue;
         }
 
-        if (socket->settings.type == Socket_TCP && !socket->s->isConnected())
+        if (sdata->settings.type == Socket_TCP && !sdata->s->isConnected())
         {
-            if (!socket->settings.remote.isValidRemote()) break;  // abort
+            if (!sdata->settings.remote.isValidRemote()) break;  // abort
 
-            res = socket->s->connect(socket->settings.remote);
+            res = sdata->s->connect(sdata->settings.remote);
             if (res.fail("socket connect fail in player")) break;
         }
 
-        if (socket->s->canRead().ok())
+        if (sdata->s->canRead().ok())
         {
             ByteBuffer buf;
 
-            if (socket->settings.transferMode == Transfer_Bytes)
+            if (sdata->settings.transferMode == Transfer_Bytes)
             {
-                res = socket->s->recv(buf);
+                res = sdata->s->recv(buf);
                 if (res.fail("recv fail in player")) break;
             }
-            else if (socket->settings.transferMode == Transfer_Time)
+            else if (sdata->settings.transferMode == Transfer_Time)
             {
-                res = socket->s->recv(buf, socket->settings.tout, socket->settings.cyctout);
+                res = sdata->s->recv_cyc(buf, sdata->settings.tout, sdata->settings.cyctout);
                 if (res.fail("cyclic recv fail in player")) break;
             }
 
             auto msg = Cerberus::constructMessage(CERBERUS_MESSAGE_SOCKETDATA_ID);
             msg->getSlot("result")->to<ResultSlot>()->value(OR_OK);
-            msg->getSlot("host")->to<HostSlot>()->value(socket->s->remote());
+            msg->getSlot("host")->to<HostSlot>()->value(sdata->s->remote());
             msg->getSlot("buffer")->to<BufferSlot>()->value(buf);
 
-            if (socket->threads.size() == 1)
+            if (sdata->threads.size() == 1)
             {
-                Cerberus::sendMsgToObj(socket->threads.front(), msg);  // shallow copy
+                Cerberus::sendMsgToObj(sdata->threads.front(), msg);  // shallow copy
                 continue;
             }
 
-            for (auto&& el : socket->threads)
+            for (auto&& el : sdata->threads)
             {
                 Cerberus::sendMsgToObj(el, msg.duplicate());  // deep copy
             }
@@ -157,13 +156,13 @@ OpRes CerberusCore::socketCB(void* ctx, void* data)
     }
 
     // delete the socket
-    ((CerberusCore*)ctx)->m_sockets.removeSocket(socket);
+    ((CerberusCore*)ctx)->m_sockets.removeSocket(sdata);
 
     return res;
 }
 //=============================================================================
-void CerberusCore::processClient(CerberusCore* ctx, Socket* socket, SocketManager::SocketData* parentData,
-                                 const SocketSettings& settings)
+void CerberusCore::processClient(CerberusCore* ctx, cerberus_socket socket,
+                                 SocketManager::SocketData* parentData, const SocketSettings& settings)
 {
     SocketSettings set(settings);
 

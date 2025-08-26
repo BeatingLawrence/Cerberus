@@ -372,6 +372,8 @@ std::string cerberus::OpRes::errorString() const
             return "TLS key check failure";
         case OR_WrongData:
             return "Wrong data";
+        case OR_NotEnoughData:
+            return "Not enough data";
     }
 
     return "Undefined";
@@ -400,6 +402,13 @@ bool cerberus::OpRes::hasOptional(Result opt)
     }
 
     return false;
+}
+//=============================================================================
+cerberus::SIZE cerberus::OpRes::memfp() const
+{
+    SIZE s = reason.capacity();
+    for (auto& el : optional) s += sizeof(Result);
+    return s;
 }
 //=============================================================================
 cerberus::OpRes& cerberus::OpRes::addInfo(const std::string& str)
@@ -479,7 +488,7 @@ std::string cerberus::Dictionary::toString() const
 {
     std::string ret;
 
-    for (auto& el : (*this))
+    for (auto& el : *this)
     {
         ret.append(el.key);
         ret.append(": ");
@@ -488,6 +497,13 @@ std::string cerberus::Dictionary::toString() const
     }
 
     return ret;
+}
+//=============================================================================
+cerberus::SIZE cerberus::Dictionary::memfp() const
+{
+    SIZE s = 0;
+    for (auto& el : *this) s += el.sz();
+    return s;
 }
 //=============================================================================
 #if defined(LINUX_SYSTEM)

@@ -16,23 +16,18 @@ ThreadBase::ThreadBase(ThreadPeriodicity periodicity, const std::string &name)
       m_pausedFlag(true),
       m_terminateFlag(false),
       m_dead(false),
+      m_rescheduling(false),
       m_periodicity(periodicity)
 {
     pthread_condattr_t attr{};
 
     int ret = pthread_condattr_init(&attr);
 
-    if (ret)
-    {
-        throw cSystemExc("pthread_condattr_init error %s", strerror(ret));
-    }
+    if (ret) throw cSystemExc("pthread_condattr_init error %s", strerror(ret));
 
     ret = pthread_cond_init(&m_cond, &attr);
 
-    if (ret)
-    {
-        throw cSystemExc("pthread_cond_init error %s", strerror(ret));
-    }
+    if (ret) throw cSystemExc("pthread_cond_init error %s", strerror(ret));
 
     pthread_condattr_destroy(&attr);
 }
@@ -45,10 +40,13 @@ void ThreadBase::setPausedFlag(bool state)
 
     int ret = pthread_cond_signal(&m_cond);
 
-    if (ret)
-    {
-        throw cSystemExc("pthread_cond_signal error %s", strerror(ret));
-    }
+    if (ret) throw cSystemExc("pthread_cond_signal error %s", strerror(ret));
+}
+//=============================================================================
+void ThreadBase::newMsg_first()
+{
+    MutexLocker locker(&m_mutex);
+    if (m_periodicity == TP_Message && m_pausedFlag) setPausedFlag(false);
 }
 //=============================================================================
 void ThreadBase::pause()
@@ -57,14 +55,13 @@ void ThreadBase::pause()
 
     if (m_terminateFlag) return;  // skip pause if the termination is requested
 
+    if (m_rescheduling) return;  // skip pause if rescheduling has been requested
+
     while (m_pausedFlag)
     {
         int ret = pthread_cond_wait(&m_cond, &m_mutex.m_pmutex);  // this call internally unlocks the mutex
 
-        if (ret)
-        {
-            throw cSystemExc("pthread_cond_wait error %s", strerror(ret));
-        }
+        if (ret) throw cSystemExc("pthread_cond_wait error %s", strerror(ret));
     }
 }
 //=============================================================================
@@ -80,56 +77,28 @@ bool ThreadBase::getPausedFlag() const
     return m_pausedFlag;
 }
 //=============================================================================
-cerberus::cerberus_message ThreadBase::nextMessage()
-{
-    MutexLocker locker(&m_mutex);
-
-    if (m_queue.isEmpty()) return Message::create();  // invalid
-
-    if (m_queue.size() == 1 && m_periodicity == TP_Message && !m_pausedFlag) setPausedFlag(true);
-
-    return m_queue.next();
-}
-//=============================================================================
-cerberus::cerberus_message ThreadBase::nextMessageKeep() const
-{
-    MutexLocker locker(&m_mutex);
-    return m_queue.nextKeep();
-}
-//=============================================================================
-void ThreadBase::discardMessageQueue()
-{
-    MutexLocker locker(&m_mutex);
-    m_queue.clear();
-}
-//=============================================================================
-bool ThreadBase::isQueueEmpty() const
-{
-    MutexLocker locker(&m_mutex);
-    return m_queue.isEmpty();
-}
-//=============================================================================
 void ThreadBase::dead()
 {
     MutexLocker locker(&m_mutex);
     m_dead = true;
 }
 //=============================================================================
-void ThreadBase::addMessage(cerberus_message message)
+void ThreadBase::reschedule()
 {
     MutexLocker locker(&m_mutex);
-    m_queue.add(message);
-
-    if (m_periodicity == TP_Message && m_pausedFlag)
-    {
-        setPausedFlag(false);
-    }
+    m_rescheduling = true;
 }
 //=============================================================================
-size_t ThreadBase::messageCount() const
+void ThreadBase::resetRescheduling()
 {
     MutexLocker locker(&m_mutex);
-    return m_queue.size();
+    m_rescheduling = false;
+}
+//=============================================================================
+bool ThreadBase::isRescheduling()
+{
+    MutexLocker locker(&m_mutex);
+    return m_rescheduling;
 }
 //=============================================================================
 void ThreadBase::start()

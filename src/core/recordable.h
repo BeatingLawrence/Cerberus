@@ -6,6 +6,7 @@
 
 #include "../Cerberus_global.h"
 #include "../exception/exception.h"
+#include "../thread/recipient.h"
 #include "../types.h"
 
 namespace cerberus
@@ -16,7 +17,7 @@ namespace cerberus
     {
         class CerberusRegister;
 
-        class CERBERUS_EXPORT Recordable
+        class CERBERUS_EXPORT Recordable : public Recipient
         {
             friend class ::cerberus::core::CerberusRegister;
             friend class ::cerberus::Cerberus;
@@ -51,7 +52,7 @@ namespace cerberus
            public:
             Recordable() = delete;
 
-            Recordable(const Recordable& other) = default;
+            Recordable(const Recordable& other) = delete;
 
             virtual ~Recordable();
 
@@ -74,8 +75,6 @@ namespace cerberus
 
             // Returns the object name
             std::string name() const;
-
-            virtual void addMessage(cerberus_message message) = 0;
 
             // Performs a dynamic cast of this object into T. Throws an exception if the cast is not possible
             // Checking the object type() before casting is a good practice

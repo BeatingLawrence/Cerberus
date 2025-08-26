@@ -22,6 +22,8 @@ void Thread::_thread()
     {
         pause();
 
+        resetRescheduling();
+
         if (getTerminateFlag()) break;
 
         if (firstRun)
@@ -34,10 +36,10 @@ void Thread::_thread()
         {
             case TP_Message:
             {
-                if (isQueueEmpty())
-                    stop();
-                else
+                if (hasMessage())
                     m_retValue = tick();
+                else
+                    stop();
             }
             break;
 
@@ -52,7 +54,7 @@ void Thread::_thread()
             {
                 m_retValue = tick();
 
-                if (isQueueEmpty()) wait();
+                if (!hasMessage()) wait();
             }
             break;
 
@@ -85,18 +87,21 @@ void Thread::_thread()
 //=============================================================================
 int Thread::defaultTickCallback(cerberus_message msg, Thread* thread) { return 0; }
 //=============================================================================
-void Thread::defaultWarmUpCallback()
+void Thread::defaultWarmUpCallback(Thread* thread)
 {
+    (void)thread;
     // noop
 }
 //=============================================================================
-void Thread::defaultCoolDownCallback()
+void Thread::defaultCoolDownCallback(Thread* thread)
 {
+    (void)thread;
     // noop
 }
 //=============================================================================
 void Thread::wait()
 {
+    if (isRescheduling()) return;  // bypass wait if thread is rescheduling
     timespec t{};
     t.tv_nsec = m_time.nanoseconds;
     t.tv_sec  = m_time.seconds;
@@ -135,11 +140,11 @@ void Thread::construct(ThreadPeriodicity periodicity, const TimeFrame& time, con
 #endif
 }
 //=============================================================================
-int Thread::tick() { return m_tickCallback(nextMessage(), this); }
+int Thread::tick() { return m_tickCallback(next(), this); }
 //=============================================================================
-void Thread::warmUp() { m_warmUpCallback(); }
+void Thread::warmUp() { m_warmUpCallback(this); }
 //=============================================================================
-void Thread::coolDown() { m_coolDownCallback(); }
+void Thread::coolDown() { m_coolDownCallback(this); }
 //=============================================================================
 void Thread::sleep(const TimeFrame& time)
 {

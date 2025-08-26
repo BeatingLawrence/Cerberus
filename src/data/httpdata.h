@@ -33,6 +33,7 @@ namespace cerberus
 
         // Set the HTTP payload
         HTTPData& setPayload(const ByteBuffer& payload);
+        HTTPData& updatePayloadSizeHeader();
 
         // Perform a JSON generation and set the payload to the generated text.
         // The result of the generation will be returned.
@@ -113,6 +114,12 @@ namespace cerberus
 
         // Check if the request has returned a non-error result
         bool isOk();
+
+        // Wipe all the data
+        void clear();
+
+        // Tell of the instance is null, i.e. has statusCode = 0
+        bool isNull();
     };
 }  // namespace cerberus
 

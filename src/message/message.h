@@ -24,7 +24,7 @@ namespace cerberus
 
         Message(HASH32 id = CERBERUS_INVALID_ID);
 
-        Message(const Message& other) = default;
+        Message(const Message& other);
 
         Message& operator=(const Message& other) = delete;
 
@@ -57,6 +57,8 @@ namespace cerberus
         ByteBuffer toBuffer() const;
 
         virtual Clonable* clone() const;
+
+        virtual SIZE memfp() const;
 
         /*
         // Fill the fields.

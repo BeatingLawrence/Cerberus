@@ -172,6 +172,9 @@ namespace cerberus
 
         // Print the content using a debug formatting rule
         void toStr(std::string& str, uint8_t level = 0) const;
+
+        // Calculate the memory footprint
+        SIZE memfp() const;
     };
 }  // namespace cerberus
 

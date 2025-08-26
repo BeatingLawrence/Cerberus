@@ -7,9 +7,9 @@
 #include "log.h"              // IWYU pragma: export
 #include "message/message.h"  // IWYU pragma: export
 #include "message/messagetemplate.h"
-#include "message/slot.h"  // IWYU pragma: export
-#include "time/datetime.h"
-#include "time/timeframe.h"
+#include "message/slot.h"    // IWYU pragma: export
+#include "time/datetime.h"   // IWYU pragma: export
+#include "time/timeframe.h"  // IWYU pragma: export
 #include "types.h"
 
 namespace cerberus

@@ -200,6 +200,8 @@ void CerberusLog::align(std::string& str, LogLevel logLevel, uint32_t authorLen)
         case LL_Debug:
             indentation += DEBUG_TAG_STRING_LEN;
             break;
+        default:
+            break;
     }
 
     indentation += authorLen;
@@ -224,6 +226,9 @@ std::string CerberusLog::toRawLog(const std::string& str, LogLevel ll, const std
 
         case LL_Debug:
             return CerberusUtils::strPrint("%s [DEBUG] %s%s" NEWLINE, t.c_str(), a.c_str(), str.c_str());
+
+        default:
+            break;
     }
 
     return "";
@@ -280,6 +285,9 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
             std::cerr << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), s.c_str());
             std::cerr << std::endl;
             break;
+
+        default:
+            break;
     }
 #else
 
@@ -300,6 +308,9 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
         case LL_Warning:
             return CerberusUtils::strPrint("%s%s [%sWARNING%s] %s%s" NEWLINE, m_endForm, t.c_str(),
                                            m_warnForm.c_str(), m_endForm, a.c_str(), str.c_str());
+
+        default:
+            break;
     }
 
 #endif

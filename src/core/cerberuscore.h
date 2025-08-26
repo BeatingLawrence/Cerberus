@@ -40,7 +40,7 @@ namespace cerberus
 
             static OpRes socketCB(void* ctx, void* data);
 
-            static void processClient(CerberusCore* ctx, Socket* socket,
+            static void processClient(CerberusCore* ctx, cerberus_socket socket,
                                       SocketManager::SocketData* parentData, const SocketSettings& settings);
 
            public:

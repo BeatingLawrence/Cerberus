@@ -117,33 +117,41 @@ namespace cerberus
         // Send out a buffer
         OpRes send(const ByteBuffer& buffer, bool donotblock = false);
 
-        // Wait for data to arrive then receive and store them in the buffer.
+        // This is a cyclic recv helper function.
+        // This method waits for data to arrive then receives and store them in the buffer.
         // The returned amount of data may be greater than the internal buffer size, since this
         // method actually calls the system recv() more times until no more data are present,
         // and merges the buffers together.
+        //
         // - If timeout is invalid, the call acts as a non-blocking call and will return data,
-        // or OR_WouldBlock if the operation would block.
-        // - If timeout is a valid timeout, the call waits for data for at most timeout time,
-        // then starts receiving data,
-        //   and then waits for new data become available or for timeout again. If the timeout
-        //   is reached, and the call was able to receive some data, this method will return
-        //   OR_OK. If timeout is reached but the call was not able to get any data, it returns
-        //   OR_TimedOut.
-        // - If cycTimeout is valid, the call uses timeout for the first recv(), and cycTimeout
-        // for the subsequent recv() cyclic calls
-        OpRes recv(ByteBuffer& buffer, const TimeFrame& timeout, const TimeFrame& cycTimeout = TimeFrame());
+        //   or OR_WouldBlock if the operation requires blocking.
+        //
+        // - If timeout is valid, the call waits for data for at most timeout time,
+        //   then starts receiving data and then waits for new data to become available or for timeout again.
+        //   If the timeout is reached, and the call was able to receive some data, this method
+        //   will return OR_OK. If no data has been received OR_TimedOut is returned.
+        //
+        // - If cyc is valid, the call uses timeout for the first cycle and cyc for all the other
+        OpRes recv_cyc(ByteBuffer& buffer, const TimeFrame& timeout, const TimeFrame& cyc = TimeFrame());
 
-        // Receive a buffer. This call will always block if necessary
-        // The returned amount of data will not exceed the internal buffer size
+        // Receive a buffer, allow blocking for at most timeout time.
+        // The returned amount of data will never exceed the internal buffer size.
+        // The timeout parameter is used only when data are not available to be received at the moment of
+        // call. If timeout is invalid the call acts as a non-blocking call and will return data, or
+        // OR_WouldBlock if the operation requires blocking
+        OpRes recv(ByteBuffer& buffer, const TimeFrame& timeout);
+
+        // Receive a buffer. This call will always block if necessary.
+        // The returned amount of data will never exceed the internal buffer size
         OpRes recv(ByteBuffer& buffer);
 
         // Set the maximum incoming connections number. If the queue is full, new peers
         // will receive a connection refused error when they do a connect().
-        // This method is designed for TCP based sockets, however, calling this method on a
-        // non-TCP socket won't have any effect
+        // This method is designed for TCP based sockets, calling this method on a
+        // non-TCP socket will have no effect
         void setMaxConnections(size_t maxconn);
 
-        // Check if the socket is a failed socket
+        // Check if the socket is failed
         bool isFailed() const;
 
         // Check if the socket connection is established.
@@ -170,7 +178,7 @@ namespace cerberus
 
         // Close the socket
         // This method must be called at most one time,
-        // the subsequent calls will return OR_FailedInstance.
+        // subsequent calls will return OR_FailedInstance.
         // This method closes the system socket but it does not de-initialize the TLS layer,
         // so it can be reused later after a reset() call.
         // If the TLS layer is present, this method will send the close_notify alert to the peer
@@ -269,7 +277,7 @@ namespace cerberus
         // must afterwards call TLS_handshake() and specify the mode.
         OpRes connectP2P(const Host& dest, const TimeFrame& timeout = TimeFrame());
 
-        // TCP (or derived) SECTION:
+        // TCP SECTION:
 
         // Mark the socket as a listening socket, so it can accept() new connections.
         // If the instance of the socket was returned by an accept or the socket transport is
@@ -291,7 +299,7 @@ namespace cerberus
         //  send all the buffer at once calling setCork(false)
         OpRes setCork(bool cork = true);
 #endif
-        //  Set the Nagle algorithm state. As default, TCP sockets have it enabled
+        //  Set the Nagle algorithm state. As default, TCP sockets have it enabled (system dependent)
         OpRes useNagle(bool use = true);
 
         // Set the connection timeout of the socket. Default is 20 minutes (system dependent)
@@ -317,8 +325,9 @@ namespace cerberus
         // Receive a file.
         // This method blocks until a file is received or timeout is reached.
         // -If timeout is not specified and no data are ready to be received, this call could
-        // block for ever -If timeout (or/and cycTimeout) is specified, the behavior is the same
-        // as the recv() call
+        //  block for ever
+        // -If timeout (or/and cycTimeout) is specified, the behavior is the same
+        // as the recv_cyc() call
         OpRes recv(File& file, const TimeFrame& timeout = TimeFrame(),
                    const TimeFrame& cycTimeout = TimeFrame());
     };

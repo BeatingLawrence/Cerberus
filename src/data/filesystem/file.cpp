@@ -142,13 +142,14 @@ OpRes File::isEmptyDirectory(const std::string& path)
         if (++n > 2) break;
     }
 
-    closedir(dir);
-
     if (errno != 0)
     {
         logError("readdir error: %s", strerror(errno));
+        closedir(dir);
         return OR_SystemFailure;
     }
+
+    closedir(dir);
 
     if (n <= 2)
     {
