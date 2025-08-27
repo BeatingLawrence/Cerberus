@@ -51,19 +51,19 @@ cerberus::Host cerberus::Host::stringToHost(const std::string& str)
     std::string ip = str.substr(0, str.find_last_of(':'));
     // search for any, local or broadcast
 
-    if (CerberusUtils::areEqual(CerberusUtils::toLower(ip), "any"))
+    if (CerberusUtils::areEqual(ip, "any", WM_CaseInsensitive))
     {
         ret.octet_networkOrder = ADDR_ANY;
         return ret;
     }
 
-    if (CerberusUtils::areEqual(CerberusUtils::toLower(ip), "local"))
+    if (CerberusUtils::areEqual(ip, "local", WM_CaseInsensitive))
     {
         ret.octet_networkOrder = ADDR_LOOPBACK;
         return ret;
     }
 
-    if (CerberusUtils::areEqual(CerberusUtils::toLower(ip), "broadcast"))
+    if (CerberusUtils::areEqual(ip, "broadcast", WM_CaseInsensitive))
     {
         ret.octet_networkOrder = ADDR_BROADCAST;
         return ret;
@@ -84,36 +84,24 @@ cerberus::Host cerberus::Host::stringToHost(const std::string& str)
     sub     = ip.substr(0, dots[0]);
     oct[0]  = atoi(sub.c_str());
 
-    if (oct[0] < 0 || oct[0] > 255 || sub.empty())
-    {
-        return Host();
-    }
+    if (oct[0] < 0 || oct[0] > 255 || sub.empty()) return Host();
 
     dots[1] = ip.find_first_of('.', dots[0] + 1);
     sub     = ip.substr(dots[0] + 1, dots[1] - (dots[0] + 1));
     oct[1]  = atoi(sub.c_str());
 
-    if (oct[1] < 0 || oct[1] > 255 || sub.empty())
-    {
-        return Host();
-    }
+    if (oct[1] < 0 || oct[1] > 255 || sub.empty()) return Host();
 
     dots[2] = ip.find_first_of('.', dots[1] + 1);
     sub     = ip.substr(dots[1] + 1, dots[2] - (dots[1] + 1));
     oct[2]  = atoi(sub.c_str());
 
-    if (oct[2] < 0 || oct[2] > 255 || sub.empty())
-    {
-        return Host();
-    }
+    if (oct[2] < 0 || oct[2] > 255 || sub.empty()) return Host();
 
     sub    = ip.substr(dots[2] + 1);
     oct[3] = atoi(sub.c_str());
 
-    if (oct[3] < 0 || oct[3] > 255 || sub.empty())
-    {
-        return Host();
-    }
+    if (oct[3] < 0 || oct[3] > 255 || sub.empty()) return Host();
 
     ret.octect[0] = oct[0];
     ret.octect[1] = oct[1];
@@ -132,10 +120,7 @@ uint16_t cerberus::Host::getPort(const std::string& str)
         std::string portstr = str.substr(col + 1);
         portint             = atoi(portstr.c_str());
 
-        if (portint < 0 || portint > 65535)
-        {
-            return 0;
-        }
+        if (portint < 0 || portint > 65535) return 0;
     }
 
     return portint;
@@ -397,9 +382,7 @@ cerberus::OpRes& cerberus::OpRes::addOptional(Result opt)
 bool cerberus::OpRes::hasOptional(Result opt)
 {
     for (auto& el : optional)
-    {
         if (el == opt) return true;
-    }
 
     return false;
 }

@@ -37,7 +37,7 @@ namespace cerberus
         // Construct an empty ByteBuffer, no buffer memory allocation is performed
         ByteBuffer();
 
-        // Construct a ByteBuffer from another one. This operation will shallow-copy the buffer
+        // Construct a ByteBuffer from another one
         ByteBuffer(const ByteBuffer& other);
 
         // Move-construct a ByteBuffer, invalidating other

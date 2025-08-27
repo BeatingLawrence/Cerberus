@@ -380,6 +380,48 @@ OpRes File::_seek(LSIZE pos) const
     return OR_OK;
 }
 //=============================================================================
+OpRes File::_read(ByteBuffer& buf, LSIZE start, LSIZE span) const
+{
+    if (!isOpen()) return OR_BadConditions;
+
+    auto sz = size();
+    condret_str(sz, "size() error");
+
+    if (start >= sz.value) return {OR_WrongArgument, "start greater than file size"};
+
+    // cap to EOF if span is too large or if span is zero
+    if (!span || ((start + span) > sz.value)) span = sz.value - start;
+
+    condret(seek(start));
+
+    return _read_cursor(buf, span);
+}
+//=============================================================================
+OpRes File::_read_cursor(ByteBuffer& buf, LSIZE span) const
+{
+    if (!isOpen()) return OR_BadConditions;
+    if (feof(m_file)) return OR_EOF;
+
+    buf.resize(span);  // create room for at most span bytes
+
+    clearerr(m_file);
+    size_t ret = fread(buf.data(), 1, span, m_file);
+
+    buf.resize(span);  // re-adjust to actual read bytes count
+
+    if (ferror(m_file)) return OR_Failure;
+
+    if (feof(m_file))
+    {
+        if (ret)
+            return OpRes(OR_OK).addOptional(OR_EOF);
+        else
+            return OR_EOF;
+    }
+
+    return OR_OK;
+}
+//=============================================================================
 File::File(int fd, const Path& path, FileOpenMode openMode)
     : m_path(path),
       m_openMode(openMode),
@@ -459,11 +501,13 @@ SizeOpRes File::size() const
         return st.value.size;
     }
 
-    auto backup = getCursor().expect().value;
+    auto backup = getCursor();
+    condret_str(backup, "getCursor() error 1 in size()");
     condret(seekToEOF());
-    auto size = getCursor().expect().value;
-    condret(_seek(backup));
-    return (LSIZE)size;
+    auto size = getCursor();
+    condret_str(size, "getCursor() error 2 in size()");
+    condret(_seek(backup.value));
+    return (LSIZE)size.value;
 }
 //=============================================================================
 OpRes File::write(const ByteBuffer& bytes)
@@ -533,83 +577,27 @@ OpRes File::insert(const ByteBuffer& bytes)
     return OR_OK;
 }
 //=============================================================================
-OpRes File::read(ByteBuffer& bytes, LSIZE start) const
-{
-    if (!isOpen()) return OR_BadConditions;
-
-    auto res = seek(start);
-
-    if (res.fail()) return res;
-
-    LSIZE bytesToRead = size().value - start;
-
-    bytes.resize(bytesToRead);
-
-    clearerr(m_file);
-
-    auto ret = fread(bytes.data(), 1, bytesToRead, m_file);
-
-    if (ferror(m_file)) return OR_Failure;
-
-    if (feof(m_file) && !ret) return OR_EOF;
-
-    return OR_OK;
-}
+OpRes File::read(ByteBuffer& buf, LSIZE start) const { return _read(buf, start); }
 //=============================================================================
-OpRes File::read(ByteBuffer& bytes, LSIZE start, LSIZE span) const
-{
-    if (!isOpen()) return OR_BadConditions;
-
-    if ((start + span) >= size().value) return OR_WrongArgument;
-
-    auto res = seek(start);
-
-    if (res.fail()) return res;
-
-    bytes.resize(span);
-
-    clearerr(m_file);
-
-    auto ret = fread(bytes.data(), 1, span, m_file);
-
-    if (ferror(m_file)) return OR_Failure;
-
-    if (feof(m_file) && !ret) return OR_EOF;
-
-    return OR_OK;
-}
+OpRes File::read(ByteBuffer& buf, LSIZE start, LSIZE span) const { return _read(buf, start, span); }
 //=============================================================================
-OpRes File::readChunk(ByteBuffer& bytes, SIZE chunksize) const
-{
-    if (!isOpen()) return OR_BadConditions;
-
-    bytes.clear();
-    bytes.resize(chunksize);
-
-    clearerr(m_file);
-
-    auto ret = fread(bytes.data(), 1, chunksize, m_file);
-
-    bytes.resize(ret);
-
-    if (ferror(m_file)) return OR_Failure;
-
-    if (ret == 0 && feof(m_file)) return OR_EOF;
-
-    return OR_OK;
-}
+OpRes File::readChunk(ByteBuffer& buf, LSIZE chunksize) const { return _read_cursor(buf, chunksize); }
 //=============================================================================
 OpResData<ByteBuffer> File::readUntil(const ByteBuffer& sequence) const
 {
     auto backup = getCursor();
-    auto seqpos = search(sequence);
-    seek(backup.value).expect();
+    condret(backup);
 
-    if (seqpos.fail()) return seqpos;
+    auto seqpos = search(sequence);
+    condret(seek(backup.value));
+
+    condret(seqpos);
+
+    // sequence found
 
     ByteBuffer buf;
-    auto readret = readChunk(buf, seqpos.value - backup.value);
-    if (readret.fail()) return readret;
+    auto ret = readChunk(buf, seqpos.value - backup.value);
+    condret(ret);
 
     return buf;
 }
@@ -648,24 +636,33 @@ SizeOpRes File::search(const ByteBuffer& sequence) const
 StringOpRes File::readLine() const
 {
     if (!isOpen()) return OR_BadConditions;
+    if (feof(m_file)) return OR_EOF;
 
     clearerr(m_file);
+
+    char temp[128];
+
     std::string line;
 
     while (true)
     {
-        char c = 0;
+        // read end (EOF, error or newline)
+        if (fgets(temp, sizeof(temp), m_file) == nullptr) break;
 
-        fread(&c, 1, 1, m_file);
+        line += temp;
 
-        if (ferror(m_file)) return OR_Failure;
-
-        if (feof(m_file) && line.empty()) return OR_EOF;
-
-        if (c == '\n' || feof(m_file)) break;
-
-        line += c;
+        if (line.ends_with('\n'))  // full line
+        {
+            line.pop_back();
+            break;
+        }
     }
+
+    if (ferror(m_file)) return {OR_Failure, strerror(errno)};
+
+    if (feof(m_file)) return OR_EOF;
+
+    if (getCursor().value == size().value) return StringOpRes(line).addOptional(OR_EOF);  // helper
 
     return line;
 }
@@ -674,12 +671,15 @@ OpRes File::seek(cerberus::LSIZE pos) const
 {
     if (!isOpen()) return OR_BadConditions;
 
-    if (pos > size().expect().value) return OR_WrongArgument;
+    auto sz = size();
+    condret_str(sz, "seek() error");
+
+    if (pos >= sz.value) return seekToEOF();
 
     return _seek(pos);
 }
 //=============================================================================
-OpRes File::seekOffset(int64_t pos) const
+OpRes File::seekOffset(OFFSET pos) const
 {
     if (!isOpen()) return OR_BadConditions;
 

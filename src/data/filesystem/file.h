@@ -31,6 +31,10 @@ namespace cerberus
 
         OpRes _seek(LSIZE pos) const;
 
+        OpRes _read(ByteBuffer& buf, LSIZE start, LSIZE span = 0) const;
+
+        OpRes _read_cursor(ByteBuffer& buf, LSIZE span) const;
+
         File(int fd, const Path& path,
              FileOpenMode openMode);  // used internally, set openmode to FOM_ReadWrite
 
@@ -156,14 +160,17 @@ namespace cerberus
         // This method makes use of tempfile
         OpRes insert(const ByteBuffer& bytes);
 
-        // Read the file starting from start pos till the end of file
-        OpRes read(ByteBuffer& bytes, LSIZE start = 0) const;
+        // Read the file starting from start pos till the end of file.
+        // If the call reach EOF and was able to read some data, an optional EOF will
+        // be added to the return opres. If EOF is reached with no data retrieved, an EOF error
+        // is returned
+        OpRes read(ByteBuffer& buf, LSIZE start = 0) const;
 
-        // Read span bytes from file starting from start pos
-        OpRes read(ByteBuffer& bytes, LSIZE start, LSIZE span) const;
+        // Read span buf from file starting from start pos
+        OpRes read(ByteBuffer& buf, LSIZE start, LSIZE span) const;
 
         // Read a chunk of data from the current cursor position
-        OpRes readChunk(ByteBuffer& bytes, SIZE chunksize) const;
+        OpRes readChunk(ByteBuffer& buf, LSIZE chunksize) const;
 
         // Read a chunk of data from the current cursor position until a sequence is found.
         // The read sequence is inserted into the returned buffer
@@ -186,7 +193,7 @@ namespace cerberus
         OpRes seek(LSIZE pos) const;
 
         // Move the cursor back or forth according to the sign of the parameter pos
-        OpRes seekOffset(int64_t pos) const;
+        OpRes seekOffset(OFFSET pos) const;
 
         // Move the cursor to the end of file
         OpRes seekToEOF() const;

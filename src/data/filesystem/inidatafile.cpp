@@ -259,9 +259,7 @@ BoolOpRes IniDataFile::load()
 {
     m_file.setOpenMode(FOM_Read);
 
-    auto res = m_file.open();
-
-    if (res.fail()) return res;
+    condret(m_file.open());
 
     m_lines.clear();
     m_sections.clear();
@@ -290,10 +288,7 @@ BoolOpRes IniDataFile::load()
 
         CerberusUtils::removeBlank(line);
 
-        if (line.empty())
-        {
-            continue;
-        }
+        if (line.empty()) continue;
 
         Line newLine;
         auto splitted = CerberusUtils::split(line, "#");

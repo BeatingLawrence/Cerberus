@@ -14,6 +14,41 @@ TEST(fileTest, creation)
     file.close();
 }
 
+TEST(fileTest, readLine)
+{
+    {
+        File file("readLineTest.txt", cerberus::FOM_ReadWriteTrunc);
+        ASSERT_TRUE(file.open().ok());
+        for (int i = 0; i < 100; i++) file.write("helloworld");  // big chunks to test line buffering
+        file.writeLine("EOL_HERE");
+        for (int i = 0; i < 100; i++) file.write("helloworld");
+        file.writeLine("EOF_HERE");
+        file.close();
+    }
+
+    {
+        File file("readLineTest.txt", cerberus::FOM_Read);
+        ASSERT_TRUE(file.open().ok());
+        while (true)
+        {
+            auto x = file.readLine();
+            if (x.ok())
+            {
+                logInfo("OK");
+                logInfo("is eof:%s, read:%s", x.hasOptional(OR_EOF) ? "yes" : "no", x.value.c_str());
+            }
+            else
+            {
+                logInfo("NOT OK");
+                EXPECT_EQ(x.res, OR_EOF);
+                break;
+            }
+        }
+        file.close();
+        // file.remove();
+    }
+}
+
 TEST(iniDataFileTest, read)  // BEFORE TEST, prepare a read.ini file containing the following data:
 {
     if (File::existsAsFile("read.ini").fail()) GTEST_SKIP();

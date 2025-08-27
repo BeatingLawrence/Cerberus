@@ -589,7 +589,7 @@ namespace cerberus
             if (consistent()) (*m_refcount)++;
         }
 
-        managed_ptr(managed_ptr<T>&& other)
+        managed_ptr(managed_ptr<T>&& other) noexcept
             : m_ptr(other.m_ptr),
               m_refcount(other.m_refcount)
         {
@@ -734,7 +734,7 @@ namespace cerberus
             if (consistent()) (*m_refcount)++;
         }
 
-        unclonable_ptr(unclonable_ptr<T>&& other)
+        unclonable_ptr(unclonable_ptr<T>&& other) noexcept
             : m_ptr(other.m_ptr),
               m_refcount(other.m_refcount)
         {
@@ -982,25 +982,37 @@ namespace cerberus
         {
             addInfo(reason);
             addInfo(reason2);
-        };
+        }
 
         OpResData<T>& expect(const std::string& str)
         {
             OpRes::expect(str);
             return *this;
-        };
+        }
 
         OpResData<T>& expect(Result reason, const std::string& str)
         {
             OpRes::expect(reason, str);
             return *this;
-        };
+        }
 
         OpResData<T>& expect()
         {
             OpRes::expect();
             return *this;
-        };
+        }
+
+        OpResData<T>& addOptional(Result opt)
+        {
+            OpRes::addOptional(opt);
+            return *this;
+        }
+
+        OpResData<T>& addInfo(const std::string& str)
+        {
+            OpRes::addInfo(str);
+            return *this;
+        }
     };
 
     class Thread;

@@ -253,7 +253,7 @@ TEST(socketTest, TLS_google)  // this test opens a TLS socket to google.com and 
     ByteBuffer buf;
     socket.setRecvBufferSize(8192);
     logDebug("receiving");
-    auto r = socket.recv_cyc(buf, 1000, 300);
+    auto r = socket.recv_cyc(buf, 1500, 500);
 
     EXPECT_TRUE(r.ok("recv fail"));
 
