@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "../message/messagetemplate.h"
 #include "src/cerberus.h"
 #include "src/message/slot.h"
 
@@ -470,12 +471,12 @@ OpRes CerberusUtils::cleanNumber(std::string& str)
 //=============================================================================
 MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
 {
-    MessageTemplate tmplt;
+    MessageTemplate tmplt(id);
 
     switch (id)
     {
         case CERBERUS_MESSAGE_LOG_ID:
-            tmplt.addSlotType(StringSlot::create());
+            tmplt.addSlotType<StringSlot>();
             break;
 
         case CERBERUS_MESSAGE_TERM_ID:
@@ -483,19 +484,19 @@ MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
             break;
 
         case CERBERUS_MESSAGE_TASK_ID:
-            tmplt.addSlotType(UInt64Slot::create(0, "client"));
-            tmplt.addSlotType(TaskSlot::create({}, "task"));
+            tmplt.addSlotType<UInt64Slot>("client");
+            tmplt.addSlotType<TaskSlot>("task");
             break;
 
         case CERBERUS_MESSAGE_TASKEND_ID:
-            tmplt.addSlotType(ResultSlot::create(OpRes(), "result"));
-            tmplt.addSlotType(VoidPSlot::create(nullptr, "player"));
+            tmplt.addSlotType<ResultSlot>("result");
+            tmplt.addSlotType<VoidPSlot>("player");
             break;
 
         case CERBERUS_MESSAGE_SOCKETDATA_ID:
-            tmplt.addSlotType(ResultSlot::create(OpRes(), "result"));
-            tmplt.addSlotType(HostSlot::create(Host(), "host"));
-            tmplt.addSlotType(BufferSlot::create(ByteBuffer(), "buffer"));
+            tmplt.addSlotType<ResultSlot>("result");
+            tmplt.addSlotType<HostSlot>("host");
+            tmplt.addSlotType<BufferSlot>("buffer");
             break;
 
             // add here more message specializations..

@@ -15,7 +15,7 @@ namespace cerberus
     class CERBERUS_EXPORT Recipient
     {
        private:
-        std::list<cerberus_message> m_queue;
+        std::list<msg_ptr> m_queue;
         mutable Mutex m_mutex;
         SIZE m_queueBytes, m_queueWarningBytes;
 
@@ -23,11 +23,11 @@ namespace cerberus
 
        protected:
         // Returns the message in front of the queue and removes it
-        cerberus_message next();
+        msg_ptr next();
 
         // Returns the message in front of the queue using deep-copy.
         // The message will remain in the queue
-        cerberus_message nextKeep() const;
+        msg_ptr nextKeep() const;
 
         // Delete all the messages
         void clear();
@@ -55,7 +55,7 @@ namespace cerberus
         Recipient();
 
         // Adds a message at the end of the queue
-        void addMessage(cerberus_message message);
+        void addMessage(msg_ptr message);
 
         // Returns the size of the queue
         size_t size() const;

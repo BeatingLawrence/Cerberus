@@ -22,10 +22,10 @@ namespace cerberus
 
         virtual ~Player();
 
-        // check if the actor has done
+        // check if the player has done
         bool end();
 
-        // check if the Actor is busy
+        // check if the player is busy
         bool running();
 
         // start task execution

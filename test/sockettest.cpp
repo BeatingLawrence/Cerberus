@@ -10,7 +10,7 @@
 
 using namespace cerberus;
 
-static int testCallback_UDP(cerberus_message msg, Thread* thread)
+static int testCallback_UDP(msg_ptr msg, Thread* thread)
 {
     logDebug("receiver thread routine entered");
     auto socket = UDPSocket();
@@ -32,7 +32,7 @@ static int testCallback_UDP(cerberus_message msg, Thread* thread)
     }
 }
 
-static int testCallback_TCP(cerberus_message msg, Thread* thread)
+static int testCallback_TCP(msg_ptr msg, Thread* thread)
 {
     logDebug("receiver thread routine entered");
     auto socket = TCPSocket();
@@ -72,7 +72,7 @@ static int testCallback_TCP(cerberus_message msg, Thread* thread)
     }
 }
 
-static int testCallback_TCP_P2P(cerberus_message msg, Thread* thread)
+static int testCallback_TCP_P2P(msg_ptr msg, Thread* thread)
 {
     logDebug("receiver thread routine entered");
     auto socket = TCPP2PSocket();
@@ -106,7 +106,7 @@ static int testCallback_TCP_P2P(cerberus_message msg, Thread* thread)
     }
 }
 
-static int testCallback_FTP(cerberus_message msg, Thread* thread)
+static int testCallback_FTP(msg_ptr msg, Thread* thread)
 {
     logDebug("receiver thread routine entered");
     auto socket = TCPSocket();

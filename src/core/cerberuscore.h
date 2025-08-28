@@ -35,8 +35,8 @@ namespace cerberus
             virtual void warmUp() override;
             virtual void coolDown() override;
 
-            void processTaskMsg(cerberus_message msg);
-            void processMsg(cerberus_message msg);
+            void processTaskMsg(msg_ptr& msg);
+            void processMsg(msg_ptr& msg);
 
             static OpRes socketCB(void* ctx, void* data);
 

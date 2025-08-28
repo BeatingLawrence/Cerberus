@@ -7,7 +7,16 @@
 using namespace cerberus;
 
 //=============================================================================
-cerberus_message Message::create(HASH32 typeID) { return cerberus_message(new Message(typeID)); }
+slot_ptr* Message::_slot(const std::string& name) const
+{
+    HASH32 h = hashFunc(name);
+    for (auto& el : m_slots)
+        if (el->id() == h) return &el;
+
+    return nullptr;
+}
+//=============================================================================
+msg_ptr Message::create(HASH32 typeID) { return msg_ptr(new Message(typeID)); }
 //=============================================================================
 Message::Message(HASH32 typeID)
     : m_id(typeID),
@@ -28,9 +37,9 @@ Message::~Message() {}
 //=============================================================================
 size_t Message::count() const { return m_slots.size(); }
 //=============================================================================
-Message& Message::addSlot(slot_ptr slot)
+Message& Message::addSlot(slot_ptr&& slot)
 {
-    m_slots.push_back(slot);
+    m_slots.push_back(std::move(slot));
     return *this;
 }
 //=============================================================================
@@ -40,34 +49,32 @@ Message& Message::clear()
     return *this;
 }
 //=============================================================================
-slot_ptr Message::getSlotAt(size_t index)
+slot_ptr& Message::getSlotAt(size_t index)
 {
     if (index >= m_slots.size()) throw cIllegalArgExc("Index out of boundaries");
-
     return m_slots[index];
 }
 //=============================================================================
-slot_ptr Message::getConstSlotAt(size_t index) const
+slot_ptr Message::getSlotAt(size_t index) const
 {
     if (index >= m_slots.size()) throw cIllegalArgExc("Index out of boundaries");
-
-    return m_slots[index];
+    return m_slots[index].duplicate();
 }
 //=============================================================================
-slot_ptr Message::getSlot(const std::string& name)
+slot_ptr& Message::getSlot(const std::string& name)
 {
-    for (auto& el : m_slots)
-        if (CerberusUtils::areEqual(el->name(), name)) return el;
+    auto p = _slot(name);
+    if (!p) throw cIllegalArgExc("Slot \"%s\" not found", name.c_str());
 
-    throw cIllegalArgExc("Slot %s does not exist in this message", name.c_str());
+    return *p;
 }
 //=============================================================================
-slot_ptr Message::getConstSlot(const std::string& name) const
+slot_ptr Message::getSlot(const std::string& name) const
 {
-    for (auto& el : m_slots)
-        if (CerberusUtils::areEqual(el->name(), name)) return el;
+    auto p = _slot(name);
+    if (!p) throw cIllegalArgExc("Slot \"%s\" not found", name.c_str());
 
-    throw cIllegalArgExc("Slot %s does not exist in this message", name.c_str());
+    return p->duplicate();
 }
 //=============================================================================
 HASH32 Message::id() const { return m_id; }

@@ -29,7 +29,7 @@ class myclass
     }
 };
 
-static int playertest_standalone(cerberus_message msg, Thread* thr)
+static int playertest_standalone(msg_ptr msg, Thread* thr)
 {
     logInfo("thread tick, received %u", msg->id());
 

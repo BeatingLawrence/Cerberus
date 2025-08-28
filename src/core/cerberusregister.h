@@ -99,8 +99,8 @@ namespace cerberus
 
             // Send a message to a cerberus object.
             // If the id is not valid or the message cannot be sent, nothing happens
-            void sendMsgToObj(HASH32 id, cerberus_message msg);
-            void sendMsgToObj(const std::string& name, cerberus_message msg);
+            void sendMsgToObj(HASH32 id, msg_ptr msg);
+            void sendMsgToObj(const std::string& name, msg_ptr msg);
 
             //===================PLUGINS=====================
 

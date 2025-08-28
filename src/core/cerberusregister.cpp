@@ -8,9 +8,6 @@
 #include "../thread/mutexlocker.h"
 #include "recordable.h"
 
-#define hashFunc(str) CerberusUtils::hash_fnv1a(str)
-#define hashFunc_res(str) CerberusRegister::removeReserved(hashFunc(str))
-
 using namespace cerberus;
 using namespace cerberus::core;
 
@@ -82,9 +79,7 @@ OpResData<MessageTemplate> CerberusRegister::msgTemplateById(HASH32 id)
     MutexLocker locker(m_tmpltMutex);
 
     for (auto&& el : m_templates)
-    {
         if (el.id == id) return el;
-    }
 
     return OR_NotFound;
 }
@@ -152,20 +147,20 @@ HASH32 CerberusRegister::objIdByName(const std::string& name)
     return found.value->m_id;
 }
 //=============================================================================
-void CerberusRegister::sendMsgToObj(HASH32 id, cerberus_message msg)
+void CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr msg)
 {
     MutexLocker locker(m_objMutex);
     auto found = objById(id);
 
-    if (found.ok()) found.value->addMessage(msg);
+    if (found.ok()) found.value->addMessage(std::move(msg));
 }
 //=============================================================================
-void CerberusRegister::sendMsgToObj(const std::string& name, cerberus_message msg)
+void CerberusRegister::sendMsgToObj(const std::string& name, msg_ptr msg)
 {
     MutexLocker locker(m_objMutex);
     auto found = objByName(name);
 
-    if (found.ok()) found.value->addMessage(msg);
+    if (found.ok()) found.value->addMessage(std::move(msg));
 }
 //=============================================================================
 HASH32 CerberusRegister::addPlugin(void* handle, const std::string& path, bool& exists)

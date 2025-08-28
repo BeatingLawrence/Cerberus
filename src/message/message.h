@@ -13,14 +13,16 @@ namespace cerberus
     class CERBERUS_EXPORT Message : public Clonable
     {
        private:
-        std::vector<slot_ptr> m_slots;
+        mutable std::vector<slot_ptr> m_slots;
 
         HASH32 m_id;
 
         HASH32 m_recipientId;
 
+        slot_ptr* _slot(const std::string& name) const;
+
        public:
-        static cerberus_message create(HASH32 id = CERBERUS_INVALID_ID);
+        static msg_ptr create(HASH32 id = CERBERUS_INVALID_ID);
 
         Message(HASH32 id = CERBERUS_INVALID_ID);
 
@@ -32,17 +34,17 @@ namespace cerberus
 
         size_t count() const;
 
-        Message& addSlot(slot_ptr slot);
+        Message& addSlot(slot_ptr&& slot);
 
         Message& clear();
 
-        slot_ptr getSlotAt(size_t index);
+        slot_ptr& getSlotAt(size_t index);
 
-        slot_ptr getConstSlotAt(size_t index) const;
+        slot_ptr getSlotAt(size_t index) const;
 
-        slot_ptr getSlot(const std::string& name);
+        slot_ptr& getSlot(const std::string& name);
 
-        slot_ptr getConstSlot(const std::string& name) const;
+        slot_ptr getSlot(const std::string& name) const;
 
         HASH32 id() const;
 

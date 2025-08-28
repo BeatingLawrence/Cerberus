@@ -27,7 +27,7 @@ void CerberusCore::deinitializeThreadPool()
 //=============================================================================
 int CerberusCore::tick()
 {
-    cerberus_message message = next();
+    msg_ptr message = next();
 
     if (!(message->isValid())) return 0;
 
@@ -74,13 +74,13 @@ void CerberusCore::coolDown()
     logInfo("Stopping Core Thread");
 }
 //=============================================================================
-void CerberusCore::processTaskMsg(cerberus_message msg)
+void CerberusCore::processTaskMsg(msg_ptr& msg)
 {
-    auto tm = msg->getConstSlot("task")->to<TaskSlot>()->value();
+    auto tm = msg->getSlot("task")->to<TaskSlot>()->value();
     m_pool.runTask(tm);
 }
 //=============================================================================
-void CerberusCore::processMsg(cerberus_message msg) { Cerberus::sendMsgToObj(msg->recipient(), msg); }
+void CerberusCore::processMsg(msg_ptr& msg) { Cerberus::sendMsgToObj(msg->recipient(), std::move(msg)); }
 //=============================================================================
 OpRes CerberusCore::socketCB(void* ctx, void* data)
 {
@@ -99,9 +99,10 @@ OpRes CerberusCore::socketCB(void* ctx, void* data)
 
             auto s = sdata->s->accept();
 
-            if (s.consistent())
+            if (s)
             {
-                CerberusCore::processClient((CerberusCore*)ctx, s, sdata, sdata->settings);
+                // do not use s anymore !
+                CerberusCore::processClient((CerberusCore*)ctx, std::move(s), sdata, sdata->settings);
                 // maybe send a message also?
             }
             else
@@ -144,7 +145,7 @@ OpRes CerberusCore::socketCB(void* ctx, void* data)
 
             if (sdata->threads.size() == 1)
             {
-                Cerberus::sendMsgToObj(sdata->threads.front(), msg);  // shallow copy
+                Cerberus::sendMsgToObj(sdata->threads.front(), std::move(msg));  // shallow copy
                 continue;
             }
 
@@ -170,7 +171,7 @@ void CerberusCore::processClient(CerberusCore* ctx, cerberus_socket socket,
     set.remote = Host();
     set.server = false;
 
-    auto sdata = ctx->m_sockets.newSocketCopy(set, socket, parentData);
+    auto sdata = ctx->m_sockets.newSocketCopy(set, std::move(socket), parentData);
 
     Task t = {};
     t.cb   = CerberusCore::socketCB;

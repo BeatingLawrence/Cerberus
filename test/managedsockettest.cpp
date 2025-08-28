@@ -7,7 +7,7 @@ using namespace cerberus;
 static CHANDLE udp_socket_handle = 0;
 static CHANDLE tcp_socket_handle = 0;
 
-static int thrcb(cerberus_message msg, Thread* thread)
+static int thrcb(msg_ptr msg, Thread* thread)
 {
     logInfo("packet received from %s", msg->getSlot("host")->to<HostSlot>()->value().toString().c_str());
     logInfo("please verify content: %s",

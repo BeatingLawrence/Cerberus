@@ -8,11 +8,11 @@ using namespace cerberus::core;
 //=============================================================================
 int LoggerThread::tick()
 {
-    cerberus_message message = next();
+    msg_ptr message = next();
 
     if (message->id() != CERBERUS_MESSAGE_LOG_ID || m_failed.load()) return 0;
 
-    auto str = message->getConstSlotAt(0)->to<StringSlot>()->value();
+    auto str = message->getSlotAt(0)->to<StringSlot>()->value();
 
     if (m_conf.fileMaxSize)  // log rotation enabled
     {

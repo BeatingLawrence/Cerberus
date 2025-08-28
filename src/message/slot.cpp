@@ -1,27 +1,34 @@
 #include "slot.h"
 
+#include "../core/cerberusutils.h"
+#include "../define.h"
+
 using namespace cerberus;
 
 //=============================================================================
-BaseSlot::BaseSlot(const std::string& name)
-    : m_name(name)
+SlotBase::SlotBase(const std::string& name)
+    : m_id(hashFunc(name))
 {
 }
 //=============================================================================
-BaseSlot::~BaseSlot() {}
-//=============================================================================
-std::string BaseSlot::name() const { return m_name; }
-//=============================================================================
-BaseSlot& BaseSlot::name(const std::string& name)
+SlotBase::SlotBase(HASH32 id)
+    : m_id(id)
 {
-    m_name = name;
+}
+//=============================================================================
+SlotBase::~SlotBase() {}
+//=============================================================================
+SlotBase& SlotBase::setId(const std::string& name)
+{
+    m_id = hashFunc(name);
     return *this;
 }
 //=============================================================================
-slot_ptr BaseSlot::newslot(const std::string name)
+SlotBase& SlotBase::setId(HASH32 id)
 {
-    auto p = newslot();
-    p->name(name);
-    return p;
+    m_id = id;
+    return *this;
 }
+//=============================================================================
+HASH32 SlotBase::id() const { return m_id; }
 //=============================================================================

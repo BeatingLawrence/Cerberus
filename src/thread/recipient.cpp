@@ -18,21 +18,21 @@ void Recipient::_check() const
     }
 }
 //=============================================================================
-cerberus_message Recipient::next()
+msg_ptr Recipient::next()
 {
     MutexLocker loc(m_mutex);
-    if (m_queue.empty()) return cerberus_message();  // return unconsistent ptr
+    if (m_queue.empty()) return msg_ptr();  // return unconsistent ptr
 
-    cerberus_message next = std::move(m_queue.front());
+    msg_ptr next = std::move(m_queue.front());
     m_queue.pop_front();
     m_queueBytes -= next.memFootprint();  // performance counter
     return std::move(next);
 }
 //=============================================================================
-cerberus_message Recipient::nextKeep() const
+msg_ptr Recipient::nextKeep() const
 {
     MutexLocker loc(m_mutex);
-    if (m_queue.empty()) return cerberus_message();  // return unconsistent ptr
+    if (m_queue.empty()) return msg_ptr();  // return unconsistent ptr
 
     return m_queue.front().duplicate();  // deep-copy
 }
@@ -71,10 +71,10 @@ Recipient::Recipient()
 {
 }
 //=============================================================================
-void Recipient::addMessage(cerberus_message message)
+void Recipient::addMessage(msg_ptr message)
 {
     MutexLocker loc(m_mutex);
-    m_queue.push_back(message);
+    m_queue.push_back(std::move(message));
 
     m_queueBytes += message.memFootprint();  // performance counter
     _check();

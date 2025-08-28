@@ -45,7 +45,7 @@ TEST(threadTest, derived_thread_creation)
     EXPECT_EQ(thread1.join(true).expect().value, 10);
 }
 
-static int testCallback(cerberus_message msg, Thread* thread)
+static int testCallback(msg_ptr msg, Thread* thread)
 {
     logInfo("Tick from callback");
     return 20;
@@ -68,13 +68,13 @@ TEST(threadTest, thread_callback)
     EXPECT_EQ(thread3.join(true).expect().value, 20);
 }
 
-static int pingTestCallback(cerberus_message msg, Thread* thread)
+static int pingTestCallback(msg_ptr msg, Thread* thread)
 {
     static char a = 0;
     static char b = 10;
     static char c = 20;
 
-    if (msg.consistent())
+    if (msg)
     {
         logInfo(CerberusUtils::strPrint("PONG! %u %u %u",
                                         msg->getSlotAt(0)->to<cerberus::ByteSlot>()->value(),
@@ -104,7 +104,7 @@ static int pingTestCallback(cerberus_message msg, Thread* thread)
     return 0;
 }
 
-static int pongTestCallback(cerberus_message msg, Thread* thread)
+static int pongTestCallback(msg_ptr msg, Thread* thread)
 {
     if (msg->id() == CERBERUS_MESSAGE_TERM_ID)
     {
@@ -122,7 +122,7 @@ TEST(threadTest, thread_ping_pong)
 {
     // register a generic message to test Thread message exchange
     MessageTemplate tmplt("PingPongMessage");
-    tmplt.addSlotType(ByteSlot::create()).addSlotType(ByteSlot::create()).addSlotType(ByteSlot::create());
+    tmplt.addSlotType<ByteSlot>().addSlotType<ByteSlot>().addSlotType<ByteSlot>();
     Cerberus::registerTemplate(tmplt);
 
     // start the test

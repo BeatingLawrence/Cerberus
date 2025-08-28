@@ -7,13 +7,17 @@
 #endif
 
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <list>
+#include <memory>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
+#include "define.h"
 #include "exception/exception.h"
 #include "thread/mutexlocker.h"
 #include "time/datetime.h"
@@ -526,7 +530,7 @@ namespace cerberus
 
     struct Clonable
     {
-        virtual ~Clonable() {}
+        virtual ~Clonable()             = default;
         virtual Clonable* clone() const = 0;  // return a copy-constructed instance of this
         virtual SIZE memfp() const      = 0;  // return the memory footprint of this
     };
@@ -534,287 +538,108 @@ namespace cerberus
     // -------------------------------------------------------------------------------
     // -------------------------------MANAGED PTR-------------------------------------
     // -------------------------------------------------------------------------------
+    // ---------------------- A WRAPPER OF STD::UNIQUE_PTR ---------------------------
 
     template <typename T>
     class managed_ptr
     {
-        T* m_ptr;
-        size_t* m_refcount;
-
-        void _destroy()
+        static inline void _enforce_clonable()
         {
-            if (!consistent()) return;
-
-            if ((*m_refcount) == 1)
-            {
-                if (m_ptr) delete m_ptr;
-                delete m_refcount;
-            }
-            else
-                (*m_refcount)--;
-
-            m_ptr      = nullptr;
-            m_refcount = nullptr;
+            static_assert(std::is_base_of_v<Clonable, std::remove_cv_t<T>>,
+                          "managed_ptr<T>: T must derive from Clonable");
         }
 
-        void _check() const
+        std::unique_ptr<T> _ptr;
+
+        static T* clone_to_T(const T* p)
         {
-            if (!consistent()) throw cIllegalStateExc("managed_ptr not valid");
+            _enforce_clonable();
+            if (!p) return nullptr;
+            Clonable* base = p->clone();
+            T* casted      = dynamic_cast<T*>(base);
+            if (!casted)
+            {
+                delete base;
+                throw cInvalidCastExc("");
+            }
+            return casted;
         }
 
        public:
-        bool consistent() const noexcept { return m_ptr && m_refcount; }
+        constexpr managed_ptr() noexcept = default;
 
-        explicit managed_ptr(T* ptr = nullptr)
-            : m_ptr(ptr),
-              m_refcount(nullptr)
+        explicit managed_ptr(T* p) noexcept
+            : _ptr(p)
         {
-            if (m_ptr)
-            {
-                if (dynamic_cast<T*>(m_ptr) == nullptr) throw cInvalidCastExc("invalid pointer type");
-
-                if (dynamic_cast<Clonable*>(m_ptr) == nullptr)
-                    throw cInvalidCastExc("pointer is not a Clonable");
-
-                m_refcount = new size_t(1);
-                if (!consistent()) throw cSystemExc("failed allocation of refcounter");
-            }
         }
 
-        // copy constructor make a shallow copy
-        managed_ptr(const managed_ptr<T>& other)
-            : m_ptr(other.m_ptr),
-              m_refcount(other.m_refcount)
+        explicit managed_ptr(std::unique_ptr<T>&& u) noexcept
+            : _ptr(std::move(u))
         {
-            if (consistent()) (*m_refcount)++;
         }
 
-        managed_ptr(managed_ptr<T>&& other) noexcept
-            : m_ptr(other.m_ptr),
-              m_refcount(other.m_refcount)
+        // move
+        managed_ptr(managed_ptr&&) noexcept            = default;
+        managed_ptr& operator=(managed_ptr&&) noexcept = default;
+
+        // copy (deleted)
+        managed_ptr(const managed_ptr& other)            = delete;
+        managed_ptr& operator=(const managed_ptr& other) = delete;
+
+        T* get() const noexcept { return _ptr.get(); }
+
+        T& operator*()
         {
-            other.m_ptr      = nullptr;
-            other.m_refcount = nullptr;
+            if (!get()) throw cIllegalStateExc("null");
+            return *get();
         }
 
-        // Move assignment operator
-        managed_ptr& operator=(managed_ptr&& other) noexcept
+        const T& operator*() const
         {
-            if (this == &other) return *this;
-
-            _destroy();
-
-            m_ptr      = other.m_ptr;
-            m_refcount = other.m_refcount;
-
-            other.m_ptr      = nullptr;
-            other.m_refcount = nullptr;
-            return *this;
+            if (!get()) throw cIllegalStateExc("null");
+            return *get();
         }
 
-        // shared copy
-        managed_ptr<T>& operator=(const managed_ptr<T>& other) noexcept
+        T* operator->()
         {
-            if (this == &other) return *this;
-
-            _check();
-            _destroy();
-
-            m_ptr      = other.m_ptr;
-            m_refcount = other.m_refcount;
-
-            if (consistent()) (*m_refcount)++;
-            return *this;
-        }
-
-        ~managed_ptr() { _destroy(); }
-
-        // duplicate the data (deep copy)
-        managed_ptr<T> duplicate() const
-        {
-            if (consistent())
-            {
-                T* p = dynamic_cast<T*>(static_cast<Clonable*>(m_ptr)->clone());
-                if (!p) throw cInvalidCastExc("cloned type is not valid");
-                return managed_ptr<T>(p);
-            }
-            else
-                return managed_ptr<T>();  // return unconsistent pointer
-        }
-
-        T* get() const { return m_ptr; }
-
-        T& operator*() const
-        {
-            _check();
-            return *(get());
-        }
-
-        T* operator->() const
-        {
-            _check();
+            if (!get()) throw cIllegalStateExc("null");
             return get();
         }
 
-        // stops managing the pointer, returning the wrapped underlying pointer
-        T* disown()
+        const T* operator->() const
         {
-            _check();
-
-            // assert that the instance count equals 1
-            if (*m_refcount != 1) cIllegalStateExc("a disowning managed_ptr must be unique");
-
-            delete m_refcount;
-            m_refcount = nullptr;
-
-            T* ret = get();
-            m_ptr  = nullptr;
-            return ret;
-        }
-
-        SIZE memFootprint() const
-        {
-            SIZE s = static_cast<Clonable*>(m_ptr)->memfp();
-            return s + sizeof(managed_ptr);
-        }
-    };
-
-    // -------------------------------------------------------------------------------
-    // -----------------------------UNCLONABLE PTR------------------------------------
-    // -------------------------------------------------------------------------------
-
-    template <typename T>
-    class unclonable_ptr
-    {
-        T* m_ptr;
-        size_t* m_refcount;
-
-        void _destroy()
-        {
-            if (!consistent()) return;
-
-            if ((*m_refcount) == 1)
-            {
-                if (m_ptr) delete m_ptr;
-                delete m_refcount;
-            }
-            else
-                (*m_refcount)--;
-
-            m_ptr      = nullptr;
-            m_refcount = nullptr;
-        }
-
-        void _check() const
-        {
-            if (!consistent()) throw cIllegalStateExc("unclonable_ptr not valid");
-        }
-
-       public:
-        bool consistent() const noexcept { return m_ptr && m_refcount; }
-
-        explicit unclonable_ptr(T* ptr = nullptr)
-            : m_ptr(ptr),
-              m_refcount(nullptr)
-        {
-            if (m_ptr)
-            {
-                if (dynamic_cast<T*>(m_ptr) == nullptr) throw cInvalidCastExc("invalid pointer type");
-
-                m_refcount = new size_t(1);
-                if (!consistent()) throw cSystemExc("failed allocation of refcounter");
-            }
-        }
-
-        // copy constructor make a shallow copy
-        unclonable_ptr(const unclonable_ptr<T>& other)
-            : m_ptr(other.m_ptr),
-              m_refcount(other.m_refcount)
-        {
-            if (consistent()) (*m_refcount)++;
-        }
-
-        unclonable_ptr(unclonable_ptr<T>&& other) noexcept
-            : m_ptr(other.m_ptr),
-              m_refcount(other.m_refcount)
-        {
-            other.m_ptr      = nullptr;
-            other.m_refcount = nullptr;
-        }
-
-        // Move assignment operator
-        unclonable_ptr& operator=(unclonable_ptr&& other) noexcept
-        {
-            if (this == &other) return *this;
-
-            _destroy();
-
-            m_ptr      = other.m_ptr;
-            m_refcount = other.m_refcount;
-
-            other.m_ptr      = nullptr;
-            other.m_refcount = nullptr;
-            return *this;
-        }
-
-        // shared copy
-        unclonable_ptr<T>& operator=(const unclonable_ptr<T>& other) noexcept
-        {
-            if (this == &other) return *this;
-
-            _check();
-            _destroy();
-
-            m_ptr      = other.m_ptr;
-            m_refcount = other.m_refcount;
-
-            if (consistent()) (*m_refcount)++;
-            return *this;
-        }
-
-        ~unclonable_ptr() { _destroy(); }
-
-        T* get() const { return m_ptr; }
-
-        T& operator*() const
-        {
-            _check();
-            return *(get());
-        }
-
-        T* operator->() const
-        {
-            _check();
+            if (!get()) throw cIllegalStateExc("null");
             return get();
         }
 
-        // stops managing the pointer, returning the wrapped underlying pointer
-        T* disown()
+        explicit operator bool() const noexcept { return static_cast<bool>(_ptr); }
+
+        void reset(T* p = nullptr) noexcept { _ptr.reset(p); }
+        T* release() noexcept { return _ptr.release(); }
+        void swap(managed_ptr& other) noexcept { _ptr.swap(other._ptr); }
+
+        // deep copy
+        managed_ptr duplicate() const
         {
-            _check();
+            _enforce_clonable();
+            return managed_ptr{clone_to_T(get())};
+        }
 
-            // assert that the instance count equals 1
-            if (*m_refcount != 1) cIllegalStateExc("a disowning unclonable_ptr must be unique");
-
-            delete m_refcount;
-            m_refcount = nullptr;
-
-            T* ret = get();
-            m_ptr  = nullptr;
-            return ret;
+        size_t memFootprint() const
+        {
+            _enforce_clonable();
+            if (!get()) return sizeof(*this);
+            return get()->memfp() + sizeof(*this);
         }
     };
 
     class Message;
-    class BaseSlot;
-
-    typedef managed_ptr<::cerberus::Message> cerberus_message;
-    typedef managed_ptr<const ::cerberus::Message> cerberus_const_message;
-    typedef managed_ptr<::cerberus::BaseSlot> slot_ptr;
-
+    class SlotBase;
     class Socket;
 
-    typedef unclonable_ptr<::cerberus::Socket> cerberus_socket;
+    typedef managed_ptr<::cerberus::Message> msg_ptr;
+    typedef managed_ptr<::cerberus::SlotBase> slot_ptr;
+    typedef std::unique_ptr<::cerberus::Socket> cerberus_socket;
 
     enum IniDataType : uint8_t
     {
@@ -1018,7 +843,7 @@ namespace cerberus
     class Thread;
 
     typedef void (*timerCallback)(void* ctx);
-    typedef int (*threadTickCallback)(cerberus_message msg, Thread* thr);
+    typedef int (*threadTickCallback)(msg_ptr msg, Thread* thr);
     typedef void (*threadCallback)(Thread* thr);
     typedef OpRes (*playerCallback)(void* ctx, void* data);
     typedef void (*taskEndCallback)(void* ctx, void* data, OpRes result);

@@ -127,8 +127,8 @@ namespace cerberus
         static void unregisterObj(HASH32 id);
 
         // Directly send a message to a cerberus object
-        static void sendMsgToObj(HASH32 id, cerberus_message msg);
-        static void sendMsgToObj(const std::string& name, cerberus_message msg);
+        static void sendMsgToObj(HASH32 id, msg_ptr msg);
+        static void sendMsgToObj(const std::string& name, msg_ptr msg);
 
         // =======================Plugin manager============================
 
@@ -175,10 +175,10 @@ namespace cerberus
                         const std::string& author = std::string(), bool application = true);
 
         // Send a message
-        static void send(cerberus_message message, HASH32 recipientID = CERBERUS_INVALID_ID);
+        static void send(msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
 
         // Send a message using the id of the given named object
-        static void send(cerberus_message message, const std::string& recipient);
+        static void send(msg_ptr& message, const std::string& recipient);
 
         // Create a new socket in the Cerberus memory space
         static OpResData<CHANDLE> newSocket(const SocketSettings& settings);
@@ -216,12 +216,12 @@ namespace cerberus
         // Factory of messages. A call to this method will return an empty but structured message.
         // This method will return an invalid message if ID was not found, or it will
         // throw an exception if the provided ID is not valid (invalid id or in reserved range)
-        static cerberus_message constructMessage(HASH32 id);
+        static msg_ptr constructMessage(HASH32 id);
 
         // Factory of messages. A call to this method will return an empty but structured message.
         // This method will return an invalid message if name was not found,
         // or if it's not a Message name.
-        static cerberus_message constructMessage(const std::string& name);
+        static msg_ptr constructMessage(const std::string& name);
     };
 }  // namespace cerberus
 

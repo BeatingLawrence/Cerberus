@@ -12,8 +12,13 @@
 #include <regex>
 
 #include "../Cerberus_global.h"
-#include "../message/messagetemplate.h"
+// #include "../message/messagetemplate.h"
 #include "../types.h"
+
+namespace cerberus
+{
+    class MessageTemplate;
+}
 
 namespace cerberus
 {

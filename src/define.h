@@ -46,6 +46,9 @@
 
 #endif
 
+#define hashFunc(str) CerberusUtils::hash_fnv1a(str)
+#define hashFunc_res(str) CerberusRegister::removeReserved(hashFunc(str))
+
 // Cerberus constants definitions
 // Standard Messages with id 1~255 are reserved and not used by register
 

@@ -85,7 +85,7 @@ void Thread::_thread()
     dead();
 }
 //=============================================================================
-int Thread::defaultTickCallback(cerberus_message msg, Thread* thread) { return 0; }
+int Thread::defaultTickCallback(msg_ptr msg, Thread* thread) { return 0; }
 //=============================================================================
 void Thread::defaultWarmUpCallback(Thread* thread)
 {

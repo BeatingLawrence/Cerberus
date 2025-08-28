@@ -28,7 +28,7 @@ namespace cerberus
                   remove(false) {};
 
             SocketData(cerberus_socket socket)
-                : s(socket),
+                : s(std::move(socket)),
                   handle(0),
                   remove(false) {};
         };

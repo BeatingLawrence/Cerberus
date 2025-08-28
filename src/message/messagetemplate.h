@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "../Cerberus_global.h"
+#include "../message/slot.h"
 #include "../types.h"
 
 namespace cerberus
@@ -24,11 +25,11 @@ namespace cerberus
        public:
         HASH32 id;
 
-        // Construct an empty template
-        MessageTemplate();
+        // Construct an empty template with given ID
+        MessageTemplate(HASH32 id = CERBERUS_INVALID_ID);
 
         // Copy constructor
-        MessageTemplate(const MessageTemplate& other) = default;
+        MessageTemplate(const MessageTemplate& other);
 
         // Construct an empty template with a name
         MessageTemplate(const std::string& name);
@@ -37,10 +38,21 @@ namespace cerberus
         MessageTemplate(const Message& message, const std::string& name);
 
         // Add a single slot type at the end of the template
-        MessageTemplate& addSlotType(slot_ptr type, const std::string& name = "");
+        template <typename T>
+        MessageTemplate& addSlotType(const std::string& name = "")
+        {
+            static_assert(std::is_base_of<SlotBase, T>::value,
+                          "MessageTemplate::addSlotType<T>: T must derive from SlotBase");
+
+            slot_ptr proto(new T());
+
+            m_types.push_back(proto->newslot());
+            m_types.back()->setId(name);
+            return *this;
+        }
 
         // Return the slot at the index position
-        slot_ptr getSlotAt(size_t index) const;
+        slot_ptr& getSlotAt(size_t index);
 
         // Return the number of slots contained in this template
         size_t count() const;
@@ -51,6 +63,8 @@ namespace cerberus
         // Iterators
         ConstIterator<slot_ptr> begin() const;
         ConstIterator<slot_ptr> end() const;
+
+        msg_ptr instantiate() const;
     };
 }  // namespace cerberus
 

@@ -75,9 +75,9 @@ OpRes SocketManager::addListener(CHANDLE socket, HASH32 threadID)
 SocketManager::SocketData *SocketManager::newSocketCopy(const SocketSettings &settings,
                                                         cerberus_socket socket, SocketData *parentData)
 {
-    if (!socket.consistent() || parentData == nullptr) return nullptr;
+    if (!socket || parentData == nullptr) return nullptr;
 
-    auto p = new SocketData(socket);
+    auto p = new SocketData(std::move(socket));
 
     p->settings = settings;
     p->threads  = parentData->threads;

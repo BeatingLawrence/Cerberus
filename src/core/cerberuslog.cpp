@@ -108,9 +108,9 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
     // file log
     if (fileLoggerAvail())
     {
-        cerberus_message logMessage = Cerberus::constructMessage(CERBERUS_MESSAGE_LOG_ID);
+        msg_ptr logMessage = Cerberus::constructMessage(CERBERUS_MESSAGE_LOG_ID);
         logMessage->getSlotAt(0)->to<StringSlot>()->value(rawLog);
-        m_logger->addMessage(logMessage);
+        m_logger->addMessage(std::move(logMessage));
     }
 }
 //=============================================================================
