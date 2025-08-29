@@ -103,8 +103,6 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
         sysPrint(stream(logLevel), rawLog);
     }
 
-    rawLog.pop_back();  // remove the \n
-
     // file log
     if (fileLoggerAvail())
     {
@@ -216,16 +214,16 @@ std::string CerberusLog::toRawLog(const std::string& str, LogLevel ll, const std
     switch (ll)
     {
         case LL_Info:
-            return CerberusUtils::strPrint("%s [INFO] %s%s" NEWLINE, t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [INFO] %s%s", t.c_str(), a.c_str(), str.c_str());
 
         case LL_Warning:
-            return CerberusUtils::strPrint("%s [WARNING] %s%s" NEWLINE, t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [WARNING] %s%s", t.c_str(), a.c_str(), str.c_str());
 
         case LL_Error:
-            return CerberusUtils::strPrint("%s [ERROR] %s%s" NEWLINE, t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [ERROR] %s%s", t.c_str(), a.c_str(), str.c_str());
 
         case LL_Debug:
-            return CerberusUtils::strPrint("%s [DEBUG] %s%s" NEWLINE, t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [DEBUG] %s%s", t.c_str(), a.c_str(), str.c_str());
 
         default:
             break;
@@ -238,6 +236,7 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
                                         const std::string& t)
 {
 #ifdef WINDOWS_SYSTEM
+#error "IMPLEMENTATION WRONG, please rewrite"
     // remake this part under windows !!
 
     switch (logLevel)
@@ -294,19 +293,19 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
     switch (ll)
     {
         case LL_Debug:
-            return CerberusUtils::strPrint("%s%s [%sDEBUG%s] %s%s" NEWLINE, m_endForm, t.c_str(),
-                                           m_debForm.c_str(), m_endForm, a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s%s [%sDEBUG%s] %s%s", m_endForm, t.c_str(), m_debForm.c_str(),
+                                           m_endForm, a.c_str(), str.c_str());
 
         case LL_Info:
-            return CerberusUtils::strPrint("%s%s [%sINFO%s] %s%s" NEWLINE, m_endForm, t.c_str(),
-                                           m_infoForm.c_str(), m_endForm, a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s%s [%sINFO%s] %s%s", m_endForm, t.c_str(), m_infoForm.c_str(),
+                                           m_endForm, a.c_str(), str.c_str());
 
         case LL_Error:
-            return CerberusUtils::strPrint("%s%s [%sERROR%s] %s%s" NEWLINE, m_endForm, t.c_str(),
-                                           m_errForm.c_str(), m_endForm, a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s%s [%sERROR%s] %s%s", m_endForm, t.c_str(), m_errForm.c_str(),
+                                           m_endForm, a.c_str(), str.c_str());
 
         case LL_Warning:
-            return CerberusUtils::strPrint("%s%s [%sWARNING%s] %s%s" NEWLINE, m_endForm, t.c_str(),
+            return CerberusUtils::strPrint("%s%s [%sWARNING%s] %s%s", m_endForm, t.c_str(),
                                            m_warnForm.c_str(), m_endForm, a.c_str(), str.c_str());
 
         default:
@@ -318,6 +317,7 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
     return "";
 }
 //=============================================================================
+// tell if unformatted log string is needed right now
 bool CerberusLog::rawLogNeeded() { return (!m_logConf.colorFormatting || fileLoggerAvail()); }
 //=============================================================================
 bool CerberusLog::fileLoggerAvail()
@@ -334,7 +334,7 @@ FILE* CerberusLog::stream(LogLevel ll)
     return stdout;
 }
 //=============================================================================
-void CerberusLog::sysPrint(FILE* f, const std::string& str) { fprintf(f, "%s", str.c_str()); }
+void CerberusLog::sysPrint(FILE* f, const std::string& str) { fprintf(f, "%s\n", str.c_str()); }
 //=============================================================================
 std::string CerberusLog::authStr(const std::string& str, bool app)
 {
