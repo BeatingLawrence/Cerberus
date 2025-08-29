@@ -65,6 +65,8 @@ target_compile_definitions(Cerberus
 install(TARGETS Cerberus DESTINATION lib)
 install(DIRECTORY src/ DESTINATION include/cerberus FILES_MATCHING PATTERN "*.h")
 
+find_package(Boost 1.70 REQUIRED COMPONENTS regex CONFIG)
+
 # =======================test executable==========================
 
 file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS "test/*")
@@ -149,4 +151,8 @@ endif()
 if(GOOGLETEST)
     target_link_libraries(test LINK_PRIVATE ${GTEST_LIBRARY})
     target_link_libraries(test LINK_PRIVATE ${GTEST_MAIN_LIBRARY})
+endif()
+
+if(UNIX AND NOT APPLE)
+  target_link_options(Cerberus PRIVATE -Wl,-z,defs -Wl,--no-undefined)
 endif()
