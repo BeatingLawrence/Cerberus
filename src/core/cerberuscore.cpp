@@ -80,7 +80,11 @@ void CerberusCore::processTaskMsg(msg_ptr& msg)
     m_pool.runTask(tm);
 }
 //=============================================================================
-void CerberusCore::processMsg(msg_ptr& msg) { Cerberus::sendMsgToObj(msg->recipient(), std::move(msg)); }
+void CerberusCore::processMsg(msg_ptr& msg)
+{
+    auto recipient = msg->recipient();  // IMPORTANT, don't call std::move and msg->recipient in the same line
+    Cerberus::sendMsgToObj(recipient, std::move(msg));
+}
 //=============================================================================
 OpRes CerberusCore::socketCB(void* ctx, void* data)
 {

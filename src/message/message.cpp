@@ -39,6 +39,7 @@ size_t Message::count() const { return m_slots.size(); }
 //=============================================================================
 Message& Message::addSlot(slot_ptr&& slot)
 {
+    if (!slot) throw cIllegalArgExc("slot is null");
     m_slots.push_back(std::move(slot));
     return *this;
 }
