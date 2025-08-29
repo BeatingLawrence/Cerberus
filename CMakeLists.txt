@@ -65,8 +65,6 @@ target_compile_definitions(Cerberus
 install(TARGETS Cerberus DESTINATION lib)
 install(DIRECTORY src/ DESTINATION include/cerberus FILES_MATCHING PATTERN "*.h")
 
-find_package(Boost 1.70 REQUIRED COMPONENTS regex CONFIG)
-
 # =======================test executable==========================
 
 file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS "test/*")
@@ -153,6 +151,23 @@ if(GOOGLETEST)
     target_link_libraries(test LINK_PRIVATE ${GTEST_MAIN_LIBRARY})
 endif()
 
-if(UNIX AND NOT APPLE)
-  target_link_options(Cerberus PRIVATE -Wl,-z,defs -Wl,--no-undefined)
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
 endif()
+
+find_package(Boost QUIET COMPONENTS regex CONFIG)
+if(NOT Boost_FOUND)
+  find_package(Boost REQUIRED COMPONENTS regex)  # old find boost
+endif()
+
+if(TARGET Boost::regex)
+  target_link_libraries(Cerberus PUBLIC Boost::regex)
+else()
+  target_include_directories(Cerberus PUBLIC ${Boost_INCLUDE_DIRS})
+  target_link_libraries(Cerberus PUBLIC ${Boost_REGEX_LIBRARY})
+endif()
+
+if(UNIX AND NOT APPLE)
+  target_link_options(Cerberus PRIVATE -Wl,--no-as-needed -Wl,-z,defs -Wl,--no-undefined)
+endif()
+
