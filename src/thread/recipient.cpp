@@ -18,6 +18,14 @@ void Recipient::_check() const
     }
 }
 //=============================================================================
+bool Recipient::_lockAndCheckEmpty() const
+{
+    m_mutex.lock();
+    return m_queue.empty();
+}
+//=============================================================================
+void Recipient::_unlock() const { m_mutex.unlock(); }
+//=============================================================================
 msg_ptr Recipient::next()
 {
     MutexLocker loc(m_mutex);
@@ -73,14 +81,18 @@ Recipient::Recipient()
 //=============================================================================
 void Recipient::addMessage(msg_ptr message)
 {
-    MutexLocker loc(m_mutex);
-    m_queue.push_back(std::move(message));
+    bool first = false;
+    {
+        MutexLocker loc(m_mutex);
+        first = m_queue.empty();
+        m_queueBytes += message.memFootprint();  // performance counter
+        m_queue.push_back(std::move(message));
 
-    m_queueBytes += message.memFootprint();  // performance counter
-    _check();
+        _check();
+    }
 
     // signal a new message
-    if (m_queue.size() == 1) newMsg_first();
+    if (first) newMsg_first();
     newMsg();
 }
 //=============================================================================

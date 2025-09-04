@@ -77,9 +77,12 @@ namespace cerberus
 
         static void defaultCoolDownCallback(Thread* thread);
 
-        void wait();
+        void _wait();
 
-        void construct(ThreadPeriodicity periodicity, const TimeFrame& time, const std::string& name);
+        // specific for message mode
+        void _stopIfNoMessage();
+
+        void _construct(ThreadPeriodicity periodicity, const TimeFrame& time, const std::string& name);
 
        protected:
         virtual int tick();

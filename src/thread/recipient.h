@@ -1,7 +1,7 @@
 #ifndef RECIPIENT_H
 #define RECIPIENT_H
 
-// This interface class defines a message recipient, i.e. an object whose can receive messages.
+// This class defines a message recipient, i.e. an object whose can receive messages.
 // The Recipient class also syncronizes the queue accesses, and provides memory usage tracking
 
 #include <list>
@@ -14,12 +14,18 @@ namespace cerberus
 {
     class CERBERUS_EXPORT Recipient
     {
+        friend class ::cerberus::Thread;
+
        private:
         std::list<msg_ptr> m_queue;
         mutable Mutex m_mutex;
         SIZE m_queueBytes, m_queueWarningBytes;
 
         void _check() const;
+
+        bool _lockAndCheckEmpty() const;
+
+        void _unlock() const;
 
        protected:
         // Returns the message in front of the queue and removes it

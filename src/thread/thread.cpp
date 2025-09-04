@@ -46,15 +46,14 @@ void Thread::_thread()
             case TP_Periodic:
             {
                 m_retValue = tick();
-                wait();
+                _wait();
             }
             break;
 
             case TP_PeriodicMessage:
             {
                 m_retValue = tick();
-
-                if (!hasMessage()) wait();
+                if (!hasMessage()) _wait();
             }
             break;
 
@@ -99,7 +98,7 @@ void Thread::defaultCoolDownCallback(Thread* thread)
     // noop
 }
 //=============================================================================
-void Thread::wait()
+void Thread::_wait()
 {
     if (isRescheduling()) return;  // bypass wait if thread is rescheduling
     timespec t{};
@@ -108,7 +107,14 @@ void Thread::wait()
     nanosleep(&t, NULL);
 }
 //=============================================================================
-void Thread::construct(ThreadPeriodicity periodicity, const TimeFrame& time, const std::string& name)
+void Thread::_stopIfNoMessage()
+{
+    bool empty = _lockAndCheckEmpty();
+    if (empty) stop();
+    _unlock();
+}
+//=============================================================================
+void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, const std::string& name)
 {
     if (periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicMessage)
     {
@@ -163,7 +169,7 @@ Thread::Thread(ThreadPeriodicity periodicity, const TimeFrame& time, const std::
       m_warmUpCallback(&defaultWarmUpCallback),
       m_coolDownCallback(&defaultCoolDownCallback)
 {
-    construct(periodicity, time, name);
+    _construct(periodicity, time, name);
 }
 //=============================================================================
 Thread::Thread(const std::string& name)
@@ -174,7 +180,7 @@ Thread::Thread(const std::string& name)
       m_warmUpCallback(&defaultWarmUpCallback),
       m_coolDownCallback(&defaultCoolDownCallback)
 {
-    construct(TP_Message, TimeFrame(), name);
+    _construct(TP_Message, TimeFrame(), name);
 }
 //=============================================================================
 Thread::Thread(ThreadPeriodicity periodicity, const std::string& name)
@@ -185,7 +191,7 @@ Thread::Thread(ThreadPeriodicity periodicity, const std::string& name)
       m_warmUpCallback(&defaultWarmUpCallback),
       m_coolDownCallback(&defaultCoolDownCallback)
 {
-    construct(periodicity, TimeFrame(), name);
+    _construct(periodicity, TimeFrame(), name);
 }
 //=============================================================================
 Thread::~Thread() { checkOut(); }
