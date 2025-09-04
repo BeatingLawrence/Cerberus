@@ -46,6 +46,12 @@ namespace cerberus
 
         slot_ptr getSlot(const std::string& name) const;
 
+        template <typename T>
+        slot_ptr& get(const std::string& name)
+        {
+            return getSlot(name)->to<T>();
+        }
+
         HASH32 id() const;
 
         HASH32 recipient() const;
