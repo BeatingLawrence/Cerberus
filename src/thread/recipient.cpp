@@ -18,14 +18,6 @@ void Recipient::_check() const
     }
 }
 //=============================================================================
-bool Recipient::_lockAndCheckEmpty() const
-{
-    m_mutex.lock();
-    return m_queue.empty();
-}
-//=============================================================================
-void Recipient::_unlock() const { m_mutex.unlock(); }
-//=============================================================================
 msg_ptr Recipient::next()
 {
     MutexLocker loc(m_mutex);
@@ -73,13 +65,28 @@ void Recipient::newMsg_first()
     // nop
 }
 //=============================================================================
-Recipient::Recipient()
+SIZE Recipient::size_nomutex() { return m_queue.size(); }
+//=============================================================================
+Recipient::Recipient(Mutex *mutex)
     : m_queueBytes(0),
-      m_queueWarningBytes(0)
+      m_queueWarningBytes(0),
+      m_mutex(mutex),
+      m_extmutex(false)
 {
+    if (m_mutex)
+        m_extmutex = true;
+    else
+        m_mutex = new Mutex();
 }
 //=============================================================================
-void Recipient::addMessage(msg_ptr message)
+Recipient::~Recipient()
+{
+    m_queue.clear();
+
+    if (!m_extmutex) delete m_mutex;
+}
+//=============================================================================
+void Recipient::addMessage(msg_ptr &&message)
 {
     bool first = false;
     {
@@ -96,7 +103,7 @@ void Recipient::addMessage(msg_ptr message)
     newMsg();
 }
 //=============================================================================
-size_t Recipient::size() const
+SIZE Recipient::size() const
 {
     MutexLocker loc(m_mutex);
     return m_queue.size();

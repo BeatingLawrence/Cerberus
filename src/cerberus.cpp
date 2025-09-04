@@ -216,7 +216,7 @@ void Cerberus::send(msg_ptr& message, HASH32 recipientID)
     if (recipientID != CERBERUS_INVALID_ID) message->setRecipient(recipientID);
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    Cerberus::framework.core.data->addMessage(std::move(message));
+    Cerberus::framework.core.data->send(std::move(message));
 }
 //=============================================================================
 void Cerberus::send(msg_ptr& message, const std::string& recipient)
@@ -224,7 +224,7 @@ void Cerberus::send(msg_ptr& message, const std::string& recipient)
     message->setRecipient(idByName(recipient));
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    Cerberus::framework.core.data->addMessage(std::move(message));
+    Cerberus::framework.core.data->send(std::move(message));
 }
 //=============================================================================
 OpResData<CHANDLE> Cerberus::newSocket(const SocketSettings& settings)

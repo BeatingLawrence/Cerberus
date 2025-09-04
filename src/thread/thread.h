@@ -79,9 +79,6 @@ namespace cerberus
 
         void _wait();
 
-        // specific for message mode
-        void _stopIfNoMessage();
-
         void _construct(ThreadPeriodicity periodicity, const TimeFrame& time, const std::string& name);
 
        protected:

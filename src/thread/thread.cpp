@@ -36,10 +36,8 @@ void Thread::_thread()
         {
             case TP_Message:
             {
-                if (hasMessage())
-                    m_retValue = tick();
-                else
-                    stop();
+                if (hasMessage()) m_retValue = tick();
+                queueCheckStop();
             }
             break;
 
@@ -105,13 +103,6 @@ void Thread::_wait()
     t.tv_nsec = m_time.nanoseconds;
     t.tv_sec  = m_time.seconds;
     nanosleep(&t, NULL);
-}
-//=============================================================================
-void Thread::_stopIfNoMessage()
-{
-    bool empty = _lockAndCheckEmpty();
-    if (empty) stop();
-    _unlock();
 }
 //=============================================================================
 void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, const std::string& name)

@@ -90,8 +90,6 @@ Message& Message::setRecipient(HASH32 id)
     return *this;
 }
 //=============================================================================
-bool Message::isValid() const { return (m_id != CERBERUS_INVALID_ID); }
-//=============================================================================
 ByteBuffer Message::toBuffer() const
 {
     ByteBuffer ret;

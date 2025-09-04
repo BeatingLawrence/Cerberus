@@ -152,7 +152,7 @@ void CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr msg)
     MutexLocker locker(m_objMutex);
     auto found = objById(id);
 
-    if (found.ok()) found.value->addMessage(std::move(msg));
+    if (found.ok()) found.value->send(std::move(msg));
 }
 //=============================================================================
 void CerberusRegister::sendMsgToObj(const std::string& name, msg_ptr msg)
@@ -160,7 +160,7 @@ void CerberusRegister::sendMsgToObj(const std::string& name, msg_ptr msg)
     MutexLocker locker(m_objMutex);
     auto found = objByName(name);
 
-    if (found.ok()) found.value->addMessage(std::move(msg));
+    if (found.ok()) found.value->send(std::move(msg));
 }
 //=============================================================================
 HASH32 CerberusRegister::addPlugin(void* handle, const std::string& path, bool& exists)

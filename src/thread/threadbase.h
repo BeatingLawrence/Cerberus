@@ -4,11 +4,12 @@
 #include <pthread.h>
 
 #include "../core/recordable.h"
+#include "./recipient.h"
 #include "mutex.h"
 
 namespace cerberus
 {
-    class ThreadBase : public core::Recordable
+    class ThreadBase : public core::Recordable, protected Recipient
     {
        private:
         mutable Mutex m_mutex;
@@ -25,11 +26,11 @@ namespace cerberus
        protected:
         ThreadBase() = delete;
 
-        ThreadBase(const ThreadBase& other) = delete;
+        ThreadBase(const ThreadBase &other) = delete;
 
-        ThreadBase(ThreadBase&& other) = delete;
+        ThreadBase(ThreadBase &&other) = delete;
 
-        ThreadBase(ThreadPeriodicity periodicity, const std::string& name);
+        ThreadBase(ThreadPeriodicity periodicity, const std::string &name);
 
         virtual ~ThreadBase();
 
@@ -49,6 +50,9 @@ namespace cerberus
 
         bool isRescheduling();
 
+        // stop only if the queue is empty
+        void queueCheckStop();
+
        public:
         void start();
 
@@ -58,7 +62,11 @@ namespace cerberus
 
         bool isDead();
 
-        inline ThreadPeriodicity getPeriodicity() const { return m_periodicity; };
+        inline ThreadPeriodicity getPeriodicity() const { return m_periodicity; }
+
+        virtual void send(msg_ptr &&msg) override;
+
+        using Recipient::size;
     };
 }  // namespace cerberus
 

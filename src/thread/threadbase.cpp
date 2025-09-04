@@ -11,6 +11,7 @@ using namespace cerberus;
 //=============================================================================
 ThreadBase::ThreadBase(ThreadPeriodicity periodicity, const std::string &name)
     : Recordable(Recordable::ObjectType::COBJ_Thread, name),
+      Recipient(&m_mutex),
       m_mutex(),
       m_cond(),
       m_pausedFlag(true),
@@ -48,6 +49,8 @@ void ThreadBase::newMsg_first()
     MutexLocker locker(&m_mutex);
     if (m_periodicity == TP_Message && m_pausedFlag) setPausedFlag(false);
 }
+//=============================================================================
+void ThreadBase::send(msg_ptr &&msg) { addMessage(std::move(msg)); }
 //=============================================================================
 void ThreadBase::pause()
 {
@@ -99,6 +102,12 @@ bool ThreadBase::isRescheduling()
 {
     MutexLocker locker(&m_mutex);
     return m_rescheduling;
+}
+//=============================================================================
+void ThreadBase::queueCheckStop()
+{
+    MutexLocker locker(&m_mutex);
+    if (!size_nomutex()) setPausedFlag(true);
 }
 //=============================================================================
 void ThreadBase::start()

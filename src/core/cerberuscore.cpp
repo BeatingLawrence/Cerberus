@@ -29,7 +29,7 @@ int CerberusCore::tick()
 {
     msg_ptr message = next();
 
-    if (!(message->isValid())) return 0;
+    if (!message) return 0;
 
     // Process message queue..
 

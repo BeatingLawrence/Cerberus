@@ -14,20 +14,19 @@ namespace cerberus
 {
     class CERBERUS_EXPORT Recipient
     {
-        friend class ::cerberus::Thread;
-
        private:
         std::list<msg_ptr> m_queue;
-        mutable Mutex m_mutex;
         SIZE m_queueBytes, m_queueWarningBytes;
+        mutable Mutex *m_mutex;
+        bool m_extmutex;
 
         void _check() const;
 
-        bool _lockAndCheckEmpty() const;
-
-        void _unlock() const;
-
        protected:
+        Recipient(Mutex *mutex = nullptr);
+
+        virtual ~Recipient();
+
         // Returns the message in front of the queue and removes it
         msg_ptr next();
 
@@ -57,14 +56,14 @@ namespace cerberus
         // This version will be called only when the queue size transit from 0 to 1 messages
         virtual void newMsg_first();
 
+        SIZE size_nomutex();
+
        public:
-        Recipient();
-
         // Adds a message at the end of the queue
-        void addMessage(msg_ptr message);
+        void addMessage(msg_ptr &&message);
 
-        // Returns the size of the queue
-        size_t size() const;
+        // Returns the size of the queue (number of messages)
+        SIZE size() const;
 
         // Tells wether the queue has at least one message
         bool hasMessage() const;

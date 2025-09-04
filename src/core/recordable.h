@@ -6,7 +6,6 @@
 
 #include "../Cerberus_global.h"
 #include "../exception/exception.h"
-#include "../thread/recipient.h"
 #include "../types.h"
 
 namespace cerberus
@@ -17,7 +16,7 @@ namespace cerberus
     {
         class CerberusRegister;
 
-        class CERBERUS_EXPORT Recordable : public Recipient
+        class CERBERUS_EXPORT Recordable
         {
             friend class ::cerberus::core::CerberusRegister;
             friend class ::cerberus::Cerberus;
@@ -31,11 +30,13 @@ namespace cerberus
             };
 
             // Return a string containing the object type (and socket type if present) and ID,
-            // like "Thread ID:123456" or "Socket TCP ID:123456"
+            // like "Thread ID:123456"
             static std::string toStr(const Recordable& obj);
 
             // Same as above
             std::string toObjStr();
+
+            virtual void send(msg_ptr&& msg) = 0;
 
            private:
             HASH32 m_id;

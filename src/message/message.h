@@ -54,8 +54,6 @@ namespace cerberus
 
         Message& setRecipient(HASH32 id);
 
-        bool isValid() const;
-
         ByteBuffer toBuffer() const;
 
         virtual Clonable* clone() const;
