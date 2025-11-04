@@ -76,6 +76,8 @@ static int pingTestCallback(msg_ptr msg, Thread* thread)
 
     if (msg)
     {
+        if (!msg->is("PingPongMessage")) logError("message is not a PingPongMessage");
+
         logInfo(CerberusUtils::strPrint("PONG! %u %u %u",
                                         msg->getSlotAt(0)->to<cerberus::ByteSlot>()->value(),
                                         msg->getSlotAt(1)->to<cerberus::ByteSlot>()->value(),
