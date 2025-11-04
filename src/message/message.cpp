@@ -1,8 +1,9 @@
 #include "message.h"
 
+#include "../core/cerberusregister.h"  // IWYU pragma: export
+#include "../data/bytebuffer.h"
 #include "../exception/exceptioncatalog.h"
 #include "slot.h"
-#include "src/data/bytebuffer.h"
 
 using namespace cerberus;
 
@@ -79,6 +80,13 @@ slot_ptr Message::getSlot(const std::string& name) const
 }
 //=============================================================================
 HASH32 Message::id() const { return m_id; }
+//=============================================================================
+bool Message::is(const std::string& name) const
+{
+    if (name.empty()) return false;
+
+    return m_id == hashFunc_res(name);
+}
 //=============================================================================
 HASH32 Message::recipient() const { return m_recipientId; }
 //=============================================================================

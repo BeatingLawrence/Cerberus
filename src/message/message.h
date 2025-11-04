@@ -54,6 +54,8 @@ namespace cerberus
 
         HASH32 id() const;
 
+        bool is(const std::string& name) const;
+
         HASH32 recipient() const;
 
         bool hasValidRecipient() const;

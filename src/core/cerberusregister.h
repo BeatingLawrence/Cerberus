@@ -51,8 +51,6 @@ namespace cerberus
             std::list<MessageTemplate> m_templates;
             Mutex m_tmpltMutex;
 
-            static HASH32 removeReserved(HASH32 hash);
-
             HASH32 findAvailableObjId(const std::string& name);
             HASH32 findAvailableTmpltId(const std::string& name);
             HASH32 findAvailablePluginId(const std::string& path);
@@ -72,6 +70,8 @@ namespace cerberus
             CerberusRegister();
 
             ~CerberusRegister();
+
+            static HASH32 removeReserved(HASH32 hash);
 
             //==================TEMPLATES====================
 
