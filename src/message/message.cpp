@@ -17,10 +17,19 @@ slot_ptr* Message::_slot(const std::string& name) const
     return nullptr;
 }
 //=============================================================================
-msg_ptr Message::create(HASH32 typeID) { return msg_ptr(new Message(typeID)); }
+msg_ptr Message::create(HASH32 id) { return msg_ptr(new Message(id)); }
 //=============================================================================
-Message::Message(HASH32 typeID)
-    : m_id(typeID),
+msg_ptr Message::create(const std::string& name) { return msg_ptr(new Message(name)); }
+//=============================================================================
+Message::Message(HASH32 id)
+    : m_id(id),
+      m_recipientId(CERBERUS_INVALID_ID)
+{
+    // noop
+}
+//=============================================================================
+Message::Message(const std::string& name)
+    : m_id(hashFunc_res(name)),
       m_recipientId(CERBERUS_INVALID_ID)
 {
     // noop
@@ -42,12 +51,6 @@ Message& Message::addSlot(slot_ptr&& slot)
 {
     if (!slot) throw cIllegalArgExc("slot is null");
     m_slots.push_back(std::move(slot));
-    return *this;
-}
-//=============================================================================
-Message& Message::clear()
-{
-    m_slots.clear();
     return *this;
 }
 //=============================================================================
@@ -105,6 +108,18 @@ ByteBuffer Message::toBuffer() const
     return ret;
 }
 //=============================================================================
+ConstIterator<slot_ptr> Message::begin() const
+{
+    if (m_slots.empty()) return nullptr;
+    return &m_slots.front();
+}
+//=============================================================================
+ConstIterator<slot_ptr> Message::end() const
+{
+    if (m_slots.empty()) return nullptr;
+    return ((&m_slots.back()) + 1);
+}
+//=============================================================================
 Clonable* Message::clone() const { return new Message(*this); }
 //=============================================================================
 SIZE Message::memfp() const
@@ -113,112 +128,4 @@ SIZE Message::memfp() const
     for (auto&& el : m_slots) s += el.memFootprint();
     return s;
 }
-//=============================================================================
-/*
-Message& Message::fill(std::initializer_list<TypeWrapper> values)
-{
-    if (values.size() != m_slots.size()) throw cIllegalArgExc("fill() called with a wrong number of args");
-
-    size_t index = 0;
-
-    for (auto&& el : values)
-    {
-        switch (el.type)
-        {
-            case ST_BYTE:
-                getSlotAt(index)->to<ByteSlot>()->value(el._byte);
-                break;
-            case ST_INT32:
-                getSlotAt(index)->to<Int32Slot>()->value(el._int32);
-                break;
-            case ST_INT64:
-                getSlotAt(index)->to<Int64Slot>()->value(el._int64);
-                break;
-            case ST_FLOAT:
-                getSlotAt(index)->to<FloatSlot>()->value(el._float);
-                break;
-            case ST_DOUBLE:
-                getSlotAt(index)->to<DoubleSlot>()->value(el._double);
-                break;
-            case ST_BOOL:
-                getSlotAt(index)->to<BoolSlot>()->value(el._bool);
-                break;
-            case ST_VOIDP:
-                getSlotAt(index)->to<VoidPSlot>()->value(el._voidp);
-                break;
-            case ST_STRING:
-                getSlotAt(index)->to<StringSlot>()->value(*((std::string*)el._voidp));
-                break;
-            case ST_BYTEBUFFER:
-                getSlotAt(index)->to<BufferSlot>()->value(*((ByteBuffer*)el._voidp));
-                break;
-            case ST_DICTIONARY:
-                getSlotAt(index)->to<DictionarySlot>()->value(*((Dictionary*)el._voidp));
-                break;
-            case ST_JSON:
-                getSlotAt(index)->to<JsonSlot>()->value(*((JsonData*)el._voidp));
-                break;
-
-            default:
-                throw cImplMissExc("The given slot type has not been implemented");
-        }
-    }
-
-    return *this;
-}
-//=============================================================================
-Message& Message::insert(std::initializer_list<TypeWrapper> values)
-{
-    clear();
-
-    for (auto&& el : values)
-    {
-        slot_ptr s;
-
-        switch (el.type)
-        {
-            case ST_BYTE:
-                s = ByteSlot::create(el._byte);
-                break;
-            case ST_INT32:
-                s = Int32Slot::create(el._int32);
-                break;
-            case ST_INT64:
-                s = Int64Slot::create(el._int64);
-                break;
-            case ST_FLOAT:
-                s = FloatSlot::create(el._float);
-                break;
-            case ST_DOUBLE:
-                s = DoubleSlot::create(el._double);
-                break;
-            case ST_BOOL:
-                s = BoolSlot::create(el._bool);
-                break;
-            case ST_VOIDP:
-                s = VoidPSlot::create(el._voidp);
-                break;
-            case ST_STRING:
-                s = StringSlot::create(*((std::string*)el._voidp));
-                break;
-            case ST_BYTEBUFFER:
-                s = BufferSlot::create(*((ByteBuffer*)el._voidp));
-                break;
-            case ST_DICTIONARY:
-                s = DictionarySlot::create(*((Dictionary*)el._voidp));
-                break;
-            case ST_JSON:
-                s = JsonSlot::create(*((JsonData*)el._voidp));
-                break;
-
-            default:
-                throw cImplMissExc("The given slot type has not been implemented");
-        }
-
-        m_slots.push_back(s);
-    }
-
-    return *this;
-}
-*/
 //=============================================================================

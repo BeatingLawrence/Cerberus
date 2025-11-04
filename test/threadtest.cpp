@@ -121,8 +121,8 @@ static int pongTestCallback(msg_ptr msg, Thread* thread)
 TEST(threadTest, thread_ping_pong)
 {
     // register a generic message to test Thread message exchange
-    MessageTemplate tmplt("PingPongMessage");
-    tmplt.addSlotType<ByteSlot>().addSlotType<ByteSlot>().addSlotType<ByteSlot>();
+    auto tmplt = Message::create("PingPongMessage");
+    tmplt->addSlotType<ByteSlot>().addSlotType<ByteSlot>().addSlotType<ByteSlot>();
     Cerberus::registerTemplate(tmplt);
 
     // start the test

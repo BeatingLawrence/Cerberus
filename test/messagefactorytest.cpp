@@ -1,27 +1,16 @@
 #include <cerberus.h>
 #include <gtest/gtest.h>
-#include <message/messagetemplate.h>
 
 TEST(messageFactoryTest, registering_message)
 {
-    cerberus::Message msg;
-    msg.addSlot(cerberus::ByteSlot::create(10));
-    msg.addSlot(cerberus::ByteSlot::create(12));
-    msg.addSlot(cerberus::ByteSlot::create(14));
+    auto msg = cerberus::Message::create("Test-Message");
+    msg->addSlot(cerberus::ByteSlot::create(10));
+    msg->addSlot(cerberus::ByteSlot::create(12));
+    msg->addSlot(cerberus::ByteSlot::create(14));
 
-    EXPECT_EQ(msg.count(), 3);
+    EXPECT_EQ(msg->count(), 3);
 
-    EXPECT_NO_THROW(cerberus::Cerberus::registerMessage(msg, "Test-Message"));
-}
-
-TEST(messageFactoryTest, probing_message)
-{
-    EXPECT_FALSE(cerberus::Cerberus::templateByName("UNKNOWN_MESSAGE").ok());
-
-    auto tmplt = cerberus::Cerberus::templateByName("Test-Message");
-
-    EXPECT_TRUE(tmplt.ok("error"));
-    EXPECT_NE(tmplt.value.id, CERBERUS_INVALID_ID);
+    EXPECT_NO_THROW(cerberus::Cerberus::registerTemplate(msg));
 }
 
 TEST(messageFactoryTest, constructing_message)

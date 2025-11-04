@@ -24,16 +24,6 @@ HASH32 CerberusRegister::findAvailableObjId(const std::string& name)
     return h;
 }
 //=============================================================================
-HASH32 CerberusRegister::findAvailableTmpltId(const std::string& name)
-{
-    HASH32 h = hashFunc_res(name);
-
-    for (auto&& el : m_templates)  // collision detection
-        if (h == el.id) throw cFatalExc("collision encountered while hashing %s", name.c_str());
-
-    return h;
-}
-//=============================================================================
 HASH32 CerberusRegister::findAvailablePluginId(const std::string& path)
 {
     HASH32 h = hashFunc(path);
@@ -42,6 +32,15 @@ HASH32 CerberusRegister::findAvailablePluginId(const std::string& path)
         if (h == el.id) throw cFatalExc("collision encountered while hashing %s", path.c_str());
 
     return h;
+}
+//=============================================================================
+bool CerberusRegister::_templateIdCheck(HASH32 id) const
+{
+    // siimply check if given id exists in the register
+    for (auto&& el : m_templates)
+        if (el->id() == id) return true;
+
+    return false;
 }
 //=============================================================================
 OpResData<Recordable*> CerberusRegister::objById(HASH32 id)
@@ -67,34 +66,27 @@ CerberusRegister::CerberusRegister() {}
 //=============================================================================
 CerberusRegister::~CerberusRegister() { cleanup(); }
 //=============================================================================
-OpResData<MessageTemplate> CerberusRegister::msgTemplateByName(const std::string& name)
+OpRes CerberusRegister::addMsgTemplate(const msg_ptr& tmplt)
 {
-    return msgTemplateById(hashFunc_res(name));
+    MutexLocker locker(m_tmpltMutex);
+
+    if (tmplt->id() == CERBERUS_INVALID_ID) return OR_WrongArgument;
+    if (_templateIdCheck(tmplt->id())) return OR_AlreadyPresent;
+
+    m_templates.push_back(tmplt.duplicate());
+
+    return OR_OK;
 }
 //=============================================================================
-OpResData<MessageTemplate> CerberusRegister::msgTemplateById(HASH32 id)
+msg_ptr CerberusRegister::constructMessage(HASH32 id)
 {
-    if (id == CERBERUS_INVALID_ID) return OR_WrongArgument;
-
     MutexLocker locker(m_tmpltMutex);
 
     for (auto&& el : m_templates)
-        if (el.id == id) return el;
 
-    return OR_NotFound;
-}
-//=============================================================================
-OpResData<HASH32> CerberusRegister::addMsgTemplate(const MessageTemplate& tmplt)
-{
-    if (tmplt.name().empty()) return OR_WrongArgument;
+        if (el->id() == id) return el.duplicate();
 
-    MutexLocker locker(m_tmpltMutex);
-
-    MessageTemplate t(tmplt);
-    t.id = findAvailableTmpltId(tmplt.name());
-    m_templates.push_back(t);
-
-    return t.id;
+    return msg_ptr();
 }
 //=============================================================================
 void CerberusRegister::registerObj(Recordable* object)

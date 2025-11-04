@@ -4,7 +4,6 @@
 #include <list>
 #include <string>
 
-#include "../message/messagetemplate.h"
 #include "../thread/mutex.h"
 #include "../thread/mutexlocker.h"
 #include "recordable.h"
@@ -48,12 +47,13 @@ namespace cerberus
             std::list<Plugin> m_plugins;
             Mutex m_pluginMutex;
 
-            std::list<MessageTemplate> m_templates;
+            std::list<msg_ptr> m_templates;
             Mutex m_tmpltMutex;
 
             HASH32 findAvailableObjId(const std::string& name);
-            HASH32 findAvailableTmpltId(const std::string& name);
             HASH32 findAvailablePluginId(const std::string& path);
+
+            bool _templateIdCheck(HASH32 id) const;
 
             // Give a cerberus object from its ID, or nullptr if it does not exist
             // This method does not lock the mutex!
@@ -75,14 +75,12 @@ namespace cerberus
 
             //==================TEMPLATES====================
 
-            // Retrieves a MessageTemplate by its name
-            OpResData<MessageTemplate> msgTemplateByName(const std::string& name);
-
-            // Retrieves a MessageTemplate by its ID
-            OpResData<MessageTemplate> msgTemplateById(HASH32 id);
-
             // Register a new message template
-            OpResData<HASH32> addMsgTemplate(const MessageTemplate& tmplt);
+            OpRes addMsgTemplate(const msg_ptr& tmplt);
+
+            // Return a new copy of the stored template of given id
+            // an invalid pointer will be returned if id is not found
+            msg_ptr constructMessage(HASH32 id);
 
             //===================OBJECTS=====================
 

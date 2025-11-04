@@ -12,7 +12,6 @@
 #include <regex>
 
 #include "../Cerberus_global.h"
-// #include "../message/messagetemplate.h"
 #include "../types.h"
 
 namespace cerberus
@@ -155,9 +154,6 @@ namespace cerberus
         // The method also removes the dot if the decimal part is null.
         // This method fails if the supplied string is not a number
         static OpRes cleanNumber(std::string& str);
-
-        // Construct a standard message template
-        static MessageTemplate standardTemplate(HASH32 id);
 
         // Compute the FNV1A digest of the string
         static HASH32 hash_fnv1a(const std::string& str);

@@ -46,8 +46,11 @@
 
 #endif
 
-#define hashFunc(str) CerberusUtils::hash_fnv1a(str)                             // generic hashing function
-#define hashFunc_res(str) core::CerberusRegister::removeReserved(hashFunc(str))  // set to zero the LS byte
+#define hashFunc(str) CerberusUtils::hash_fnv1a(str)  // generic hash function
+// used by slots
+
+#define hashFunc_res(str) core::CerberusRegister::removeReserved(hashFunc(str))  // restricted hash function
+// used by messages
 
 // Cerberus constants definitions
 // Standard Messages with id 1~255 are reserved and not used by register

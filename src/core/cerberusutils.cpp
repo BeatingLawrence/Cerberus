@@ -8,9 +8,8 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "../message/messagetemplate.h"
-#include "src/cerberus.h"
-#include "src/message/slot.h"
+#include "../cerberus.h"
+#include "../message/slot.h"
 
 #define FNV_OFFSET_BASIS 0x811c9dc5
 #define FNV_PRIME 0x01000193
@@ -467,45 +466,6 @@ OpRes CerberusUtils::cleanNumber(std::string& str)
     if (negative && !areEqual(str, "0") && !areEqual(str, "0.0")) str.insert(str.begin(), '-');
 
     return OR_OK;
-}
-//=============================================================================
-MessageTemplate CerberusUtils::standardTemplate(HASH32 id)
-{
-    MessageTemplate tmplt(id);
-
-    switch (id)
-    {
-        case CERBERUS_MESSAGE_LOG_ID:
-            tmplt.addSlotType<StringSlot>();
-            break;
-
-        case CERBERUS_MESSAGE_TERM_ID:
-            // nothing to add
-            break;
-
-        case CERBERUS_MESSAGE_TASK_ID:
-            tmplt.addSlotType<UInt64Slot>("client");
-            tmplt.addSlotType<TaskSlot>("task");
-            break;
-
-        case CERBERUS_MESSAGE_TASKEND_ID:
-            tmplt.addSlotType<ResultSlot>("result");
-            tmplt.addSlotType<VoidPSlot>("player");
-            break;
-
-        case CERBERUS_MESSAGE_SOCKETDATA_ID:
-            tmplt.addSlotType<ResultSlot>("result");
-            tmplt.addSlotType<HostSlot>("host");
-            tmplt.addSlotType<BufferSlot>("buffer");
-            break;
-
-            // add here more message specializations..
-
-        default:
-            throw cImplMissExc("Requested standard message is not defined");
-    }
-
-    return tmplt;
 }
 //=============================================================================
 HASH32 CerberusUtils::hash_fnv1a(const std::string& str)

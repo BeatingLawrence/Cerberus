@@ -23,8 +23,11 @@ namespace cerberus
 
        public:
         static msg_ptr create(HASH32 id = CERBERUS_INVALID_ID);
+        static msg_ptr create(const std::string& name);
 
         Message(HASH32 id = CERBERUS_INVALID_ID);
+
+        Message(const std::string& name);
 
         Message(const Message& other);
 
@@ -34,9 +37,21 @@ namespace cerberus
 
         size_t count() const;
 
+        // add a slot moving it
         Message& addSlot(slot_ptr&& slot);
 
-        Message& clear();
+        // add a slot specifying just the type and name (no content)
+        template <typename T>
+        Message& addSlotType(const std::string& name = "")
+        {
+            static_assert(std::is_base_of<SlotBase, T>::value,
+                          "MessageTemplate::addSlotType<T>: T must derive from SlotBase");
+
+            slot_ptr p(new T());
+            p->setId(name);
+            m_slots.push_back(std::move(p));
+            return *this;
+        }
 
         slot_ptr& getSlotAt(size_t index);
 
@@ -64,26 +79,12 @@ namespace cerberus
 
         ByteBuffer toBuffer() const;
 
+        ConstIterator<slot_ptr> begin() const;
+        ConstIterator<slot_ptr> end() const;
+
         virtual Clonable* clone() const;
 
         virtual SIZE memfp() const;
-
-        /*
-        // Fill the fields.
-        // Given value types must match with the actual value types
-        // stored in the message, otherwise a cast exception
-        // for the corresponding slot will be thrown.
-        // Furthermore, an exception will be thrown if the number of args
-        // does not match the number of slots in the message
-        Message& fill(std::initializer_list<TypeWrapper> values);
-
-        // Insert the specified values in the fields.
-        // This method is similar to fill() except for the fact that insert()
-        // clears the message first, deleting all slots and then re-creates them
-        // one by one using the given type and value.
-        Message& insert(std::initializer_list<TypeWrapper> values);
-
-        */
     };
 }  // namespace cerberus
 

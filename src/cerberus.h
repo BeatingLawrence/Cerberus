@@ -6,10 +6,9 @@
 #include "data/data.h"        // IWYU pragma: export
 #include "log.h"              // IWYU pragma: export
 #include "message/message.h"  // IWYU pragma: export
-#include "message/messagetemplate.h"
-#include "message/slot.h"    // IWYU pragma: export
-#include "time/datetime.h"   // IWYU pragma: export
-#include "time/timeframe.h"  // IWYU pragma: export
+#include "message/slot.h"     // IWYU pragma: export
+#include "time/datetime.h"    // IWYU pragma: export
+#include "time/timeframe.h"   // IWYU pragma: export
 #include "types.h"
 
 namespace cerberus
@@ -117,6 +116,8 @@ namespace cerberus
        private:
         static FrameworkData framework;
 
+        static msg_ptr stdTemplate(HASH32 id);
+
         // ======================Private Register===========================
 
         // Register a given object and return its id
@@ -200,18 +201,8 @@ namespace cerberus
 
         // ===========================Factory==============================
 
-        // Retrieve a MessageTemplate by its ID
-        static OpResData<MessageTemplate> templateById(HASH32 id);
-
-        // Retrieve a MessageTemplate by its name
-        static OpResData<MessageTemplate> templateByName(const std::string& name);
-
-        // Retrieve a message ID from its name
-        static HASH32 msgIdByName(const std::string& name);
-
-        // Add a template of the given message to the register, returning the chosen typeID
-        static OpResData<HASH32> registerMessage(const Message& message, const std::string& name);
-        static OpResData<HASH32> registerTemplate(const MessageTemplate& tmplt);
+        // Add a template of the given message to the register
+        static OpRes registerTemplate(const msg_ptr& tmplt);
 
         // Factory of messages. A call to this method will return an empty but structured message.
         // This method will return an invalid message if ID was not found, or it will
