@@ -21,10 +21,6 @@ namespace cerberus
 
         slot_ptr* _slot(const std::string& name) const;
 
-       public:
-        static msg_ptr create(HASH32 id = CERBERUS_INVALID_ID);
-        static msg_ptr create(const std::string& name);
-
         Message(HASH32 id = CERBERUS_INVALID_ID);
 
         Message(const std::string& name);
@@ -33,9 +29,17 @@ namespace cerberus
 
         Message& operator=(const Message& other) = delete;
 
+       public:
+        static msg_ptr create(HASH32 id = CERBERUS_INVALID_ID);
+        static msg_ptr create(const std::string& name);
+
         virtual ~Message();
 
+        // get the number of slots
         size_t count() const;
+
+        // add a slot copying it
+        Message& addSlot(const slot_ptr& slot);
 
         // add a slot moving it
         Message& addSlot(slot_ptr&& slot);
@@ -47,21 +51,19 @@ namespace cerberus
             static_assert(std::is_base_of<SlotBase, T>::value,
                           "MessageTemplate::addSlotType<T>: T must derive from SlotBase");
 
-            slot_ptr p(new T());
+            slot_ptr p = T::create();
             p->setId(name);
             m_slots.push_back(std::move(p));
             return *this;
         }
 
+        // get a slot
         slot_ptr& getSlotAt(size_t index);
-
         slot_ptr getSlotAt(size_t index) const;
-
         slot_ptr& getSlot(const std::string& name);
-
         slot_ptr getSlot(const std::string& name) const;
 
-        // quick access helper. Access directly to underlying object (value type)
+        // quick access helper. Access directly to the underlying object of one slot (value type)
         template <typename T>
         decltype(auto) get(const std::string& name)
         {
@@ -82,23 +84,35 @@ namespace cerberus
             return (slot->value());
         }
 
+        // return the ID of this message
         HASH32 id() const;
 
+        // convert a textual name to an ID
+        static HASH32 idFromName(const std::string& name);
+
+        // checks if the ID of this equals the idFromName(name)
         bool is(const std::string& name) const;
 
+        // return the recipient of the message
         HASH32 recipient() const;
 
+        // check if the recipient != INVALID_ID
         bool hasValidRecipient() const;
 
+        // set a recipient
         Message& setRecipient(HASH32 id);
 
+        // convert the message to a plain buffer
         ByteBuffer toBuffer() const;
 
+        // iterators
         ConstIterator<slot_ptr> begin() const;
         ConstIterator<slot_ptr> end() const;
 
+        // clone this message and all of its slots
         virtual Clonable* clone() const;
 
+        // calculate the memory footprint of this message, iterating over all of its slots
         virtual SIZE memfp() const;
     };
 }  // namespace cerberus

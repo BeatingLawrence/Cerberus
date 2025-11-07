@@ -47,6 +47,13 @@ Message::~Message() {}
 //=============================================================================
 size_t Message::count() const { return m_slots.size(); }
 //=============================================================================
+Message& Message::addSlot(const slot_ptr& slot)
+{
+    if (!slot) throw cIllegalArgExc("slot is null");
+    m_slots.push_back(std::move(slot.duplicate()));
+    return *this;
+}
+//=============================================================================
 Message& Message::addSlot(slot_ptr&& slot)
 {
     if (!slot) throw cIllegalArgExc("slot is null");
@@ -83,6 +90,8 @@ slot_ptr Message::getSlot(const std::string& name) const
 }
 //=============================================================================
 HASH32 Message::id() const { return m_id; }
+//=============================================================================
+HASH32 Message::idFromName(const std::string& name) { return hashFunc_res(name); }
 //=============================================================================
 bool Message::is(const std::string& name) const
 {
