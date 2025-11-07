@@ -5,7 +5,7 @@
 
 #include "../Cerberus_global.h"
 #include "../core/cerberusutils.h"
-#include "../data/data.h"
+#include "../data/data.h"  // IWYU pragma: export
 #include "../exception/exception.h"
 #include "../types.h"
 
@@ -45,7 +45,7 @@ namespace cerberus
             if (casted == nullptr)
             {
                 throw cIllegalArgExc(
-                    CerberusUtils::strPrint("Invalid cast from %s to %s",
+                    CerberusUtils::strPrint("Invalid slot cast from %s to %s",
                                             boost::core::demangle(typeid(*this).name()).c_str(),
                                             boost::core::demangle(typeid(T).name()).c_str())
                         .c_str());

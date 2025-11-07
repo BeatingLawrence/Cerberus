@@ -61,10 +61,25 @@ namespace cerberus
 
         slot_ptr getSlot(const std::string& name) const;
 
+        // quick access helper. Access directly to underlying object (value type)
         template <typename T>
-        slot_ptr& get(const std::string& name)
+        decltype(auto) get(const std::string& name)
         {
-            return getSlot(name)->to<T>();
+            static_assert(std::is_base_of<SlotBase, T>::value,
+                          "Message::get<TSlot>: TSlot must derive from SlotBase");
+
+            auto* slot = getSlot(name)->to<T>();
+            return (slot->value());
+        }
+
+        template <typename T>
+        decltype(auto) get(const std::string& name) const
+        {
+            static_assert(std::is_base_of<SlotBase, T>::value,
+                          "Message::get<TSlot>: TSlot must derive from SlotBase");
+
+            const auto* slot = getSlot(name)->to<T>();
+            return (slot->value());
         }
 
         HASH32 id() const;
