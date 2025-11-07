@@ -26,8 +26,8 @@ message(STATUS ${CMAKE_PROJECT_VERSION})
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-option(POSTGRESQL "postgresql backend support")
-option(GOOGLETEST "googletest support")
+option(POSTGRESQL "postgresql backend support" OFF)
+option(GOOGLETEST "googletest support" OFF)
 
 set(CMAKE_DEBUG_POSTFIX -d)
 
@@ -65,15 +65,19 @@ target_compile_definitions(Cerberus
 install(TARGETS Cerberus DESTINATION lib)
 install(DIRECTORY src/ DESTINATION include/cerberus FILES_MATCHING PATTERN "*.h")
 
-# =======================test executable==========================
+#postgres support switch
+if(POSTGRESQL)
+    find_library(PQXX_LIBRARY
+        NAMES pqxx libpqxx
+    )
 
-file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS "test/*")
-add_executable(test EXCLUDE_FROM_ALL ${test_sources})
+    if(NOT PQXX_LIBRARY)
+        message(FATAL_ERROR "pqxx library not found")
+    endif()
 
-target_include_directories(test PRIVATE "src/")
-target_link_libraries(test LINK_PRIVATE Cerberus)
-
-# ================================================================
+    target_link_libraries(Cerberus PRIVATE ${PQXX_LIBRARY})
+    target_compile_definitions(Cerberus PRIVATE POSTGRESQL_SUPPORT)
+endif()
 
 if(MSVC)
 
@@ -84,22 +88,6 @@ if(MSVC)
     )
 
     target_compile_definitions(Cerberus PRIVATE WINDOWS_SYSTEM)
-
-    if(GOOGLETEST)
-        target_include_directories(test PUBLIC "./gtest/include")
-
-        find_library(GTEST_LIBRARY NAMES gtest PATHS "./gtest/lib" PATH_SUFFIXES lib)
-        find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "./gtest/lib" PATH_SUFFIXES lib)
-
-        if((GTEST_LIBRARY STREQUAL "GTEST_LIBRARY-NOTFOUND") OR (GTEST_MAIN_LIBRARY STREQUAL "GTEST_MAIN_LIBRARY-NOTFOUND"))
-            message(FATAL_ERROR "Pre-compiled GTest library needed on Windows system! Please Read README.md")
-        endif()
-    endif()
-
-    #postgres support
-    if(POSTGRESQL)
-        target_link_libraries(Cerberus LINK_PRIVATE libpqxx)
-    endif()
 
     #OPEN-SSL
     target_include_directories(Cerberus PUBLIC "C:/Qt/Tools/OpenSSL/Win_x64/include")
@@ -127,28 +115,40 @@ elseif(UNIX)
         "/opt/homebrew/lib"     #for MACOS
     )
 
-    #postgres support
-    if(POSTGRESQL)
-        target_link_libraries(Cerberus LINK_PRIVATE pqxx)
-        target_compile_definitions(Cerberus PRIVATE POSTGRESQL_SUPPORT)
-    endif()
-
     #OPEN-SSL
     target_link_libraries(Cerberus LINK_PRIVATE ssl crypto)
 
-    if(GOOGLETEST)
-        find_library(GTEST_LIBRARY NAMES gtest PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
-        find_library(GTEST_MAIN_LIBRARY NAMES gtest_main PATHS "/usr/lib" "/opt/homebrew/lib" PATH_SUFFIXES lib)
-
-        if((GTEST_LIBRARY STREQUAL "GTEST_LIBRARY-NOTFOUND") OR (GTEST_MAIN_LIBRARY STREQUAL "GTEST_MAIN_LIBRARY-NOTFOUND"))
-            message(FATAL_ERROR "GTest library not found!")
-        endif()
-    endif()
 endif()
 
+#googletest support switch
 if(GOOGLETEST)
-    target_link_libraries(test LINK_PRIVATE ${GTEST_LIBRARY})
-    target_link_libraries(test LINK_PRIVATE ${GTEST_MAIN_LIBRARY})
+  #automatically download and compile gtest library if not already installed in the system
+    include(FetchContent)
+
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG v1.17.0
+    )
+    # Prevent system gtest installation
+    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+    set(INSTALL_GMOCK OFF CACHE BOOL "" FORCE)
+
+    FetchContent_MakeAvailable(googletest)
+
+    enable_testing()
+
+    file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS
+        "test/*.cpp"
+        "test/*.h"
+    )
+
+    add_executable(cerberus-test ${test_sources})
+    target_link_libraries(cerberus-test PRIVATE Cerberus gtest_main)
+    target_include_directories(cerberus-test PRIVATE "src/")
+
+    include(GoogleTest)
+    gtest_discover_tests(cerberus-test)
 endif()
 
 if(POLICY CMP0167)
