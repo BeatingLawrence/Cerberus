@@ -310,12 +310,12 @@ namespace cerberus
         bool isValid() { return func != nullptr; };
     };
 
-    struct TLS_SD_STATE
+    struct TLS_ShutdownState
     {
         bool local;
         bool remote;
 
-        TLS_SD_STATE(bool local = false, bool remote = false)
+        TLS_ShutdownState(bool local = false, bool remote = false)
             : local(local),
               remote(remote)
         {

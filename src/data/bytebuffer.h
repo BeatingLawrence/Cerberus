@@ -10,7 +10,7 @@ namespace cerberus
 
     class CERBERUS_EXPORT ByteBuffer
     {
-        friend cerberus::SharedByteBuffer;
+        friend class cerberus::SharedByteBuffer;
 
        private:
         BYTE* m_bytes;  // heap

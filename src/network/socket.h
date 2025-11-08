@@ -241,7 +241,7 @@ namespace cerberus
         // to the other peer and consider the TLS layer closed
         OpRes TLS_shutdown(bool quick = false);
 
-        OpResData<TLS_SD_STATE> TLS_getshutdown() const;
+        OpResData<TLS_ShutdownState> TLS_getshutdown() const;
 
         // Set the Socket to ignore the Hangup signal from the peer before a shutdown is
         // completed. After this call, the Socket will not give an error inside a recv()

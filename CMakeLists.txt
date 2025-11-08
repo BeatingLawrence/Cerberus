@@ -120,11 +120,11 @@ elseif(UNIX)
 
 endif()
 
+include(FetchContent)
+
 #googletest support switch
 if(GOOGLETEST)
   #automatically download and compile gtest library if not already installed in the system
-    include(FetchContent)
-
     FetchContent_Declare(
         googletest
         GIT_REPOSITORY https://github.com/google/googletest.git
@@ -169,5 +169,37 @@ endif()
 
 if(UNIX AND NOT APPLE)
   target_link_options(Cerberus PRIVATE -Wl,--no-as-needed -Wl,-z,defs -Wl,--no-undefined)
+endif()
+
+# ======================= DOCUMENTATION =======================
+find_package(Doxygen QUIET)
+
+if(DOXYGEN_FOUND)
+    message(STATUS "Doxygen found: ${DOXYGEN_EXECUTABLE}")
+
+    include(FetchContent)
+
+    FetchContent_Declare(
+        doxygen-awesome-css
+        URL https://github.com/jothepro/doxygen-awesome-css/archive/refs/heads/main.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    FetchContent_MakeAvailable(doxygen-awesome-css)
+
+    FetchContent_GetProperties(doxygen-awesome-css SOURCE_DIR AWESOME_CSS_DIR)
+
+    set(DOXYFILE_IN  "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in")
+    set(DOXYFILE_OUT "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile")
+    configure_file("${DOXYFILE_IN}" "${DOXYFILE_OUT}" @ONLY)
+
+    add_custom_target(doc
+        COMMAND ${DOXYGEN_EXECUTABLE} "${DOXYFILE_OUT}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+        COMMENT "Generating Cerberus HTML/LaTeX documentation with doxygen-awesome-css"
+        VERBATIM
+    )
+
+else()
+    message(STATUS "Doxygen not found. 'doc' target not available")
 endif()
 

@@ -19,90 +19,90 @@ namespace cerberus
         class CerberusRegister;
         class CerberusLog;
         class LibLoader;
+
+        template <class T>
+        struct FrameworkLock
+        {
+            struct FrameworkLocker
+            {
+                FrameworkLock& lock;
+
+                FrameworkLocker(FrameworkLock& lock)
+                    : lock(lock) {};
+
+                ~FrameworkLocker() { lock.end(); };
+            };
+
+            friend FrameworkLocker;
+
+            std::atomic<bool> ready;
+            std::atomic<int> usage;
+            T* data;
+
+            FrameworkLock()
+                : ready(false),
+                  usage(0),
+                  data(nullptr) {};
+
+            FrameworkLock(const FrameworkLock& other) = delete;
+
+           private:
+            void begin() { usage.fetch_add(1); }
+            void end() { usage.fetch_sub(1); }
+
+           public:
+            FrameworkLocker getLocker()
+            {
+                begin();
+                return FrameworkLocker(*this);
+            }
+
+            void wait()
+            {
+                while (usage.load() != 0)
+                {
+                    asm("nop");
+                }
+            }
+
+            void construct()
+            {
+                if (!data) data = new T;
+                ready.store(true);
+            }
+
+            void destroy()
+            {
+                ready.store(false);
+                wait();
+                delete data;
+                data = nullptr;
+            }
+
+            bool isReady() { return ready.load(); };
+
+            void isReadySevere()
+            {
+                if (!isReady()) throw cUsageErrorExc("bad init usage");
+            };
+        };
+
+        struct FrameworkData
+        {
+            core::FrameworkLock<core::CerberusLog> log;
+            core::FrameworkLock<core::CerberusRegister> reg;
+            core::FrameworkLock<core::CerberusCore> core;
+
+            void construct(const CerberusInitConf& conf);
+            void destroy();
+
+            void start();
+            void stop();
+        };
     }  // namespace core
 
     class Timer;
     class Alarm;
-
-    template <class T>
-    struct FrameworkLock
-    {
-        struct FrameworkLocker
-        {
-            FrameworkLock& lock;
-
-            FrameworkLocker(FrameworkLock& lock)
-                : lock(lock) {};
-
-            ~FrameworkLocker() { lock.end(); };
-        };
-
-        friend FrameworkLocker;
-
-        std::atomic<bool> ready;
-        std::atomic<int> usage;
-        T* data;
-
-        FrameworkLock()
-            : ready(false),
-              usage(0),
-              data(nullptr) {};
-
-        FrameworkLock(const FrameworkLock& other) = delete;
-
-       private:
-        void begin() { usage.fetch_add(1); }
-        void end() { usage.fetch_sub(1); }
-
-       public:
-        FrameworkLocker getLocker()
-        {
-            begin();
-            return FrameworkLocker(*this);
-        }
-
-        void wait()
-        {
-            while (usage.load() != 0)
-            {
-                asm("nop");
-            }
-        }
-
-        void construct()
-        {
-            if (!data) data = new T;
-            ready.store(true);
-        }
-
-        void destroy()
-        {
-            ready.store(false);
-            wait();
-            delete data;
-            data = nullptr;
-        }
-
-        bool isReady() { return ready.load(); };
-
-        void isReadySevere()
-        {
-            if (!isReady()) throw cUsageErrorExc("bad init usage");
-        };
-    };
-
-    struct FrameworkData
-    {
-        FrameworkLock<core::CerberusLog> log;
-        FrameworkLock<core::CerberusRegister> reg;
-        FrameworkLock<core::CerberusCore> core;
-
-        void construct(const CerberusInitConf& conf);
-        void destroy();
-
-        void start();
-        void stop();
-    };
 
     class CERBERUS_EXPORT Cerberus
     {
@@ -114,7 +114,7 @@ namespace cerberus
         friend class ::cerberus::Alarm;
 
        private:
-        static FrameworkData framework;
+        static core::FrameworkData framework;
 
         static msg_ptr stdTemplate(HASH32 id);
 

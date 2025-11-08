@@ -2,6 +2,7 @@
 
 #include "../thread/mutexlocker.h"
 #include "cerberusutils.h"
+using namespace cerberus::core;
 using namespace cerberus;
 
 //=============================================================================

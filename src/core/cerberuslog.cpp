@@ -16,15 +16,15 @@ using namespace cerberus::core;
 #define ERROR_TAG_STRING_LEN 9
 #define CERB_TAG_STR "[CERB]"
 
-#ifdef WINDOWS_SYSTEM
+#if defined LINUX_SYSTEM || defined APPLE_SYSTEM
+#include <unistd.h>
+#define NEWLINE "\n"
+const char* CerberusLog::m_endForm = "\033[0m";
+#else
 #include <windows.h>
 #define NEWLINE "\r\n"
 const uint8_t CerberusLog::EndOfFormatting_Windows =
     TERMINAL_FOREGROUND_BLUE | TERMINAL_FOREGROUND_GREEN | TERMINAL_FOREGROUND_RED;
-#else
-#include <unistd.h>
-#define NEWLINE "\n"
-const char* CerberusLog::m_endForm = "\033[0m";
 #endif
 
 //=============================================================================

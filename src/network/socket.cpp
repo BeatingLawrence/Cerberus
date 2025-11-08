@@ -1012,7 +1012,7 @@ bool Socket::TLS_hasSession() const { return m_ssl; }
 //=============================================================================
 OpRes Socket::TLS_shutdown(bool quick) { return _TLS_shutdown(quick); }
 //=============================================================================
-OpResData<TLS_SD_STATE> Socket::TLS_getshutdown() const
+OpResData<TLS_ShutdownState> Socket::TLS_getshutdown() const
 {
     if (!TLS_hasSession()) return OR_Unavailable;
 
@@ -1025,7 +1025,7 @@ OpResData<TLS_SD_STATE> Socket::TLS_getshutdown() const
 
     if (ret & SSL_RECEIVED_SHUTDOWN) remote = true;
 
-    return TLS_SD_STATE(local, remote);
+    return TLS_ShutdownState(local, remote);
 }
 //=============================================================================
 OpRes Socket::TLS_ignoreHangup(bool ignore)
