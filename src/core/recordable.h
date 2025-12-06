@@ -1,7 +1,6 @@
 #ifndef RECORDABLE_H
 #define RECORDABLE_H
 
-#include <cstdint>
 #include <string>
 
 #include "../Cerberus_global.h"
@@ -22,13 +21,6 @@ namespace cerberus
             friend class ::cerberus::Cerberus;
 
            public:
-            enum ObjectType : uint8_t
-            {
-                COBJ_Invalid,
-                COBJ_Thread,
-                // add more types here..
-            };
-
             // Return a string containing the object type (and socket type if present) and ID,
             // like "Thread ID:123456"
             static std::string toStr(const Recordable& obj);
@@ -41,14 +33,12 @@ namespace cerberus
            private:
             HASH32 m_id;
 
-            ObjectType m_type;
-
             std::string m_name;
 
             static std::string toThreadStr(const Recordable& obj);
 
            protected:
-            Recordable(ObjectType type, const std::string& name = std::string());
+            Recordable(const std::string& name = std::string());
 
            public:
             Recordable() = delete;
@@ -70,9 +60,6 @@ namespace cerberus
 
             // Returns the object ID
             HASH32 id() const;
-
-            // Returns the object type
-            ObjectType type() const;
 
             // Returns the object name
             std::string name() const;

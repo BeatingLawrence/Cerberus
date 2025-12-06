@@ -11,19 +11,7 @@ std::string Recordable::toStr(const Recordable& obj)
 {
     std::string ret;
 
-    switch (obj.m_type)
-    {
-        case COBJ_Invalid:
-            return "Invalid object";
-        case COBJ_Thread:
-            ret.append("Thread");
-            break;
-        default:
-            ret.append("Unknown type");
-            break;
-    }
-
-    ret.append(", ID:");
+    ret.append("ID:");
 
     if (obj.m_id == CERBERUS_INVALID_ID)
         ret.append("INVALID");
@@ -34,12 +22,6 @@ std::string Recordable::toStr(const Recordable& obj)
     {
         ret.append(", NAME:");
         ret.append(obj.m_name);
-    }
-
-    if (obj.m_type == COBJ_Thread)
-    {
-        ret.append(", ");
-        ret.append(toThreadStr(obj));
     }
 
     return ret;
@@ -78,9 +60,8 @@ std::string Recordable::toThreadStr(const Recordable& obj)
     return "";
 }
 //=============================================================================
-Recordable::Recordable(ObjectType type, const std::string& name)
+Recordable::Recordable(const std::string& name)
     : m_id(CERBERUS_INVALID_ID),
-      m_type(type),
       m_name(name)
 {
 }
@@ -94,8 +75,6 @@ void Recordable::checkOut() { cerberus::Cerberus::unregisterObj(m_id); }
 bool Recordable::isRegistered() const { return (m_id != CERBERUS_INVALID_ID); }
 //=============================================================================
 cerberus::HASH32 Recordable::id() const { return m_id; }
-//=============================================================================
-Recordable::ObjectType Recordable::type() const { return m_type; }
 //=============================================================================
 std::string Recordable::name() const { return m_name; }
 //=============================================================================

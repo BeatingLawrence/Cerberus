@@ -99,15 +99,7 @@ void CerberusRegister::registerObj(Recordable* object)
 
     object->m_id = findAvailableObjId(object->name());
 
-    switch (object->type())
-    {
-        case Recordable::COBJ_Thread:
-            m_objects.push_back(object);
-            break;
-
-        default:
-            throw cIllegalArgExc("unknown type");
-    }
+    m_objects.push_back(object);
 
     logDebug("New %s", object->toObjStr().c_str());
 }
