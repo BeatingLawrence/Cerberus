@@ -5,83 +5,6 @@
 using namespace cerberus::core;
 
 //=============================================================================
-int EventScheduler::tick()  // runs every 100us (0.1ms)
-{
-    MutexLocker locker(m_mutex);
-
-    auto now = DateTime::current();
-
-    bool done = false;
-
-    while (!done)
-    {
-        done = true;
-
-        for (auto it = m_timers.begin(); it < m_timers.end(); it++)
-        {
-            if (*((*it).bit) == false)
-            {
-                continue;
-            }
-
-            if (now >= (*it).delay)  // expired
-            {
-                if (!(*it).time.isNull())
-                {
-                    // periodic timer
-                    (*it).delay = now.add((*it).time);
-
-                    (*it).callback((*it).ctx);  // call the callback
-                }
-                else
-                {
-                    // one-shot timer
-                    (*(*it).bit) = false;
-                    m_timers.erase(it);
-                    done = false;
-
-                    (*it).callback((*it).ctx);  // call the callback
-
-                    break;
-                }
-            }
-        }
-    }
-
-    return 0;
-}
-//=============================================================================
-void EventScheduler::addTimer(std::atomic_bool *bit, DateTime d, TimeFrame t, timerCallback callback,
-                              void *ctx)
-{
-    TimerData data = {};
-    data.bit       = bit;
-    data.delay     = d;
-    data.time      = t;
-    data.callback  = callback;
-    data.ctx       = ctx;
-
-    MutexLocker locker(m_mutex);
-
-    for (auto &&el : m_timers)
-    {
-        if (el.bit == bit)  // timer already in vector
-        {
-            (*el.bit)   = true;
-            data.delay  = d;
-            el.time     = t;
-            el.callback = callback;
-            el.ctx      = ctx;
-            return;
-        }
-    }
-
-    // not found
-
-    (*data.bit) = true;
-    m_timers.push_back(data);
-}
-//=============================================================================
 EventScheduler::EventScheduler()
     : cerberus::Thread(TP_Periodic, TimeFrame(100, TimeFrame::U_MicroSecond), "Event Scheduler")
 {
@@ -91,13 +14,92 @@ EventScheduler::~EventScheduler()
 {
     MutexLocker locker(m_mutex);
 
-    for (auto &&el : m_timers)
-    {
-        (*el.bit) = false;
-    }
+    for (auto& el : m_timers) el.bit->store(false, std::memory_order_relaxed);
+
+    m_timers.clear();
 }
 //=============================================================================
-void EventScheduler::startTimer(TimerData &data)
+int EventScheduler::tick()  // runs every 100us (0.1ms)
+{
+    std::vector<std::pair<timerCallback, void*>> calls;
+    calls.reserve(8);
+
+    const DateTime now = DateTime::current();
+
+    {
+        MutexLocker locker(m_mutex);
+
+        for (auto it = m_timers.begin(); it != m_timers.end();)
+        {
+            if (!it->bit->load(std::memory_order_relaxed))
+            {
+                ++it;
+                continue;
+            }
+
+            if (now < it->delay)
+            {
+                ++it;
+                continue;
+            }
+
+            auto cb  = it->callback;
+            auto ctx = it->ctx;
+
+            if (!it->time.isNull())
+            {
+                DateTime next = now;
+                next.add(it->time);
+                it->delay = next;
+
+                calls.emplace_back(cb, ctx);
+                ++it;
+            }
+            else
+            {
+                it->bit->store(false, std::memory_order_relaxed);
+                it = m_timers.erase(it);
+
+                calls.emplace_back(cb, ctx);
+            }
+        }
+    }  // unlock
+
+    for (auto& [cb, ctx] : calls) cb(ctx);
+
+    return 0;
+}
+//=============================================================================
+void EventScheduler::addTimer(std::atomic_bool* bit, DateTime d, TimeFrame t, timerCallback callback,
+                              void* ctx)
+{
+    MutexLocker locker(m_mutex);
+
+    for (auto& el : m_timers)
+    {
+        if (el.bit == bit)
+        {
+            el.delay    = d;
+            el.time     = t;
+            el.callback = callback;
+            el.ctx      = ctx;
+            el.bit->store(true, std::memory_order_relaxed);
+            return;
+        }
+    }
+
+    TimerData data = {};
+    data.bit       = bit;
+    data.delay     = d;
+    data.time      = t;
+    data.callback  = callback;
+    data.ctx       = ctx;
+
+    data.bit->store(true, std::memory_order_relaxed);
+    m_timers.push_back(data);
+}
+//=============================================================================
+void EventScheduler::startTimer(TimerData& data)
 {
     if (!data.isValid()) return;
 
@@ -106,24 +108,32 @@ void EventScheduler::startTimer(TimerData &data)
         if (data.isDelayed())
             addTimer(data.bit, data.delay, data.time, data.callback, data.ctx);
         else
-            addTimer(data.bit, DateTime::current().add(data.time), data.time, data.callback, data.ctx);
+        {
+            DateTime d = DateTime::current();
+            d.add(data.time);
+            addTimer(data.bit, d, data.time, data.callback, data.ctx);
+        }
     }
     else
+    {
         addTimer(data.bit, data.delay, TimeFrame(), data.callback, data.ctx);
+    }
 }
 //=============================================================================
-void EventScheduler::stopTimer(std::atomic_bool &bit)
+void EventScheduler::stopTimer(std::atomic_bool& bit)
 {
     MutexLocker locker(m_mutex);
 
-    for (auto it = m_timers.begin(); it < m_timers.end(); it++)
+    for (auto it = m_timers.begin(); it != m_timers.end(); ++it)
     {
         if (it->bit == &bit)
         {
             m_timers.erase(it);
-            bit = false;
+            bit.store(false, std::memory_order_relaxed);
             return;
         }
     }
+
+    bit.store(false, std::memory_order_relaxed);
 }
 //=============================================================================

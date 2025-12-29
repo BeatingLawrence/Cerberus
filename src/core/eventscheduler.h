@@ -2,39 +2,34 @@
 #define CERBERUS_CORE_EVENTSCHEDULER_H
 
 #include <atomic>
+#include <utility>
 #include <vector>
 
-#include "../thread/mutex.h"
-#include "../thread/thread.h"
-#include "../time/datetime.h"
+#include "src/thread/mutex.h"
+#include "src/thread/thread.h"
+#include "src/time/datetime.h"
+#include "src/time/timeframe.h"
+#include "src/types.h"
 
-namespace cerberus
+namespace cerberus::core
 {
-    namespace core
+    class EventScheduler : public cerberus::Thread
     {
-        class EventScheduler : public cerberus::Thread
-        {
-           private:
-            std::vector<TimerData> m_timers;
+       private:
+        Mutex m_mutex;
+        std::vector<TimerData> m_timers;
 
-            Mutex m_mutex;
+        void addTimer(std::atomic_bool* bit, DateTime d, TimeFrame t, timerCallback callback, void* ctx);
 
-            virtual int tick() override;
+        int tick() override;
 
-            void addTimer(std::atomic_bool* bit, DateTime d, TimeFrame t, timerCallback callback, void* ctx);
+       public:
+        EventScheduler();
+        ~EventScheduler() override;
 
-           public:
-            EventScheduler();
-
-            virtual ~EventScheduler();
-
-            // Start a timer. The configuration depends on the validity of data members
-            void startTimer(TimerData& data);
-
-            // Stop a timer and remove it from references
-            void stopTimer(std::atomic_bool& bit);
-        };
-    }  // namespace core
-}  // namespace cerberus
+        void startTimer(TimerData& data);
+        void stopTimer(std::atomic_bool& bit);
+    };
+}  // namespace cerberus::core
 
 #endif  // CERBERUS_CORE_EVENTSCHEDULER_H
