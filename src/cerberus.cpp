@@ -120,18 +120,24 @@ bool Cerberus::updatePlugin(uint32_t id, const std::string& path, void* handle)
     return Cerberus::framework.reg.data->updatePlugin(id, path, handle);
 }
 //=============================================================================
-void Cerberus::startTimer(TimerData& data)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    Cerberus::framework.core.data->m_eventScheduler.startTimer(data);
-}
-//=============================================================================
 void Cerberus::stopTimer(std::atomic_bool& bit)
 {
-    Cerberus::framework.core.isReadySevere();
+    if (!Cerberus::framework.core.isReady())
+    {
+        bit.store(false, std::memory_order_relaxed);
+        return;
+    }
+
     auto locker = Cerberus::framework.core.getLocker();
     Cerberus::framework.core.data->m_eventScheduler.stopTimer(bit);
+}
+
+void Cerberus::startTimer(TimerData& data)
+{
+    if (!Cerberus::framework.core.isReady()) return;
+
+    auto locker = Cerberus::framework.core.getLocker();
+    Cerberus::framework.core.data->m_eventScheduler.startTimer(data);
 }
 //=============================================================================
 //=================================INTERFACE===================================
@@ -251,19 +257,55 @@ void Cerberus::log(const std::string& str, LogLevel logLevel, const std::string&
     Cerberus::framework.log.data->log(str, logLevel, author, application);
 }
 //=============================================================================
-void Cerberus::send(msg_ptr& message, HASH32 recipientID)
+void Cerberus::send(const msg_ptr& message, HASH32 recipientID)
 {
-    if (recipientID != CERBERUS_INVALID_ID) message->setRecipient(recipientID);
+    if (!message) return;
+
+    msg_ptr copy = message.duplicate();
+
+    if (recipientID != CERBERUS_INVALID_ID) copy->setRecipient(recipientID);
+
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
+
+    Cerberus::framework.core.data->send(std::move(copy));
+}
+//=============================================================================
+void Cerberus::send(const msg_ptr& message, const std::string& recipient)
+{
+    if (!message) return;
+
+    msg_ptr copy = message.duplicate();
+
+    copy->setRecipient(idByName(recipient));
+
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+
+    Cerberus::framework.core.data->send(std::move(copy));
+}
+//=============================================================================
+void Cerberus::send(msg_ptr&& message, HASH32 recipientID)
+{
+    if (!message) return;
+
+    if (recipientID != CERBERUS_INVALID_ID) message->setRecipient(recipientID);
+
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+
     Cerberus::framework.core.data->send(std::move(message));
 }
 //=============================================================================
-void Cerberus::send(msg_ptr& message, const std::string& recipient)
+void Cerberus::send(msg_ptr&& message, const std::string& recipient)
 {
+    if (!message) return;
+
     message->setRecipient(idByName(recipient));
+
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
+
     Cerberus::framework.core.data->send(std::move(message));
 }
 //=============================================================================

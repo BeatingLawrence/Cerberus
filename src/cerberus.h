@@ -175,11 +175,13 @@ namespace cerberus
         static void log(const std::string& str, LogLevel logLevel = LL_Info,
                         const std::string& author = std::string(), bool application = true);
 
-        // Send a message
-        static void send(msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
+        // send with deep copy
+        static void send(const msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
+        static void send(const msg_ptr& message, const std::string& recipient);
 
-        // Send a message using the id of the given named object
-        static void send(msg_ptr& message, const std::string& recipient);
+        // send using std::move
+        static void send(msg_ptr&& message, HASH32 recipientID = CERBERUS_INVALID_ID);
+        static void send(msg_ptr&& message, const std::string& recipient);
 
         // Create a new socket in the Cerberus memory space
         static OpResData<CHANDLE> newSocket(const SocketSettings& settings);

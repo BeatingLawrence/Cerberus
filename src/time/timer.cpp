@@ -70,9 +70,14 @@ void Timer::start()
     Cerberus::startTimer(td);
 }
 //=============================================================================
-void Timer::stop() { Cerberus::stopTimer(m_running); }
+void Timer::stop()
+{
+    if (!m_running.load(std::memory_order_relaxed)) return;
+
+    Cerberus::stopTimer(m_running);
+}
 //=============================================================================
-bool Timer::isRunning() { return m_running; }
+bool Timer::isRunning() { return m_running.load(std::memory_order_relaxed); }
 //=============================================================================
 void Timer::provideTimeoutCallback(timerCallback callback, void *ctx)
 {
