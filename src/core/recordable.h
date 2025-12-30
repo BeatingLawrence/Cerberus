@@ -28,8 +28,6 @@ namespace cerberus
             // Same as above
             std::string toObjStr();
 
-            virtual void send(msg_ptr&& msg) = 0;
-
            private:
             HASH32 m_id;
 

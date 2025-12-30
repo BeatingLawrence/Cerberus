@@ -50,8 +50,6 @@ void ThreadBase::newMsg_first()
     if (m_periodicity == TP_Message && m_pausedFlag) setPausedFlag(false);
 }
 //=============================================================================
-void ThreadBase::send(msg_ptr &&msg) { addMessage(std::move(msg)); }
-//=============================================================================
 void ThreadBase::pause()
 {
     MutexLocker locker(&m_mutex);

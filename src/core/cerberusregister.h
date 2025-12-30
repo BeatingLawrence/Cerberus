@@ -97,8 +97,13 @@ namespace cerberus
 
             // Send a message to a cerberus object.
             // If the id is not valid or the message cannot be sent, nothing happens
-            void sendMsgToObj(HASH32 id, msg_ptr msg);
-            void sendMsgToObj(const std::string& name, msg_ptr msg);
+            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg);
+            OpRes sendMsgToObj(const std::string& name, msg_ptr& msg);
+
+            // Send a message to a cerberus object using deep-copy.
+            // The copy is created only if the destination queue can accept it.
+            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg);
+            OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg);
 
             //===================PLUGINS=====================
 

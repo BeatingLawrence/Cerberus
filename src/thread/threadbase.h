@@ -9,7 +9,7 @@
 
 namespace cerberus
 {
-    class ThreadBase : public core::Recordable, protected Recipient
+    class ThreadBase : public core::Recordable, public Recipient
     {
        private:
         mutable Mutex m_mutex;
@@ -63,8 +63,6 @@ namespace cerberus
         bool isDead();
 
         inline ThreadPeriodicity getPeriodicity() const { return m_periodicity; }
-
-        virtual void send(msg_ptr &&msg) override;
 
         using Recipient::size;
     };

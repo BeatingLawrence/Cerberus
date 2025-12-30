@@ -6,6 +6,7 @@
 #include "../define.h"
 #include "../exception/exception.h"
 #include "../thread/mutexlocker.h"
+#include "../thread/recipient.h"
 #include "recordable.h"
 
 using namespace cerberus;
@@ -131,20 +132,102 @@ HASH32 CerberusRegister::objIdByName(const std::string& name)
     return found.value->m_id;
 }
 //=============================================================================
-void CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr msg)
+OpRes CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr& msg)
 {
     MutexLocker locker(m_objMutex);
     auto found = objById(id);
 
-    if (found.ok()) found.value->send(std::move(msg));
+    if (found.fail()) return OR_Failure;
+
+    auto* obj = found.value;
+    if (!obj)
+    {
+        logError("Dropping message: target object is null (id=%u)", id);
+        return OR_Failure;
+    }
+
+    Recipient* r = dynamic_cast<Recipient*>(obj);
+    if (!r)
+    {
+        logError("Dropping message: target is not a Recipient (id=%u, obj=%s)", id, obj->toObjStr().c_str());
+        return OR_Failure;
+    }
+
+    return r->send(msg);
 }
 //=============================================================================
-void CerberusRegister::sendMsgToObj(const std::string& name, msg_ptr msg)
+OpRes CerberusRegister::sendMsgToObj(const std::string& name, msg_ptr& msg)
 {
     MutexLocker locker(m_objMutex);
     auto found = objByName(name);
 
-    if (found.ok()) found.value->send(std::move(msg));
+    if (found.fail()) return OR_Failure;
+
+    auto* obj = found.value;
+    if (!obj)
+    {
+        logError("Dropping message: target object is null (name=%s)", name.c_str());
+        return OR_Failure;
+    }
+
+    Recipient* r = dynamic_cast<Recipient*>(obj);
+    if (!r)
+    {
+        logError("Dropping message: target is not a Recipient (name=%s, obj=%s)", name.c_str(),
+                 obj->toObjStr().c_str());
+        return OR_Failure;
+    }
+
+    return r->send(msg);
+}
+//=============================================================================
+OpRes CerberusRegister::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg)
+{
+    MutexLocker locker(m_objMutex);
+    auto found = objById(id);
+
+    if (found.fail()) return OR_Failure;
+
+    auto* obj = found.value;
+    if (!obj)
+    {
+        logError("Dropping message: target object is null (id=%u)", id);
+        return OR_Failure;
+    }
+
+    Recipient* r = dynamic_cast<Recipient*>(obj);
+    if (!r)
+    {
+        logError("Dropping message: target is not a Recipient (id=%u, obj=%s)", id, obj->toObjStr().c_str());
+        return OR_Failure;
+    }
+
+    return r->send_deep(msg, id);
+}
+//=============================================================================
+OpRes CerberusRegister::sendMsgToObj_deep(const std::string& name, const msg_ptr& msg)
+{
+    MutexLocker locker(m_objMutex);
+    auto found = objByName(name);
+
+    if (found.fail()) return OR_Failure;
+
+    auto* obj = found.value;
+    if (!obj)
+    {
+        logError("Dropping message: target object is null (name=%s)", name.c_str());
+        return OR_Failure;
+    }
+
+    Recipient* r = dynamic_cast<Recipient*>(obj);
+    if (!r)
+    {
+        logError("Dropping message: target is not a Recipient (name=%s, obj=%s)", name.c_str(),
+                 obj->toObjStr().c_str());
+        return OR_Failure;
+    }
+
+    return r->send_deep(msg, obj->id());
 }
 //=============================================================================
 HASH32 CerberusRegister::addPlugin(void* handle, const std::string& path, bool& exists)
@@ -200,8 +283,6 @@ void CerberusRegister::cleanupPlugins()
         int ret = dlclose(el.handle);
 
         if (ret != 0) logError("Error while unloading plugin %u %s", el.id, el.path.c_str());
-
-        return;
     }
 
     m_plugins.clear();

@@ -91,7 +91,7 @@ TEST(messageFactoryTest, slotFromCStruct_creation)
     // also dynamically register the message for the subsequent test
     cerberus::Cerberus::registerTemplate(msg);
 
-    t.send(std::move(msg));
+    t.send(msg);
 
     t.join();
 }

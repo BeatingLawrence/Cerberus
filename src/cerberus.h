@@ -90,7 +90,6 @@ namespace cerberus
         struct FrameworkData
         {
             core::FrameworkLock<core::CerberusLog> log;
-            core::FrameworkLock<core::CerberusRegister> reg;
             core::FrameworkLock<core::CerberusCore> core;
 
             void construct(const CerberusInitConf& conf);
@@ -128,8 +127,10 @@ namespace cerberus
         static void unregisterObj(HASH32 id);
 
         // Directly send a message to a cerberus object
-        static void sendMsgToObj(HASH32 id, msg_ptr msg);
-        static void sendMsgToObj(const std::string& name, msg_ptr msg);
+        static OpRes sendMsgToObj(HASH32 id, msg_ptr& msg);
+
+        // Directly send a message to a cerberus object (deep-copy, copy-late)
+        static OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg);
 
         // =======================Plugin manager============================
 
@@ -176,12 +177,12 @@ namespace cerberus
                         const std::string& author = std::string(), bool application = true);
 
         // send with deep copy
-        static void send(const msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
-        static void send(const msg_ptr& message, const std::string& recipient);
+        static OpRes send_deep(const msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
+        static OpRes send_deep(const msg_ptr& message, const std::string& recipient);
 
         // send using std::move
-        static void send(msg_ptr&& message, HASH32 recipientID = CERBERUS_INVALID_ID);
-        static void send(msg_ptr&& message, const std::string& recipient);
+        static OpRes send(msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
+        static OpRes send(msg_ptr& message, const std::string& recipient);
 
         // Create a new socket in the Cerberus memory space
         static OpResData<CHANDLE> newSocket(const SocketSettings& settings);

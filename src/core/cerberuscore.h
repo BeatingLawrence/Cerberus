@@ -12,6 +12,7 @@
 #include "../thread/threadpool.h"
 #include "eventscheduler.h"
 #include "socketmanager.h"
+#include "cerberusregister.h"
 
 namespace cerberus
 {
@@ -27,6 +28,8 @@ namespace cerberus
             ThreadPool m_pool;
 
             SocketManager m_sockets;
+
+            CerberusRegister m_reg;
 
             void initializeThreadPool();
             void deinitializeThreadPool();
@@ -51,6 +54,27 @@ namespace cerberus
             virtual ~CerberusCore();
 
             void setup(const CoreConf& parms);
+
+            //=====================REGISTER========================
+
+            void registerObj(Recordable* object) { m_reg.registerObj(object); }
+            void unregisterObj(HASH32 id) { m_reg.unregisterObj(id); }
+            HASH32 objIdByName(const std::string& name) { return m_reg.objIdByName(name); }
+
+            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg) { return m_reg.sendMsgToObj(id, msg); }
+            OpRes sendMsgToObj(const std::string& name, msg_ptr& msg) { return m_reg.sendMsgToObj(name, msg); }
+
+            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg) { return m_reg.sendMsgToObj_deep(id, msg); }
+            OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg) { return m_reg.sendMsgToObj_deep(name, msg); }
+
+            OpRes addMsgTemplate(const msg_ptr& tmplt) { return m_reg.addMsgTemplate(tmplt); }
+            msg_ptr constructMessage(HASH32 id) { return m_reg.constructMessage(id); }
+
+            HASH32 addPlugin(void* handle, const std::string& path, bool& exists) { return m_reg.addPlugin(handle, path, exists); }
+            MutexLocker getPluginMutex(HASH32 id) { return m_reg.getPluginMutex(id); }
+            void* checkPlugin(HASH32 id) { return m_reg.checkPlugin(id); }
+            bool updatePlugin(HASH32 id, const std::string& path, void* handle) { return m_reg.updatePlugin(id, path, handle); }
+            void cleanupPlugins() { m_reg.cleanupPlugins(); }
 
             //=====================SOCKETS========================
 

@@ -82,8 +82,17 @@ void CerberusCore::processTaskMsg(msg_ptr& msg)
 //=============================================================================
 void CerberusCore::processMsg(msg_ptr& msg)
 {
-    auto recipient = msg->recipient();  // IMPORTANT, don't call std::move and msg->recipient in the same line
-    Cerberus::sendMsgToObj(recipient, std::move(msg));
+    const HASH32 recipient = msg->recipient();
+
+    OpRes res = sendMsgToObj(recipient, msg);
+
+    if (res != OR_OK)
+    {
+        // retry later (requeue in core inbox)
+        res = send(msg);
+
+        if (res != OR_OK) logWarning("Core inbox full, dropping message");
+    }
 }
 //=============================================================================
 OpRes CerberusCore::socketCB(void* ctx, void* data)
@@ -149,13 +158,24 @@ OpRes CerberusCore::socketCB(void* ctx, void* data)
 
             if (sdata->threads.size() == 1)
             {
-                Cerberus::sendMsgToObj(sdata->threads.front(), std::move(msg));  // shallow copy
+                res = Cerberus::sendMsgToObj(sdata->threads.front(), msg);
+                if (res != OR_OK) logWarning("socketCB: queue full, message rejected");
                 continue;
             }
 
+            bool warned = false;
             for (auto&& el : sdata->threads)
             {
-                Cerberus::sendMsgToObj(el, msg.duplicate());  // deep copy
+                OpRes r = Cerberus::sendMsgToObj_deep(el, msg);
+                if (r != OR_OK)
+                {
+                    res = OR_Failure;
+                    if (!warned)
+                    {
+                        warned = true;
+                        logWarning("socketCB: one or more listeners rejected the message");
+                    }
+                }
             }
         }
     }

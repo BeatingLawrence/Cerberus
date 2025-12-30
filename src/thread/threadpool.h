@@ -1,6 +1,9 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 
+#include <deque>
+#include <list>
+
 #include "../types.h"
 #include "mutex.h"
 
@@ -23,7 +26,12 @@ namespace cerberus
         TimeFrame m_maxInactiveTime;
 
         std::list<PoolEl> m_pool;
+        std::deque<Task> m_queue;
+
         Mutex m_poolMutex;
+
+        bool m_allowBackup;
+        SIZE m_maxQueue;  // 0 = unlimited
 
         static void taskEndCb(void* ctx, void* data, OpRes res);
         void _taskEndCb(void* data, OpRes res);
@@ -38,7 +46,6 @@ namespace cerberus
 
        public:
         ThreadPool();
-
         ~ThreadPool();
 
         // construct the pool
@@ -47,7 +54,13 @@ namespace cerberus
         // clears the pool
         void clear();
 
-        void runTask(Task t);
+        // policy
+        void allowBackupThreads(bool allow);
+        void setMaxQueue(SIZE maxQueue);
+
+        // returns OR_OK if accepted, OR_FAIL if rejected
+        OpRes runTask(Task t);
+        OpRes runTask(cerberus::OpRes (*cb)(void*, void*), void* ctx, void* data);
 
         // get pool size
         size_t size();
