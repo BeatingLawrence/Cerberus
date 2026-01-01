@@ -1,6 +1,5 @@
 #include "threadpool.h"
 
-#include "../cerberus.h"
 #include "../time/timer.h"
 #include "mutexlocker.h"
 #include "player.h"
@@ -28,7 +27,6 @@ void ThreadPool::_taskEndCb(void* data, OpRes res)
 
     if (wakeManager) m_manager->start();
 }
-
 //=============================================================================
 void ThreadPool::timerEndCb(void* ctx) { ((ThreadPool*)ctx)->_timerEndCb(); }
 //=============================================================================
@@ -62,7 +60,6 @@ OpRes ThreadPool::_managerCb()
             delete it->player;
             delete it->timer;
             m_pool.erase(it);
-            logDebug("temporary thread removed");
             break;
         }
     }
@@ -189,7 +186,6 @@ OpRes ThreadPool::runTask(Task t)
             auto pl = newPlayer(true);
             pl.player->run(t.cb, t.ctx, t.data);
             m_pool.push_back(pl);
-            logDebug("temporary thread created");
             return OR_OK;
         }
 
@@ -197,11 +193,7 @@ OpRes ThreadPool::runTask(Task t)
         if (m_pool.empty()) return OR_Failure;
 
         // enqueue
-        if (m_maxQueue && m_queue.size() >= m_maxQueue)
-        {
-            logDebug("threadpool queue full, dropping task");
-            return OR_Failure;
-        }
+        if (m_maxQueue && m_queue.size() >= m_maxQueue) return OR_Failure;
 
         m_queue.push_back(t);
         wakeManager = true;
@@ -221,9 +213,71 @@ OpRes ThreadPool::runTask(cerberus::OpRes (*cb)(void*, void*), void* ctx, void* 
     return runTask(t);
 }
 //=============================================================================
-size_t ThreadPool::size()
+size_t ThreadPool::size() const
 {
     MutexLocker ml(m_poolMutex);
     return m_pool.size();
+}
+//=============================================================================
+SIZE ThreadPool::queuedCount() const
+{
+    MutexLocker ml(m_poolMutex);
+    return (SIZE)m_queue.size();
+}
+//=============================================================================
+SIZE ThreadPool::busyCount() const
+{
+    MutexLocker ml(m_poolMutex);
+
+    SIZE busy = 0;
+    for (auto& el : m_pool)
+        if (!el.player->end()) ++busy;
+
+    return busy;
+}
+//=============================================================================
+SIZE ThreadPool::idleCount() const
+{
+    MutexLocker ml(m_poolMutex);
+
+    SIZE busy = 0;
+    for (auto& el : m_pool)
+        if (!el.player->end()) ++busy;
+
+    return (SIZE)m_pool.size() - busy;
+}
+//=============================================================================
+SIZE ThreadPool::fixedCount() const
+{
+    MutexLocker ml(m_poolMutex);
+
+    SIZE n = 0;
+    for (auto& el : m_pool)
+        if (!el.backup) ++n;
+
+    return n;
+}
+//=============================================================================
+SIZE ThreadPool::backupCount() const
+{
+    MutexLocker ml(m_poolMutex);
+
+    SIZE n = 0;
+    for (auto& el : m_pool)
+        if (el.backup) ++n;
+
+    return n;
+}
+//=============================================================================
+SIZE ThreadPool::maxQueue() const
+{
+    MutexLocker ml(m_poolMutex);
+    return m_maxQueue;
+}
+//=============================================================================
+bool ThreadPool::backupAllowed() const
+{
+    MutexLocker ml(m_poolMutex);
+    return m_allowBackup;
 }
 //=============================================================================

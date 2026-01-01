@@ -1,5 +1,5 @@
-#ifndef THREADPOOL_H
-#define THREADPOOL_H
+#ifndef CERBERUS_THREADPOOL_H
+#define CERBERUS_THREADPOOL_H
 
 #include <deque>
 #include <list>
@@ -28,7 +28,7 @@ namespace cerberus
         std::list<PoolEl> m_pool;
         std::deque<Task> m_queue;
 
-        Mutex m_poolMutex;
+        mutable Mutex m_poolMutex;
 
         bool m_allowBackup;
         SIZE m_maxQueue;  // 0 = unlimited
@@ -48,23 +48,48 @@ namespace cerberus
         ThreadPool();
         ~ThreadPool();
 
-        // construct the pool
+        // Construct the pool with a fixed number of workers.
         void build(SIZE size, TimeFrame maxInactiveTime = TimeFrame());
 
-        // clears the pool
+        // Stop all workers and clear any queued tasks.
         void clear();
 
-        // policy
+        // Enable/disable temporary backup worker threads.
         void allowBackupThreads(bool allow);
+
+        // Set max queued tasks (0 = unlimited). If shrinking, drops newest tasks.
         void setMaxQueue(SIZE maxQueue);
 
-        // returns OR_OK if accepted, OR_FAIL if rejected
+        // Returns OR_OK if accepted, OR_Failure if rejected.
         OpRes runTask(Task t);
+
+        // Convenience overload.
         OpRes runTask(cerberus::OpRes (*cb)(void*, void*), void* ctx, void* data);
 
-        // get pool size
-        size_t size();
+        // Returns current total number of workers (fixed + backup).
+        size_t size() const;
+
+        // Returns number of queued tasks waiting for an idle worker.
+        SIZE queuedCount() const;
+
+        // Returns number of workers currently running a task.
+        SIZE busyCount() const;
+
+        // Returns number of idle workers ready to accept a task.
+        SIZE idleCount() const;
+
+        // Returns number of fixed (non-backup) workers.
+        SIZE fixedCount() const;
+
+        // Returns number of backup workers currently alive.
+        SIZE backupCount() const;
+
+        // Returns max queued tasks (0 = unlimited).
+        SIZE maxQueue() const;
+
+        // Returns whether backup threads are allowed.
+        bool backupAllowed() const;
     };
 }  // namespace cerberus
 
-#endif  // THREADPOOL_H
+#endif  // CERBERUS_THREADPOOL_H

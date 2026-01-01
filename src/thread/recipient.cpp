@@ -1,167 +1,83 @@
 #include "recipient.h"
 
-#include "../cerberus.h"
-#include "../core/cerberuslog.h"
 #include "../message/message.h"  // IWYU pragma: export
 #include "../thread/mutexlocker.h"
 
 using namespace cerberus;
 
 //=============================================================================
-void Recipient::_updatePeaks_nomutex()
+Recipient::QueueState* Recipient::_q_nomutex(SIZE queueIndex)
 {
-    const SIZE c = (SIZE)m_queue.size();
-    if (m_queueBytes > m_peakBytes) m_peakBytes = m_queueBytes;
-    if (c > m_peakCount) m_peakCount = c;
+    if (queueIndex >= m_queues.size()) return nullptr;
+    return &m_queues[(size_t)queueIndex];
 }
 //=============================================================================
-void Recipient::_checkWarnings_nomutex()
+const Recipient::QueueState* Recipient::_q_nomutex(SIZE queueIndex) const
 {
-    if (m_queueWarningBytes)
-    {
-        const bool over = (m_queueBytes > m_queueWarningBytes);
-        if (over && !m_warnedBytes)
-        {
-            m_warnedBytes = true;
-            logWarning("Queue bytes warning %u/%u", m_queueBytes, m_queueWarningBytes);
-        }
-        else if (!over)
-            m_warnedBytes = false;
-    }
-
-    if (m_queueWarningCount)
-    {
-        const SIZE c    = (SIZE)m_queue.size();
-        const bool over = (c > m_queueWarningCount);
-        if (over && !m_warnedCount)
-        {
-            m_warnedCount = true;
-            logWarning("Queue count warning %u/%u", c, m_queueWarningCount);
-        }
-        else if (!over)
-            m_warnedCount = false;
-    }
+    if (queueIndex >= m_queues.size()) return nullptr;
+    return &m_queues[(size_t)queueIndex];
 }
 //=============================================================================
-bool Recipient::_overLimit_nomutex(SIZE addBytes, SIZE addCount) const
+SIZE Recipient::_totalBytes_nomutex() const
 {
-    const SIZE c = (SIZE)m_queue.size();
+    SIZE tot = 0;
+    for (auto& q : m_queues) tot += q.queueBytes;
+    return tot;
+}
+//=============================================================================
+SIZE Recipient::_totalCount_nomutex() const
+{
+    SIZE tot = 0;
+    for (auto& q : m_queues) tot += (SIZE)q.queue.size();
+    return tot;
+}
+//=============================================================================
+void Recipient::_updatePeaks_nomutex(QueueState& q)
+{
+    const SIZE c = (SIZE)q.queue.size();
+    if (q.queueBytes > q.peakBytes) q.peakBytes = q.queueBytes;
+    if (c > q.peakCount) q.peakCount = c;
+}
+//=============================================================================
+void Recipient::_updateTotalPeaks_nomutex()
+{
+    const SIZE tb = _totalBytes_nomutex();
+    const SIZE tc = _totalCount_nomutex();
+    if (tb > m_peakBytesTotal) m_peakBytesTotal = tb;
+    if (tc > m_peakCountTotal) m_peakCountTotal = tc;
+}
+//=============================================================================
+bool Recipient::_overLimit_nomutex(const QueueState& q, SIZE addBytes, SIZE addCount) const
+{
+    const SIZE c = (SIZE)q.queue.size();
 
-    if (m_queueLimitBytes && (m_queueBytes + addBytes) > m_queueLimitBytes) return true;
-    if (m_queueLimitCount && (c + addCount) > m_queueLimitCount) return true;
+    if (q.queueLimitBytes && (q.queueBytes + addBytes) > q.queueLimitBytes) return true;
+    if (q.queueLimitCount && (c + addCount) > q.queueLimitCount) return true;
 
     return false;
 }
 //=============================================================================
-void Recipient::_dropOldest_nomutex(SIZE bytesToFit, SIZE countToFit)
+void Recipient::_dropOldest_nomutex(QueueState& q, SIZE bytesToFit, SIZE countToFit)
 {
-    while (!m_queue.empty())
+    while (!q.queue.empty())
     {
-        const bool bytesOk = (!m_queueLimitBytes) || ((m_queueBytes + bytesToFit) <= m_queueLimitBytes);
+        const bool bytesOk = (!q.queueLimitBytes) || ((q.queueBytes + bytesToFit) <= q.queueLimitBytes);
         const bool countOk =
-            (!m_queueLimitCount) || (((SIZE)m_queue.size() + countToFit) <= m_queueLimitCount);
+            (!q.queueLimitCount) || (((SIZE)q.queue.size() + countToFit) <= q.queueLimitCount);
 
         if (bytesOk && countOk) break;
 
-        msg_ptr& front = m_queue.front();
-        m_queueBytes -= front.memFootprint();
-        m_queue.pop_front();
-        ++m_dropped;
+        msg_ptr& front = q.queue.front();
+        q.queueBytes -= front.memFootprint();
+        q.queue.pop_front();
+        ++q.dropped;
     }
 }
 //=============================================================================
-msg_ptr Recipient::next()
-{
-    MutexLocker loc(m_mutex);
-    if (m_queue.empty()) return msg_ptr();
-
-    msg_ptr m = std::move(m_queue.front());
-    m_queue.pop_front();
-    m_queueBytes -= m.memFootprint();
-
-    _checkWarnings_nomutex();
-    return m;
-}
-//=============================================================================
-msg_ptr Recipient::nextKeep() const
-{
-    MutexLocker loc(m_mutex);
-    if (m_queue.empty()) return msg_ptr();
-
-    return m_queue.front().duplicate();
-}
-//=============================================================================
-void Recipient::clear()
-{
-    MutexLocker loc(m_mutex);
-    m_queue.clear();
-    m_queueBytes  = 0;
-    m_warnedBytes = false;
-    m_warnedCount = false;
-}
-//=============================================================================
-void Recipient::setQueueWarning(SIZE bytes) { setQueueWarningBytes(bytes); }
-//=============================================================================
-void Recipient::setQueueWarningBytes(SIZE bytes)
-{
-    MutexLocker loc(m_mutex);
-    m_queueWarningBytes = bytes;
-    m_warnedBytes       = false;
-}
-//=============================================================================
-void Recipient::setQueueWarningCount(SIZE count)
-{
-    MutexLocker loc(m_mutex);
-    m_queueWarningCount = count;
-    m_warnedCount       = false;
-}
-//=============================================================================
-void Recipient::setQueueLimitBytes(SIZE bytes)
-{
-    MutexLocker loc(m_mutex);
-    m_queueLimitBytes = bytes;
-}
-//=============================================================================
-void Recipient::setQueueLimitCount(SIZE count)
-{
-    MutexLocker loc(m_mutex);
-    m_queueLimitCount = count;
-}
-//=============================================================================
-void Recipient::setOverflowPolicy(OverflowPolicy p)
-{
-    MutexLocker loc(m_mutex);
-    m_policy = p;
-}
-//=============================================================================
-void Recipient::resetStats()
-{
-    MutexLocker loc(m_mutex);
-    m_peakBytes = 0;
-    m_peakCount = 0;
-    m_dropped   = 0;
-    m_rejected  = 0;
-}
-//=============================================================================
-void Recipient::newMsg() {}
-//=============================================================================
-void Recipient::newMsg_first() {}
-//=============================================================================
-SIZE Recipient::size_nomutex() const { return (SIZE)m_queue.size(); }
-//=============================================================================
 Recipient::Recipient(Mutex* mutex)
-    : m_queueBytes(0),
-      m_queueWarningBytes(0),
-      m_queueLimitBytes(0),
-      m_queueWarningCount(0),
-      m_queueLimitCount(0),
-      m_peakBytes(0),
-      m_peakCount(0),
-      m_dropped(0),
-      m_rejected(0),
-      m_warnedBytes(false),
-      m_warnedCount(false),
-      m_policy(REJECT_NEW),
+    : m_queues(1),
+      m_peakBytesTotal(0),
+      m_peakCountTotal(0),
       m_mutex(mutex),
       m_extmutex(false)
 {
@@ -173,11 +89,206 @@ Recipient::Recipient(Mutex* mutex)
 //=============================================================================
 Recipient::~Recipient()
 {
-    m_queue.clear();
+    for (auto& q : m_queues) q.queue.clear();
     if (!m_extmutex) delete m_mutex;
 }
 //=============================================================================
-OpRes Recipient::send(msg_ptr& message)
+void Recipient::configureQueues(SIZE queues)
+{
+    if (queues < 1) queues = 1;
+
+    MutexLocker loc(m_mutex);
+
+    if ((SIZE)m_queues.size() == queues) return;
+
+    // If shrinking, clear queues that will be discarded.
+    if (queues < (SIZE)m_queues.size())
+        for (SIZE i = queues; i < (SIZE)m_queues.size(); ++i)
+        {
+            m_queues[(size_t)i].queue.clear();
+            m_queues[(size_t)i].queueBytes = 0;
+        }
+
+    m_queues.resize((size_t)queues);
+}
+//=============================================================================
+msg_ptr Recipient::next() { return next(0); }
+//=============================================================================
+msg_ptr Recipient::nextKeep() const { return nextKeep(0); }
+//=============================================================================
+msg_ptr Recipient::next(SIZE queueIndex)
+{
+    MutexLocker loc(m_mutex);
+    QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return msg_ptr();
+    if (q->queue.empty()) return msg_ptr();
+
+    msg_ptr m = std::move(q->queue.front());
+    q->queue.pop_front();
+    q->queueBytes -= m.memFootprint();
+    return m;
+}
+//=============================================================================
+msg_ptr Recipient::nextKeep(SIZE queueIndex) const
+{
+    MutexLocker loc(m_mutex);
+    const QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return msg_ptr();
+    if (q->queue.empty()) return msg_ptr();
+
+    return q->queue.front().duplicate();
+}
+//=============================================================================
+void Recipient::clear()
+{
+    MutexLocker loc(m_mutex);
+    for (auto& q : m_queues)
+    {
+        q.queue.clear();
+        q.queueBytes = 0;
+    }
+}
+//=============================================================================
+void Recipient::clear(SIZE queueIndex)
+{
+    MutexLocker loc(m_mutex);
+    QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return;
+    q->queue.clear();
+    q->queueBytes = 0;
+}
+//=============================================================================
+void Recipient::setQueueLimitBytes(SIZE bytes) { setQueueLimitBytes(bytes, 0); }
+//=============================================================================
+void Recipient::setQueueLimitCount(SIZE count) { setQueueLimitCount(count, 0); }
+//=============================================================================
+void Recipient::setOverflowPolicy(OverflowPolicy p) { setOverflowPolicy(p, 0); }
+//=============================================================================
+void Recipient::setQueueLimitBytes(SIZE bytes, SIZE queueIndex)
+{
+    MutexLocker loc(m_mutex);
+    QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return;
+    q->queueLimitBytes = bytes;
+}
+//=============================================================================
+void Recipient::setQueueLimitCount(SIZE count, SIZE queueIndex)
+{
+    MutexLocker loc(m_mutex);
+    QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return;
+    q->queueLimitCount = count;
+}
+//=============================================================================
+void Recipient::setOverflowPolicy(OverflowPolicy p, SIZE queueIndex)
+{
+    MutexLocker loc(m_mutex);
+    QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return;
+    q->policy = p;
+}
+//=============================================================================
+void Recipient::resetStats()
+{
+    MutexLocker loc(m_mutex);
+
+    for (auto& q : m_queues)
+    {
+        q.peakBytes = 0;
+        q.peakCount = 0;
+        q.dropped   = 0;
+        q.rejected  = 0;
+    }
+    m_peakBytesTotal = 0;
+    m_peakCountTotal = 0;
+}
+//=============================================================================
+void Recipient::resetStats(SIZE queueIndex)
+{
+    MutexLocker loc(m_mutex);
+
+    QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return;
+    q->peakBytes = 0;
+    q->peakCount = 0;
+    q->dropped   = 0;
+    q->rejected  = 0;
+}
+//=============================================================================
+OpRes Recipient::requeueFront(msg_ptr& message) { return requeueFront(message, 0); }
+//=============================================================================
+OpRes Recipient::requeueBack(msg_ptr& message) { return requeueBack(message, 0); }
+//=============================================================================
+OpRes Recipient::requeueFront(msg_ptr& message, SIZE queueIndex)
+{
+    if (!message) return OR_WrongArgument;
+
+    bool first = false;
+    const SIZE msgBytes = message.memFootprint();
+
+    {
+        MutexLocker loc(m_mutex);
+        QueueState* q = _q_nomutex(queueIndex);
+        if (!q) return OR_WrongArgument;
+
+        first = q->queue.empty();
+        q->queueBytes += msgBytes;
+        q->queue.push_front(std::move(message));
+
+        _updatePeaks_nomutex(*q);
+        _updateTotalPeaks_nomutex();
+    }
+
+    if (first) newMsg_first();
+    newMsg();
+    return OR_OK;
+}
+//=============================================================================
+OpRes Recipient::requeueBack(msg_ptr& message, SIZE queueIndex)
+{
+    if (!message) return OR_WrongArgument;
+
+    bool first = false;
+    const SIZE msgBytes = message.memFootprint();
+
+    {
+        MutexLocker loc(m_mutex);
+        QueueState* q = _q_nomutex(queueIndex);
+        if (!q) return OR_WrongArgument;
+
+        first = q->queue.empty();
+        q->queueBytes += msgBytes;
+        q->queue.push_back(std::move(message));
+
+        _updatePeaks_nomutex(*q);
+        _updateTotalPeaks_nomutex();
+    }
+
+    if (first) newMsg_first();
+    newMsg();
+    return OR_OK;
+}
+//=============================================================================
+void Recipient::newMsg() {}
+//=============================================================================
+void Recipient::newMsg_first() {}
+//=============================================================================
+SIZE Recipient::size_nomutex() const
+{
+    // total count across all queues
+    return _totalCount_nomutex();
+}
+//=============================================================================
+SIZE Recipient::size_nomutex(SIZE queueIndex) const
+{
+    const QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return 0;
+    return (SIZE)q->queue.size();
+}
+//=============================================================================
+OpRes Recipient::send(msg_ptr& message) { return send(message, 0); }
+//=============================================================================
+OpRes Recipient::send(msg_ptr& message, SIZE queueIndex)
 {
     if (!message) return OR_Failure;
 
@@ -185,27 +296,27 @@ OpRes Recipient::send(msg_ptr& message)
 
     {
         MutexLocker loc(m_mutex);
+        QueueState* q = _q_nomutex(queueIndex);
+        if (!q) return OR_WrongArgument;
 
         const SIZE msgBytes = message.memFootprint();
 
-        if (_overLimit_nomutex(msgBytes, 1))
-        {
-            if (m_policy == DROP_OLDEST) _dropOldest_nomutex(msgBytes, 1);
-        }
+        if (_overLimit_nomutex(*q, msgBytes, 1))
+            if (q->policy == DROP_OLDEST) _dropOldest_nomutex(*q, msgBytes, 1);
 
-        if (_overLimit_nomutex(msgBytes, 1))
+        if (_overLimit_nomutex(*q, msgBytes, 1))
         {
-            ++m_rejected;
+            ++q->rejected;
             return OR_Failure;  // message untouched
         }
 
-        first = m_queue.empty();
+        first = q->queue.empty();
 
-        m_queueBytes += msgBytes;
-        m_queue.push_back(std::move(message));  // consumed only here
+        q->queueBytes += msgBytes;
+        q->queue.push_back(std::move(message));  // consumed only here
 
-        _updatePeaks_nomutex();
-        _checkWarnings_nomutex();
+        _updatePeaks_nomutex(*q);
+        _updateTotalPeaks_nomutex();
     }
 
     if (first) newMsg_first();
@@ -215,28 +326,35 @@ OpRes Recipient::send(msg_ptr& message)
 //=============================================================================
 OpRes Recipient::send_deep(const msg_ptr& src, HASH32 recipientOverride)
 {
+    return send_deep(src, 0, recipientOverride);
+}
+//=============================================================================
+OpRes Recipient::send_deep(const msg_ptr& src, SIZE queueIndex, HASH32 recipientOverride)
+{
     if (!src) return OR_Failure;
 
     bool first = false;
 
     {
         MutexLocker loc(m_mutex);
+        QueueState* q = _q_nomutex(queueIndex);
+        if (!q) return OR_WrongArgument;
 
         const SIZE estBytes = src.memFootprint();
 
-        if (_overLimit_nomutex(estBytes, 1))
-            if (m_policy == DROP_OLDEST) _dropOldest_nomutex(estBytes, 1);
+        if (_overLimit_nomutex(*q, estBytes, 1))
+            if (q->policy == DROP_OLDEST) _dropOldest_nomutex(*q, estBytes, 1);
 
-        if (_overLimit_nomutex(estBytes, 1))
+        if (_overLimit_nomutex(*q, estBytes, 1))
         {
-            ++m_rejected;
+            ++q->rejected;
             return OR_Failure;  // no duplicate
         }
 
         msg_ptr copy = src.duplicate();
         if (!copy)
         {
-            ++m_rejected;
+            ++q->rejected;
             return OR_Failure;
         }
 
@@ -244,21 +362,21 @@ OpRes Recipient::send_deep(const msg_ptr& src, HASH32 recipientOverride)
 
         const SIZE copyBytes = copy.memFootprint();
 
-        if (_overLimit_nomutex(copyBytes, 1))
-            if (m_policy == DROP_OLDEST) _dropOldest_nomutex(copyBytes, 1);
+        if (_overLimit_nomutex(*q, copyBytes, 1))
+            if (q->policy == DROP_OLDEST) _dropOldest_nomutex(*q, copyBytes, 1);
 
-        if (_overLimit_nomutex(copyBytes, 1))
+        if (_overLimit_nomutex(*q, copyBytes, 1))
         {
-            ++m_rejected;
+            ++q->rejected;
             return OR_Failure;
         }
 
-        first = m_queue.empty();
-        m_queueBytes += copyBytes;
-        m_queue.push_back(std::move(copy));
+        first = q->queue.empty();
+        q->queueBytes += copyBytes;
+        q->queue.push_back(std::move(copy));
 
-        _updatePeaks_nomutex();
-        _checkWarnings_nomutex();
+        _updatePeaks_nomutex(*q);
+        _updateTotalPeaks_nomutex();
     }
 
     if (first) newMsg_first();
@@ -269,48 +387,101 @@ OpRes Recipient::send_deep(const msg_ptr& src, HASH32 recipientOverride)
 SIZE Recipient::size() const
 {
     MutexLocker loc(m_mutex);
-    return (SIZE)m_queue.size();
+    return _totalCount_nomutex();
+}
+//=============================================================================
+SIZE Recipient::size(SIZE queueIndex) const
+{
+    MutexLocker loc(m_mutex);
+    const QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return 0;
+    return (SIZE)q->queue.size();
 }
 //=============================================================================
 bool Recipient::hasMessage() const
 {
     MutexLocker loc(m_mutex);
-    return !m_queue.empty();
+    for (auto& q : m_queues)
+        if (!q.queue.empty()) return true;
+    return false;
+}
+//=============================================================================
+bool Recipient::hasMessage(SIZE queueIndex) const
+{
+    MutexLocker loc(m_mutex);
+    const QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return false;
+    return !q->queue.empty();
 }
 //=============================================================================
 SIZE Recipient::getQueueBytesCount() const
 {
     MutexLocker loc(m_mutex);
-    return m_queueBytes;
+    return _totalBytes_nomutex();
 }
 //=============================================================================
 SIZE Recipient::getQueueCount() const
 {
     MutexLocker loc(m_mutex);
-    return (SIZE)m_queue.size();
+    return _totalCount_nomutex();
+}
+//=============================================================================
+SIZE Recipient::getQueueBytesCount(SIZE queueIndex) const
+{
+    MutexLocker loc(m_mutex);
+    const QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return 0;
+    return q->queueBytes;
+}
+//=============================================================================
+SIZE Recipient::getQueueCount(SIZE queueIndex) const
+{
+    MutexLocker loc(m_mutex);
+    const QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return 0;
+    return (SIZE)q->queue.size();
 }
 //=============================================================================
 SIZE Recipient::getPeakBytes() const
 {
     MutexLocker loc(m_mutex);
-    return m_peakBytes;
+    return m_peakBytesTotal;
 }
 //=============================================================================
 SIZE Recipient::getPeakCount() const
 {
     MutexLocker loc(m_mutex);
-    return m_peakCount;
+    return m_peakCountTotal;
 }
 //=============================================================================
 SIZE Recipient::getDroppedCount() const
 {
     MutexLocker loc(m_mutex);
-    return m_dropped;
+    SIZE tot = 0;
+    for (auto& q : m_queues) tot += q.dropped;
+    return tot;
 }
 //=============================================================================
 SIZE Recipient::getRejectedCount() const
 {
     MutexLocker loc(m_mutex);
-    return m_rejected;
+    SIZE tot = 0;
+    for (auto& q : m_queues) tot += q.rejected;
+    return tot;
 }
 //=============================================================================
+SIZE Recipient::getDroppedCount(SIZE queueIndex) const
+{
+    MutexLocker loc(m_mutex);
+    const QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return 0;
+    return q->dropped;
+}
+//=============================================================================
+SIZE Recipient::getRejectedCount(SIZE queueIndex) const
+{
+    MutexLocker loc(m_mutex);
+    const QueueState* q = _q_nomutex(queueIndex);
+    if (!q) return 0;
+    return q->rejected;
+}
