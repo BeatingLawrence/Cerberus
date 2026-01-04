@@ -63,9 +63,23 @@ namespace cerberus
 
             OpRes sendMsgToObj(HASH32 id, msg_ptr& msg) { return m_reg.sendMsgToObj(id, msg); }
             OpRes sendMsgToObj(const std::string& name, msg_ptr& msg) { return m_reg.sendMsgToObj(name, msg); }
+            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, SIZE queueIndex) { return m_reg.sendMsgToObj(id, msg, queueIndex); }
+            OpRes sendMsgToObj(const std::string& name, msg_ptr& msg, SIZE queueIndex)
+            {
+                return m_reg.sendMsgToObj(name, msg, queueIndex);
+            }
 
             OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg) { return m_reg.sendMsgToObj_deep(id, msg); }
             OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg) { return m_reg.sendMsgToObj_deep(name, msg); }
+            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, SIZE queueIndex)
+            {
+                return m_reg.sendMsgToObj_deep(id, msg, queueIndex);
+            }
+            OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg, SIZE queueIndex)
+            {
+                return m_reg.sendMsgToObj_deep(name, msg, queueIndex);
+            }
+
 
             OpRes addMsgTemplate(const msg_ptr& tmplt) { return m_reg.addMsgTemplate(tmplt); }
             msg_ptr constructMessage(HASH32 id) { return m_reg.constructMessage(id); }

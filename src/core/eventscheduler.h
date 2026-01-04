@@ -2,7 +2,6 @@
 #define CERBERUS_CORE_EVENTSCHEDULER_H
 
 #include <atomic>
-#include <utility>
 #include <vector>
 
 #include "src/thread/mutex.h"
@@ -19,7 +18,8 @@ namespace cerberus::core
         Mutex m_mutex;
         std::vector<TimerData> m_timers;
 
-        void addTimer(std::atomic_bool* bit, DateTime d, TimeFrame t, timerCallback callback, void* ctx);
+        void addTimer(std::atomic_bool* bit, std::atomic_bool* expired, DateTime d, TimeFrame t,
+                      timerCallback callback, void* ctx);
 
         int tick() override;
 

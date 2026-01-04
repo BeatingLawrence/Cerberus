@@ -1,8 +1,7 @@
-#ifndef RECIPIENT_H
-#define RECIPIENT_H
+#ifndef CERBERUS_RECIPIENT_H
+#define CERBERUS_RECIPIENT_H
 
 #include <list>
-#include <vector>
 
 #include "../Cerberus_global.h"
 #include "../types.h"
@@ -22,6 +21,7 @@ namespace cerberus
        private:
         struct QueueState
         {
+            SIZE index{0};
             std::list<msg_ptr> queue;
 
             SIZE queueBytes{0};
@@ -37,9 +37,9 @@ namespace cerberus
             OverflowPolicy policy{REJECT_NEW};
         };
 
-        std::vector<QueueState> m_queues;
+        std::list<QueueState> m_queues;
 
-        // Total peaks across all queues (useful for existing logging).
+        // Total peaks across all queues
         SIZE m_peakBytesTotal;
         SIZE m_peakCountTotal;
 
@@ -53,6 +53,7 @@ namespace cerberus
 
         QueueState* _q_nomutex(SIZE queueIndex);
         const QueueState* _q_nomutex(SIZE queueIndex) const;
+        QueueState* _ensureQueue_nomutex(SIZE queueIndex);
 
         SIZE _totalBytes_nomutex() const;
         SIZE _totalCount_nomutex() const;
@@ -60,10 +61,6 @@ namespace cerberus
        protected:
         Recipient(Mutex* mutex = nullptr);
         virtual ~Recipient();
-
-        // Resize internal message queues (minimum 1). Intended to be called by derived classes
-        // inside their constructor *before* the thread is started.
-        void configureQueues(SIZE queues);
 
         msg_ptr next();
         msg_ptr nextKeep() const;
@@ -87,7 +84,7 @@ namespace cerberus
 
         void resetStats(SIZE queueIndex);
 
-        // Re-insert a message bypassing limits (used for lossless restore after next()).
+        // Re-insert a message bypassing limits
         OpRes requeueFront(msg_ptr& message);  // consumes only on OR_OK
         OpRes requeueBack(msg_ptr& message);   // consumes only on OR_OK
 
@@ -108,12 +105,11 @@ namespace cerberus
         // Same as send(), but targets a specific internal queue.
         OpRes send(msg_ptr& message, SIZE queueIndex);
 
-        // Deep-copy only if it can be accepted; consumes nothing on OR_Failure.
-        OpRes send_deep(const msg_ptr& message, HASH32 recipient = CERBERUS_INVALID_ID);
+        // Deep-copy only if it can be accepted.
+        OpRes send_deep(const msg_ptr& message);
 
         // Same as send_deep(), but targets a specific internal queue.
-        OpRes send_deep(const msg_ptr& message, SIZE queueIndex,
-                        HASH32 recipient = CERBERUS_INVALID_ID);
+        OpRes send_deep(const msg_ptr& message, SIZE queueIndex);
 
         SIZE size() const;
         SIZE size(SIZE queueIndex) const;
@@ -138,4 +134,4 @@ namespace cerberus
     };
 }  // namespace cerberus
 
-#endif  // RECIPIENT_H
+#endif  // CERBERUS_RECIPIENT_H

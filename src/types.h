@@ -853,12 +853,13 @@ namespace cerberus
         DateTime delay;
         TimeFrame time;
         std::atomic_bool* bit;
+        std::atomic_bool* expired;
         timerCallback callback;
         void* ctx;
 
         bool isPeriodic() { return !time.isNull(); }
         bool isDelayed() { return delay.isValid(); }
-        bool isValid() { return (isPeriodic() || isDelayed()) && bit; }
+        bool isValid() { return (isPeriodic() || isDelayed()) && bit && expired; }
     };
 
     enum TimerType : uint8_t

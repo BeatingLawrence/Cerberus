@@ -8,14 +8,25 @@ using namespace cerberus;
 //=============================================================================
 Recipient::QueueState* Recipient::_q_nomutex(SIZE queueIndex)
 {
-    if (queueIndex >= m_queues.size()) return nullptr;
-    return &m_queues[(size_t)queueIndex];
+    for (auto& q : m_queues)
+        if (q.index == queueIndex) return &q;
+    return nullptr;
 }
 //=============================================================================
 const Recipient::QueueState* Recipient::_q_nomutex(SIZE queueIndex) const
 {
-    if (queueIndex >= m_queues.size()) return nullptr;
-    return &m_queues[(size_t)queueIndex];
+    for (const auto& q : m_queues)
+        if (q.index == queueIndex) return &q;
+    return nullptr;
+}
+//=============================================================================
+Recipient::QueueState* Recipient::_ensureQueue_nomutex(SIZE queueIndex)
+{
+    if (auto* q = _q_nomutex(queueIndex)) return q;
+    m_queues.emplace_back();
+    auto& q = m_queues.back();
+    q.index = queueIndex;
+    return &q;
 }
 //=============================================================================
 SIZE Recipient::_totalBytes_nomutex() const
@@ -75,8 +86,7 @@ void Recipient::_dropOldest_nomutex(QueueState& q, SIZE bytesToFit, SIZE countTo
 }
 //=============================================================================
 Recipient::Recipient(Mutex* mutex)
-    : m_queues(1),
-      m_peakBytesTotal(0),
+    : m_peakBytesTotal(0),
       m_peakCountTotal(0),
       m_mutex(mutex),
       m_extmutex(false)
@@ -85,6 +95,9 @@ Recipient::Recipient(Mutex* mutex)
         m_extmutex = true;
     else
         m_mutex = new Mutex();
+
+    m_queues.emplace_back();
+    m_queues.back().index = 0;
 }
 //=============================================================================
 Recipient::~Recipient()
@@ -92,26 +105,6 @@ Recipient::~Recipient()
     for (auto& q : m_queues) q.queue.clear();
     if (!m_extmutex) delete m_mutex;
 }
-//=============================================================================
-void Recipient::configureQueues(SIZE queues)
-{
-    if (queues < 1) queues = 1;
-
-    MutexLocker loc(m_mutex);
-
-    if ((SIZE)m_queues.size() == queues) return;
-
-    // If shrinking, clear queues that will be discarded.
-    if (queues < (SIZE)m_queues.size())
-        for (SIZE i = queues; i < (SIZE)m_queues.size(); ++i)
-        {
-            m_queues[(size_t)i].queue.clear();
-            m_queues[(size_t)i].queueBytes = 0;
-        }
-
-    m_queues.resize((size_t)queues);
-}
-//=============================================================================
 msg_ptr Recipient::next() { return next(0); }
 //=============================================================================
 msg_ptr Recipient::nextKeep() const { return nextKeep(0); }
@@ -167,24 +160,21 @@ void Recipient::setOverflowPolicy(OverflowPolicy p) { setOverflowPolicy(p, 0); }
 void Recipient::setQueueLimitBytes(SIZE bytes, SIZE queueIndex)
 {
     MutexLocker loc(m_mutex);
-    QueueState* q = _q_nomutex(queueIndex);
-    if (!q) return;
+    QueueState* q = _ensureQueue_nomutex(queueIndex);
     q->queueLimitBytes = bytes;
 }
 //=============================================================================
 void Recipient::setQueueLimitCount(SIZE count, SIZE queueIndex)
 {
     MutexLocker loc(m_mutex);
-    QueueState* q = _q_nomutex(queueIndex);
-    if (!q) return;
+    QueueState* q = _ensureQueue_nomutex(queueIndex);
     q->queueLimitCount = count;
 }
 //=============================================================================
 void Recipient::setOverflowPolicy(OverflowPolicy p, SIZE queueIndex)
 {
     MutexLocker loc(m_mutex);
-    QueueState* q = _q_nomutex(queueIndex);
-    if (!q) return;
+    QueueState* q = _ensureQueue_nomutex(queueIndex);
     q->policy = p;
 }
 //=============================================================================
@@ -207,8 +197,7 @@ void Recipient::resetStats(SIZE queueIndex)
 {
     MutexLocker loc(m_mutex);
 
-    QueueState* q = _q_nomutex(queueIndex);
-    if (!q) return;
+    QueueState* q = _ensureQueue_nomutex(queueIndex);
     q->peakBytes = 0;
     q->peakCount = 0;
     q->dropped   = 0;
@@ -223,13 +212,12 @@ OpRes Recipient::requeueFront(msg_ptr& message, SIZE queueIndex)
 {
     if (!message) return OR_WrongArgument;
 
-    bool first = false;
+    bool first          = false;
     const SIZE msgBytes = message.memFootprint();
 
     {
         MutexLocker loc(m_mutex);
-        QueueState* q = _q_nomutex(queueIndex);
-        if (!q) return OR_WrongArgument;
+        QueueState* q = _ensureQueue_nomutex(queueIndex);
 
         first = q->queue.empty();
         q->queueBytes += msgBytes;
@@ -248,13 +236,12 @@ OpRes Recipient::requeueBack(msg_ptr& message, SIZE queueIndex)
 {
     if (!message) return OR_WrongArgument;
 
-    bool first = false;
+    bool first          = false;
     const SIZE msgBytes = message.memFootprint();
 
     {
         MutexLocker loc(m_mutex);
-        QueueState* q = _q_nomutex(queueIndex);
-        if (!q) return OR_WrongArgument;
+        QueueState* q = _ensureQueue_nomutex(queueIndex);
 
         first = q->queue.empty();
         q->queueBytes += msgBytes;
@@ -275,7 +262,7 @@ void Recipient::newMsg_first() {}
 //=============================================================================
 SIZE Recipient::size_nomutex() const
 {
-    // total count across all queues
+    // total count for all queues
     return _totalCount_nomutex();
 }
 //=============================================================================
@@ -296,8 +283,7 @@ OpRes Recipient::send(msg_ptr& message, SIZE queueIndex)
 
     {
         MutexLocker loc(m_mutex);
-        QueueState* q = _q_nomutex(queueIndex);
-        if (!q) return OR_WrongArgument;
+        QueueState* q = _ensureQueue_nomutex(queueIndex);
 
         const SIZE msgBytes = message.memFootprint();
 
@@ -324,12 +310,9 @@ OpRes Recipient::send(msg_ptr& message, SIZE queueIndex)
     return OR_OK;
 }
 //=============================================================================
-OpRes Recipient::send_deep(const msg_ptr& src, HASH32 recipientOverride)
-{
-    return send_deep(src, 0, recipientOverride);
-}
+OpRes Recipient::send_deep(const msg_ptr& src) { return send_deep(src, 0); }
 //=============================================================================
-OpRes Recipient::send_deep(const msg_ptr& src, SIZE queueIndex, HASH32 recipientOverride)
+OpRes Recipient::send_deep(const msg_ptr& src, SIZE queueIndex)
 {
     if (!src) return OR_Failure;
 
@@ -337,8 +320,7 @@ OpRes Recipient::send_deep(const msg_ptr& src, SIZE queueIndex, HASH32 recipient
 
     {
         MutexLocker loc(m_mutex);
-        QueueState* q = _q_nomutex(queueIndex);
-        if (!q) return OR_WrongArgument;
+        QueueState* q = _ensureQueue_nomutex(queueIndex);
 
         const SIZE estBytes = src.memFootprint();
 
@@ -357,8 +339,6 @@ OpRes Recipient::send_deep(const msg_ptr& src, SIZE queueIndex, HASH32 recipient
             ++q->rejected;
             return OR_Failure;
         }
-
-        if (recipientOverride != CERBERUS_INVALID_ID) copy->setRecipient(recipientOverride);
 
         const SIZE copyBytes = copy.memFootprint();
 
@@ -485,3 +465,4 @@ SIZE Recipient::getRejectedCount(SIZE queueIndex) const
     if (!q) return 0;
     return q->rejected;
 }
+//=============================================================================

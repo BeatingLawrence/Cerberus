@@ -11,7 +11,8 @@ namespace cerberus
     class Timer
     {
        private:
-        std::atomic_bool m_running;
+       std::atomic_bool m_running;
+        std::atomic_bool m_expired;
 
         TimerType m_type;
 
@@ -42,6 +43,7 @@ namespace cerberus
         void stop();
 
         bool isRunning();
+        bool expired();
 
         // Sets a callback to be executed when the timer expires
         void provideTimeoutCallback(timerCallback callback, void* ctx);

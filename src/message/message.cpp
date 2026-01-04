@@ -1,6 +1,7 @@
 #include "message.h"
 
 #include "../core/cerberusregister.h"  // IWYU pragma: export
+#include "../cerberus.h"
 #include "../data/bytebuffer.h"
 #include "../exception/exceptioncatalog.h"
 #include "slot.h"
@@ -23,21 +24,21 @@ msg_ptr Message::create(const std::string& name) { return msg_ptr(new Message(na
 //=============================================================================
 Message::Message(HASH32 id)
     : m_id(id),
-      m_recipientId(CERBERUS_INVALID_ID)
+      m_recipientIds()
 {
     // noop
 }
 //=============================================================================
 Message::Message(const std::string& name)
     : m_id(hashFunc_res(name)),
-      m_recipientId(CERBERUS_INVALID_ID)
+      m_recipientIds()
 {
     // noop
 }
 //=============================================================================
 Message::Message(const Message& other)
     : m_id(other.m_id),
-      m_recipientId(other.m_recipientId)
+      m_recipientIds(other.m_recipientIds)
 {
     // deep-copy all slots
     for (auto& el : other.m_slots) m_slots.push_back(el.duplicate());
@@ -100,15 +101,41 @@ bool Message::is(const std::string& name) const
     return m_id == hashFunc_res(name);
 }
 //=============================================================================
-HASH32 Message::recipient() const { return m_recipientId; }
-//=============================================================================
-bool Message::hasValidRecipient() const { return m_recipientId != CERBERUS_INVALID_ID; }
-//=============================================================================
-Message& Message::setRecipient(HASH32 id)
+HASH32 Message::recipient() const
 {
-    m_recipientId = id;
-    return *this;
+    if (m_recipientIds.empty()) return CERBERUS_INVALID_ID;
+    return m_recipientIds.front();
 }
+//=============================================================================
+const std::vector<HASH32>& Message::recipients() const { return m_recipientIds; }
+//=============================================================================
+bool Message::hasValidRecipient() const
+{
+    for (const auto& id : m_recipientIds)
+        if (id != CERBERUS_INVALID_ID) return true;
+
+    return false;
+}
+//=============================================================================
+void Message::setRecipient(HASH32 id) const
+{
+    m_recipientIds.clear();
+    m_recipientIds.push_back(id);
+}
+//=============================================================================
+void Message::setRecipients(const std::vector<HASH32>& ids) const { m_recipientIds = ids; }
+//=============================================================================
+void Message::addRecipient(HASH32 id) const { m_recipientIds.push_back(id); }
+//=============================================================================
+OpRes Message::addRecipient(const std::string& name) const
+{
+    const HASH32 id = Cerberus::idByName(name);
+    if (id == CERBERUS_INVALID_ID) return OR_Failure;
+    m_recipientIds.push_back(id);
+    return OR_OK;
+}
+//=============================================================================
+void Message::clearRecipients() const { m_recipientIds.clear(); }
 //=============================================================================
 ByteBuffer Message::toBuffer() const
 {

@@ -261,6 +261,8 @@ OpRes Cerberus::send_deep(const msg_ptr& message, HASH32 recipientID)
 {
     if (!message) return OR_WrongArgument;
 
+    if (recipientID != CERBERUS_INVALID_ID) message->setRecipient(recipientID);
+
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
 
@@ -275,7 +277,31 @@ OpRes Cerberus::send_deep(const msg_ptr& message, const std::string& recipient)
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
 
+    message->setRecipient(Cerberus::framework.core.data->objIdByName(recipient));
     return Cerberus::framework.core.data->send_deep(message, idByName(recipient));
+}
+//=============================================================================
+OpRes Cerberus::send_deep(const msg_ptr& message, HASH32 recipientID, SIZE queueIndex)
+{
+    if (!message) return OR_WrongArgument;
+
+    if (recipientID != CERBERUS_INVALID_ID) message->setRecipient(recipientID);
+
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+
+    return Cerberus::framework.core.data->sendMsgToObj_deep(recipientID, message, queueIndex);
+}
+//=============================================================================
+OpRes Cerberus::send_deep(const msg_ptr& message, const std::string& recipient, SIZE queueIndex)
+{
+    if (!message) return OR_WrongArgument;
+
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+
+    message->setRecipient(Cerberus::framework.core.data->objIdByName(recipient));
+    return Cerberus::framework.core.data->sendMsgToObj_deep(recipient, message, queueIndex);
 }
 //=============================================================================
 OpRes Cerberus::send(msg_ptr& message, HASH32 recipientID)
@@ -294,12 +320,34 @@ OpRes Cerberus::send(msg_ptr& message, const std::string& recipient)
 {
     if (!message) return OR_WrongArgument;
 
-    message->setRecipient(idByName(recipient));
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+
+    message->setRecipient(Cerberus::framework.core.data->objIdByName(recipient));
+    return Cerberus::framework.core.data->send(message);
+}
+//=============================================================================
+OpRes Cerberus::send(msg_ptr& message, HASH32 recipientID, SIZE queueIndex)
+{
+    if (!message) return OR_WrongArgument;
+
+    if (recipientID != CERBERUS_INVALID_ID) message->setRecipient(recipientID);
 
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
 
-    return Cerberus::framework.core.data->send(message);
+    return Cerberus::framework.core.data->sendMsgToObj(recipientID, message, queueIndex);
+}
+//=============================================================================
+OpRes Cerberus::send(msg_ptr& message, const std::string& recipient, SIZE queueIndex)
+{
+    if (!message) return OR_WrongArgument;
+
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+
+    message->setRecipient(Cerberus::framework.core.data->objIdByName(recipient));
+    return Cerberus::framework.core.data->sendMsgToObj(recipient, message, queueIndex);
 }
 //=============================================================================
 OpResData<CHANDLE> Cerberus::newSocket(const SocketSettings& settings)

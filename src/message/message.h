@@ -17,7 +17,7 @@ namespace cerberus
 
         HASH32 m_id;
 
-        HASH32 m_recipientId;
+        mutable std::vector<HASH32> m_recipientIds;
 
         slot_ptr* _slot(const std::string& name) const;
 
@@ -93,14 +93,27 @@ namespace cerberus
         // checks if the ID of this equals the idFromName(name)
         bool is(const std::string& name) const;
 
-        // return the recipient of the message
+        // return the first recipient of the message (if any)
         HASH32 recipient() const;
 
-        // check if the recipient != INVALID_ID
+        // get all recipients
+        const std::vector<HASH32>& recipients() const;
+
+        // check if at least one recipient is valid
         bool hasValidRecipient() const;
 
-        // set a recipient
-        Message& setRecipient(HASH32 id);
+        // set a single recipient (clears any existing recipients)
+        void setRecipient(HASH32 id) const;
+
+        // set recipients
+        void setRecipients(const std::vector<HASH32>& ids) const;
+
+        // add a recipient
+        void addRecipient(HASH32 id) const;
+        OpRes addRecipient(const std::string& name) const;
+
+        // clear all recipients
+        void clearRecipients() const;
 
         // convert the message to a plain buffer
         ByteBuffer toBuffer() const;

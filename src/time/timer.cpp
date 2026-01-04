@@ -13,6 +13,7 @@ void Timer::defaultTimeoutCallback(void *ctx)
 //=============================================================================
 Timer::Timer()
     : m_running(false),
+      m_expired(false),
       m_type(TT_OneShot),
       m_callback(defaultTimeoutCallback),
       m_ctx(nullptr)
@@ -21,6 +22,7 @@ Timer::Timer()
 //=============================================================================
 Timer::Timer(const TimeFrame &time, TimerType type, const DateTime &delay)
     : m_running(false),
+      m_expired(false),
       m_type(type),
       m_time(time),
       m_delay(delay),
@@ -44,6 +46,7 @@ void Timer::start()
     TimerData td = {};
 
     td.bit      = &m_running;
+    td.expired  = &m_expired;
     td.callback = m_callback;
     td.ctx      = m_ctx;
 
@@ -67,6 +70,7 @@ void Timer::start()
             break;
     };
 
+    m_expired.store(false, std::memory_order_relaxed);
     Cerberus::startTimer(td);
 }
 //=============================================================================
@@ -78,6 +82,8 @@ void Timer::stop()
 }
 //=============================================================================
 bool Timer::isRunning() { return m_running.load(std::memory_order_relaxed); }
+//=============================================================================
+bool Timer::expired() { return m_expired.exchange(false, std::memory_order_relaxed); }
 //=============================================================================
 void Timer::provideTimeoutCallback(timerCallback callback, void *ctx)
 {

@@ -45,6 +45,8 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
 
             auto cb  = it->callback;
             auto ctx = it->ctx;
+            if (it->expired)
+                it->expired->store(true, std::memory_order_relaxed);
 
             if (!it->time.isNull())
             {
@@ -70,8 +72,8 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
     return 0;
 }
 //=============================================================================
-void EventScheduler::addTimer(std::atomic_bool* bit, DateTime d, TimeFrame t, timerCallback callback,
-                              void* ctx)
+void EventScheduler::addTimer(std::atomic_bool* bit, std::atomic_bool* expired, DateTime d, TimeFrame t,
+                              timerCallback callback, void* ctx)
 {
     MutexLocker locker(m_mutex);
 
@@ -81,6 +83,7 @@ void EventScheduler::addTimer(std::atomic_bool* bit, DateTime d, TimeFrame t, ti
         {
             el.delay    = d;
             el.time     = t;
+            el.expired  = expired;
             el.callback = callback;
             el.ctx      = ctx;
             el.bit->store(true, std::memory_order_relaxed);
@@ -90,6 +93,7 @@ void EventScheduler::addTimer(std::atomic_bool* bit, DateTime d, TimeFrame t, ti
 
     TimerData data = {};
     data.bit       = bit;
+    data.expired   = expired;
     data.delay     = d;
     data.time      = t;
     data.callback  = callback;
@@ -106,17 +110,17 @@ void EventScheduler::startTimer(TimerData& data)
     if (data.isPeriodic())
     {
         if (data.isDelayed())
-            addTimer(data.bit, data.delay, data.time, data.callback, data.ctx);
+            addTimer(data.bit, data.expired, data.delay, data.time, data.callback, data.ctx);
         else
         {
             DateTime d = DateTime::current();
             d.add(data.time);
-            addTimer(data.bit, d, data.time, data.callback, data.ctx);
+            addTimer(data.bit, data.expired, d, data.time, data.callback, data.ctx);
         }
     }
     else
     {
-        addTimer(data.bit, data.delay, TimeFrame(), data.callback, data.ctx);
+        addTimer(data.bit, data.expired, data.delay, TimeFrame(), data.callback, data.ctx);
     }
 }
 //=============================================================================

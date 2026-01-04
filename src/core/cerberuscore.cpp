@@ -3,9 +3,25 @@
 #include "../cerberus.h"
 #include "../thread/thread.h"
 
+#include <iomanip>
+#include <sstream>
+#include <vector>
+
 using namespace cerberus::core;
 using namespace cerberus;
 
+//=============================================================================
+static std::string idsToStr(const std::vector<HASH32>& ids)
+{
+    std::ostringstream ss;
+    for (size_t i = 0; i < ids.size(); ++i)
+    {
+        if (i != 0) ss << ",";
+        ss << "0x" << std::hex << std::setw(8) << std::setfill('0') << ids[i];
+        ss << std::dec;
+    }
+    return ss.str();
+}
 //=============================================================================
 void CerberusCore::initializeThreadPool()
 {
@@ -27,7 +43,12 @@ void CerberusCore::deinitializeThreadPool()
 //=============================================================================
 int CerberusCore::tick()
 {
-    msg_ptr message = next();
+    msg_ptr message;
+
+    if (size(1) > 0)
+        message = next(1);  // retry queue first to preserve per-recipient order
+    else
+        message = next();
 
     if (!message) return 0;
 
@@ -82,16 +103,28 @@ void CerberusCore::processTaskMsg(msg_ptr& msg)
 //=============================================================================
 void CerberusCore::processMsg(msg_ptr& msg)
 {
-    const HASH32 recipient = msg->recipient();
+    auto recipients = msg->recipients();
 
-    OpRes res = sendMsgToObj(recipient, msg);
-
-    if (res != OR_OK)
+    for (size_t i = 0; i < recipients.size(); i++)
     {
-        // retry later (requeue in core inbox)
-        res = send(msg);
-
-        if (res != OR_OK) logWarning("Core inbox full, dropping message");
+        if (i == (recipients.size() - 1))  // last, avoid deep copy
+        {
+            msg->setRecipient(recipients[i]);
+            if (sendMsgToObj(recipients[i], msg).fail())
+            {
+                requeueFront(msg, 1).expect("requeue failed");
+            }
+        }
+        else  // not last, use deep copy
+        {
+            auto aux = msg.duplicate();
+            if (!aux) continue;
+            aux->setRecipient(recipients[i]);
+            if (sendMsgToObj(recipients[i], aux).fail())
+            {
+                requeueFront(aux, 1).expect("requeue failed");
+            }
+        }
     }
 }
 //=============================================================================

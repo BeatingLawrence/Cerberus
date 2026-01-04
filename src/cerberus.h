@@ -179,10 +179,15 @@ namespace cerberus
         // send with deep copy
         static OpRes send_deep(const msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
         static OpRes send_deep(const msg_ptr& message, const std::string& recipient);
+        static OpRes send_deep(const msg_ptr& message, HASH32 recipientID, SIZE queueIndex);
+        static OpRes send_deep(const msg_ptr& message, const std::string& recipient, SIZE queueIndex);
 
         // send using std::move
         static OpRes send(msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
         static OpRes send(msg_ptr& message, const std::string& recipient);
+        static OpRes send(msg_ptr& message, HASH32 recipientID, SIZE queueIndex);
+        static OpRes send(msg_ptr& message, const std::string& recipient, SIZE queueIndex);
+
 
         // Create a new socket in the Cerberus memory space
         static OpResData<CHANDLE> newSocket(const SocketSettings& settings);
