@@ -175,6 +175,14 @@ namespace cerberus
 
         // Tell the number of required bytes to represent the number num
         static uint8_t reqBytes(LSIZE num);
+
+        // Get the currently online CPU cores as CoreSet
+        static OpResData<CoreSet> getOnlineCoreSet();
+
+        // Assign IRQ affinity to the given CPU set
+        // Important: disable irqbalance kernel feature!
+        // This method requires root permissions
+        static OpRes assignIRQ(int irq, const CoreSet& cores);
     };
 }  // namespace cerberus
 

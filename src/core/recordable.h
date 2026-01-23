@@ -28,19 +28,15 @@ namespace cerberus
             // Same as above
             std::string toObjStr();
 
-           private:
+       private:
             HASH32 m_id;
-
-            std::string m_name;
 
             static std::string toThreadStr(const Recordable& obj);
 
-           protected:
-            Recordable(const std::string& name = std::string());
+       protected:
+            Recordable();
 
-           public:
-            Recordable() = delete;
-
+       public:
             Recordable(const Recordable& other) = delete;
 
             virtual ~Recordable();
@@ -48,7 +44,7 @@ namespace cerberus
             // Register this instance in the Cerberus framework register.
             // After this call, all other registered objects will be capable of
             // getting a reference to this instance and use it
-            void checkIn();
+            void checkIn(const std::string& name);
 
             // Un-register this instance from the Cerberus framework register.
             void checkOut();
@@ -58,9 +54,6 @@ namespace cerberus
 
             // Returns the object ID
             HASH32 id() const;
-
-            // Returns the object name
-            std::string name() const;
 
             // Performs a dynamic cast of this object into T. Throws an exception if the cast is not possible
             // Checking the object type() before casting is a good practice

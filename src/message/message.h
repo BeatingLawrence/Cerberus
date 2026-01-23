@@ -84,6 +84,26 @@ namespace cerberus
             return (slot->value());
         }
 
+        // check if a slot exists and can be cast to the requested slot type
+        template <typename T>
+        bool has(const std::string& name) const
+        {
+            static_assert(std::is_base_of<SlotBase, T>::value,
+                          "Message::has<TSlot>: TSlot must derive from SlotBase");
+
+            slot_ptr* slot = _slot(name);
+            if (!slot || !(*slot)) return false;
+            try
+            {
+                (*slot)->to<T>();
+            }
+            catch (...)
+            {
+                return false;
+            }
+            return true;
+        }
+
         // return the ID of this message
         HASH32 id() const;
 

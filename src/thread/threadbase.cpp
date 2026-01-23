@@ -9,8 +9,8 @@
 using namespace cerberus;
 
 //=============================================================================
-ThreadBase::ThreadBase(ThreadPeriodicity periodicity, const std::string &name)
-    : Recordable(name),
+ThreadBase::ThreadBase(ThreadPeriodicity periodicity)
+    : Recordable(),
       Recipient(&m_mutex),
       m_mutex(),
       m_cond(),

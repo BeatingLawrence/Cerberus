@@ -4,6 +4,7 @@
 #include "Cerberus_global.h"
 #include "core/cerberuslog.h"
 #include "data/data.h"        // IWYU pragma: export
+#include "data/filesystem/inidatafile.h"
 #include "log.h"              // IWYU pragma: export
 #include "message/message.h"  // IWYU pragma: export
 #include "message/slot.h"     // IWYU pragma: export
@@ -121,7 +122,7 @@ namespace cerberus
 
         // Register a given object and return its id
         // Return an invalid ID if the registering failed
-        static void registerObj(core::Recordable* object);
+        static void registerObj(core::Recordable* object, const std::string& name);
 
         // Unregister an object by its id
         static void unregisterObj(HASH32 id);
@@ -176,17 +177,45 @@ namespace cerberus
         static void log(const std::string& str, LogLevel logLevel = LL_Info,
                         const std::string& author = std::string(), bool application = true);
 
+        // Configuration file (IniDataFile) access
+        static void setFileName(const std::string& fileName);
+        static OpRes load();
+        static bool exists(const std::string& key, const std::string& section = MAIN_SECTION);
+        static IniDataType type(const std::string& key, const std::string& section = MAIN_SECTION);
+        static bool isType(const std::string& key, IniDataType type);
+        static OpRes rewrite();
+
+        static OpRes write_string(const std::string& key, const std::string& value,
+                                  const std::string& section = MAIN_SECTION);
+        static OpRes write_integer(const std::string& key, int64_t value, const std::string& section = MAIN_SECTION);
+        static OpRes write_double(const std::string& key, double value, const std::string& section = MAIN_SECTION);
+        static OpRes write_bool(const std::string& key, bool value, const std::string& section = MAIN_SECTION);
+
+        static OpRes enforce_string(const std::string& key, const std::string& value,
+                                    const std::string& section = MAIN_SECTION);
+        static OpRes enforce_integer(const std::string& key, int64_t value,
+                                     const std::string& section = MAIN_SECTION);
+        static OpRes enforce_double(const std::string& key, double value,
+                                    const std::string& section = MAIN_SECTION);
+        static OpRes enforce_bool(const std::string& key, bool value,
+                                  const std::string& section = MAIN_SECTION);
+
+        static StringOpRes read_string(const std::string& key, const std::string& section = MAIN_SECTION);
+        static IntOpRes read_integer(const std::string& key, const std::string& section = MAIN_SECTION);
+        static FloatOpRes read_double(const std::string& key, const std::string& section = MAIN_SECTION);
+        static BoolOpRes read_bool(const std::string& key, const std::string& section = MAIN_SECTION);
+
         // send with deep copy
         static OpRes send_deep(const msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
         static OpRes send_deep(const msg_ptr& message, const std::string& recipient);
-        static OpRes send_deep(const msg_ptr& message, HASH32 recipientID, SIZE queueIndex);
-        static OpRes send_deep(const msg_ptr& message, const std::string& recipient, SIZE queueIndex);
+        static OpRes send_deep(const msg_ptr& message, HASH32 recipientID, HASH32 channel_in);
+        static OpRes send_deep(const msg_ptr& message, const std::string& recipient, HASH32 channel_in);
 
         // send using std::move
         static OpRes send(msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
         static OpRes send(msg_ptr& message, const std::string& recipient);
-        static OpRes send(msg_ptr& message, HASH32 recipientID, SIZE queueIndex);
-        static OpRes send(msg_ptr& message, const std::string& recipient, SIZE queueIndex);
+        static OpRes send(msg_ptr& message, HASH32 recipientID, HASH32 channel_in);
+        static OpRes send(msg_ptr& message, const std::string& recipient, HASH32 channel_in);
 
 
         // Create a new socket in the Cerberus memory space

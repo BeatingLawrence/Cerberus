@@ -2,6 +2,7 @@
 #define CERBERUS_RECIPIENT_H
 
 #include <list>
+#include <vector>
 
 #include "../Cerberus_global.h"
 #include "../types.h"
@@ -21,12 +22,14 @@ namespace cerberus
        private:
         struct QueueState
         {
-            SIZE index{0};
+            HASH32 channel_in{0};
             std::list<msg_ptr> queue;
 
             SIZE queueBytes{0};
             SIZE queueLimitBytes{0};  // 0 = unlimited
             SIZE queueLimitCount{0};  // 0 = unlimited
+            SIZE reservedBytes{0};
+            SIZE reservedCount{0};
 
             SIZE peakBytes{0};
             SIZE peakCount{0};
@@ -39,6 +42,20 @@ namespace cerberus
 
         std::list<QueueState> m_queues;
 
+        struct RecipientTarget
+        {
+            Recipient* recipient{nullptr};
+            HASH32 channel_in{0};
+        };
+
+        struct RecipientChannel
+        {
+            HASH32 channel_out{CERBERUS_INVALID_ID};
+            std::vector<RecipientTarget> recipients;
+        };
+
+        std::list<RecipientChannel> m_channels;
+
         // Total peaks across all queues
         SIZE m_peakBytesTotal;
         SIZE m_peakCountTotal;
@@ -50,78 +67,91 @@ namespace cerberus
         void _updateTotalPeaks_nomutex();
         bool _overLimit_nomutex(const QueueState& q, SIZE addBytes, SIZE addCount) const;
         void _dropOldest_nomutex(QueueState& q, SIZE bytesToFit, SIZE countToFit);
+        bool _consumeReserve_nomutex(QueueState& q, SIZE msgBytes);
 
-        QueueState* _q_nomutex(SIZE queueIndex);
-        const QueueState* _q_nomutex(SIZE queueIndex) const;
-        QueueState* _ensureQueue_nomutex(SIZE queueIndex);
+        QueueState* _q_nomutex(HASH32 channel_in);
+        const QueueState* _q_nomutex(HASH32 channel_in) const;
+        QueueState* _ensureQueue_nomutex(HASH32 channel_in);
+
+        RecipientChannel* _channel_nomutex(HASH32 channel_out);
+        const RecipientChannel* _channel_nomutex(HASH32 channel_out) const;
+        RecipientChannel* _ensureChannel_nomutex(HASH32 channel_out);
 
         SIZE _totalBytes_nomutex() const;
         SIZE _totalCount_nomutex() const;
+
+        bool reserve(msg_ptr& message, HASH32 channel_in);
+        void reserve_revert(msg_ptr& message, HASH32 channel_in);
 
        protected:
         Recipient(Mutex* mutex = nullptr);
         virtual ~Recipient();
 
-        msg_ptr next();
-        msg_ptr nextKeep() const;
-
-        msg_ptr next(SIZE queueIndex);
-        msg_ptr nextKeep(SIZE queueIndex) const;
+        msg_ptr next(HASH32 channel_in = 0);
+        msg_ptr nextKeep(HASH32 channel_in = 0) const;
 
         void clear();
 
-        void clear(SIZE queueIndex);
+        void clear(HASH32 channel_in);
 
         void setQueueLimitBytes(SIZE bytes);  // 0 = unlimited
         void setQueueLimitCount(SIZE count);  // 0 = unlimited
         void setOverflowPolicy(OverflowPolicy p);
 
-        void setQueueLimitBytes(SIZE bytes, SIZE queueIndex);
-        void setQueueLimitCount(SIZE count, SIZE queueIndex);
-        void setOverflowPolicy(OverflowPolicy p, SIZE queueIndex);
+        void setQueueLimitBytes(SIZE bytes, HASH32 channel_in);
+        void setQueueLimitCount(SIZE count, HASH32 channel_in);
+        void setOverflowPolicy(OverflowPolicy p, HASH32 channel_in);
 
         void resetStats();
 
-        void resetStats(SIZE queueIndex);
+        void resetStats(HASH32 channel_in);
 
         // Re-insert a message bypassing limits
         OpRes requeueFront(msg_ptr& message);  // consumes only on OR_OK
         OpRes requeueBack(msg_ptr& message);   // consumes only on OR_OK
 
-        OpRes requeueFront(msg_ptr& message, SIZE queueIndex);
-        OpRes requeueBack(msg_ptr& message, SIZE queueIndex);
+        OpRes requeueFront(msg_ptr& message, HASH32 channel_in);
+        OpRes requeueBack(msg_ptr& message, HASH32 channel_in);
 
         virtual void newMsg();
         virtual void newMsg_first();
 
         SIZE size_nomutex() const;
 
-        SIZE size_nomutex(SIZE queueIndex) const;
+        SIZE size_nomutex(HASH32 channel_in) const;
+
+        OpRes broadcast(msg_ptr& message, HASH32 channel_out = 0);
+        OpRes broadcast_deep(msg_ptr& message, HASH32 channel_out = 0);
 
        public:
+        void setRecipient(Recipient* recipient, HASH32 channel_out = 0, HASH32 channel_in = 0);
+        void removeRecipient(Recipient* recipient, HASH32 channel_out = 0);
         // Consume only on success (OR_OK). On OR_Failure the message stays intact.
         OpRes send(msg_ptr& message);
 
         // Same as send(), but targets a specific internal queue.
-        OpRes send(msg_ptr& message, SIZE queueIndex);
+        OpRes send(msg_ptr& message, HASH32 channel_in);
 
         // Deep-copy only if it can be accepted.
         OpRes send_deep(const msg_ptr& message);
 
         // Same as send_deep(), but targets a specific internal queue.
-        OpRes send_deep(const msg_ptr& message, SIZE queueIndex);
+        OpRes send_deep(const msg_ptr& message, HASH32 channel_in);
+
+        // Create and send a message by name with no fields
+        OpRes signal(const std::string& msgname, HASH32 channel_in = 0);
 
         SIZE size() const;
-        SIZE size(SIZE queueIndex) const;
+        SIZE size(HASH32 channel_in) const;
 
         bool hasMessage() const;
-        bool hasMessage(SIZE queueIndex) const;
+        bool hasMessage(HASH32 channel_in) const;
 
         SIZE getQueueBytesCount() const;
         SIZE getQueueCount() const;
 
-        SIZE getQueueBytesCount(SIZE queueIndex) const;
-        SIZE getQueueCount(SIZE queueIndex) const;
+        SIZE getQueueBytesCount(HASH32 channel_in) const;
+        SIZE getQueueCount(HASH32 channel_in) const;
 
         SIZE getPeakBytes() const;
         SIZE getPeakCount() const;
@@ -129,8 +159,8 @@ namespace cerberus
         SIZE getDroppedCount() const;
         SIZE getRejectedCount() const;
 
-        SIZE getDroppedCount(SIZE queueIndex) const;
-        SIZE getRejectedCount(SIZE queueIndex) const;
+        SIZE getDroppedCount(HASH32 channel_in) const;
+        SIZE getRejectedCount(HASH32 channel_in) const;
     };
 }  // namespace cerberus
 

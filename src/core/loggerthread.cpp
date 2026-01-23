@@ -53,11 +53,12 @@ void LoggerThread::coolDown()
 }
 //=============================================================================
 LoggerThread::LoggerThread()
-    : cerberus::Thread(TP_Message, "Logger"),
+    : cerberus::Thread(TP_Message),
       m_logFile(),
       m_currentSize(0),
       m_conf()
 {
+    setThreadName("Logger");
     m_failed.store(false);
     m_logFile.setOpenMode(FOM_ReadWriteAppend);
 }

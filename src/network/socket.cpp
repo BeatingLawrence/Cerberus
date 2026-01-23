@@ -14,11 +14,44 @@
 #ifdef LINUX_SYSTEM
 #include <sys/sendfile.h>
 #endif
+#include <openssl/opensslv.h>
 #include <unistd.h>
 
 #include "src/data/filesystem/file.h"
 #include "src/exception/exceptioncatalog.h"
 #include "src/time/timer.h"
+
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+
+static inline int SSL_CTX_load_verify_file(SSL_CTX *ctx, const char *file)
+{
+    return SSL_CTX_load_verify_locations(ctx, file, NULL);
+}
+
+static inline int SSL_CTX_load_verify_dir(SSL_CTX *ctx, const char *dir)
+{
+    return SSL_CTX_load_verify_locations(ctx, NULL, dir);
+}
+
+#endif
+
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
+
+static inline int SSL_read_ex(SSL *ssl, void *buf, size_t num, size_t *readbytes)
+{
+    int r = SSL_read(ssl, buf, (int)num);
+
+    if (r > 0)
+    {
+        *readbytes = (size_t)r;
+        return 1;
+    }
+
+    *readbytes = 0;
+    return 0;
+}
+
+#endif
 
 #define DEFAULT_RECV_BUFFER_SIZE 512
 #define DEFAULT_MAX_CONNECTIONS 15
@@ -395,6 +428,10 @@ OpRes Socket::_TLS_send(const ByteBuffer &buffer)
 //=============================================================================
 OpRes Socket::_TLS_sendFile(const File &file)
 {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    (void)file;
+    throw cImplMissExc("implementation missing, openssl is outdated");
+#else
     auto res = file.size();
     if (res.fail()) return res;
 
@@ -440,6 +477,7 @@ OpRes Socket::_TLS_sendFile(const File &file)
     if (check()) return OR_Hangup;
 
     return OR_OK;
+#endif
 }
 //=============================================================================
 OpRes Socket::_TLS_recv(ByteBuffer &buffer)
@@ -1032,6 +1070,7 @@ OpRes Socket::TLS_ignoreHangup(bool ignore)
 {
     if (!isTLS()) return OR_Unavailable;
 
+#ifdef SSL_OP_IGNORE_UNEXPECTED_EOF
     if (ignore)
     {
         SSL_CTX_set_options(m_sslCtx, SSL_OP_IGNORE_UNEXPECTED_EOF);
@@ -1052,6 +1091,10 @@ OpRes Socket::TLS_ignoreHangup(bool ignore)
     }
 
     return OR_OK;
+#else
+    (void)ignore;
+    return OR_Unavailable;
+#endif
 }
 //=============================================================================
 StringOpRes Socket::TLS_getProtocolName()

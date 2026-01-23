@@ -49,13 +49,14 @@ int Player::tick()
 //=============================================================================
 Player::~Player() {}
 //=============================================================================
-Player::Player(bool manualTrigger, const std::string &name)
-    : Thread(manualTrigger ? TP_Trigger : TP_Message, name),
+Player::Player(bool manualTrigger, LSIZE stackSize)
+    : Thread(manualTrigger ? TP_Trigger : TP_Message, stackSize),
       m_cb(nullptr),
       m_endCb(nullptr),
       m_ctx(nullptr),
       m_endCbCtx(nullptr)
 {
+    setThreadName("player");
 }
 //=============================================================================
 bool Player::end() { return getPausedFlag(); }

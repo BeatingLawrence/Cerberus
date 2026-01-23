@@ -6,8 +6,9 @@ using namespace cerberus::core;
 
 //=============================================================================
 EventScheduler::EventScheduler()
-    : cerberus::Thread(TP_Periodic, TimeFrame(100, TimeFrame::U_MicroSecond), "Event Scheduler")
+    : cerberus::Thread(TP_Periodic, TimeFrame(100, TimeFrame::U_MicroSecond))
 {
+    setThreadName("Event Scheduler");
 }
 //=============================================================================
 EventScheduler::~EventScheduler()

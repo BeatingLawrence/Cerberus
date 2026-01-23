@@ -8,8 +8,11 @@
  *
  */
 
+#include <utility>
+
 #include "../thread/thread.h"
 #include "../thread/threadpool.h"
+#include "../data/filesystem/inidatafile.h"
 #include "eventscheduler.h"
 #include "socketmanager.h"
 #include "cerberusregister.h"
@@ -30,6 +33,8 @@ namespace cerberus
             SocketManager m_sockets;
 
             CerberusRegister m_reg;
+
+            IniDataFile m_iniFile;
 
             void initializeThreadPool();
             void deinitializeThreadPool();
@@ -55,29 +60,35 @@ namespace cerberus
 
             void setup(const CoreConf& parms);
 
+            IniDataFile& iniFile() { return m_iniFile; }
+            const IniDataFile& iniFile() const { return m_iniFile; }
+            void setIniFile(const IniDataFile& other) { m_iniFile = other; }
+            void setIniFile(IniDataFile&& other) { m_iniFile = std::move(other); }
+            void setIniFileName(const std::string& fileName) { m_iniFile.setFileName(fileName); }
+
             //=====================REGISTER========================
 
-            void registerObj(Recordable* object) { m_reg.registerObj(object); }
+            void registerObj(Recordable* object, const std::string& name) { m_reg.registerObj(object, name); }
             void unregisterObj(HASH32 id) { m_reg.unregisterObj(id); }
             HASH32 objIdByName(const std::string& name) { return m_reg.objIdByName(name); }
 
             OpRes sendMsgToObj(HASH32 id, msg_ptr& msg) { return m_reg.sendMsgToObj(id, msg); }
             OpRes sendMsgToObj(const std::string& name, msg_ptr& msg) { return m_reg.sendMsgToObj(name, msg); }
-            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, SIZE queueIndex) { return m_reg.sendMsgToObj(id, msg, queueIndex); }
-            OpRes sendMsgToObj(const std::string& name, msg_ptr& msg, SIZE queueIndex)
+            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in) { return m_reg.sendMsgToObj(id, msg, channel_in); }
+            OpRes sendMsgToObj(const std::string& name, msg_ptr& msg, HASH32 channel_in)
             {
-                return m_reg.sendMsgToObj(name, msg, queueIndex);
+                return m_reg.sendMsgToObj(name, msg, channel_in);
             }
 
             OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg) { return m_reg.sendMsgToObj_deep(id, msg); }
             OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg) { return m_reg.sendMsgToObj_deep(name, msg); }
-            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, SIZE queueIndex)
+            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in)
             {
-                return m_reg.sendMsgToObj_deep(id, msg, queueIndex);
+                return m_reg.sendMsgToObj_deep(id, msg, channel_in);
             }
-            OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg, SIZE queueIndex)
+            OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg, HASH32 channel_in)
             {
-                return m_reg.sendMsgToObj_deep(name, msg, queueIndex);
+                return m_reg.sendMsgToObj_deep(name, msg, channel_in);
             }
 
 

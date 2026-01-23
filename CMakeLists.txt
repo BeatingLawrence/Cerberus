@@ -46,6 +46,8 @@ add_library(Cerberus SHARED EXCLUDE_FROM_ALL
   ${cerb_sources}
 )
 
+target_compile_options(Cerberus PRIVATE $<$<CONFIG:Release>:-O3>)
+
 set_property(   #delete install directory on clean
         TARGET Cerberus
         APPEND
@@ -105,18 +107,15 @@ elseif(UNIX)
         target_compile_definitions(Cerberus PRIVATE LINUX_SYSTEM)
     endif()
 
-    target_include_directories(Cerberus PUBLIC
-        "/usr/include"          #for Linux
-        "/opt/homebrew/include" #for MACOS
-    )
+    # --- Required system libs on Linux (pthread, dl, timer_*) ---
+    if(NOT APPLE)
+        find_package(Threads REQUIRED)
+        target_link_libraries(Cerberus PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt)
+    endif()
 
-    target_link_directories(Cerberus PUBLIC
-        "/usr/lib"              #for Linux
-        "/opt/homebrew/lib"     #for MACOS
-    )
-
-    #OPEN-SSL
-    target_link_libraries(Cerberus LINK_PRIVATE ssl crypto)
+    # --- OPENSSL (no hardcoded paths) ---
+    find_package(OpenSSL REQUIRED)
+    target_link_libraries(Cerberus PRIVATE OpenSSL::SSL OpenSSL::Crypto)
 
 endif()
 
@@ -202,4 +201,3 @@ if(DOXYGEN_FOUND)
 else()
     message(STATUS "Doxygen not found. 'doc' target not available")
 endif()
-

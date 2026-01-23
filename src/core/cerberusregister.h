@@ -86,7 +86,7 @@ namespace cerberus
 
             // Register a given object and return its id
             // Return an invalid ID if the registering failed
-            void registerObj(Recordable* object);
+            void registerObj(Recordable* object, const std::string& name);
 
             // Unregiste an object by its id
             // Nothing happens if the ID does not exist
@@ -99,15 +99,15 @@ namespace cerberus
             // If the id is not valid or the message cannot be sent, nothing happens
             OpRes sendMsgToObj(HASH32 id, msg_ptr& msg);
             OpRes sendMsgToObj(const std::string& name, msg_ptr& msg);
-            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, SIZE queueIndex);
-            OpRes sendMsgToObj(const std::string& name, msg_ptr& msg, SIZE queueIndex);
+            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in);
+            OpRes sendMsgToObj(const std::string& name, msg_ptr& msg, HASH32 channel_in);
 
             // Send a message to a cerberus object using deep-copy.
             // The copy is created only if the destination queue can accept it.
             OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg);
             OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg);
-            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, SIZE queueIndex);
-            OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg, SIZE queueIndex);
+            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in);
+            OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg, HASH32 channel_in);
 
             //===================PLUGINS=====================
 

@@ -3,30 +3,55 @@
 #include "../message/message.h"  // IWYU pragma: export
 #include "../thread/mutexlocker.h"
 
+#include <algorithm>
+
 using namespace cerberus;
 
 //=============================================================================
-Recipient::QueueState* Recipient::_q_nomutex(SIZE queueIndex)
+Recipient::QueueState* Recipient::_q_nomutex(HASH32 channel_in)
 {
     for (auto& q : m_queues)
-        if (q.index == queueIndex) return &q;
+        if (q.channel_in == channel_in) return &q;
     return nullptr;
 }
 //=============================================================================
-const Recipient::QueueState* Recipient::_q_nomutex(SIZE queueIndex) const
+const Recipient::QueueState* Recipient::_q_nomutex(HASH32 channel_in) const
 {
     for (const auto& q : m_queues)
-        if (q.index == queueIndex) return &q;
+        if (q.channel_in == channel_in) return &q;
     return nullptr;
 }
 //=============================================================================
-Recipient::QueueState* Recipient::_ensureQueue_nomutex(SIZE queueIndex)
+Recipient::QueueState* Recipient::_ensureQueue_nomutex(HASH32 channel_in)
 {
-    if (auto* q = _q_nomutex(queueIndex)) return q;
+    if (auto* q = _q_nomutex(channel_in)) return q;
     m_queues.emplace_back();
     auto& q = m_queues.back();
-    q.index = queueIndex;
+    q.channel_in = channel_in;
     return &q;
+}
+//=============================================================================
+Recipient::RecipientChannel* Recipient::_channel_nomutex(HASH32 channel_out)
+{
+    for (auto& c : m_channels)
+        if (c.channel_out == channel_out) return &c;
+    return nullptr;
+}
+//=============================================================================
+const Recipient::RecipientChannel* Recipient::_channel_nomutex(HASH32 channel_out) const
+{
+    for (const auto& c : m_channels)
+        if (c.channel_out == channel_out) return &c;
+    return nullptr;
+}
+//=============================================================================
+Recipient::RecipientChannel* Recipient::_ensureChannel_nomutex(HASH32 channel_out)
+{
+    if (auto* c = _channel_nomutex(channel_out)) return c;
+    m_channels.emplace_back();
+    auto& c = m_channels.back();
+    c.channel_out = channel_out;
+    return &c;
 }
 //=============================================================================
 SIZE Recipient::_totalBytes_nomutex() const
@@ -60,9 +85,10 @@ void Recipient::_updateTotalPeaks_nomutex()
 //=============================================================================
 bool Recipient::_overLimit_nomutex(const QueueState& q, SIZE addBytes, SIZE addCount) const
 {
-    const SIZE c = (SIZE)q.queue.size();
+    const SIZE c = (SIZE)q.queue.size() + q.reservedCount;
 
-    if (q.queueLimitBytes && (q.queueBytes + addBytes) > q.queueLimitBytes) return true;
+    if (q.queueLimitBytes && (q.queueBytes + q.reservedBytes + addBytes) > q.queueLimitBytes)
+        return true;
     if (q.queueLimitCount && (c + addCount) > q.queueLimitCount) return true;
 
     return false;
@@ -72,9 +98,11 @@ void Recipient::_dropOldest_nomutex(QueueState& q, SIZE bytesToFit, SIZE countTo
 {
     while (!q.queue.empty())
     {
-        const bool bytesOk = (!q.queueLimitBytes) || ((q.queueBytes + bytesToFit) <= q.queueLimitBytes);
+        const bool bytesOk = (!q.queueLimitBytes) ||
+            ((q.queueBytes + q.reservedBytes + bytesToFit) <= q.queueLimitBytes);
         const bool countOk =
-            (!q.queueLimitCount) || (((SIZE)q.queue.size() + countToFit) <= q.queueLimitCount);
+            (!q.queueLimitCount) ||
+            (((SIZE)q.queue.size() + q.reservedCount + countToFit) <= q.queueLimitCount);
 
         if (bytesOk && countOk) break;
 
@@ -83,6 +111,14 @@ void Recipient::_dropOldest_nomutex(QueueState& q, SIZE bytesToFit, SIZE countTo
         q.queue.pop_front();
         ++q.dropped;
     }
+}
+//=============================================================================
+bool Recipient::_consumeReserve_nomutex(QueueState& q, SIZE msgBytes)
+{
+    if (q.reservedCount == 0 || q.reservedBytes < msgBytes) return false;
+    q.reservedCount -= 1;
+    q.reservedBytes -= msgBytes;
+    return true;
 }
 //=============================================================================
 Recipient::Recipient(Mutex* mutex)
@@ -97,7 +133,7 @@ Recipient::Recipient(Mutex* mutex)
         m_mutex = new Mutex();
 
     m_queues.emplace_back();
-    m_queues.back().index = 0;
+    m_queues.back().channel_in = 0;
 }
 //=============================================================================
 Recipient::~Recipient()
@@ -105,14 +141,45 @@ Recipient::~Recipient()
     for (auto& q : m_queues) q.queue.clear();
     if (!m_extmutex) delete m_mutex;
 }
-msg_ptr Recipient::next() { return next(0); }
 //=============================================================================
-msg_ptr Recipient::nextKeep() const { return nextKeep(0); }
+void Recipient::setRecipient(Recipient* recipient, HASH32 channel_out, HASH32 channel_in)
+{
+    if (!recipient) return;
+
+    MutexLocker loc(m_mutex);
+    RecipientChannel* c = _ensureChannel_nomutex(channel_out);
+    for (auto& entry : c->recipients)
+    {
+        if (entry.recipient != recipient) continue;
+        entry.channel_in = channel_in;
+        return;
+    }
+
+    c->recipients.push_back({recipient, channel_in});
+}
 //=============================================================================
-msg_ptr Recipient::next(SIZE queueIndex)
+void Recipient::removeRecipient(Recipient* recipient, HASH32 channel_out)
+{
+    if (!recipient) return;
+
+    MutexLocker loc(m_mutex);
+    for (auto it = m_channels.begin(); it != m_channels.end(); ++it)
+    {
+        if (it->channel_out != channel_out) continue;
+        auto& list = it->recipients;
+        list.erase(std::remove_if(list.begin(), list.end(),
+                                  [recipient](const RecipientTarget& entry)
+                                  { return entry.recipient == recipient; }),
+                   list.end());
+        if (list.empty()) m_channels.erase(it);
+        return;
+    }
+}
+//=============================================================================
+msg_ptr Recipient::next(HASH32 channel_in)
 {
     MutexLocker loc(m_mutex);
-    QueueState* q = _q_nomutex(queueIndex);
+    QueueState* q = _q_nomutex(channel_in);
     if (!q) return msg_ptr();
     if (q->queue.empty()) return msg_ptr();
 
@@ -122,10 +189,10 @@ msg_ptr Recipient::next(SIZE queueIndex)
     return m;
 }
 //=============================================================================
-msg_ptr Recipient::nextKeep(SIZE queueIndex) const
+msg_ptr Recipient::nextKeep(HASH32 channel_in) const
 {
     MutexLocker loc(m_mutex);
-    const QueueState* q = _q_nomutex(queueIndex);
+    const QueueState* q = _q_nomutex(channel_in);
     if (!q) return msg_ptr();
     if (q->queue.empty()) return msg_ptr();
 
@@ -139,16 +206,20 @@ void Recipient::clear()
     {
         q.queue.clear();
         q.queueBytes = 0;
+        q.reservedBytes = 0;
+        q.reservedCount = 0;
     }
 }
 //=============================================================================
-void Recipient::clear(SIZE queueIndex)
+void Recipient::clear(HASH32 channel_in)
 {
     MutexLocker loc(m_mutex);
-    QueueState* q = _q_nomutex(queueIndex);
+    QueueState* q = _q_nomutex(channel_in);
     if (!q) return;
     q->queue.clear();
     q->queueBytes = 0;
+    q->reservedBytes = 0;
+    q->reservedCount = 0;
 }
 //=============================================================================
 void Recipient::setQueueLimitBytes(SIZE bytes) { setQueueLimitBytes(bytes, 0); }
@@ -157,25 +228,60 @@ void Recipient::setQueueLimitCount(SIZE count) { setQueueLimitCount(count, 0); }
 //=============================================================================
 void Recipient::setOverflowPolicy(OverflowPolicy p) { setOverflowPolicy(p, 0); }
 //=============================================================================
-void Recipient::setQueueLimitBytes(SIZE bytes, SIZE queueIndex)
+void Recipient::setQueueLimitBytes(SIZE bytes, HASH32 channel_in)
 {
     MutexLocker loc(m_mutex);
-    QueueState* q = _ensureQueue_nomutex(queueIndex);
+    QueueState* q = _ensureQueue_nomutex(channel_in);
     q->queueLimitBytes = bytes;
 }
 //=============================================================================
-void Recipient::setQueueLimitCount(SIZE count, SIZE queueIndex)
+void Recipient::setQueueLimitCount(SIZE count, HASH32 channel_in)
 {
     MutexLocker loc(m_mutex);
-    QueueState* q = _ensureQueue_nomutex(queueIndex);
+    QueueState* q = _ensureQueue_nomutex(channel_in);
     q->queueLimitCount = count;
 }
 //=============================================================================
-void Recipient::setOverflowPolicy(OverflowPolicy p, SIZE queueIndex)
+void Recipient::setOverflowPolicy(OverflowPolicy p, HASH32 channel_in)
 {
     MutexLocker loc(m_mutex);
-    QueueState* q = _ensureQueue_nomutex(queueIndex);
+    QueueState* q = _ensureQueue_nomutex(channel_in);
     q->policy = p;
+}
+//=============================================================================
+bool Recipient::reserve(msg_ptr& message, HASH32 channel_in)
+{
+    if (!message) return false;
+
+    MutexLocker loc(m_mutex);
+    QueueState* q = _ensureQueue_nomutex(channel_in);
+    if (q->policy == DROP_OLDEST) return true;
+
+    const SIZE msgBytes = message.memFootprint();
+    if (_overLimit_nomutex(*q, msgBytes, 1))
+        if (q->policy == DROP_OLDEST) _dropOldest_nomutex(*q, msgBytes, 1);
+
+    if (_overLimit_nomutex(*q, msgBytes, 1)) return false;
+
+    q->reservedBytes += msgBytes;
+    q->reservedCount += 1;
+    return true;
+}
+//=============================================================================
+void Recipient::reserve_revert(msg_ptr& message, HASH32 channel_in)
+{
+    if (!message) return;
+
+    const SIZE msgBytes = message.memFootprint();
+    MutexLocker loc(m_mutex);
+    QueueState* q = _q_nomutex(channel_in);
+    if (!q) return;
+
+    if (q->reservedCount > 0) q->reservedCount -= 1;
+    if (q->reservedBytes >= msgBytes)
+        q->reservedBytes -= msgBytes;
+    else
+        q->reservedBytes = 0;
 }
 //=============================================================================
 void Recipient::resetStats()
@@ -193,11 +299,11 @@ void Recipient::resetStats()
     m_peakCountTotal = 0;
 }
 //=============================================================================
-void Recipient::resetStats(SIZE queueIndex)
+void Recipient::resetStats(HASH32 channel_in)
 {
     MutexLocker loc(m_mutex);
 
-    QueueState* q = _ensureQueue_nomutex(queueIndex);
+    QueueState* q = _ensureQueue_nomutex(channel_in);
     q->peakBytes = 0;
     q->peakCount = 0;
     q->dropped   = 0;
@@ -208,7 +314,7 @@ OpRes Recipient::requeueFront(msg_ptr& message) { return requeueFront(message, 0
 //=============================================================================
 OpRes Recipient::requeueBack(msg_ptr& message) { return requeueBack(message, 0); }
 //=============================================================================
-OpRes Recipient::requeueFront(msg_ptr& message, SIZE queueIndex)
+OpRes Recipient::requeueFront(msg_ptr& message, HASH32 channel_in)
 {
     if (!message) return OR_WrongArgument;
 
@@ -217,7 +323,7 @@ OpRes Recipient::requeueFront(msg_ptr& message, SIZE queueIndex)
 
     {
         MutexLocker loc(m_mutex);
-        QueueState* q = _ensureQueue_nomutex(queueIndex);
+        QueueState* q = _ensureQueue_nomutex(channel_in);
 
         first = q->queue.empty();
         q->queueBytes += msgBytes;
@@ -232,7 +338,7 @@ OpRes Recipient::requeueFront(msg_ptr& message, SIZE queueIndex)
     return OR_OK;
 }
 //=============================================================================
-OpRes Recipient::requeueBack(msg_ptr& message, SIZE queueIndex)
+OpRes Recipient::requeueBack(msg_ptr& message, HASH32 channel_in)
 {
     if (!message) return OR_WrongArgument;
 
@@ -241,7 +347,7 @@ OpRes Recipient::requeueBack(msg_ptr& message, SIZE queueIndex)
 
     {
         MutexLocker loc(m_mutex);
-        QueueState* q = _ensureQueue_nomutex(queueIndex);
+        QueueState* q = _ensureQueue_nomutex(channel_in);
 
         first = q->queue.empty();
         q->queueBytes += msgBytes;
@@ -266,34 +372,127 @@ SIZE Recipient::size_nomutex() const
     return _totalCount_nomutex();
 }
 //=============================================================================
-SIZE Recipient::size_nomutex(SIZE queueIndex) const
+SIZE Recipient::size_nomutex(HASH32 channel_in) const
 {
-    const QueueState* q = _q_nomutex(queueIndex);
+    const QueueState* q = _q_nomutex(channel_in);
     if (!q) return 0;
     return (SIZE)q->queue.size();
 }
 //=============================================================================
+OpRes Recipient::broadcast(msg_ptr& message, HASH32 channel_out)
+{
+    if (!message) return OR_Failure;
+
+    MutexLocker loc(m_mutex);
+    RecipientChannel* c = _channel_nomutex(channel_out);
+    if (!c || c->recipients.empty()) return OR_NotFound;
+
+    RecipientTarget* last = nullptr;
+    for (auto it = c->recipients.rbegin(); it != c->recipients.rend(); ++it)
+    {
+        if (it->recipient)
+        {
+            last = &(*it);
+            break;
+        }
+    }
+
+    if (!last) return OR_NotFound;
+
+    std::vector<RecipientTarget*> reserved;
+    reserved.reserve(c->recipients.size());
+
+    for (auto& target : c->recipients)
+    {
+        if (!target.recipient) continue;
+        if (!target.recipient->reserve(message, target.channel_in))
+        {
+            for (auto* entry : reserved)
+            {
+                entry->recipient->reserve_revert(message, entry->channel_in);
+            }
+            return OR_Failure;
+        }
+        reserved.push_back(&target);
+    }
+
+    OpRes res = OR_OK;
+    for (auto& target : c->recipients)
+    {
+        if (!target.recipient || &target == last) continue;
+        OpRes r = target.recipient->send_deep(message, target.channel_in);
+        if (r != OR_OK) res = OR_Failure;
+    }
+
+    OpRes r = last->recipient->send(message, last->channel_in);
+    if (r != OR_OK) res = OR_Failure;
+
+    return res;
+}
+//=============================================================================
+OpRes Recipient::broadcast_deep(msg_ptr& message, HASH32 channel_out)
+{
+    if (!message) return OR_Failure;
+
+    MutexLocker loc(m_mutex);
+    RecipientChannel* c = _channel_nomutex(channel_out);
+    if (!c || c->recipients.empty()) return OR_NotFound;
+
+    std::vector<RecipientTarget*> reserved;
+    reserved.reserve(c->recipients.size());
+
+    for (auto& target : c->recipients)
+    {
+        if (!target.recipient) continue;
+        if (!target.recipient->reserve(message, target.channel_in))
+        {
+            for (auto* entry : reserved)
+            {
+                entry->recipient->reserve_revert(message, entry->channel_in);
+            }
+            return OR_Failure;
+        }
+        reserved.push_back(&target);
+    }
+
+    OpRes res = OR_OK;
+    for (auto& target : c->recipients)
+    {
+        if (!target.recipient) continue;
+        OpRes r = target.recipient->send_deep(message, target.channel_in);
+        if (r != OR_OK) res = OR_Failure;
+    }
+
+    return res;
+}
+//=============================================================================
 OpRes Recipient::send(msg_ptr& message) { return send(message, 0); }
 //=============================================================================
-OpRes Recipient::send(msg_ptr& message, SIZE queueIndex)
+OpRes Recipient::send(msg_ptr& message, HASH32 channel_in)
 {
     if (!message) return OR_Failure;
 
     bool first = false;
+    const SIZE msgBytes = message.memFootprint();
 
     {
         MutexLocker loc(m_mutex);
-        QueueState* q = _ensureQueue_nomutex(queueIndex);
+        QueueState* q = _ensureQueue_nomutex(channel_in);
+        const bool reserved = _consumeReserve_nomutex(*q, msgBytes);
 
-        const SIZE msgBytes = message.memFootprint();
-
-        if (_overLimit_nomutex(*q, msgBytes, 1))
-            if (q->policy == DROP_OLDEST) _dropOldest_nomutex(*q, msgBytes, 1);
-
-        if (_overLimit_nomutex(*q, msgBytes, 1))
+        if (!reserved)
         {
-            ++q->rejected;
-            return OR_Failure;  // message untouched
+            if (_overLimit_nomutex(*q, msgBytes, 1))
+                if (q->policy == DROP_OLDEST) _dropOldest_nomutex(*q, msgBytes, 1);
+
+            if (_overLimit_nomutex(*q, msgBytes, 1))
+            {
+                if (!(q->policy == DROP_OLDEST && q->queue.empty()))
+                {
+                    ++q->rejected;
+                    return OR_Failure;  // message untouched
+                }
+            }
         }
 
         first = q->queue.empty();
@@ -312,43 +511,61 @@ OpRes Recipient::send(msg_ptr& message, SIZE queueIndex)
 //=============================================================================
 OpRes Recipient::send_deep(const msg_ptr& src) { return send_deep(src, 0); }
 //=============================================================================
-OpRes Recipient::send_deep(const msg_ptr& src, SIZE queueIndex)
+OpRes Recipient::send_deep(const msg_ptr& src, HASH32 channel_in)
 {
     if (!src) return OR_Failure;
 
     bool first = false;
+    const SIZE estBytes = src.memFootprint();
+    bool reserved = false;
 
     {
         MutexLocker loc(m_mutex);
-        QueueState* q = _ensureQueue_nomutex(queueIndex);
+        QueueState* q = _ensureQueue_nomutex(channel_in);
+        reserved = _consumeReserve_nomutex(*q, estBytes);
 
-        const SIZE estBytes = src.memFootprint();
-
-        if (_overLimit_nomutex(*q, estBytes, 1))
-            if (q->policy == DROP_OLDEST) _dropOldest_nomutex(*q, estBytes, 1);
-
-        if (_overLimit_nomutex(*q, estBytes, 1))
+        if (!reserved)
         {
-            ++q->rejected;
-            return OR_Failure;  // no duplicate
+            if (_overLimit_nomutex(*q, estBytes, 1))
+                if (q->policy == DROP_OLDEST) _dropOldest_nomutex(*q, estBytes, 1);
+
+            if (_overLimit_nomutex(*q, estBytes, 1))
+            {
+                if (!(q->policy == DROP_OLDEST && q->queue.empty()))
+                {
+                    ++q->rejected;
+                    return OR_Failure;  // no duplicate
+                }
+            }
         }
 
         msg_ptr copy = src.duplicate();
         if (!copy)
         {
+            if (reserved)
+            {
+                q->reservedBytes += estBytes;
+                q->reservedCount += 1;
+            }
             ++q->rejected;
             return OR_Failure;
         }
 
         const SIZE copyBytes = copy.memFootprint();
 
-        if (_overLimit_nomutex(*q, copyBytes, 1))
-            if (q->policy == DROP_OLDEST) _dropOldest_nomutex(*q, copyBytes, 1);
-
-        if (_overLimit_nomutex(*q, copyBytes, 1))
+        if (!reserved)
         {
-            ++q->rejected;
-            return OR_Failure;
+            if (_overLimit_nomutex(*q, copyBytes, 1))
+                if (q->policy == DROP_OLDEST) _dropOldest_nomutex(*q, copyBytes, 1);
+
+            if (_overLimit_nomutex(*q, copyBytes, 1))
+            {
+                if (!(q->policy == DROP_OLDEST && q->queue.empty()))
+                {
+                    ++q->rejected;
+                    return OR_Failure;
+                }
+            }
         }
 
         first = q->queue.empty();
@@ -364,16 +581,23 @@ OpRes Recipient::send_deep(const msg_ptr& src, SIZE queueIndex)
     return OR_OK;
 }
 //=============================================================================
+OpRes Recipient::signal(const std::string& msgname, HASH32 channel_in)
+{
+    msg_ptr msg = Message::create(msgname);
+    if (!msg) return OR_Failure;
+    return send(msg, channel_in);
+}
+//=============================================================================
 SIZE Recipient::size() const
 {
     MutexLocker loc(m_mutex);
     return _totalCount_nomutex();
 }
 //=============================================================================
-SIZE Recipient::size(SIZE queueIndex) const
+SIZE Recipient::size(HASH32 channel_in) const
 {
     MutexLocker loc(m_mutex);
-    const QueueState* q = _q_nomutex(queueIndex);
+    const QueueState* q = _q_nomutex(channel_in);
     if (!q) return 0;
     return (SIZE)q->queue.size();
 }
@@ -386,10 +610,10 @@ bool Recipient::hasMessage() const
     return false;
 }
 //=============================================================================
-bool Recipient::hasMessage(SIZE queueIndex) const
+bool Recipient::hasMessage(HASH32 channel_in) const
 {
     MutexLocker loc(m_mutex);
-    const QueueState* q = _q_nomutex(queueIndex);
+    const QueueState* q = _q_nomutex(channel_in);
     if (!q) return false;
     return !q->queue.empty();
 }
@@ -406,18 +630,18 @@ SIZE Recipient::getQueueCount() const
     return _totalCount_nomutex();
 }
 //=============================================================================
-SIZE Recipient::getQueueBytesCount(SIZE queueIndex) const
+SIZE Recipient::getQueueBytesCount(HASH32 channel_in) const
 {
     MutexLocker loc(m_mutex);
-    const QueueState* q = _q_nomutex(queueIndex);
+    const QueueState* q = _q_nomutex(channel_in);
     if (!q) return 0;
     return q->queueBytes;
 }
 //=============================================================================
-SIZE Recipient::getQueueCount(SIZE queueIndex) const
+SIZE Recipient::getQueueCount(HASH32 channel_in) const
 {
     MutexLocker loc(m_mutex);
-    const QueueState* q = _q_nomutex(queueIndex);
+    const QueueState* q = _q_nomutex(channel_in);
     if (!q) return 0;
     return (SIZE)q->queue.size();
 }
@@ -450,18 +674,18 @@ SIZE Recipient::getRejectedCount() const
     return tot;
 }
 //=============================================================================
-SIZE Recipient::getDroppedCount(SIZE queueIndex) const
+SIZE Recipient::getDroppedCount(HASH32 channel_in) const
 {
     MutexLocker loc(m_mutex);
-    const QueueState* q = _q_nomutex(queueIndex);
+    const QueueState* q = _q_nomutex(channel_in);
     if (!q) return 0;
     return q->dropped;
 }
 //=============================================================================
-SIZE Recipient::getRejectedCount(SIZE queueIndex) const
+SIZE Recipient::getRejectedCount(HASH32 channel_in) const
 {
     MutexLocker loc(m_mutex);
-    const QueueState* q = _q_nomutex(queueIndex);
+    const QueueState* q = _q_nomutex(channel_in);
     if (!q) return 0;
     return q->rejected;
 }

@@ -64,7 +64,7 @@ namespace cerberus
 
         void insertLine(const Line& line);
 
-        OpRes syncFile();  // rewrites the file reading from memory
+        OpRes syncFile();  // rewrites the file using cached values
 
         void printDebug();
 
@@ -79,13 +79,13 @@ namespace cerberus
         void setFileName(const std::string& fileName);
 
         // Attempt to load an .ini file.
-        // If load() manages to parse all the file with no errors, the result is OR_OK and true.
-        // If load() finds errors while parsing the file, the result is still OR_OK but it is false,
-        // to indicate that the operation retrieved all possible information from the file
-        // but some data was not correctly written and has been discarded.
+        // If load() manages to parse all the file with no errors, the result is OR_OK.
+        // If load() finds errors while parsing the file, the result is still OR_OK but it has the
+        // optional OR_Failure, to indicate that the operation retrieved all possible information
+        // from the file but some data was not correctly written and has been discarded.
         // If a not ignoreable error has been encountered, OR_Failure is returned.
         // If the given path is not valid, OR_InvalidFile is returned.
-        BoolOpRes load();
+        OpRes load();
 
         // Checks if a key exists in the memory
         bool exists(const std::string& key, const std::string& section = MAIN_SECTION);
@@ -113,6 +113,20 @@ namespace cerberus
         OpRes write_integer(const std::string& key, int64_t value, const std::string& section = MAIN_SECTION);
         OpRes write_double(const std::string& key, double value, const std::string& section = MAIN_SECTION);
         OpRes write_bool(const std::string& key, bool value, const std::string& section = MAIN_SECTION);
+
+        // Enforce methods:
+        // These methods ensure that a given key exists in the file.
+        // If the key already exists, nothing is changed for string values.
+        // For typed values, if the key exists but has a different type, it is overwritten.
+        // If the key does not exist, it is created as if calling the corresponding write_*().
+        OpRes enforce_string(const std::string& key, const std::string& value,
+                             const std::string& section = MAIN_SECTION);
+        OpRes enforce_integer(const std::string& key, int64_t value,
+                              const std::string& section = MAIN_SECTION);
+        OpRes enforce_double(const std::string& key, double value,
+                             const std::string& section = MAIN_SECTION);
+        OpRes enforce_bool(const std::string& key, bool value,
+                           const std::string& section = MAIN_SECTION);
 
         // Read methods:
         // These methods return the requested data reading from the keys loaded with load().

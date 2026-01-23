@@ -1,6 +1,7 @@
 #include "cerberusutils.h"
 
 #include <inttypes.h>
+#include <sys/sysinfo.h>
 
 #include <algorithm>
 #include <boost/regex.hpp>
@@ -8,8 +9,9 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "../cerberus.h"
-#include "../message/slot.h"
+#include "../cerberus.h"               // IWYU pragma: export
+#include "../data/filesystem/file.h"  // IWYU pragma: export
+#include "../message/slot.h"           // IWYU pragma: export
 
 #define FNV_OFFSET_BASIS 0x811c9dc5
 #define FNV_PRIME 0x01000193
@@ -24,6 +26,7 @@ std::regex CerberusUtils::isNumberRegex("\\-?[0-9]+(?:\\.[0-9]+)?", std::regex_c
 std::string CerberusUtils::strPrint(std::string format, ...)
 {
     std::string ret;
+    if (format.empty()) return ret;
     va_list testList;
     va_list list;
     va_start(testList, format);
@@ -33,8 +36,9 @@ std::string CerberusUtils::strPrint(std::string format, ...)
 
     if (required > 0)
     {
-        ret.resize(required);
-        vsnprintf(&ret[0], required + 1, format.c_str(), list);
+        ret.resize(static_cast<size_t>(required) + 1u);
+        vsnprintf(&ret[0], ret.size(), format.c_str(), list);
+        ret.resize(static_cast<size_t>(required));
     }
 
     va_end(testList);
@@ -45,6 +49,7 @@ std::string CerberusUtils::strPrint(std::string format, ...)
 std::string CerberusUtils::strPrint_valist(std::string format, va_list list)
 {
     std::string ret;
+    if (format.empty()) return ret;
     va_list testList;
     va_copy(testList, list);
     char garbage;
@@ -52,8 +57,9 @@ std::string CerberusUtils::strPrint_valist(std::string format, va_list list)
 
     if (required > 0)
     {
-        ret.resize(required);
-        vsnprintf(&ret[0], required + 1, format.c_str(), list);
+        ret.resize(static_cast<size_t>(required) + 1u);
+        vsnprintf(&ret[0], ret.size(), format.c_str(), list);
+        ret.resize(static_cast<size_t>(required));
     }
 
     va_end(testList);
@@ -616,5 +622,51 @@ uint8_t CerberusUtils::reqBytes(LSIZE num)
     }
 
     return 1;
+}
+//=============================================================================
+OpResData<CoreSet> CerberusUtils::getOnlineCoreSet()
+{
+    int cores = get_nprocs();
+
+    if (cores <= 0) return OpResData<CoreSet>(OR_Failure, "get_nprocs fail");
+
+    CoreSet set;
+    set.cores.reserve(static_cast<size_t>(cores));
+
+    for (int i = 0; i < cores; ++i)
+        set.addCore(i);
+
+    return set;
+}
+//=============================================================================
+OpRes CerberusUtils::assignIRQ(int irq, const CoreSet& coresIn)
+{
+    if (irq < 0) return OR_WrongArgument;
+    if (coresIn.cores.empty()) return OR_WrongArgument;
+
+    std::vector<int> cores = coresIn.cores;
+    std::sort(cores.begin(), cores.end());
+    cores.erase(std::unique(cores.begin(), cores.end()), cores.end());
+
+    std::string list;
+    for (size_t i = 0; i < cores.size(); ++i)
+    {
+        if (i) list.append(",");
+        list.append(strPrint("%d", cores[i]));
+    }
+
+    if (list.empty()) return OR_WrongArgument;
+
+    std::string path = strPrint("/proc/irq/%d/smp_affinity_list", irq);
+    File f(path, FOM_ReadWrite);
+
+    auto r = f.open();
+    if (r.fail()) return r;
+
+    ByteBuffer data(list);
+    auto w = f.write(data);
+    f.close();
+
+    return w;
 }
 //=============================================================================

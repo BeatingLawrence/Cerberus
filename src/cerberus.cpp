@@ -3,10 +3,13 @@
 #include <openssl/conf.h>
 #include <openssl/ssl.h>
 
+#include <sstream>
+
 #include "core/cerberuscore.h"
 #include "core/cerberusregister.h"
 #include "define.h"
 #include "exception/exception.h"
+#include "data/filesystem/inidatafile.h"
 
 #ifdef WINDOWS_SYSTEM
 #include <windows.h>
@@ -23,6 +26,116 @@ using namespace cerberus;
 using namespace cerberus::core;
 
 FrameworkData Cerberus::framework;
+
+namespace
+{
+    const char* kFrameworkSection = "framework";
+
+    bool readBoolOpt(IniDataFile& ini, const std::string& key, bool& out)
+    {
+        auto r = ini.read_bool(key, kFrameworkSection);
+        if (r == OR_OK)
+        {
+            out = r.value;
+            return true;
+        }
+        return false;
+    }
+
+    bool readIntOpt(IniDataFile& ini, const std::string& key, int64_t& out)
+    {
+        auto r = ini.read_integer(key, kFrameworkSection);
+        if (r == OR_OK)
+        {
+            out = r.value;
+            return true;
+        }
+        return false;
+    }
+
+    bool readDoubleOpt(IniDataFile& ini, const std::string& key, double& out)
+    {
+        auto r = ini.read_double(key, kFrameworkSection);
+        if (r == OR_OK)
+        {
+            out = static_cast<double>(r.value);
+            return true;
+        }
+        return false;
+    }
+
+    bool readStringOpt(IniDataFile& ini, const std::string& key, std::string& out)
+    {
+        auto r = ini.read_string(key, kFrameworkSection);
+        if (r == OR_OK)
+        {
+            out = r.value;
+            return true;
+        }
+        return false;
+    }
+
+    bool parseCoreSet(const std::string& text, CoreSet& out)
+    {
+        std::string s = text;
+        for (char& c : s)
+        {
+            if (c == ',' || c == ';') c = ' ';
+        }
+
+        std::istringstream iss(s);
+        int core = -1;
+        bool any = false;
+        while (iss >> core)
+        {
+            out.addCore(core);
+            any = true;
+        }
+        return any;
+    }
+
+    void applyIniToInitConf(IniDataFile& ini, CerberusInitConf& conf)
+    {
+        int64_t ival = 0;
+        double dval = 0.0;
+        bool bval = false;
+        std::string sval;
+
+        if (readBoolOpt(ini, "useCiphers", bval)) conf.useCiphers = bval;
+        if (readStringOpt(ini, "appConfigurationFile", sval)) conf.appConfigurationFile = sval;
+        if (readBoolOpt(ini, "initFromFile", bval)) conf.initFromFile = bval;
+
+        if (readIntOpt(ini, "logSetup.appLogLevel", ival))
+            conf.logSetup.appLogLevel = static_cast<LogLevel>(ival);
+        if (readIntOpt(ini, "logSetup.fwLogLevel", ival))
+            conf.logSetup.fwLogLevel = static_cast<LogLevel>(ival);
+        if (readBoolOpt(ini, "logSetup.colorFormatting", bval))
+            conf.logSetup.colorFormatting = bval;
+
+        if (readBoolOpt(ini, "logSetup.fileLogConf.enable", bval))
+            conf.logSetup.fileLogConf.enable = bval;
+        if (readStringOpt(ini, "logSetup.fileLogConf.fileName", sval))
+            conf.logSetup.fileLogConf.fileName = sval;
+        if (readIntOpt(ini, "logSetup.fileLogConf.fileMaxSize", ival))
+            conf.logSetup.fileLogConf.fileMaxSize = static_cast<LSIZE>(ival);
+        if (readStringOpt(ini, "logSetup.fileLogConf.logDir", sval))
+            conf.logSetup.fileLogConf.logDir = sval;
+        if (readStringOpt(ini, "logSetup.fileLogConf.fileNameFmt", sval))
+            conf.logSetup.fileLogConf.fileNameFmt = sval;
+        if (readIntOpt(ini, "logSetup.fileLogConf.logDirMaxSize", ival))
+            conf.logSetup.fileLogConf.logDirMaxSize = static_cast<SIZE>(ival);
+
+        if (readIntOpt(ini, "coreSetup.threadPool", ival))
+            conf.coreSetup.threadPool = static_cast<SIZE>(ival);
+        if (readIntOpt(ini, "coreSetup.backupThreadMaxTime", ival))
+            conf.coreSetup.backupThreadMaxTime = static_cast<uint32_t>(ival);
+        if (readStringOpt(ini, "coreSetup.coreSet", sval))
+        {
+            CoreSet set;
+            if (parseCoreSet(sval, set)) conf.coreSetup.coreSet = set;
+        }
+    }
+}  // namespace
 
 //=============================================================================
 msg_ptr Cerberus::stdTemplate(HASH32 id)
@@ -64,11 +177,11 @@ msg_ptr Cerberus::stdTemplate(HASH32 id)
     return tmplt;
 }
 //=============================================================================
-void Cerberus::registerObj(Recordable* object)
+void Cerberus::registerObj(Recordable* object, const std::string& name)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    Cerberus::framework.core.data->registerObj(object);
+    Cerberus::framework.core.data->registerObj(object, name);
 }
 //=============================================================================
 void Cerberus::unregisterObj(HASH32 id)
@@ -144,13 +257,40 @@ void Cerberus::startTimer(TimerData& data)
 //=============================================================================
 void Cerberus::init(const CerberusInitConf& parms)
 {
-    Cerberus::framework.construct(parms);
+    CerberusInitConf conf = parms;
+
+    IniDataFile ini;
+    bool iniLoaded = false;
+    if (!conf.appConfigurationFile.empty() || conf.initFromFile)
+    {
+        ini.setFileName(conf.appConfigurationFile);
+        OpRes lr = ini.load();
+        if (lr.fail()) throw cFatalExc("application configuration file malformed");
+        iniLoaded = true;
+        if (conf.initFromFile) applyIniToInitConf(ini, conf);
+    }
+
+    Thread::setDefaultCoreSet(conf.coreSetup.coreSet);
+    Cerberus::framework.construct(conf);
+
+    if (iniLoaded)
+    {
+        auto locker = Cerberus::framework.core.getLocker();
+        Cerberus::framework.core.data->setIniFile(ini);
+        if (!conf.appConfigurationFile.empty())
+            Cerberus::framework.core.data->setIniFileName(conf.appConfigurationFile);
+    }
+    else if (!conf.appConfigurationFile.empty())
+    {
+        auto locker = Cerberus::framework.core.getLocker();
+        Cerberus::framework.core.data->setIniFileName(conf.appConfigurationFile);
+    }
 
     Cerberus::framework.start();
 
     logDebug("Cerberus init completed");
 
-    if (parms.useCiphers)
+    if (conf.useCiphers)
     {
         SSL_library_init();
         SSL_load_error_strings();
@@ -180,6 +320,8 @@ CerberusInitConf Cerberus::cerberusDefaultParms()
     CerberusInitConf toReturn{};
     toReturn.useCiphers               = true;
     toReturn.logSetup.colorFormatting = true;
+    toReturn.appConfigurationFile     = "";
+    toReturn.initFromFile             = false;
 
     toReturn.logSetup.fileLogConf.enable        = true;
     toReturn.logSetup.fileLogConf.fileName      = "./app.log";
@@ -189,7 +331,7 @@ CerberusInitConf Cerberus::cerberusDefaultParms()
     toReturn.logSetup.fileLogConf.logDirMaxSize = 1000000;
 
     toReturn.logSetup.appLogLevel  = LL_Error;
-    toReturn.logSetup.cerbLogLevel = LL_Error;
+    toReturn.logSetup.fwLogLevel = LL_Error;
 
     toReturn.coreSetup.threadPool          = 0;
     toReturn.coreSetup.backupThreadMaxTime = 10000;  // 10 seconds
@@ -257,6 +399,132 @@ void Cerberus::log(const std::string& str, LogLevel logLevel, const std::string&
     Cerberus::framework.log.data->log(str, logLevel, author, application);
 }
 //=============================================================================
+void Cerberus::setFileName(const std::string& fileName)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    Cerberus::framework.core.data->iniFile().setFileName(fileName);
+}
+//=============================================================================
+OpRes Cerberus::load()
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().load();
+}
+//=============================================================================
+bool Cerberus::exists(const std::string& key, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().exists(key, section);
+}
+//=============================================================================
+IniDataType Cerberus::type(const std::string& key, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().type(key, section);
+}
+//=============================================================================
+bool Cerberus::isType(const std::string& key, IniDataType type)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().isType(key, type);
+}
+//=============================================================================
+OpRes Cerberus::rewrite()
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().rewrite();
+}
+//=============================================================================
+OpRes Cerberus::write_string(const std::string& key, const std::string& value, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().write_string(key, value, section);
+}
+//=============================================================================
+OpRes Cerberus::write_integer(const std::string& key, int64_t value, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().write_integer(key, value, section);
+}
+//=============================================================================
+OpRes Cerberus::write_double(const std::string& key, double value, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().write_double(key, value, section);
+}
+//=============================================================================
+OpRes Cerberus::write_bool(const std::string& key, bool value, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().write_bool(key, value, section);
+}
+//=============================================================================
+OpRes Cerberus::enforce_string(const std::string& key, const std::string& value, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().enforce_string(key, value, section);
+}
+//=============================================================================
+OpRes Cerberus::enforce_integer(const std::string& key, int64_t value, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().enforce_integer(key, value, section);
+}
+//=============================================================================
+OpRes Cerberus::enforce_double(const std::string& key, double value, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().enforce_double(key, value, section);
+}
+//=============================================================================
+OpRes Cerberus::enforce_bool(const std::string& key, bool value, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().enforce_bool(key, value, section);
+}
+//=============================================================================
+StringOpRes Cerberus::read_string(const std::string& key, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().read_string(key, section);
+}
+//=============================================================================
+IntOpRes Cerberus::read_integer(const std::string& key, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().read_integer(key, section);
+}
+//=============================================================================
+FloatOpRes Cerberus::read_double(const std::string& key, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().read_double(key, section);
+}
+//=============================================================================
+BoolOpRes Cerberus::read_bool(const std::string& key, const std::string& section)
+{
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    return Cerberus::framework.core.data->iniFile().read_bool(key, section);
+}
+//=============================================================================
 OpRes Cerberus::send_deep(const msg_ptr& message, HASH32 recipientID)
 {
     if (!message) return OR_WrongArgument;
@@ -281,7 +549,7 @@ OpRes Cerberus::send_deep(const msg_ptr& message, const std::string& recipient)
     return Cerberus::framework.core.data->send_deep(message, idByName(recipient));
 }
 //=============================================================================
-OpRes Cerberus::send_deep(const msg_ptr& message, HASH32 recipientID, SIZE queueIndex)
+OpRes Cerberus::send_deep(const msg_ptr& message, HASH32 recipientID, HASH32 channel_in)
 {
     if (!message) return OR_WrongArgument;
 
@@ -290,10 +558,10 @@ OpRes Cerberus::send_deep(const msg_ptr& message, HASH32 recipientID, SIZE queue
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
 
-    return Cerberus::framework.core.data->sendMsgToObj_deep(recipientID, message, queueIndex);
+    return Cerberus::framework.core.data->sendMsgToObj_deep(recipientID, message, channel_in);
 }
 //=============================================================================
-OpRes Cerberus::send_deep(const msg_ptr& message, const std::string& recipient, SIZE queueIndex)
+OpRes Cerberus::send_deep(const msg_ptr& message, const std::string& recipient, HASH32 channel_in)
 {
     if (!message) return OR_WrongArgument;
 
@@ -301,7 +569,7 @@ OpRes Cerberus::send_deep(const msg_ptr& message, const std::string& recipient, 
     auto locker = Cerberus::framework.core.getLocker();
 
     message->setRecipient(Cerberus::framework.core.data->objIdByName(recipient));
-    return Cerberus::framework.core.data->sendMsgToObj_deep(recipient, message, queueIndex);
+    return Cerberus::framework.core.data->sendMsgToObj_deep(recipient, message, channel_in);
 }
 //=============================================================================
 OpRes Cerberus::send(msg_ptr& message, HASH32 recipientID)
@@ -327,7 +595,7 @@ OpRes Cerberus::send(msg_ptr& message, const std::string& recipient)
     return Cerberus::framework.core.data->send(message);
 }
 //=============================================================================
-OpRes Cerberus::send(msg_ptr& message, HASH32 recipientID, SIZE queueIndex)
+OpRes Cerberus::send(msg_ptr& message, HASH32 recipientID, HASH32 channel_in)
 {
     if (!message) return OR_WrongArgument;
 
@@ -336,10 +604,10 @@ OpRes Cerberus::send(msg_ptr& message, HASH32 recipientID, SIZE queueIndex)
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
 
-    return Cerberus::framework.core.data->sendMsgToObj(recipientID, message, queueIndex);
+    return Cerberus::framework.core.data->sendMsgToObj(recipientID, message, channel_in);
 }
 //=============================================================================
-OpRes Cerberus::send(msg_ptr& message, const std::string& recipient, SIZE queueIndex)
+OpRes Cerberus::send(msg_ptr& message, const std::string& recipient, HASH32 channel_in)
 {
     if (!message) return OR_WrongArgument;
 
@@ -347,7 +615,7 @@ OpRes Cerberus::send(msg_ptr& message, const std::string& recipient, SIZE queueI
     auto locker = Cerberus::framework.core.getLocker();
 
     message->setRecipient(Cerberus::framework.core.data->objIdByName(recipient));
-    return Cerberus::framework.core.data->sendMsgToObj(recipient, message, queueIndex);
+    return Cerberus::framework.core.data->sendMsgToObj(recipient, message, channel_in);
 }
 //=============================================================================
 OpResData<CHANDLE> Cerberus::newSocket(const SocketSettings& settings)

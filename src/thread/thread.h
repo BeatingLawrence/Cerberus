@@ -24,6 +24,8 @@
  *                       The stop() method pauses the thread.
  *                       The terminate() method terminates the Thread.
  *
+ *      - Periodic RT:   Same as Periodic, but the thread is started with real-time scheduling.
+ *
  *      - PeriodicQueue: The Thread will wake up from sleep state every time a period of time passes.
  *                       If messages are present in the queue, the Thread will temporary act as a Non-Periodic
  * Thread. The start() method resumes the thread. The stop() method pauses the thread. The terminate() method
@@ -61,6 +63,9 @@ namespace cerberus
 
         SplittedTime m_time;
 
+        void* m_stack;
+        LSIZE m_stackSize;
+
         static void* _staticThread(void* context);
 
         void _thread();
@@ -71,6 +76,8 @@ namespace cerberus
 
         threadCallback m_warmUpCallback, m_coolDownCallback;
 
+        static CoreSet s_defaultCoreSet;
+
         static int defaultTickCallback(msg_ptr msg, Thread* thread);
 
         static void defaultWarmUpCallback(Thread* thread);
@@ -79,7 +86,8 @@ namespace cerberus
 
         void _wait();
 
-        void _construct(ThreadPeriodicity periodicity, const TimeFrame& time, const std::string& name);
+        void _construct(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize,
+                        const CoreSet& coreSet);
 
        protected:
         virtual int tick();
@@ -89,15 +97,19 @@ namespace cerberus
         virtual void coolDown();
 
        public:
-        // Construct a thread.
-        // If periodicity is TP_Periodic or TP_PeriodicQueue a valid time must be specified.
-        Thread(ThreadPeriodicity periodicity, const TimeFrame& time, const std::string& name = "");
+        // Set thread name (pthread) if supported by the platform.
+        void setThreadName(const std::string& name);
 
-        // Construct a non-periodic thread with the given name if provided
-        Thread(const std::string& name = "");
+        // Construct a thread with optional stack size.
+        // If periodicity is TP_Periodic, TP_Periodic_realtime, or TP_PeriodicMessage a valid time must be specified.
+        Thread(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize = 0,
+               const CoreSet& coreSet = CoreSet());
 
-        // Construct a thread with given periodicity and name
-        Thread(ThreadPeriodicity periodicity, const std::string& name = "");
+        // Construct a non-periodic thread with optional stack size
+        Thread(LSIZE stackSize = 0, const CoreSet& coreSet = CoreSet());
+
+        // Construct a thread with given periodicity and optional stack size
+        Thread(ThreadPeriodicity periodicity, LSIZE stackSize = 0, const CoreSet& coreSet = CoreSet());
 
         Thread(const Thread& other) = delete;
 
@@ -125,6 +137,12 @@ namespace cerberus
 
         // Set a custom callback to be executed as coolDown()
         void provideCoolDownCallback(threadCallback callback);
+
+       private:
+        // Set default core set for new threads (empty = no default affinity).
+        static void setDefaultCoreSet(const CoreSet& coreSet);
+
+        friend class Cerberus;
     };
 }  // namespace cerberus
 

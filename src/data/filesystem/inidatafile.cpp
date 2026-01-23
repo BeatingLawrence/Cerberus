@@ -255,7 +255,7 @@ IniDataFile::~IniDataFile()
 //=============================================================================
 void IniDataFile::setFileName(const std::string& fileName) { m_file.path(fileName); }
 //=============================================================================
-BoolOpRes IniDataFile::load()
+OpRes IniDataFile::load()
 {
     m_file.setOpenMode(FOM_Read);
 
@@ -281,7 +281,9 @@ BoolOpRes IniDataFile::load()
                 return OR_Failure;
             }
 
-            return ok;  // EOF is ok
+            OpRes out = OR_OK;
+            if (!ok) out.addOptional(OR_Failure);
+            return out;  // EOF is ok
         }
 
         std::string line = res.value;
@@ -401,6 +403,34 @@ cerberus::OpRes IniDataFile::write_double(const std::string& key, double value, 
 cerberus::OpRes IniDataFile::write_bool(const std::string& key, bool value, const std::string& section)
 {
     return write_string(key, value ? "true" : "false", section);
+}
+//=============================================================================
+cerberus::OpRes IniDataFile::enforce_string(const std::string& key, const std::string& value,
+                                            const std::string& section)
+{
+    if (exists(key, section)) return OR_OK;
+    return write_string(key, value, section);
+}
+//=============================================================================
+cerberus::OpRes IniDataFile::enforce_integer(const std::string& key, int64_t value,
+                                             const std::string& section)
+{
+    if (type(key, section) == IDT_Integer) return OR_OK;
+    return write_integer(key, value, section);
+}
+//=============================================================================
+cerberus::OpRes IniDataFile::enforce_double(const std::string& key, double value,
+                                            const std::string& section)
+{
+    if (type(key, section) == IDT_Double) return OR_OK;
+    return write_double(key, value, section);
+}
+//=============================================================================
+cerberus::OpRes IniDataFile::enforce_bool(const std::string& key, bool value,
+                                          const std::string& section)
+{
+    if (type(key, section) == IDT_Bool) return OR_OK;
+    return write_bool(key, value, section);
 }
 //=============================================================================
 StringOpRes IniDataFile::read_string(const std::string& key, const std::string& section)

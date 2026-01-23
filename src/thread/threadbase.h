@@ -30,7 +30,7 @@ namespace cerberus
 
         ThreadBase(ThreadBase &&other) = delete;
 
-        ThreadBase(ThreadPeriodicity periodicity, const std::string &name);
+        ThreadBase(ThreadPeriodicity periodicity);
 
         virtual ~ThreadBase();
 

@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #endif
 
+#include <algorithm>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -17,7 +18,7 @@
 #include <utility>
 #include <vector>
 
-#include "define.h"
+#include "define.h"  // IWYU pragma: export
 #include "exception/exception.h"
 #include "thread/mutexlocker.h"
 #include "time/datetime.h"
@@ -49,6 +50,37 @@ namespace cerberus
     typedef uint32_t HASH32;
     typedef HASH32 CHANDLE;
     typedef uint64_t DBMOD;
+
+    struct CoreSet
+    {
+        std::vector<int> cores;
+
+        void addCore(int core)
+        {
+            if (std::find(cores.begin(), cores.end(), core) != cores.end()) return;
+            cores.push_back(core);
+        }
+
+        void removeCore(int core)
+        {
+            auto it = std::find(cores.begin(), cores.end(), core);
+            if (it != cores.end()) cores.erase(it);
+        }
+        bool empty() const { return cores.empty(); }
+
+        static CoreSet subtract(const CoreSet& a, const CoreSet& b)
+        {
+            CoreSet out;
+            out.cores.reserve(a.cores.size());
+            for (int core : a.cores)
+            {
+                if (std::find(b.cores.begin(), b.cores.end(), core) == b.cores.end())
+                    out.cores.push_back(core);
+            }
+            return out;
+        }
+    };
+
 
     struct VAR_256_BITS
     {
@@ -405,10 +437,23 @@ namespace cerberus
                               // file
     };
 
+    enum ThreadStackSize : LSIZE
+    {
+        TSS_4M   = 4ULL * 1024ULL * 1024ULL,
+        TSS_8M   = 8ULL * 1024ULL * 1024ULL,
+        TSS_16M  = 16ULL * 1024ULL * 1024ULL,
+        TSS_32M  = 32ULL * 1024ULL * 1024ULL,
+        TSS_64M  = 64ULL * 1024ULL * 1024ULL,
+        TSS_128M = 128ULL * 1024ULL * 1024ULL,
+        TSS_256M = 256ULL * 1024ULL * 1024ULL,
+        TSS_512M = 512ULL * 1024ULL * 1024ULL,
+    };
+
     enum ThreadPeriodicity : uint8_t
     {
         TP_Message,
         TP_Periodic,
+        TP_Periodic_realtime,
         TP_PeriodicMessage,
         TP_OneShot,
         TP_Continuos,
@@ -482,7 +527,7 @@ namespace cerberus
     struct LogConf
     {
         LogLevel appLogLevel;         // application log level. Minor levels will be silenced
-        LogLevel cerbLogLevel;        // framework log level. Minor levels will be silenced
+        LogLevel fwLogLevel;          // framework log level. Minor levels will be silenced
         bool colorFormatting;         // enable the color formatting of the output terminal
         LogRole infoRole;             // log role for the info level
         LogRole warningRole;          // log role for the warning level
@@ -495,10 +540,12 @@ namespace cerberus
     {
         SIZE threadPool;  // set the size of the Cerberus thread pool. a value of zero disables it
         uint32_t backupThreadMaxTime;  // set the maximum time to keep backup threads alive (in ms)
+        CoreSet coreSet;  // default core set for Cerberus threads (empty = no affinity)
 
         CoreConf()
             : threadPool(0),
-              backupThreadMaxTime(0) {};
+              backupThreadMaxTime(0),
+              coreSet() {};
     };
 
     struct CerberusInitConf
@@ -506,6 +553,8 @@ namespace cerberus
         LogConf logSetup;
         CoreConf coreSetup;
         bool useCiphers;  // enable cerberus to init and use the OpenSSL library
+        std::string appConfigurationFile;  // application configuration file path
+        bool initFromFile;                 // override init params from configuration file
     };
 
     enum HTTPVersion : uint8_t

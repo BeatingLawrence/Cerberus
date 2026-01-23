@@ -239,8 +239,9 @@ void CerberusCore::processClient(CerberusCore* ctx, cerberus_socket socket,
 }
 //=============================================================================
 CerberusCore::CerberusCore()
-    : Thread(TP_Message, "Cerberus core")
+    : Thread(TP_Message)
 {
+    setThreadName("Cerberus core");
 }
 //=============================================================================
 CerberusCore::~CerberusCore() {}

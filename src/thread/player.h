@@ -16,7 +16,7 @@ namespace cerberus
         virtual int tick() override;
 
        public:
-        Player(bool manualTrigger = false, const std::string& name = "");
+        Player(bool manualTrigger = false, LSIZE stackSize = 0);
 
         Player(const Player& other) = delete;
 

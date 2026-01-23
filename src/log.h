@@ -25,19 +25,23 @@
 
 #define tlogInfo(text, ...)                                                             \
     ::cerberus::Cerberus::log(::cerberus::CerberusUtils::strPrint(text, ##__VA_ARGS__), \
-                              ::cerberus::LogLevel::LL_Info, this->name(), false)
+                              ::cerberus::LogLevel::LL_Info,                              \
+                              ::cerberus::CerberusUtils::strPrint("%lx", this->id()), false)
 
 #define tlogWarning(text, ...)                                                          \
     ::cerberus::Cerberus::log(::cerberus::CerberusUtils::strPrint(text, ##__VA_ARGS__), \
-                              ::cerberus::LogLevel::LL_Warning, this->name(), false)
+                              ::cerberus::LogLevel::LL_Warning,                           \
+                              ::cerberus::CerberusUtils::strPrint("%lx", this->id()), false)
 
 #define tlogError(text, ...)                                                            \
     ::cerberus::Cerberus::log(::cerberus::CerberusUtils::strPrint(text, ##__VA_ARGS__), \
-                              ::cerberus::LogLevel::LL_Error, this->name(), false)
+                              ::cerberus::LogLevel::LL_Error,                             \
+                              ::cerberus::CerberusUtils::strPrint("%lx", this->id()), false)
 
 #define tlogDebug(text, ...)                                                            \
     ::cerberus::Cerberus::log(::cerberus::CerberusUtils::strPrint(text, ##__VA_ARGS__), \
-                              ::cerberus::LogLevel::LL_Debug, this->name(), false)
+                              ::cerberus::LogLevel::LL_Debug,                             \
+                              ::cerberus::CerberusUtils::strPrint("%lx", this->id()), false)
 
 #else
 // compiling the client application
@@ -62,19 +66,23 @@
 
 #define tlogInfo(text, ...)                                                             \
     ::cerberus::Cerberus::log(::cerberus::CerberusUtils::strPrint(text, ##__VA_ARGS__), \
-                              ::cerberus::LogLevel::LL_Info, this->name(), true)
+                              ::cerberus::LogLevel::LL_Info,                              \
+                              ::cerberus::CerberusUtils::strPrint("%lx", this->id()), true)
 
 #define tlogWarning(text, ...)                                                          \
     ::cerberus::Cerberus::log(::cerberus::CerberusUtils::strPrint(text, ##__VA_ARGS__), \
-                              ::cerberus::LogLevel::LL_Warning, this->name(), true)
+                              ::cerberus::LogLevel::LL_Warning,                           \
+                              ::cerberus::CerberusUtils::strPrint("%lx", this->id()), true)
 
 #define tlogError(text, ...)                                                            \
     ::cerberus::Cerberus::log(::cerberus::CerberusUtils::strPrint(text, ##__VA_ARGS__), \
-                              ::cerberus::LogLevel::LL_Error, this->name(), true)
+                              ::cerberus::LogLevel::LL_Error,                             \
+                              ::cerberus::CerberusUtils::strPrint("%lx", this->id()), true)
 
 #define tlogDebug(text, ...)                                                            \
     ::cerberus::Cerberus::log(::cerberus::CerberusUtils::strPrint(text, ##__VA_ARGS__), \
-                              ::cerberus::LogLevel::LL_Debug, this->name(), true)
+                              ::cerberus::LogLevel::LL_Debug,                             \
+                              ::cerberus::CerberusUtils::strPrint("%lx", this->id()), true)
 
 #endif
 

@@ -90,19 +90,19 @@ msg_ptr CerberusRegister::constructMessage(HASH32 id)
     return msg_ptr();
 }
 //=============================================================================
-void CerberusRegister::registerObj(Recordable* object)
+void CerberusRegister::registerObj(Recordable* object, const std::string& name)
 {
     if (object == nullptr) return;
 
-    if (object->name().empty()) throw cIllegalArgExc("Registering objects must have a name");
+    if (name.empty()) throw cIllegalArgExc("Registering objects must have a name");
 
     MutexLocker locker(m_objMutex);
 
-    object->m_id = findAvailableObjId(object->name());
+    object->m_id = findAvailableObjId(name);
 
     m_objects.push_back(object);
 
-    logDebug("New %s", object->toObjStr().c_str());
+    logDebug("New %s, NAME:%s", object->toObjStr().c_str(), name.c_str());
 }
 //=============================================================================
 void CerberusRegister::unregisterObj(HASH32 id)
@@ -181,7 +181,7 @@ OpRes CerberusRegister::sendMsgToObj(const std::string& name, msg_ptr& msg)
     return r->send(msg);
 }
 //=============================================================================
-OpRes CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr& msg, SIZE queueIndex)
+OpRes CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in)
 {
     MutexLocker locker(m_objMutex);
     auto found = objById(id);
@@ -202,10 +202,10 @@ OpRes CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr& msg, SIZE queueIndex)
         return OR_Failure;
     }
 
-    return r->send(msg, queueIndex);
+    return r->send(msg, channel_in);
 }
 //=============================================================================
-OpRes CerberusRegister::sendMsgToObj(const std::string& name, msg_ptr& msg, SIZE queueIndex)
+OpRes CerberusRegister::sendMsgToObj(const std::string& name, msg_ptr& msg, HASH32 channel_in)
 {
     MutexLocker locker(m_objMutex);
     auto found = objByName(name);
@@ -227,7 +227,7 @@ OpRes CerberusRegister::sendMsgToObj(const std::string& name, msg_ptr& msg, SIZE
         return OR_Failure;
     }
 
-    return r->send(msg, queueIndex);
+    return r->send(msg, channel_in);
 }
 //=============================================================================
 OpRes CerberusRegister::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg)
@@ -279,7 +279,7 @@ OpRes CerberusRegister::sendMsgToObj_deep(const std::string& name, const msg_ptr
     return r->send_deep(msg, obj->id());
 }
 //=============================================================================
-OpRes CerberusRegister::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, SIZE queueIndex)
+OpRes CerberusRegister::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in)
 {
     MutexLocker locker(m_objMutex);
     auto found = objById(id);
@@ -300,10 +300,10 @@ OpRes CerberusRegister::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, SIZE qu
         return OR_Failure;
     }
 
-    return r->send_deep(msg, queueIndex);
+    return r->send_deep(msg, channel_in);
 }
 //=============================================================================
-OpRes CerberusRegister::sendMsgToObj_deep(const std::string& name, const msg_ptr& msg, SIZE queueIndex)
+OpRes CerberusRegister::sendMsgToObj_deep(const std::string& name, const msg_ptr& msg, HASH32 channel_in)
 {
     MutexLocker locker(m_objMutex);
     auto found = objByName(name);
@@ -325,7 +325,7 @@ OpRes CerberusRegister::sendMsgToObj_deep(const std::string& name, const msg_ptr
         return OR_Failure;
     }
 
-    return r->send_deep(msg, queueIndex);
+    return r->send_deep(msg, channel_in);
 }
 //=============================================================================
 HASH32 CerberusRegister::addPlugin(void* handle, const std::string& path, bool& exists)

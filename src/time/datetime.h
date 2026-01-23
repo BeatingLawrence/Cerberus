@@ -13,6 +13,7 @@
  */
 #include <time.h>
 
+#include <cstdint>
 #include <string>
 
 #include "../Cerberus_global.h"
@@ -109,6 +110,9 @@ namespace cerberus
 
         // Return the time value as a string for timestamping
         std::string toTimeStampString() const;
+
+        // Return the epoch timestamp in milliseconds
+        uint64_t toEpochMilliseconds() const;
 
         // Set the time according to the seconds and nanoseconds (timespec struct).
         // Please note that nanosecond precision is lost

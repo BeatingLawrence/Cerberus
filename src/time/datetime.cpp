@@ -9,6 +9,19 @@
 using namespace cerberus;
 
 //=============================================================================
+static inline tm toTm(const DateTime& dt)
+{
+    tm t = {};
+    t.tm_year = static_cast<int>(dt.years()) - 1900;
+    t.tm_mon  = static_cast<int>(dt.months()) - 1;
+    t.tm_mday = static_cast<int>(dt.days());
+    t.tm_hour = static_cast<int>(dt.hours());
+    t.tm_min  = static_cast<int>(dt.minutes());
+    t.tm_sec  = static_cast<int>(dt.seconds());
+    t.tm_isdst = -1;
+    return t;
+}
+//=============================================================================
 time_t DateTime::normalize() const
 {
     if (m_offset.isNegative())
@@ -263,6 +276,14 @@ std::string DateTime::toTimeStampString() const
 {
     return CerberusUtils::strPrint("%.4u.%.2u.%.2u-%.2u:%.2u:%.2u.%.3u", years(), months(), days(), hours(),
                                    minutes(), seconds(), milliseconds());
+}
+//=============================================================================
+uint64_t DateTime::toEpochMilliseconds() const
+{
+    tm t = toTm(*this);
+    time_t seconds = mktime(&t);
+    if (seconds < 0) seconds = 0;
+    return static_cast<uint64_t>(seconds) * 1000u + static_cast<uint64_t>(milliseconds());
 }
 //=============================================================================
 DateTime &DateTime::fromTimespec(uint32_t seconds, uint32_t nanoseconds)
