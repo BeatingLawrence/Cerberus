@@ -345,6 +345,11 @@ bool IniDataFile::exists(const std::string& key, const std::string& section)
     return (search(key, section) != nullptr);
 }
 //=============================================================================
+bool IniDataFile::isType(const std::string& key, IniDataType type)
+{
+    return (this->type(key) == type);
+}
+//=============================================================================
 cerberus::IniDataType IniDataFile::type(const std::string& key, const std::string& section)
 {
     auto found = search(key, section);

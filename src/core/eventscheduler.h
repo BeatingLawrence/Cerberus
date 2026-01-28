@@ -17,9 +17,10 @@ namespace cerberus::core
        private:
         Mutex m_mutex;
         std::vector<TimerData> m_timers;
+        msg_ptr m_timerExpiryMsg;
 
         void addTimer(std::atomic_bool* bit, std::atomic_bool* expired, DateTime d, TimeFrame t,
-                      timerCallback callback, void* ctx);
+                      timerCallback callback, void* ctx, HASH32 recipient);
 
         int tick() override;
 

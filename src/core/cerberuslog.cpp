@@ -10,10 +10,7 @@
 using namespace cerberus::core;
 
 #define TIMESTAMP_STRING_LEN 23
-#define DEBUG_TAG_STRING_LEN 9  // (including spaces)
-#define INFO_TAG_STRING_LEN 8
-#define WARNING_TAG_STRING_LEN 11
-#define ERROR_TAG_STRING_LEN 9
+#define LOGCHANNELSPEC_LEN 7  // (including spaces)
 #define CERB_TAG_STR "[CERB]"
 
 #if defined LINUX_SYSTEM || defined APPLE_SYSTEM
@@ -76,7 +73,7 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
 {
     // loglevel check
     if ((application && logLevel > m_logConf.appLogLevel) ||
-        (!application && logLevel > m_logConf.cerbLogLevel))
+        (!application && logLevel > m_logConf.fwLogLevel))
         return;
 
     // author
@@ -184,23 +181,8 @@ void CerberusLog::align(std::string& str, LogLevel logLevel, uint32_t authorLen)
 {
     uint32_t indentation = TIMESTAMP_STRING_LEN;
 
-    switch (logLevel)
-    {
-        case LL_Info:
-            indentation += INFO_TAG_STRING_LEN;
-            break;
-        case LL_Warning:
-            indentation += WARNING_TAG_STRING_LEN;
-            break;
-        case LL_Error:
-            indentation += ERROR_TAG_STRING_LEN;
-            break;
-        case LL_Debug:
-            indentation += DEBUG_TAG_STRING_LEN;
-            break;
-        default:
-            break;
-    }
+    (void)logLevel;
+    indentation += LOGCHANNELSPEC_LEN;
 
     indentation += authorLen;
     std::string indentStr(indentation, ' ');
@@ -214,16 +196,16 @@ std::string CerberusLog::toRawLog(const std::string& str, LogLevel ll, const std
     switch (ll)
     {
         case LL_Info:
-            return CerberusUtils::strPrint("%s [INFO] %s%s", t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [INF] %s%s", t.c_str(), a.c_str(), str.c_str());
 
         case LL_Warning:
-            return CerberusUtils::strPrint("%s [WARNING] %s%s", t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [WRN] %s%s", t.c_str(), a.c_str(), str.c_str());
 
         case LL_Error:
-            return CerberusUtils::strPrint("%s [ERROR] %s%s", t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [ERR] %s%s", t.c_str(), a.c_str(), str.c_str());
 
         case LL_Debug:
-            return CerberusUtils::strPrint("%s [DEBUG] %s%s", t.c_str(), a.c_str(), str.c_str());
+            return CerberusUtils::strPrint("%s [DBG] %s%s", t.c_str(), a.c_str(), str.c_str());
 
         default:
             break;
@@ -246,7 +228,7 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
             std::cout << CerberusUtils::strPrint("%s [", timestamp.c_str());
             SetConsoleTextAttribute(instance->m_stdoutHandle_Windows,
                                     instance->m_infoLogTerminalFormatting_Windows);
-            std::cout << "INFO";
+            std::cout << "INF";
             SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
             std::cout << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), s.c_str());
             std::cout << std::endl;
@@ -257,7 +239,7 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
             std::cout << CerberusUtils::strPrint("%s [", timestamp.c_str());
             SetConsoleTextAttribute(instance->m_stdoutHandle_Windows,
                                     instance->m_warningLogTerminalFormatting_Windows);
-            std::cout << "WARNING";
+            std::cout << "WRN";
             SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
             std::cout << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), s.c_str());
             std::cout << std::endl;
@@ -268,7 +250,7 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
             std::cerr << CerberusUtils::strPrint("%s [", timestamp.c_str());
             SetConsoleTextAttribute(instance->m_stdoutHandle_Windows,
                                     instance->m_errorLogTerminalFormatting_Windows);
-            std::cerr << "ERROR";
+            std::cerr << "ERR";
             SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
             std::cerr << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), s.c_str());
             std::cerr << std::endl;
@@ -279,7 +261,7 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
             std::cerr << CerberusUtils::strPrint("%s [", timestamp.c_str());
             SetConsoleTextAttribute(instance->m_stdoutHandle_Windows,
                                     instance->m_debugLogTerminalFormatting_Windows);
-            std::cerr << "DEBUG";
+            std::cerr << "DBG";
             SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
             std::cerr << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), s.c_str());
             std::cerr << std::endl;
@@ -293,19 +275,19 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
     switch (ll)
     {
         case LL_Debug:
-            return CerberusUtils::strPrint("%s%s [%sDEBUG%s] %s%s", m_endForm, t.c_str(), m_debForm.c_str(),
+            return CerberusUtils::strPrint("%s%s [%sDBG%s] %s%s", m_endForm, t.c_str(), m_debForm.c_str(),
                                            m_endForm, a.c_str(), str.c_str());
 
         case LL_Info:
-            return CerberusUtils::strPrint("%s%s [%sINFO%s] %s%s", m_endForm, t.c_str(), m_infoForm.c_str(),
+            return CerberusUtils::strPrint("%s%s [%sINF%s] %s%s", m_endForm, t.c_str(), m_infoForm.c_str(),
                                            m_endForm, a.c_str(), str.c_str());
 
         case LL_Error:
-            return CerberusUtils::strPrint("%s%s [%sERROR%s] %s%s", m_endForm, t.c_str(), m_errForm.c_str(),
+            return CerberusUtils::strPrint("%s%s [%sERR%s] %s%s", m_endForm, t.c_str(), m_errForm.c_str(),
                                            m_endForm, a.c_str(), str.c_str());
 
         case LL_Warning:
-            return CerberusUtils::strPrint("%s%s [%sWARNING%s] %s%s", m_endForm, t.c_str(),
+            return CerberusUtils::strPrint("%s%s [%sWRN%s] %s%s", m_endForm, t.c_str(),
                                            m_warnForm.c_str(), m_endForm, a.c_str(), str.c_str());
 
         default:

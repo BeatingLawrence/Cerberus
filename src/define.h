@@ -64,5 +64,6 @@
 #define CERBERUS_MESSAGE_TASK_ID 3u        // sent to a player to start a task
 #define CERBERUS_MESSAGE_TASKEND_ID 4u     // sent from a player to signal a task end
 #define CERBERUS_MESSAGE_SOCKETDATA_ID 5u  // sent by cerberus to listening threads
+#define CERBERUS_MESSAGE_TIMEREXPIRY_ID 6u // sent by cerberus timer to a recipient
 
 #endif  // CERBERUS_DEFINE_H

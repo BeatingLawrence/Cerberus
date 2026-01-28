@@ -1,5 +1,6 @@
 #include "eventscheduler.h"
 
+#include "src/cerberus.h"
 #include "src/thread/mutexlocker.h"
 
 using namespace cerberus::core;
@@ -9,6 +10,7 @@ EventScheduler::EventScheduler()
     : cerberus::Thread(TP_Periodic, TimeFrame(100, TimeFrame::U_MicroSecond))
 {
     setThreadName("Event Scheduler");
+    m_timerExpiryMsg = cerberus::Message::create(CERBERUS_MESSAGE_TIMEREXPIRY_ID);
 }
 //=============================================================================
 EventScheduler::~EventScheduler()
@@ -24,6 +26,8 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
 {
     std::vector<std::pair<timerCallback, void*>> calls;
     calls.reserve(8);
+    std::vector<HASH32> recipients;
+    recipients.reserve(8);
 
     const DateTime now = DateTime::current();
 
@@ -46,6 +50,7 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
 
             auto cb  = it->callback;
             auto ctx = it->ctx;
+            const HASH32 recipient = it->recipient;
             if (it->expired)
                 it->expired->store(true, std::memory_order_relaxed);
 
@@ -56,6 +61,7 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
                 it->delay = next;
 
                 calls.emplace_back(cb, ctx);
+                if (recipient != CERBERUS_INVALID_ID) recipients.push_back(recipient);
                 ++it;
             }
             else
@@ -64,17 +70,25 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
                 it = m_timers.erase(it);
 
                 calls.emplace_back(cb, ctx);
+                if (recipient != CERBERUS_INVALID_ID) recipients.push_back(recipient);
             }
         }
     }  // unlock
 
     for (auto& [cb, ctx] : calls) cb(ctx);
+    if (m_timerExpiryMsg)
+    {
+        for (auto recipient : recipients)
+        {
+            Cerberus::send_deep(m_timerExpiryMsg, recipient);
+        }
+    }
 
     return 0;
 }
 //=============================================================================
 void EventScheduler::addTimer(std::atomic_bool* bit, std::atomic_bool* expired, DateTime d, TimeFrame t,
-                              timerCallback callback, void* ctx)
+                              timerCallback callback, void* ctx, HASH32 recipient)
 {
     MutexLocker locker(m_mutex);
 
@@ -87,6 +101,7 @@ void EventScheduler::addTimer(std::atomic_bool* bit, std::atomic_bool* expired, 
             el.expired  = expired;
             el.callback = callback;
             el.ctx      = ctx;
+            el.recipient = recipient;
             el.bit->store(true, std::memory_order_relaxed);
             return;
         }
@@ -99,6 +114,7 @@ void EventScheduler::addTimer(std::atomic_bool* bit, std::atomic_bool* expired, 
     data.time      = t;
     data.callback  = callback;
     data.ctx       = ctx;
+    data.recipient = recipient;
 
     data.bit->store(true, std::memory_order_relaxed);
     m_timers.push_back(data);
@@ -111,17 +127,17 @@ void EventScheduler::startTimer(TimerData& data)
     if (data.isPeriodic())
     {
         if (data.isDelayed())
-            addTimer(data.bit, data.expired, data.delay, data.time, data.callback, data.ctx);
+            addTimer(data.bit, data.expired, data.delay, data.time, data.callback, data.ctx, data.recipient);
         else
         {
             DateTime d = DateTime::current();
             d.add(data.time);
-            addTimer(data.bit, data.expired, d, data.time, data.callback, data.ctx);
+            addTimer(data.bit, data.expired, d, data.time, data.callback, data.ctx, data.recipient);
         }
     }
     else
     {
-        addTimer(data.bit, data.expired, data.delay, TimeFrame(), data.callback, data.ctx);
+        addTimer(data.bit, data.expired, data.delay, TimeFrame(), data.callback, data.ctx, data.recipient);
     }
 }
 //=============================================================================

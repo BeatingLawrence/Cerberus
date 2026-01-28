@@ -168,6 +168,10 @@ msg_ptr Cerberus::stdTemplate(HASH32 id)
             tmplt->addSlotType<BufferSlot>("buffer");
             break;
 
+        case CERBERUS_MESSAGE_TIMEREXPIRY_ID:
+            // nothing to add
+            break;
+
             // add here more message specializations..
 
         default:
@@ -616,41 +620,6 @@ OpRes Cerberus::send(msg_ptr& message, const std::string& recipient, HASH32 chan
 
     message->setRecipient(Cerberus::framework.core.data->objIdByName(recipient));
     return Cerberus::framework.core.data->sendMsgToObj(recipient, message, channel_in);
-}
-//=============================================================================
-OpResData<CHANDLE> Cerberus::newSocket(const SocketSettings& settings)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->newSocket(settings);
-}
-//=============================================================================
-OpRes Cerberus::addSocketListener(CHANDLE socket, HASH32 threadID)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->addSocketListener(socket, threadID);
-}
-//=============================================================================
-OpRes Cerberus::addSocketListener(CHANDLE socket, const std::string& threadName)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->addSocketListener(socket, idByName(threadName));
-}
-//=============================================================================
-OpRes Cerberus::socketSend(CHANDLE socket, const ByteBuffer& buffer)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->socketSend(socket, buffer);
-}
-//=============================================================================
-OpRes Cerberus::removeSocket(CHANDLE socket)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->removeSocket(socket);
 }
 //=============================================================================
 HASH32 Cerberus::idByName(const std::string& name)

@@ -22,6 +22,7 @@ namespace cerberus
 
         timerCallback m_callback;
         void* m_ctx;
+        HASH32 m_recipient;
 
         static void defaultTimeoutCallback(void* ctx);
 
@@ -47,6 +48,9 @@ namespace cerberus
 
         // Sets a callback to be executed when the timer expires
         void provideTimeoutCallback(timerCallback callback, void* ctx);
+
+        // Sets a recipient to be notified when the timer expires
+        void setRecipient(HASH32 recipientId);
     };
 }  // namespace cerberus
 

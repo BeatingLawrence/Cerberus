@@ -16,7 +16,8 @@ Timer::Timer()
       m_expired(false),
       m_type(TT_OneShot),
       m_callback(defaultTimeoutCallback),
-      m_ctx(nullptr)
+      m_ctx(nullptr),
+      m_recipient(CERBERUS_INVALID_ID)
 {
 }
 //=============================================================================
@@ -27,7 +28,8 @@ Timer::Timer(const TimeFrame &time, TimerType type, const DateTime &delay)
       m_time(time),
       m_delay(delay),
       m_callback(defaultTimeoutCallback),
-      m_ctx(nullptr)
+      m_ctx(nullptr),
+      m_recipient(CERBERUS_INVALID_ID)
 {
 }
 //=============================================================================
@@ -49,6 +51,7 @@ void Timer::start()
     td.expired  = &m_expired;
     td.callback = m_callback;
     td.ctx      = m_ctx;
+    td.recipient = m_recipient;
 
     switch (m_type)
     {
@@ -89,5 +92,10 @@ void Timer::provideTimeoutCallback(timerCallback callback, void *ctx)
 {
     m_callback = callback;
     m_ctx      = ctx;
+}
+//=============================================================================
+void Timer::setRecipient(HASH32 recipientId)
+{
+    m_recipient = recipientId;
 }
 //=============================================================================

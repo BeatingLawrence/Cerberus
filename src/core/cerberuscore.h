@@ -14,7 +14,6 @@
 #include "../thread/threadpool.h"
 #include "../data/filesystem/inidatafile.h"
 #include "eventscheduler.h"
-#include "socketmanager.h"
 #include "cerberusregister.h"
 
 namespace cerberus
@@ -30,8 +29,6 @@ namespace cerberus
 
             ThreadPool m_pool;
 
-            SocketManager m_sockets;
-
             CerberusRegister m_reg;
 
             IniDataFile m_iniFile;
@@ -45,11 +42,6 @@ namespace cerberus
 
             void processTaskMsg(msg_ptr& msg);
             void processMsg(msg_ptr& msg);
-
-            static OpRes socketCB(void* ctx, void* data);
-
-            static void processClient(CerberusCore* ctx, cerberus_socket socket,
-                                      SocketManager::SocketData* parentData, const SocketSettings& settings);
 
            public:
             EventScheduler m_eventScheduler;
@@ -102,18 +94,6 @@ namespace cerberus
             void cleanupPlugins() { m_reg.cleanupPlugins(); }
 
             //=====================SOCKETS========================
-
-            // Create a new socket in the Cerberus memory space
-            OpResData<CHANDLE> newSocket(const SocketSettings& settings);
-
-            // Add a listener to the specified socket
-            OpRes addSocketListener(CHANDLE socket, HASH32 threadID);
-
-            // Send out a buffer using the specified managed socket
-            OpRes socketSend(CHANDLE socket, const ByteBuffer& buffer);
-
-            // Remove the specified socket
-            OpRes removeSocket(CHANDLE socket);
         };
     }  // namespace core
 }  // namespace cerberus

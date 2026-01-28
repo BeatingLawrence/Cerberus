@@ -217,20 +217,6 @@ namespace cerberus
         static OpRes send(msg_ptr& message, HASH32 recipientID, HASH32 channel_in);
         static OpRes send(msg_ptr& message, const std::string& recipient, HASH32 channel_in);
 
-
-        // Create a new socket in the Cerberus memory space
-        static OpResData<CHANDLE> newSocket(const SocketSettings& settings);
-
-        // Add a listener to the specified socket
-        static OpRes addSocketListener(CHANDLE socket, HASH32 threadID);
-        static OpRes addSocketListener(CHANDLE socket, const std::string& threadName);
-
-        // Send out a buffer using the specified managed socket
-        static OpRes socketSend(CHANDLE socket, const ByteBuffer& buffer);
-
-        // Remove the specified socket
-        static OpRes removeSocket(CHANDLE socket);
-
         // ======================Public Register===========================
 
         // Retrieve an object ID by its name

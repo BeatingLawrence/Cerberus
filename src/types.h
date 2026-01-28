@@ -905,6 +905,7 @@ namespace cerberus
         std::atomic_bool* expired;
         timerCallback callback;
         void* ctx;
+        HASH32 recipient;
 
         bool isPeriodic() { return !time.isNull(); }
         bool isDelayed() { return delay.isValid(); }
@@ -1046,33 +1047,6 @@ namespace cerberus
         // Resolve the given Host using the hostname member.
         // The resulting numeric IP address is written in the ip parameter
         OpRes resolve();
-    };
-
-    enum SocketTransfer : uint8_t
-    {
-        Transfer_Bytes,  // the socket will receive up to buffersize bytes
-        Transfer_Time,   // the socket will keep calling recv() until timeout is reached
-    };
-
-    struct SocketSettings
-    {
-        SocketType type;              // type of socket (Socket_TCP or Socket_UDP)
-        Host bind;                    // interface to bind the socket to
-        Host remote;                  // remote host to keep the connection with
-        SocketTransfer transferMode;  // socket data transfer mode
-
-        TimeFrame tout, cyctout;  // timeout values used for Transfer_time
-        SIZE maxpayload;          // recv buffer size of the socket
-
-        bool server;     // true if the socket is a server socket (passive)
-        size_t maxconn;  // maximum number of pending connection (for passive sockets only)
-
-        SocketSettings()
-            : type(Socket_TCP),
-              transferMode(Transfer_Bytes),
-              maxpayload(0),
-              server(false),
-              maxconn(0) {};
     };
 
     class ByteBuffer;
