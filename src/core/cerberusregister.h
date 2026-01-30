@@ -59,10 +59,6 @@ namespace cerberus
             // This method does not lock the mutex!
             OpResData<Recordable*> objById(HASH32 id);
 
-            // Give a cerberus object from its name, or nullptr if it does not exist
-            // This method does not lock the mutex!
-            OpResData<Recordable*> objByName(const std::string& name);
-
             // delete all the cerberus-owned objects
             void cleanup();
 
@@ -92,22 +88,13 @@ namespace cerberus
             // Nothing happens if the ID does not exist
             void unregisterObj(HASH32 id);
 
-            // Retrieves an object ID by its name
-            HASH32 objIdByName(const std::string& name);
-
             // Send a message to a cerberus object.
             // If the id is not valid or the message cannot be sent, nothing happens
-            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg);
-            OpRes sendMsgToObj(const std::string& name, msg_ptr& msg);
-            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in);
-            OpRes sendMsgToObj(const std::string& name, msg_ptr& msg, HASH32 channel_in);
+            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in = 0);
 
             // Send a message to a cerberus object using deep-copy.
             // The copy is created only if the destination queue can accept it.
-            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg);
-            OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg);
-            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in);
-            OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg, HASH32 channel_in);
+            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in = 0);
 
             //===================PLUGINS=====================
 

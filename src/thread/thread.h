@@ -117,6 +117,8 @@ namespace cerberus
 
         virtual ~Thread();
 
+        void checkIn(const std::string& name) override;
+
         SplittedTime getTime() const;
 
         // Put the calling thread in sleep state for a given time

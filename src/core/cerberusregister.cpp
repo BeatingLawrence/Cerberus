@@ -54,13 +54,6 @@ OpResData<Recordable*> CerberusRegister::objById(HASH32 id)
     return OR_NotFound;
 }
 //=============================================================================
-OpResData<Recordable*> CerberusRegister::objByName(const std::string& name)
-{
-    if (name.empty()) return OR_WrongArgument;
-
-    return objById(hashFunc_res(name));
-}
-//=============================================================================
 void CerberusRegister::cleanup() { m_objects.clear(); }
 //=============================================================================
 CerberusRegister::CerberusRegister() {}
@@ -122,65 +115,6 @@ void CerberusRegister::unregisterObj(HASH32 id)
     }
 }
 //=============================================================================
-HASH32 CerberusRegister::objIdByName(const std::string& name)
-{
-    MutexLocker locker(m_objMutex);
-    auto found = objByName(name);
-
-    if (found.fail()) return CERBERUS_INVALID_ID;
-
-    return found.value->m_id;
-}
-//=============================================================================
-OpRes CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr& msg)
-{
-    MutexLocker locker(m_objMutex);
-    auto found = objById(id);
-
-    if (found.fail()) return OR_Failure;
-
-    auto* obj = found.value;
-    if (!obj)
-    {
-        logError("Dropping message: target object is null (id=%u)", id);
-        return OR_Failure;
-    }
-
-    Recipient* r = dynamic_cast<Recipient*>(obj);
-    if (!r)
-    {
-        logError("Dropping message: target is not a Recipient (id=%u, obj=%s)", id, obj->toObjStr().c_str());
-        return OR_Failure;
-    }
-
-    return r->send(msg);
-}
-//=============================================================================
-OpRes CerberusRegister::sendMsgToObj(const std::string& name, msg_ptr& msg)
-{
-    MutexLocker locker(m_objMutex);
-    auto found = objByName(name);
-
-    if (found.fail()) return OR_Failure;
-
-    auto* obj = found.value;
-    if (!obj)
-    {
-        logError("Dropping message: target object is null (name=%s)", name.c_str());
-        return OR_Failure;
-    }
-
-    Recipient* r = dynamic_cast<Recipient*>(obj);
-    if (!r)
-    {
-        logError("Dropping message: target is not a Recipient (name=%s, obj=%s)", name.c_str(),
-                 obj->toObjStr().c_str());
-        return OR_Failure;
-    }
-
-    return r->send(msg);
-}
-//=============================================================================
 OpRes CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in)
 {
     MutexLocker locker(m_objMutex);
@@ -205,80 +139,6 @@ OpRes CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in)
     return r->send(msg, channel_in);
 }
 //=============================================================================
-OpRes CerberusRegister::sendMsgToObj(const std::string& name, msg_ptr& msg, HASH32 channel_in)
-{
-    MutexLocker locker(m_objMutex);
-    auto found = objByName(name);
-
-    if (found.fail()) return OR_Failure;
-
-    auto* obj = found.value;
-    if (!obj)
-    {
-        logError("Dropping message: target object is null (name=%s)", name.c_str());
-        return OR_Failure;
-    }
-
-    Recipient* r = dynamic_cast<Recipient*>(obj);
-    if (!r)
-    {
-        logError("Dropping message: target is not a Recipient (name=%s, obj=%s)", name.c_str(),
-                 obj->toObjStr().c_str());
-        return OR_Failure;
-    }
-
-    return r->send(msg, channel_in);
-}
-//=============================================================================
-OpRes CerberusRegister::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg)
-{
-    MutexLocker locker(m_objMutex);
-    auto found = objById(id);
-
-    if (found.fail()) return OR_Failure;
-
-    auto* obj = found.value;
-    if (!obj)
-    {
-        logError("Dropping message: target object is null (id=%u)", id);
-        return OR_Failure;
-    }
-
-    Recipient* r = dynamic_cast<Recipient*>(obj);
-    if (!r)
-    {
-        logError("Dropping message: target is not a Recipient (id=%u, obj=%s)", id, obj->toObjStr().c_str());
-        return OR_Failure;
-    }
-
-    return r->send_deep(msg, id);
-}
-//=============================================================================
-OpRes CerberusRegister::sendMsgToObj_deep(const std::string& name, const msg_ptr& msg)
-{
-    MutexLocker locker(m_objMutex);
-    auto found = objByName(name);
-
-    if (found.fail()) return OR_Failure;
-
-    auto* obj = found.value;
-    if (!obj)
-    {
-        logError("Dropping message: target object is null (name=%s)", name.c_str());
-        return OR_Failure;
-    }
-
-    Recipient* r = dynamic_cast<Recipient*>(obj);
-    if (!r)
-    {
-        logError("Dropping message: target is not a Recipient (name=%s, obj=%s)", name.c_str(),
-                 obj->toObjStr().c_str());
-        return OR_Failure;
-    }
-
-    return r->send_deep(msg, obj->id());
-}
-//=============================================================================
 OpRes CerberusRegister::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in)
 {
     MutexLocker locker(m_objMutex);
@@ -297,31 +157,6 @@ OpRes CerberusRegister::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 
     if (!r)
     {
         logError("Dropping message: target is not a Recipient (id=%u, obj=%s)", id, obj->toObjStr().c_str());
-        return OR_Failure;
-    }
-
-    return r->send_deep(msg, channel_in);
-}
-//=============================================================================
-OpRes CerberusRegister::sendMsgToObj_deep(const std::string& name, const msg_ptr& msg, HASH32 channel_in)
-{
-    MutexLocker locker(m_objMutex);
-    auto found = objByName(name);
-
-    if (found.fail()) return OR_Failure;
-
-    auto* obj = found.value;
-    if (!obj)
-    {
-        logError("Dropping message: target object is null (name=%s)", name.c_str());
-        return OR_Failure;
-    }
-
-    Recipient* r = dynamic_cast<Recipient*>(obj);
-    if (!r)
-    {
-        logError("Dropping message: target is not a Recipient (name=%s, obj=%s)", name.c_str(),
-                 obj->toObjStr().c_str());
         return OR_Failure;
     }
 

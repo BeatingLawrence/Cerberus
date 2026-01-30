@@ -127,19 +127,13 @@ namespace cerberus
         void setRecipient(Recipient* recipient, HASH32 channel_out = 0, HASH32 channel_in = 0);
         void removeRecipient(Recipient* recipient, HASH32 channel_out = 0);
         // Consume only on success (OR_OK). On OR_Failure the message stays intact.
-        OpRes send(msg_ptr& message);
-
-        // Same as send(), but targets a specific internal queue.
-        OpRes send(msg_ptr& message, HASH32 channel_in);
+        OpRes send(msg_ptr& message, HASH32 channel_in = 0);
 
         // Deep-copy only if it can be accepted.
-        OpRes send_deep(const msg_ptr& message);
+        OpRes send_deep(const msg_ptr& message, HASH32 channel_in = 0);
 
-        // Same as send_deep(), but targets a specific internal queue.
-        OpRes send_deep(const msg_ptr& message, HASH32 channel_in);
-
-        // Create and send a message by name with no fields
-        OpRes signal(const std::string& msgname, HASH32 channel_in = 0);
+        // Create and send a message by id with no fields
+        OpRes signal(HASH32 msgid, HASH32 channel_in = 0);
 
         SIZE size() const;
         SIZE size(HASH32 channel_in) const;

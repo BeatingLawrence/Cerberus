@@ -314,6 +314,12 @@ void Thread::sleep(const TimeFrame& time)
     nanosleep(&t, NULL);
 }
 //=============================================================================
+void Thread::checkIn(const std::string& name)
+{
+    setThreadName(name);
+    cerberus::core::Recordable::checkIn(name);
+}
+//=============================================================================
 Thread::Thread(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize, const CoreSet& coreSet)
     : ThreadBase(periodicity),
       m_pthread(),

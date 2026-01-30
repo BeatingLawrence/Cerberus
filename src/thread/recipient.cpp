@@ -466,8 +466,6 @@ OpRes Recipient::broadcast_deep(msg_ptr& message, HASH32 channel_out)
     return res;
 }
 //=============================================================================
-OpRes Recipient::send(msg_ptr& message) { return send(message, 0); }
-//=============================================================================
 OpRes Recipient::send(msg_ptr& message, HASH32 channel_in)
 {
     if (!message) return OR_Failure;
@@ -508,8 +506,6 @@ OpRes Recipient::send(msg_ptr& message, HASH32 channel_in)
     newMsg();
     return OR_OK;
 }
-//=============================================================================
-OpRes Recipient::send_deep(const msg_ptr& src) { return send_deep(src, 0); }
 //=============================================================================
 OpRes Recipient::send_deep(const msg_ptr& src, HASH32 channel_in)
 {
@@ -581,9 +577,9 @@ OpRes Recipient::send_deep(const msg_ptr& src, HASH32 channel_in)
     return OR_OK;
 }
 //=============================================================================
-OpRes Recipient::signal(const std::string& msgname, HASH32 channel_in)
+OpRes Recipient::signal(HASH32 msgid, HASH32 channel_in)
 {
-    msg_ptr msg = Message::create(msgname);
+    msg_ptr msg = Message::create(msgid);
     if (!msg) return OR_Failure;
     return send(msg, channel_in);
 }

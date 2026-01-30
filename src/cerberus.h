@@ -128,10 +128,10 @@ namespace cerberus
         static void unregisterObj(HASH32 id);
 
         // Directly send a message to a cerberus object
-        static OpRes sendMsgToObj(HASH32 id, msg_ptr& msg);
+        static OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in = 0);
 
         // Directly send a message to a cerberus object (deep-copy, copy-late)
-        static OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg);
+        static OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in = 0);
 
         // =======================Plugin manager============================
 
@@ -206,21 +206,14 @@ namespace cerberus
         static BoolOpRes read_bool(const std::string& key, const std::string& section = MAIN_SECTION);
 
         // send with deep copy
-        static OpRes send_deep(const msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
-        static OpRes send_deep(const msg_ptr& message, const std::string& recipient);
-        static OpRes send_deep(const msg_ptr& message, HASH32 recipientID, HASH32 channel_in);
-        static OpRes send_deep(const msg_ptr& message, const std::string& recipient, HASH32 channel_in);
+        static OpRes send_deep(const msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID,
+                               HASH32 channel_in = 0);
 
         // send using std::move
-        static OpRes send(msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID);
-        static OpRes send(msg_ptr& message, const std::string& recipient);
-        static OpRes send(msg_ptr& message, HASH32 recipientID, HASH32 channel_in);
-        static OpRes send(msg_ptr& message, const std::string& recipient, HASH32 channel_in);
+        static OpRes send(msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID,
+                          HASH32 channel_in = 0);
 
         // ======================Public Register===========================
-
-        // Retrieve an object ID by its name
-        static HASH32 idByName(const std::string& name);
 
         // ===========================Factory==============================
 
@@ -235,7 +228,6 @@ namespace cerberus
         // Factory of messages. A call to this method will return an empty but structured message.
         // This method will return an invalid message if name was not found,
         // or if it's not a Message name.
-        static msg_ptr constructMessage(const std::string& name);
     };
 }  // namespace cerberus
 

@@ -23,15 +23,12 @@ namespace cerberus
 
         Message(HASH32 id = CERBERUS_INVALID_ID);
 
-        Message(const std::string& name);
-
         Message(const Message& other);
 
         Message& operator=(const Message& other) = delete;
 
        public:
         static msg_ptr create(HASH32 id = CERBERUS_INVALID_ID);
-        static msg_ptr create(const std::string& name);
 
         virtual ~Message();
 
@@ -107,11 +104,8 @@ namespace cerberus
         // return the ID of this message
         HASH32 id() const;
 
-        // convert a textual name to an ID
-        static HASH32 idFromName(const std::string& name);
-
-        // checks if the ID of this equals the idFromName(name)
-        bool is(const std::string& name) const;
+        // checks if the ID of this equals the given ID
+        bool is(HASH32 id) const;
 
         // return the first recipient of the message (if any)
         HASH32 recipient() const;
@@ -130,7 +124,6 @@ namespace cerberus
 
         // add a recipient
         void addRecipient(HASH32 id) const;
-        OpRes addRecipient(const std::string& name) const;
 
         // clear all recipients
         void clearRecipients() const;

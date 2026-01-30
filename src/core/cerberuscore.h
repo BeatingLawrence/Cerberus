@@ -62,25 +62,14 @@ namespace cerberus
 
             void registerObj(Recordable* object, const std::string& name) { m_reg.registerObj(object, name); }
             void unregisterObj(HASH32 id) { m_reg.unregisterObj(id); }
-            HASH32 objIdByName(const std::string& name) { return m_reg.objIdByName(name); }
-
-            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg) { return m_reg.sendMsgToObj(id, msg); }
-            OpRes sendMsgToObj(const std::string& name, msg_ptr& msg) { return m_reg.sendMsgToObj(name, msg); }
-            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in) { return m_reg.sendMsgToObj(id, msg, channel_in); }
-            OpRes sendMsgToObj(const std::string& name, msg_ptr& msg, HASH32 channel_in)
+            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in = 0)
             {
-                return m_reg.sendMsgToObj(name, msg, channel_in);
+                return m_reg.sendMsgToObj(id, msg, channel_in);
             }
 
-            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg) { return m_reg.sendMsgToObj_deep(id, msg); }
-            OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg) { return m_reg.sendMsgToObj_deep(name, msg); }
-            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in)
+            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in = 0)
             {
                 return m_reg.sendMsgToObj_deep(id, msg, channel_in);
-            }
-            OpRes sendMsgToObj_deep(const std::string& name, const msg_ptr& msg, HASH32 channel_in)
-            {
-                return m_reg.sendMsgToObj_deep(name, msg, channel_in);
             }
 
 

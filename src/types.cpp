@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "core/cerberusutils.h"
+#include "core/cerberusregister.h"
 #include "exception/exception.h"
 #include "network/socket.h"
 #include "src/cerberus.h"
@@ -19,6 +20,30 @@ const uint32_t cerberus::Host::ADDR_LOOPBACK  = INADDR_LOOPBACK;
 const uint32_t cerberus::Host::ADDR_BROADCAST = INADDR_BROADCAST;
 #endif
 
+//=============================================================================
+cerberus::HASH32::HASH32(const char* str)
+    : m_value(0)
+{
+    if (str) m_value = hashFunc_res(str);
+}
+//=============================================================================
+cerberus::HASH32::HASH32(const std::string& str)
+    : m_value(hashFunc_res(str))
+{
+}
+//=============================================================================
+cerberus::HASH32& cerberus::HASH32::operator=(const char* str)
+{
+    m_value = str ? hashFunc_res(str) : 0u;
+    return *this;
+}
+//=============================================================================
+cerberus::HASH32& cerberus::HASH32::operator=(const std::string& str)
+{
+    m_value = hashFunc_res(str);
+    return *this;
+}
+//=============================================================================
 //=============================================================================
 cerberus::Host::Host()
     : octet_networkOrder(ADDR_ANY),

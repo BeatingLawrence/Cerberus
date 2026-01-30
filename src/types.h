@@ -47,9 +47,50 @@ namespace cerberus
     typedef uint64_t LSIZE;
     typedef uint8_t BYTE;
     typedef int64_t OFFSET;
-    typedef uint32_t HASH32;
-    typedef HASH32 CHANDLE;
     typedef uint64_t DBMOD;
+
+    class HASH32
+    {
+       public:
+        constexpr HASH32(uint32_t value = 0) noexcept
+            : m_value(value)
+        {
+        }
+
+        constexpr HASH32(int value) noexcept
+            : m_value(static_cast<uint32_t>(value))
+        {
+        }
+
+        HASH32(const char* str);
+        HASH32(const std::string& str);
+
+        HASH32& operator=(uint32_t value) noexcept
+        {
+            m_value = value;
+            return *this;
+        }
+
+        HASH32& operator=(int value) noexcept
+        {
+            m_value = static_cast<uint32_t>(value);
+            return *this;
+        }
+
+        HASH32& operator=(const char* str);
+        HASH32& operator=(const std::string& str);
+
+        constexpr operator uint32_t() const noexcept { return m_value; }
+        constexpr uint32_t value() const noexcept { return m_value; }
+
+       private:
+        uint32_t m_value;
+    };
+
+    constexpr inline bool operator==(HASH32 a, HASH32 b) noexcept { return a.value() == b.value(); }
+    constexpr inline bool operator!=(HASH32 a, HASH32 b) noexcept { return a.value() != b.value(); }
+
+    typedef HASH32 CHANDLE;
 
     struct CoreSet
     {

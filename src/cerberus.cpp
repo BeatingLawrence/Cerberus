@@ -195,18 +195,18 @@ void Cerberus::unregisterObj(HASH32 id)
     Cerberus::framework.core.data->unregisterObj(id);
 }
 //=============================================================================
-OpRes Cerberus::sendMsgToObj(HASH32 id, msg_ptr& msg)
+OpRes Cerberus::sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->sendMsgToObj(id, msg);
+    return Cerberus::framework.core.data->sendMsgToObj(id, msg, channel_in);
 }
 //=============================================================================
-OpRes Cerberus::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg)
+OpRes Cerberus::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->sendMsgToObj_deep(id, msg);
+    return Cerberus::framework.core.data->sendMsgToObj_deep(id, msg, channel_in);
 }
 //=============================================================================
 HASH32 Cerberus::addPlugin(void* handle, const std::string& path, bool& exists)
@@ -529,30 +529,6 @@ BoolOpRes Cerberus::read_bool(const std::string& key, const std::string& section
     return Cerberus::framework.core.data->iniFile().read_bool(key, section);
 }
 //=============================================================================
-OpRes Cerberus::send_deep(const msg_ptr& message, HASH32 recipientID)
-{
-    if (!message) return OR_WrongArgument;
-
-    if (recipientID != CERBERUS_INVALID_ID) message->setRecipient(recipientID);
-
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-
-    // deep-copy is done only if accepted (inside core/recipient)
-    return Cerberus::framework.core.data->send_deep(message, recipientID);
-}
-//=============================================================================
-OpRes Cerberus::send_deep(const msg_ptr& message, const std::string& recipient)
-{
-    if (!message) return OR_WrongArgument;
-
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-
-    message->setRecipient(Cerberus::framework.core.data->objIdByName(recipient));
-    return Cerberus::framework.core.data->send_deep(message, idByName(recipient));
-}
-//=============================================================================
 OpRes Cerberus::send_deep(const msg_ptr& message, HASH32 recipientID, HASH32 channel_in)
 {
     if (!message) return OR_WrongArgument;
@@ -565,40 +541,6 @@ OpRes Cerberus::send_deep(const msg_ptr& message, HASH32 recipientID, HASH32 cha
     return Cerberus::framework.core.data->sendMsgToObj_deep(recipientID, message, channel_in);
 }
 //=============================================================================
-OpRes Cerberus::send_deep(const msg_ptr& message, const std::string& recipient, HASH32 channel_in)
-{
-    if (!message) return OR_WrongArgument;
-
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-
-    message->setRecipient(Cerberus::framework.core.data->objIdByName(recipient));
-    return Cerberus::framework.core.data->sendMsgToObj_deep(recipient, message, channel_in);
-}
-//=============================================================================
-OpRes Cerberus::send(msg_ptr& message, HASH32 recipientID)
-{
-    if (!message) return OR_WrongArgument;
-
-    if (recipientID != CERBERUS_INVALID_ID) message->setRecipient(recipientID);
-
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-
-    return Cerberus::framework.core.data->send(message);
-}
-//=============================================================================
-OpRes Cerberus::send(msg_ptr& message, const std::string& recipient)
-{
-    if (!message) return OR_WrongArgument;
-
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-
-    message->setRecipient(Cerberus::framework.core.data->objIdByName(recipient));
-    return Cerberus::framework.core.data->send(message);
-}
-//=============================================================================
 OpRes Cerberus::send(msg_ptr& message, HASH32 recipientID, HASH32 channel_in)
 {
     if (!message) return OR_WrongArgument;
@@ -609,24 +551,6 @@ OpRes Cerberus::send(msg_ptr& message, HASH32 recipientID, HASH32 channel_in)
     auto locker = Cerberus::framework.core.getLocker();
 
     return Cerberus::framework.core.data->sendMsgToObj(recipientID, message, channel_in);
-}
-//=============================================================================
-OpRes Cerberus::send(msg_ptr& message, const std::string& recipient, HASH32 channel_in)
-{
-    if (!message) return OR_WrongArgument;
-
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-
-    message->setRecipient(Cerberus::framework.core.data->objIdByName(recipient));
-    return Cerberus::framework.core.data->sendMsgToObj(recipient, message, channel_in);
-}
-//=============================================================================
-HASH32 Cerberus::idByName(const std::string& name)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->objIdByName(name);
 }
 //=============================================================================
 OpRes Cerberus::registerTemplate(const msg_ptr& tmplt)
@@ -652,8 +576,6 @@ msg_ptr Cerberus::constructMessage(HASH32 id)
 
     return std::move(msg);
 }
-//=============================================================================
-msg_ptr Cerberus::constructMessage(const std::string& name) { return constructMessage(hashFunc_res(name)); }
 //=============================================================================
 //=============================FrameworkData===================================
 //=============================================================================

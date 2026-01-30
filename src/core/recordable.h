@@ -44,10 +44,10 @@ namespace cerberus
             // Register this instance in the Cerberus framework register.
             // After this call, all other registered objects will be capable of
             // getting a reference to this instance and use it
-            void checkIn(const std::string& name);
+            virtual void checkIn(const std::string& name);
 
             // Un-register this instance from the Cerberus framework register.
-            void checkOut();
+            virtual void checkOut();
 
             // Checks if the object is registered
             bool isRegistered() const;

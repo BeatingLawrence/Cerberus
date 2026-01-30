@@ -20,17 +20,8 @@ slot_ptr* Message::_slot(const std::string& name) const
 //=============================================================================
 msg_ptr Message::create(HASH32 id) { return msg_ptr(new Message(id)); }
 //=============================================================================
-msg_ptr Message::create(const std::string& name) { return msg_ptr(new Message(name)); }
-//=============================================================================
 Message::Message(HASH32 id)
     : m_id(id),
-      m_recipientIds()
-{
-    // noop
-}
-//=============================================================================
-Message::Message(const std::string& name)
-    : m_id(hashFunc_res(name)),
       m_recipientIds()
 {
     // noop
@@ -92,14 +83,7 @@ slot_ptr Message::getSlot(const std::string& name) const
 //=============================================================================
 HASH32 Message::id() const { return m_id; }
 //=============================================================================
-HASH32 Message::idFromName(const std::string& name) { return hashFunc_res(name); }
-//=============================================================================
-bool Message::is(const std::string& name) const
-{
-    if (name.empty()) return false;
-
-    return m_id == hashFunc_res(name);
-}
+bool Message::is(HASH32 id) const { return m_id == id; }
 //=============================================================================
 HASH32 Message::recipient() const
 {
@@ -126,14 +110,6 @@ void Message::setRecipient(HASH32 id) const
 void Message::setRecipients(const std::vector<HASH32>& ids) const { m_recipientIds = ids; }
 //=============================================================================
 void Message::addRecipient(HASH32 id) const { m_recipientIds.push_back(id); }
-//=============================================================================
-OpRes Message::addRecipient(const std::string& name) const
-{
-    const HASH32 id = Cerberus::idByName(name);
-    if (id == CERBERUS_INVALID_ID) return OR_Failure;
-    m_recipientIds.push_back(id);
-    return OR_OK;
-}
 //=============================================================================
 void Message::clearRecipients() const { m_recipientIds.clear(); }
 //=============================================================================
