@@ -49,21 +49,24 @@
 #define hashFunc(str) CerberusUtils::hash_fnv1a(str)  // generic hash function
 // used by slots
 
-#define hashFunc_res(str) core::CerberusRegister::removeReserved(hashFunc(str))  // restricted hash function
+#define CRB_HASH_REMOVE_RESERVED(h) ((h) & 0xffffff00u)
+#define hashFunc_res(str) CRB_HASH_REMOVE_RESERVED(hashFunc(str))  // restricted hash function
 // used by messages
 
 // Cerberus constants definitions
 // Standard Messages with id 1~255 are reserved and not used by register
 
-#define CERBERUS_INVALID_ID 0u
-#define CERBERUS_REG_RANGE_START 256u  // the first ID outside the reserved range
+#define CRB_INVALID_ID 0u
+#define CRB_REGISTER_RANGE_START 256u  // the first ID used by the Cerberus Register
 
 // Default templates:
-#define CERBERUS_MESSAGE_TERM_ID 1u        // sent to threads to signal termination
-#define CERBERUS_MESSAGE_LOG_ID 2u         // sent to the logger thread to log on file
-#define CERBERUS_MESSAGE_TASK_ID 3u        // sent to a player to start a task
-#define CERBERUS_MESSAGE_TASKEND_ID 4u     // sent from a player to signal a task end
-#define CERBERUS_MESSAGE_SOCKETDATA_ID 5u  // sent by cerberus to listening threads
-#define CERBERUS_MESSAGE_TIMEREXPIRY_ID 6u // sent by cerberus timer to a recipient
+#define CRB_MESSAGE_TERM_ID 1u         // sent to threads to signal termination
+#define CRB_MESSAGE_LOG_ID 2u          // sent to the logger thread to log on file
+#define CRB_MESSAGE_TASK_ID 3u         // sent to a player to start a task
+#define CRB_MESSAGE_TASKEND_ID 4u      // sent from a player to signal a task end
+#define CRB_MESSAGE_SOCKETDATA_ID 5u   // sent by cerberus to listening threads
+#define CRB_MESSAGE_TIMEREXPIRY_ID 6u  // sent by cerberus timer to a recipient
+
+#define CRB_CHANNEL_TIMER 1000u  // the channel used by EventScheduler to send a timerexpiry message
 
 #endif  // CERBERUS_DEFINE_H

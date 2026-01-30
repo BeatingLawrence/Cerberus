@@ -3,14 +3,14 @@
 #include "src/cerberus.h"
 #include "src/thread/mutexlocker.h"
 
-using namespace cerberus::core;
+using namespace crb::core;
 
 //=============================================================================
 EventScheduler::EventScheduler()
-    : cerberus::Thread(TP_Periodic, TimeFrame(100, TimeFrame::U_MicroSecond))
+    : crb::Thread(TP_Periodic, TimeFrame(100, TimeFrame::U_MicroSecond))
 {
     setThreadName("Event Scheduler");
-    m_timerExpiryMsg = cerberus::Message::create(CERBERUS_MESSAGE_TIMEREXPIRY_ID);
+    m_timerExpiryMsg = crb::Message::create(CRB_MESSAGE_TIMEREXPIRY_ID);
 }
 //=============================================================================
 EventScheduler::~EventScheduler()
@@ -61,7 +61,7 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
                 it->delay = next;
 
                 calls.emplace_back(cb, ctx);
-                if (recipient != CERBERUS_INVALID_ID) recipients.push_back(recipient);
+                if (recipient != CRB_INVALID_ID) recipients.push_back(recipient);
                 ++it;
             }
             else
@@ -70,7 +70,7 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
                 it = m_timers.erase(it);
 
                 calls.emplace_back(cb, ctx);
-                if (recipient != CERBERUS_INVALID_ID) recipients.push_back(recipient);
+                if (recipient != CRB_INVALID_ID) recipients.push_back(recipient);
             }
         }
     }  // unlock
@@ -80,7 +80,7 @@ int EventScheduler::tick()  // runs every 100us (0.1ms)
     {
         for (auto recipient : recipients)
         {
-            Cerberus::send_deep(m_timerExpiryMsg, recipient);
+            crb::Cerberus::send_deep(m_timerExpiryMsg, recipient, CRB_CHANNEL_TIMER);
         }
     }
 

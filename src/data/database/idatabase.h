@@ -13,7 +13,7 @@
 
 using namespace std;
 
-namespace cerberus
+namespace crb
 {
     namespace db
     {
@@ -43,6 +43,6 @@ namespace cerberus
             virtual ~IDatabase() {};
         };
     }  // namespace db
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // IDATABASE_H

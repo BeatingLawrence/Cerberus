@@ -10,9 +10,9 @@
 #include "src/time/timeframe.h"
 #include "src/types.h"
 
-namespace cerberus::core
+namespace crb::core
 {
-    class EventScheduler : public cerberus::Thread
+    class EventScheduler : public crb::Thread
     {
        private:
         Mutex m_mutex;
@@ -31,6 +31,6 @@ namespace cerberus::core
         void startTimer(TimerData& data);
         void stopTimer(std::atomic_bool& bit);
     };
-}  // namespace cerberus::core
+}  // namespace crb::core
 
 #endif  // CERBERUS_CORE_EVENTSCHEDULER_H

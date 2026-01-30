@@ -4,7 +4,7 @@
 #include "filesystemdb.h"
 #include "postgresdb.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 Database::Database(DBBackend backend)

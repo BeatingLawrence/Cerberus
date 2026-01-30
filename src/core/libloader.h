@@ -36,7 +36,7 @@
  *
  */
 
-namespace cerberus
+namespace crb
 {
     namespace core
     {
@@ -92,6 +92,6 @@ namespace cerberus
             static OpRes fastload(const std::string& path);
         };
     }  // namespace core
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_CORE_LIBLOADER_H

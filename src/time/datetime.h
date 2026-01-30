@@ -19,7 +19,7 @@
 #include "../Cerberus_global.h"
 #include "timeframe.h"
 
-namespace cerberus
+namespace crb
 {
 
     class CERBERUS_EXPORT DateTime
@@ -121,6 +121,6 @@ namespace cerberus
         // Return the current system time
         static DateTime current();
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_TIME_DATETIME_H

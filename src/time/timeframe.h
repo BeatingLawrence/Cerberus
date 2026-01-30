@@ -14,7 +14,7 @@
 
 #include "../Cerberus_global.h"
 
-namespace cerberus
+namespace crb
 {
 
     struct CERBERUS_EXPORT SplittedTime
@@ -125,6 +125,6 @@ namespace cerberus
         bool operator==(const TimeFrame& other) const;
         bool operator!=(const TimeFrame& other) const;
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_TIME_TIMEFRAME_H

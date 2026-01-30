@@ -7,7 +7,7 @@
 #include "../../exception/exception.h"
 #include "../bytebuffer.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 Cipher::Cipher()

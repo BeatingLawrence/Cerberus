@@ -12,7 +12,7 @@
 #include "time/timeframe.h"   // IWYU pragma: export
 #include "types.h"
 
-namespace cerberus
+namespace crb
 {
     namespace core
     {
@@ -106,12 +106,12 @@ namespace cerberus
 
     class CERBERUS_EXPORT Cerberus
     {
-        friend class ::cerberus::core::CerberusCore;
-        friend class ::cerberus::core::Recordable;
-        friend class ::cerberus::core::CerberusLog;
-        friend class ::cerberus::core::LibLoader;
-        friend class ::cerberus::Timer;
-        friend class ::cerberus::Alarm;
+        friend class ::crb::core::CerberusCore;
+        friend class ::crb::core::Recordable;
+        friend class ::crb::core::CerberusLog;
+        friend class ::crb::core::LibLoader;
+        friend class ::crb::Timer;
+        friend class ::crb::Alarm;
 
        private:
         static core::FrameworkData framework;
@@ -206,11 +206,11 @@ namespace cerberus
         static BoolOpRes read_bool(const std::string& key, const std::string& section = MAIN_SECTION);
 
         // send with deep copy
-        static OpRes send_deep(const msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID,
+        static OpRes send_deep(const msg_ptr& message, HASH32 recipientID = CRB_INVALID_ID,
                                HASH32 channel_in = 0);
 
         // send using std::move
-        static OpRes send(msg_ptr& message, HASH32 recipientID = CERBERUS_INVALID_ID,
+        static OpRes send(msg_ptr& message, HASH32 recipientID = CRB_INVALID_ID,
                           HASH32 channel_in = 0);
 
         // ======================Public Register===========================
@@ -229,6 +229,6 @@ namespace cerberus
         // This method will return an invalid message if name was not found,
         // or if it's not a Message name.
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_H

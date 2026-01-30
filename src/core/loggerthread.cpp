@@ -3,14 +3,14 @@
 #include "../cerberus.h"
 #include "../data/filesystem/directory.h"
 
-using namespace cerberus::core;
+using namespace crb::core;
 
 //=============================================================================
 int LoggerThread::tick()
 {
     msg_ptr message = next();
 
-    if (message->id() != CERBERUS_MESSAGE_LOG_ID || m_failed.load()) return 0;
+    if (message->id() != CRB_MESSAGE_LOG_ID || m_failed.load()) return 0;
 
     auto str = message->getSlotAt(0)->to<StringSlot>()->value();
 
@@ -53,7 +53,7 @@ void LoggerThread::coolDown()
 }
 //=============================================================================
 LoggerThread::LoggerThread()
-    : cerberus::Thread(TP_Message),
+    : crb::Thread(TP_Message),
       m_logFile(),
       m_currentSize(0),
       m_conf()

@@ -7,7 +7,7 @@
 #include "./recipient.h"
 #include "mutex.h"
 
-namespace cerberus
+namespace crb
 {
     class ThreadBase : public core::Recordable, public Recipient
     {
@@ -66,6 +66,6 @@ namespace cerberus
 
         using Recipient::size;
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_THREAD_THREADBASE_H

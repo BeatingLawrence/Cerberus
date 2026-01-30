@@ -7,7 +7,7 @@
 #include "../types.h"
 #include "mutex.h"
 
-namespace cerberus
+namespace crb
 {
     class Player;
     class Timer;
@@ -64,7 +64,7 @@ namespace cerberus
         OpRes runTask(Task t);
 
         // Convenience overload.
-        OpRes runTask(cerberus::OpRes (*cb)(void*, void*), void* ctx, void* data);
+        OpRes runTask(crb::OpRes (*cb)(void*, void*), void* ctx, void* data);
 
         // Returns current total number of workers (fixed + backup).
         size_t size() const;
@@ -90,6 +90,6 @@ namespace cerberus
         // Returns whether backup threads are allowed.
         bool backupAllowed() const;
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_THREADPOOL_H

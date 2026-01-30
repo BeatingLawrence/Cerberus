@@ -4,10 +4,10 @@
 
 #include "../cerberus.h"
 
-using namespace cerberus::core;
+using namespace crb::core;
 
 //=============================================================================
-cerberus::OpRes LibLoader::close(void* handle)
+crb::OpRes LibLoader::close(void* handle)
 {
     if (dlclose(handle) != 0)
     {
@@ -19,7 +19,7 @@ cerberus::OpRes LibLoader::close(void* handle)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes LibLoader::open(const std::string& path)
+crb::OpRes LibLoader::open(const std::string& path)
 {
     void* p = dlopen(path.c_str(), RTLD_LOCAL | RTLD_NOW);
 
@@ -57,7 +57,7 @@ LibLoader::LibLoader()
 //=============================================================================
 LibLoader::~LibLoader() { unload(); }
 //=============================================================================
-cerberus::OpRes LibLoader::load(const std::string& path, bool noreg)
+crb::OpRes LibLoader::load(const std::string& path, bool noreg)
 {
     OpRes ret;
     void* p;
@@ -91,7 +91,7 @@ cerberus::OpRes LibLoader::load(const std::string& path, bool noreg)
     logDebug("loaded plugin %s in process memory", path.c_str());
 
     bool exists = false;
-    m_id        = cerberus::Cerberus::addPlugin(m_handle, path, exists);
+    m_id        = crb::Cerberus::addPlugin(m_handle, path, exists);
 
     if (exists)
     {
@@ -104,7 +104,7 @@ cerberus::OpRes LibLoader::load(const std::string& path, bool noreg)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes LibLoader::unload()
+crb::OpRes LibLoader::unload()
 {
     if (!m_noreg) return OR_Unavailable;
     if (!m_handle) return OR_BadConditions;
@@ -121,7 +121,7 @@ cerberus::OpRes LibLoader::unload()
     return OR_Failure;
 }
 //=============================================================================
-cerberus::OpRes LibLoader::swap(const std::string& path)
+crb::OpRes LibLoader::swap(const std::string& path)
 {
     if (m_noreg) return OR_Unavailable;
 
@@ -149,9 +149,9 @@ cerberus::OpRes LibLoader::swap(const std::string& path)
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes LibLoader::reload() { return swap(m_path); }
+crb::OpRes LibLoader::reload() { return swap(m_path); }
 //=============================================================================
-cerberus::LoaderFunc LibLoader::get(const std::string& symbol)
+crb::LoaderFunc LibLoader::get(const std::string& symbol)
 {
     MutexLocker ml;
 
@@ -171,7 +171,7 @@ cerberus::LoaderFunc LibLoader::get(const std::string& symbol)
 //=============================================================================
 bool LibLoader::isLoaded() const { return isLoaded(m_path); }
 //=============================================================================
-cerberus::OpRes LibLoader::fastload(const std::string& path)
+crb::OpRes LibLoader::fastload(const std::string& path)
 {
     LibLoader loader;
     return loader.load(path);

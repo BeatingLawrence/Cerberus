@@ -2,12 +2,12 @@
 
 #include "../cerberus.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 void Player::sendTaskEndMsg(HASH32 recipient, OpRes res)
 {
-    auto msg = Cerberus::constructMessage(CERBERUS_MESSAGE_TASKEND_ID);
+    auto msg = Cerberus::constructMessage(CRB_MESSAGE_TASKEND_ID);
     msg->getSlot("result")->to<ResultSlot>()->value(res);
     msg->getSlot("player")->to<VoidPSlot>()->value(this);
     Cerberus::send(msg, recipient);
@@ -32,7 +32,7 @@ int Player::tick()
 
     // message mode
     auto msg = next();
-    if (msg->id() != CERBERUS_MESSAGE_TASK_ID) return 0;
+    if (msg->id() != CRB_MESSAGE_TASK_ID) return 0;
 
     auto client = msg->getSlot("client")->to<UInt64Slot>()->value();
     auto task   = msg->getSlot("task")->to<TaskSlot>()->value();

@@ -6,7 +6,7 @@
 #include "../message/message.h"  // IWYU pragma: export
 #include "mutexlocker.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 ThreadBase::ThreadBase(ThreadPeriodicity periodicity)

@@ -6,8 +6,8 @@
 #include "../../core/cerberusutils.h"
 #include "dbdata.h"
 
-using namespace cerberus::db;
-using namespace cerberus;
+using namespace crb::db;
+using namespace crb;
 
 //=============================================================================
 void PostgresDB::_deinit()

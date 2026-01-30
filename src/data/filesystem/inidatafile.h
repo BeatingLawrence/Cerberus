@@ -8,7 +8,7 @@
 
 #include "file.h"
 
-namespace cerberus
+namespace crb
 {
     class CERBERUS_EXPORT IniDataFile
     {
@@ -139,6 +139,6 @@ namespace cerberus
         BoolOpRes read_bool(const std::string& key, const std::string& section = MAIN_SECTION);
     };
 
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_DATA_FILESYSTEM_INIDATAFILE_H

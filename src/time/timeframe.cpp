@@ -8,7 +8,7 @@
 #define US_IN_MON (uint64_t)2592000000000u
 #define US_IN_Y (uint64_t)31536000000000u
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 void TimeFrame::_add(uint64_t val)

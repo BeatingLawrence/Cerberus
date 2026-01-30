@@ -7,7 +7,7 @@
 #include "../types.h"
 #include "./cerberusutils.h"
 
-using namespace cerberus::core;
+using namespace crb::core;
 
 #define TIMESTAMP_STRING_LEN 23
 #define LOGCHANNELSPEC_LEN 7  // (including spaces)
@@ -103,7 +103,7 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
     // file log
     if (fileLoggerAvail())
     {
-        msg_ptr logMessage = Cerberus::constructMessage(CERBERUS_MESSAGE_LOG_ID);
+        msg_ptr logMessage = Cerberus::constructMessage(CRB_MESSAGE_LOG_ID);
         logMessage->getSlotAt(0)->to<StringSlot>()->value(rawLog);
         m_logger->send(logMessage);
     }

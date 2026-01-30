@@ -7,7 +7,7 @@
 #include "bytebuffer.h"
 #include "filesystem/file.h"
 
-namespace cerberus
+namespace crb
 {
     class JsonData
     {
@@ -176,6 +176,6 @@ namespace cerberus
         // Calculate the memory footprint
         SIZE memfp() const;
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_DATA_JSONDATA_H

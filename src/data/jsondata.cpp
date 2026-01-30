@@ -2,7 +2,7 @@
 
 #include "src/cerberus.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 BoolOpRes JsonData::_parse(const ByteBuffer &buffer, ParseMode mode)
@@ -283,25 +283,25 @@ JsonData::JsonData(const std::string &name, const JsonData &data)
 {
 }
 //=============================================================================
-cerberus::Iterator<JsonData> JsonData::begin()
+crb::Iterator<JsonData> JsonData::begin()
 {
     if (m_elements.empty()) return nullptr;
     return &m_elements.front();
 }
 //=============================================================================
-cerberus::Iterator<JsonData> JsonData::end()
+crb::Iterator<JsonData> JsonData::end()
 {
     if (m_elements.empty()) return nullptr;
     return ((&m_elements.back()) + 1);
 }
 //=============================================================================
-cerberus::ConstIterator<JsonData> JsonData::begin() const
+crb::ConstIterator<JsonData> JsonData::begin() const
 {
     if (m_elements.empty()) return nullptr;
     return &m_elements.front();
 }
 //=============================================================================
-cerberus::ConstIterator<JsonData> JsonData::end() const
+crb::ConstIterator<JsonData> JsonData::end() const
 {
     if (m_elements.empty()) return nullptr;
     return ((&m_elements.back()) + 1);
@@ -337,7 +337,7 @@ JsonData JsonData::search(const std::string &name)
     return JsonData();
 }
 //=============================================================================
-cerberus::JsonDataType JsonData::type() const { return m_type; }
+crb::JsonDataType JsonData::type() const { return m_type; }
 //=============================================================================
 bool JsonData::isValid() const { return m_type != JDT_Undefined; }
 //=============================================================================
@@ -353,7 +353,7 @@ bool JsonData::isArray() const { return m_type == JDT_Array; }
 //=============================================================================
 bool JsonData::isObject() const { return m_type == JDT_Object; }
 //=============================================================================
-cerberus::SIZE JsonData::size() const { return m_elements.size(); }
+crb::SIZE JsonData::size() const { return m_elements.size(); }
 //=============================================================================
 bool JsonData::empty() const { return m_elements.empty(); }
 //=============================================================================
@@ -373,7 +373,7 @@ bool JsonData::check() const
     return true;
 }
 //=============================================================================
-cerberus::OpRes JsonData::checkFix()
+crb::OpRes JsonData::checkFix()
 {
     if (m_type == JDT_Array || m_type == JDT_Object)
     {
@@ -520,7 +520,7 @@ JsonData &JsonData::clear()
     return *this;
 }
 //=============================================================================
-cerberus::OpRes JsonData::parse(const ByteBuffer &buffer)
+crb::OpRes JsonData::parse(const ByteBuffer &buffer)
 {
     m_elements.clear();
     m_name.clear();
@@ -531,7 +531,7 @@ cerberus::OpRes JsonData::parse(const ByteBuffer &buffer)
     return res;
 }
 //=============================================================================
-cerberus::OpRes JsonData::parse(const File &file)
+crb::OpRes JsonData::parse(const File &file)
 {
     ByteBuffer buffer;
     auto res = file.read(buffer);
@@ -549,7 +549,7 @@ OpResData<ByteBuffer> JsonData::generate() const
     return buffer;
 }
 //=============================================================================
-cerberus::OpRes JsonData::generate(File &file) const
+crb::OpRes JsonData::generate(File &file) const
 {
     auto res = generate();
     if (res.fail()) return res;

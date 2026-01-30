@@ -7,7 +7,7 @@
 #include "../thread/thread.h"
 #include "../types.h"
 
-namespace cerberus
+namespace crb
 {
     namespace core
     {
@@ -45,6 +45,6 @@ namespace cerberus
             bool isFailed();
         };
     }  // namespace core
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_CORE_LOGGERTHREAD_H

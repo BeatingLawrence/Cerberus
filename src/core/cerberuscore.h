@@ -16,13 +16,13 @@
 #include "eventscheduler.h"
 #include "cerberusregister.h"
 
-namespace cerberus
+namespace crb
 {
     class Timer;
 
     namespace core
     {
-        class CerberusCore : public cerberus::Thread
+        class CerberusCore : public crb::Thread
         {
            private:
             CoreConf m_conf;
@@ -85,6 +85,6 @@ namespace cerberus
             //=====================SOCKETS========================
         };
     }  // namespace core
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_CORE_CERBERUSCORE_H

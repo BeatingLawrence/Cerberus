@@ -10,7 +10,7 @@ namespace pqxx
     class connection;
 }
 
-namespace cerberus
+namespace crb
 {
     namespace db
     {
@@ -46,7 +46,7 @@ namespace cerberus
             virtual ~PostgresDB();
         };
     }  // namespace db
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // POSTGRESDB_H
 

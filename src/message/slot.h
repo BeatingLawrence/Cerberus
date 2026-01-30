@@ -11,25 +11,25 @@
 
 // This macro allows the application to define a new slot type using a given C-struct
 #define new_slot_from_cstruct(slot_type, c_struct)                                                 \
-    class slot_type : public cerberus::Slot<c_struct>                                              \
+    class slot_type : public crb::Slot<c_struct>                                              \
     {                                                                                              \
         slot_type(const c_struct& value = {}, const std::string& name = "")                        \
-            : cerberus::Slot<c_struct>(value, name) {};                                            \
+            : crb::Slot<c_struct>(value, name) {};                                            \
                                                                                                    \
        public:                                                                                     \
-        static cerberus::slot_ptr create(const c_struct& value = {}, const std::string& name = "") \
+        static crb::slot_ptr create(const c_struct& value = {}, const std::string& name = "") \
         {                                                                                          \
-            return cerberus::slot_ptr(new slot_type(value, name));                                 \
+            return crb::slot_ptr(new slot_type(value, name));                                 \
         }                                                                                          \
-        virtual cerberus::Clonable* clone() const { return new slot_type(*this); }                 \
-        virtual cerberus::ByteBuffer toBuffer() const                                              \
+        virtual crb::Clonable* clone() const { return new slot_type(*this); }                 \
+        virtual crb::ByteBuffer toBuffer() const                                              \
         {                                                                                          \
-            return cerberus::ByteBuffer((cerberus::BYTE*)&m_value, sizeof(c_struct));              \
+            return crb::ByteBuffer((crb::BYTE*)&m_value, sizeof(c_struct));              \
         }                                                                                          \
-        virtual cerberus::SIZE memfp() const { return sizeof(slot_type); }                         \
+        virtual crb::SIZE memfp() const { return sizeof(slot_type); }                         \
     };
 
-namespace cerberus
+namespace crb
 {
     class CERBERUS_EXPORT SlotBase : public Clonable
     {
@@ -374,6 +374,6 @@ namespace cerberus
         virtual SIZE memfp() const { return sizeof(ResultSlot) + m_value.memfp(); }
     };
 
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_BASESLOT_H

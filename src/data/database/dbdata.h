@@ -20,7 +20,7 @@
 #include "../../types.h"
 #include "../bytebuffer.h"
 
-namespace cerberus
+namespace crb
 {
     class DBCell
     {
@@ -213,6 +213,6 @@ namespace cerberus
         ConstIterator<DBRow> begin() const;
         ConstIterator<DBRow> end() const;
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_DBDATA_H

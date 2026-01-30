@@ -7,7 +7,7 @@
 #include "../exception/exception.h"
 #include "../types.h"
 
-namespace cerberus
+namespace crb
 {
     class Cerberus;
 
@@ -17,8 +17,8 @@ namespace cerberus
 
         class CERBERUS_EXPORT Recordable
         {
-            friend class ::cerberus::core::CerberusRegister;
-            friend class ::cerberus::Cerberus;
+            friend class ::crb::core::CerberusRegister;
+            friend class ::crb::Cerberus;
 
            public:
             // Return a string containing the object type (and socket type if present) and ID,
@@ -110,6 +110,6 @@ namespace cerberus
             }
         };
     }  // namespace core
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // RECORDABLE_H

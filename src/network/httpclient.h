@@ -4,7 +4,7 @@
 #include "../data/httpdata.h"
 #include "socket.h"
 
-namespace cerberus
+namespace crb
 {
     class HTTPClient : private Socket
     {
@@ -15,7 +15,7 @@ namespace cerberus
 
         HTTPResponse m_currentStreamResponse;
 
-        cerberus::OpRes _connect();
+        crb::OpRes _connect();
 
         OpResData<HTTPResponse> _parseResponseHeader(const ByteBuffer &buf);
 
@@ -46,27 +46,27 @@ namespace cerberus
 
         // Connect to the remote (if not already connected) and
         // send an HTTP request using the given data
-        cerberus::OpRes makeRequest(const HTTPRequest &request);
+        crb::OpRes makeRequest(const HTTPRequest &request);
 
         // Block until a response is available to be read, then, if connection is
         // not persistent, close the socket
-        cerberus::OpResData<HTTPResponse> getResponse(const TimeFrame &timeout = TimeFrame(1000),
+        crb::OpResData<HTTPResponse> getResponse(const TimeFrame &timeout = TimeFrame(1000),
                                                       const TimeFrame &cyc     = TimeFrame());
 
         // If the server never stops to send data, the getStream() method must be used instead.
         // This version downloads the payload partially (up to buffer size) and then returns.
         // The application must keep calling this method to get the stream data.
         // NOTE: all the calls will return the same HTTPResponse data, but with different payloads.
-        cerberus::OpResData<HTTPResponse> getStream(const TimeFrame &timeout = TimeFrame(1000));
+        crb::OpResData<HTTPResponse> getStream(const TimeFrame &timeout = TimeFrame(1000));
 
         // Get HTTP data. This method is a combination of makeRequest and getResponse
-        cerberus::OpResData<HTTPResponse> get(const HTTPRequest &request,
+        crb::OpResData<HTTPResponse> get(const HTTPRequest &request,
                                               const TimeFrame &timeout    = TimeFrame(1000),
                                               const TimeFrame &cycTimeout = TimeFrame());
 
         // Force client connection close
         OpRes disconnect();
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_HTTPCLIENT_H

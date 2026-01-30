@@ -8,7 +8,7 @@
 #include "../types.h"
 #include "./mutex.h"
 
-namespace cerberus
+namespace crb
 {
     class CERBERUS_EXPORT Recipient
     {
@@ -50,7 +50,7 @@ namespace cerberus
 
         struct RecipientChannel
         {
-            HASH32 channel_out{CERBERUS_INVALID_ID};
+            HASH32 channel_out{CRB_INVALID_ID};
             std::vector<RecipientTarget> recipients;
         };
 
@@ -156,6 +156,6 @@ namespace cerberus
         SIZE getDroppedCount(HASH32 channel_in) const;
         SIZE getRejectedCount(HASH32 channel_in) const;
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_RECIPIENT_H

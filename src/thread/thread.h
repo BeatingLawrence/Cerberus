@@ -54,7 +54,7 @@
 #include "../time/timeframe.h"
 #include "./threadbase.h"
 
-namespace cerberus
+namespace crb
 {
     class CERBERUS_EXPORT Thread : public ThreadBase
     {
@@ -146,6 +146,6 @@ namespace cerberus
 
         friend class Cerberus;
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // THREAD_THREAD_H

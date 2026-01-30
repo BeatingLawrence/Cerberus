@@ -14,12 +14,7 @@
 #include "../Cerberus_global.h"
 #include "../types.h"
 
-namespace cerberus
-{
-    class MessageTemplate;
-}
-
-namespace cerberus
+namespace crb
 {
     class CERBERUS_EXPORT CerberusUtils
     {
@@ -184,6 +179,6 @@ namespace cerberus
         // This method requires root permissions
         static OpRes assignIRQ(int irq, const CoreSet& cores);
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_CORE_CERBERUSUTILS_H

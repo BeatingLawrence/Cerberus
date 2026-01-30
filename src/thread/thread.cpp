@@ -13,7 +13,7 @@
 #include "../exception/exception.h"
 #include "../message/message.h"  // IWYU pragma: export
 
-using namespace cerberus;
+using namespace crb;
 
 CoreSet Thread::s_defaultCoreSet;
 
@@ -317,7 +317,7 @@ void Thread::sleep(const TimeFrame& time)
 void Thread::checkIn(const std::string& name)
 {
     setThreadName(name);
-    cerberus::core::Recordable::checkIn(name);
+    crb::core::Recordable::checkIn(name);
 }
 //=============================================================================
 Thread::Thread(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize, const CoreSet& coreSet)
@@ -401,7 +401,7 @@ IntOpRes Thread::join(bool stop)
     return m_retValue;
 }
 //=============================================================================
-cerberus::OpRes Thread::detach()
+crb::OpRes Thread::detach()
 {
     int ret = pthread_detach(m_pthread);
 

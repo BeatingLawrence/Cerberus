@@ -9,11 +9,9 @@
 #include "../thread/recipient.h"
 #include "recordable.h"
 
-using namespace cerberus;
-using namespace cerberus::core;
+using namespace crb;
+using namespace crb::core;
 
-//=============================================================================
-HASH32 CerberusRegister::removeReserved(HASH32 hash) { return hash & 0xffffff00; }
 //=============================================================================
 HASH32 CerberusRegister::findAvailableObjId(const std::string& name)
 {
@@ -46,7 +44,7 @@ bool CerberusRegister::_templateIdCheck(HASH32 id) const
 //=============================================================================
 OpResData<Recordable*> CerberusRegister::objById(HASH32 id)
 {
-    if (id == CERBERUS_INVALID_ID) return OR_WrongArgument;
+    if (id == CRB_INVALID_ID) return OR_WrongArgument;
 
     for (auto&& el : m_objects)
         if (el->m_id == id) return el;
@@ -64,7 +62,7 @@ OpRes CerberusRegister::addMsgTemplate(const msg_ptr& tmplt)
 {
     MutexLocker locker(m_tmpltMutex);
 
-    if (tmplt->id() == CERBERUS_INVALID_ID) return OR_WrongArgument;
+    if (tmplt->id() == CRB_INVALID_ID) return OR_WrongArgument;
     if (_templateIdCheck(tmplt->id())) return OR_AlreadyPresent;
 
     m_templates.push_back(tmplt.duplicate());
@@ -100,7 +98,7 @@ void CerberusRegister::registerObj(Recordable* object, const std::string& name)
 //=============================================================================
 void CerberusRegister::unregisterObj(HASH32 id)
 {
-    if (id == CERBERUS_INVALID_ID) return;
+    if (id == CRB_INVALID_ID) return;
 
     MutexLocker locker(m_objMutex);
 
@@ -182,7 +180,7 @@ HASH32 CerberusRegister::addPlugin(void* handle, const std::string& path, bool& 
 
     uint32_t id = findAvailablePluginId(path);
 
-    if (id == CERBERUS_INVALID_ID) throw cIllegalArgExc("Plugin is a duplicate");
+    if (id == CRB_INVALID_ID) throw cIllegalArgExc("Plugin is a duplicate");
 
     m_plugins.push_back(std::move(Plugin(id, handle, path)));
 
@@ -241,7 +239,7 @@ MutexLocker CerberusRegister::getPluginMutex(HASH32 id)
     return MutexLocker();  // invalid
 }
 //=============================================================================
-bool CerberusRegister::updatePlugin(uint32_t id, const std::string& path, void* handle)
+bool CerberusRegister::updatePlugin(HASH32 id, const std::string& path, void* handle)
 {
     MutexLocker locker(m_pluginMutex);
 

@@ -4,7 +4,7 @@
 #include "src/define.h"
 #include "src/thread/thread.h"
 
-using namespace cerberus::core;
+using namespace crb::core;
 
 //=============================================================================
 std::string Recordable::toStr(const Recordable& obj)
@@ -13,7 +13,7 @@ std::string Recordable::toStr(const Recordable& obj)
 
     ret.append("ID:");
 
-    if (obj.m_id == CERBERUS_INVALID_ID)
+    if (obj.m_id == CRB_INVALID_ID)
         ret.append("INVALID");
     else
         ret.append(CerberusUtils::strPrint("%lx", obj.m_id));
@@ -25,7 +25,7 @@ std::string Recordable::toObjStr() { return Recordable::toStr(*this); }
 //=============================================================================
 std::string Recordable::toThreadStr(const Recordable& obj)
 {
-    auto thr  = obj.to_p<const cerberus::Thread>();
+    auto thr  = obj.to_p<const crb::Thread>();
     auto time = thr->getTime();
 
     switch (thr->getPeriodicity())
@@ -59,17 +59,17 @@ std::string Recordable::toThreadStr(const Recordable& obj)
 }
 //=============================================================================
 Recordable::Recordable()
-    : m_id(CERBERUS_INVALID_ID)
+    : m_id(CRB_INVALID_ID)
 {
 }
 //=============================================================================
 Recordable::~Recordable() {}
 //=============================================================================
-void Recordable::checkIn(const std::string& name) { cerberus::Cerberus::registerObj(this, name); }
+void Recordable::checkIn(const std::string& name) { crb::Cerberus::registerObj(this, name); }
 //=============================================================================
-void Recordable::checkOut() { cerberus::Cerberus::unregisterObj(m_id); }
+void Recordable::checkOut() { crb::Cerberus::unregisterObj(m_id); }
 //=============================================================================
-bool Recordable::isRegistered() const { return (m_id != CERBERUS_INVALID_ID); }
+bool Recordable::isRegistered() const { return (m_id != CRB_INVALID_ID); }
 //=============================================================================
-cerberus::HASH32 Recordable::id() const { return m_id; }
+crb::HASH32 Recordable::id() const { return m_id; }
 //=============================================================================

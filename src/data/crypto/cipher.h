@@ -9,7 +9,7 @@ typedef struct evp_cipher_ctx_st EVP_CIPHER_CTX;
 typedef struct evp_md_st EVP_MD;
 typedef struct evp_cipher_st EVP_CIPHER;
 
-namespace cerberus
+namespace crb
 {
     class ByteBuffer;
 
@@ -37,6 +37,6 @@ namespace cerberus
         // Decrypt the buffer and return the result
         OpResData<ByteBuffer> decryptData_AES256(const ByteBuffer& buf, const KEY256& key);
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_DATA_CRYPTO_CIPHER_H

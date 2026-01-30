@@ -13,7 +13,7 @@
 
 #include "../Cerberus_global.h"
 
-namespace cerberus
+namespace crb
 {
     class Mutex;
 
@@ -45,6 +45,6 @@ namespace cerberus
 
         bool isValid();
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_MUTEX_MUTEXLOCKER_H

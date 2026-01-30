@@ -35,7 +35,7 @@
  *             thus, the buffer will be deep-copied if necessary
  */
 
-namespace cerberus
+namespace crb
 {
 
     class Mutex;
@@ -156,6 +156,6 @@ namespace cerberus
         // Get the number of instances which refer to this buffer
         uint32_t instances();
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_DATA_SHAREDBYTEBUFFER_H

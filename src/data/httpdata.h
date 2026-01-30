@@ -4,7 +4,7 @@
 #include "bytebuffer.h"
 #include "jsondata.h"
 
-namespace cerberus
+namespace crb
 {
     class HTTPData
     {
@@ -121,6 +121,6 @@ namespace cerberus
         // Tell of the instance is null, i.e. has statusCode = 0
         bool isNull();
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_DATA_HTTPDATA_H

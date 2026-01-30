@@ -8,7 +8,7 @@
 #include "../Cerberus_global.h"
 #include "exceptioncatalog.h"  // IWYU pragma: export
 
-namespace cerberus
+namespace crb
 {
     class CERBERUS_EXPORT Exception : public std::exception
     {
@@ -43,5 +43,5 @@ namespace cerberus
 
         virtual const char* what() const noexcept;
     };
-}  // namespace cerberus
+}  // namespace crb
 #endif  // CERBERUS_EXCEPTION_H

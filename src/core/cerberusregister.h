@@ -8,7 +8,7 @@
 #include "../thread/mutexlocker.h"
 #include "recordable.h"
 
-namespace cerberus
+namespace crb
 {
     namespace core
     {
@@ -67,8 +67,6 @@ namespace cerberus
 
             ~CerberusRegister();
 
-            static HASH32 removeReserved(HASH32 hash);
-
             //==================TEMPLATES====================
 
             // Register a new message template
@@ -118,6 +116,6 @@ namespace cerberus
             bool updatePlugin(HASH32 id, const std::string& path, void* handle);
         };
     }  // namespace core
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_CERBERUSREGISTER_H

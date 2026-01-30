@@ -7,7 +7,7 @@
 #include "../../data/bytebuffer.h"
 #include "../../types.h"
 
-namespace cerberus
+namespace crb
 {
     class Socket;
 
@@ -15,8 +15,8 @@ namespace cerberus
 
     class CERBERUS_EXPORT File
     {
-        friend class ::cerberus::Socket;
-        friend class ::cerberus::Directory;
+        friend class ::crb::Socket;
+        friend class ::crb::Directory;
 
        private:
         Path m_path;
@@ -207,6 +207,6 @@ namespace cerberus
         // Check if this file and other file are equal (same size, same content)
         BoolOpRes isEqual(File& other) const;
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_DATA_FILESYSTEM_FILE_H

@@ -16,7 +16,7 @@
 #define FNV_OFFSET_BASIS 0x811c9dc5
 #define FNV_PRIME 0x01000193
 
-using namespace cerberus;
+using namespace crb;
 
 std::regex CerberusUtils::isNumberRegex("\\-?[0-9]+(?:\\.[0-9]+)?", std::regex_constants::ECMAScript |
                                                                         std::regex_constants::optimize |

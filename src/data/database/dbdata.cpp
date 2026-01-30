@@ -5,7 +5,7 @@
 #include "../../cerberus.h"
 #include "../../exception/exception.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 void DBCell::_fromBitArray(const std::vector<bool>& arr)

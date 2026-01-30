@@ -2,7 +2,7 @@
 
 #include "../core/cerberusutils.h"
 
-using namespace cerberus;
+using namespace crb;
 
 static constexpr const char *contentlen = "Content-Length";
 

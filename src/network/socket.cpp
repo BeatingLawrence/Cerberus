@@ -56,7 +56,7 @@ static inline int SSL_read_ex(SSL *ssl, void *buf, size_t num, size_t *readbytes
 #define DEFAULT_RECV_BUFFER_SIZE 512
 #define DEFAULT_MAX_CONNECTIONS 15
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 Socket::Socket(SocketType type, int fd, const Host &remote, SSL_CTX *ctx)

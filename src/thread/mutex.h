@@ -14,13 +14,13 @@
 #include "../Cerberus_global.h"
 #include "../types.h"
 
-namespace cerberus
+namespace crb
 {
     class ThreadBase;
 
     class CERBERUS_EXPORT Mutex
     {
-        friend class ::cerberus::ThreadBase;
+        friend class ::crb::ThreadBase;
 
        private:
         pthread_mutex_t m_pmutex;
@@ -47,6 +47,6 @@ namespace cerberus
         // An excption will be thrown if the instance is invalid
         void unlock();
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_MUTEX_MUTEX_H

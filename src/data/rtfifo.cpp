@@ -13,7 +13,7 @@
 #include "../cerberus.h"
 #include "../exception/exception.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 RTFifo::RTFifo()

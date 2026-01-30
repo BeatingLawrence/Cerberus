@@ -7,8 +7,8 @@
 #include <sstream>
 #include <vector>
 
-using namespace cerberus::core;
-using namespace cerberus;
+using namespace crb::core;
+using namespace crb;
 
 //=============================================================================
 static std::string idsToStr(const std::vector<HASH32>& ids)
@@ -63,7 +63,7 @@ int CerberusCore::tick()
 
     switch (message->id())
     {
-        case CERBERUS_MESSAGE_TASK_ID:
+        case CRB_MESSAGE_TASK_ID:
             processTaskMsg(message);
             break;
     }

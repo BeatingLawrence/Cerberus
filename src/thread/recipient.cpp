@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 Recipient::QueueState* Recipient::_q_nomutex(HASH32 channel_in)

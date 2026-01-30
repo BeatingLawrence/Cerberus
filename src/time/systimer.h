@@ -11,7 +11,7 @@
 #include "../types.h"
 #include "./timeframe.h"
 
-namespace cerberus
+namespace crb
 {
     namespace time
     {
@@ -58,7 +58,7 @@ namespace cerberus
             void provideTimeoutCallback(timerCallback callback, void* ctx = nullptr);
         };
     }  // namespace time
-}  // namespace cerberus
+}  // namespace crb
 
 #endif
 #endif  // CERBERUS_TIME_SYSTIMER_H

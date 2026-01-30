@@ -7,7 +7,7 @@
 #include "src/cerberus.h"
 #include "src/exception/exception.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 void ByteBuffer::_resize(SIZE size)
@@ -40,7 +40,7 @@ void ByteBuffer::_clear()
     m_pos   = 0;
 }
 //=============================================================================
-cerberus::BYTE& ByteBuffer::getat(SIZE index) const { return *((BYTE*)(m_bytes + index)); }
+crb::BYTE& ByteBuffer::getat(SIZE index) const { return *((BYTE*)(m_bytes + index)); }
 //=============================================================================
 ByteBuffer::ByteBuffer(const void* buf, SIZE size)
     : m_bytes(nullptr),
@@ -152,11 +152,11 @@ Iterator<BYTE> ByteBuffer::end()
     return &getat(m_size);
 }
 //=============================================================================
-const cerberus::BYTE* ByteBuffer::data(SIZE index) const { return m_bytes + index; }
+const crb::BYTE* ByteBuffer::data(SIZE index) const { return m_bytes + index; }
 //=============================================================================
-cerberus::BYTE* ByteBuffer::data(SIZE index) { return m_bytes + index; }
+crb::BYTE* ByteBuffer::data(SIZE index) { return m_bytes + index; }
 //=============================================================================
-const cerberus::BYTE& ByteBuffer::at(SIZE index) const
+const crb::BYTE& ByteBuffer::at(SIZE index) const
 {
     if (index >= m_size)
     {
@@ -165,7 +165,7 @@ const cerberus::BYTE& ByteBuffer::at(SIZE index) const
     return getat(index);
 }
 //=============================================================================
-cerberus::BYTE& ByteBuffer::at(SIZE index)
+crb::BYTE& ByteBuffer::at(SIZE index)
 {
     if (index >= m_size)
     {
@@ -174,9 +174,9 @@ cerberus::BYTE& ByteBuffer::at(SIZE index)
     return getat(index);
 }
 //=============================================================================
-cerberus::BYTE& ByteBuffer::operator[](SIZE index) { return at(index); }
+crb::BYTE& ByteBuffer::operator[](SIZE index) { return at(index); }
 //=============================================================================
-const cerberus::BYTE& ByteBuffer::operator[](SIZE index) const { return at(index); }
+const crb::BYTE& ByteBuffer::operator[](SIZE index) const { return at(index); }
 //=============================================================================
 ByteBuffer& ByteBuffer::appendFrom(const void* buffer, SIZE len)
 {
@@ -315,7 +315,7 @@ ByteBuffer& ByteBuffer::append_8b(void* src) { return appendFrom((const BYTE*)sr
 //=============================================================================
 ByteBuffer& ByteBuffer::append_16b(void* src) { return appendFrom((const BYTE*)src, 16); }
 //=============================================================================
-cerberus::SIZE ByteBuffer::size() const { return m_size; }
+crb::SIZE ByteBuffer::size() const { return m_size; }
 //=============================================================================
 bool ByteBuffer::isEmpty() const { return m_size == 0; }
 //=============================================================================
@@ -653,7 +653,7 @@ ByteBuffer ByteBuffer::read(SIZE len) const
     return subBuffer(p, len);
 }
 //=============================================================================
-cerberus::BYTE ByteBuffer::readByte() const
+crb::BYTE ByteBuffer::readByte() const
 {
     auto b = at(m_pos);
     m_pos++;
@@ -670,7 +670,7 @@ const ByteBuffer& ByteBuffer::seek(SIZE pos) const
     return *this;
 }
 //=============================================================================
-cerberus::SIZE ByteBuffer::pos() const { return m_pos; }
+crb::SIZE ByteBuffer::pos() const { return m_pos; }
 //=============================================================================
 const ByteBuffer& ByteBuffer::resetCursor(bool end) const
 {
@@ -684,7 +684,7 @@ const ByteBuffer& ByteBuffer::resetCursor(bool end) const
 //=============================================================================
 bool ByteBuffer::isEnd() const { return m_pos == m_size; }
 //=============================================================================
-const cerberus::BYTE& ByteBuffer::get() const { return at(m_pos); }
+const crb::BYTE& ByteBuffer::get() const { return at(m_pos); }
 //=============================================================================
 const ByteBuffer& ByteBuffer::moveCursor(OFFSET offset) const
 {

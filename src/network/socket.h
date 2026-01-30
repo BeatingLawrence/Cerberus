@@ -5,9 +5,9 @@
 #include "../time/timeframe.h"
 #include "../types.h"
 
-#define UDPSocket() cerberus::Socket(cerberus::SocketType::Socket_UDP)
-#define TCPSocket() cerberus::Socket(cerberus::SocketType::Socket_TCP)
-#define TCPP2PSocket() cerberus::Socket(cerberus::SocketType::Socket_TCPP2P)
+#define UDPSocket() crb::Socket(crb::SocketType::Socket_UDP)
+#define TCPSocket() crb::Socket(crb::SocketType::Socket_TCP)
+#define TCPP2PSocket() crb::Socket(crb::SocketType::Socket_TCPP2P)
 
 // A socket capable of great things!
 
@@ -18,7 +18,7 @@
 typedef struct ssl_ctx_st SSL_CTX;
 typedef struct ssl_st SSL;
 
-namespace cerberus
+namespace crb
 {
     class File;
 
@@ -331,6 +331,6 @@ namespace cerberus
         OpRes recv(File& file, const TimeFrame& timeout = TimeFrame(),
                    const TimeFrame& cycTimeout = TimeFrame());
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_NETWORK_SOCKET_H

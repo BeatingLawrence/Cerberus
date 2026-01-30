@@ -4,7 +4,7 @@
 
 #include "src/cerberus.h"
 
-using namespace cerberus::time;
+using namespace crb::time;
 
 //=============================================================================
 void SysTimer::defaultTimeoutCallback(void *ctx)

@@ -18,7 +18,7 @@
 
 #define MAXIMUM_COPY_BLOCKSIZE 4096u  // 4k block size
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 OpRes File::existsAsFile(const std::string& path)
@@ -160,7 +160,7 @@ OpRes File::isEmptyDirectory(const std::string& path)
 #endif
 }
 //=============================================================================
-OpResData<FileMetadata> cerberus::File::stat(const std::string& path)
+OpResData<FileMetadata> crb::File::stat(const std::string& path)
 {
     FileMetadata metadata = {};
 
@@ -667,7 +667,7 @@ StringOpRes File::readLine() const
     return line;
 }
 //=============================================================================
-OpRes File::seek(cerberus::LSIZE pos) const
+OpRes File::seek(crb::LSIZE pos) const
 {
     if (!isOpen()) return OR_BadConditions;
 

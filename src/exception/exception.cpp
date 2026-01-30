@@ -4,7 +4,7 @@
 
 #include "../core/cerberusutils.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 Exception::Exception() noexcept { m_error = "Unspecified exception"; }

@@ -3,7 +3,7 @@
 #include "../core/cerberusutils.h"
 #include "../define.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 SlotBase::SlotBase(const std::string& name)

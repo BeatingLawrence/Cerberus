@@ -4,7 +4,7 @@
 #include "../../types.h"
 #include "idatabase.h"
 
-namespace cerberus
+namespace crb
 {
     class Database
     {
@@ -46,6 +46,6 @@ namespace cerberus
         }
     };
 
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // DATABASE_H

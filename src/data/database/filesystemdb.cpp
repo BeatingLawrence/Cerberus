@@ -3,8 +3,8 @@
 // #include "../../cerberus.h"
 #include "../../exception/exception.h"
 
-using namespace cerberus::db;
-using namespace cerberus;
+using namespace crb::db;
+using namespace crb;
 
 /*  STRUCTURE:
  *

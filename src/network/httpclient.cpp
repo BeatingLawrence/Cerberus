@@ -4,7 +4,7 @@
 #include "src/core/cerberusutils.h"
 #include "src/types.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 OpRes HTTPClient::_connect()
@@ -20,7 +20,7 @@ OpRes HTTPClient::_connect()
     return OR_OK;
 }
 //=============================================================================
-cerberus::OpRes HTTPClient::getDictFromHeader(const ByteBuffer &header, Dictionary &dict)
+crb::OpRes HTTPClient::getDictFromHeader(const ByteBuffer &header, Dictionary &dict)
 {
     // debug("%s", header.toNormalizedString().c_str());
 
@@ -53,7 +53,7 @@ cerberus::OpRes HTTPClient::getDictFromHeader(const ByteBuffer &header, Dictiona
     }
 }
 //=============================================================================
-cerberus::OpRes HTTPClient::getStatus(const ByteBuffer &statusLine, HTTPResponse &response)
+crb::OpRes HTTPClient::getStatus(const ByteBuffer &statusLine, HTTPResponse &response)
 {
     auto str = statusLine.toString();
     CerberusUtils::removeBlankAfter(str);
@@ -158,7 +158,7 @@ void HTTPClient::setRemote(const Host &host) { m_remote = host; }
 //=============================================================================
 void HTTPClient::persistent(bool persistent) { m_persistent = persistent; }
 //=============================================================================
-cerberus::OpRes HTTPClient::makeRequest(const HTTPRequest &request)
+crb::OpRes HTTPClient::makeRequest(const HTTPRequest &request)
 {
     if (!Socket::isConnected())
     {
@@ -175,7 +175,7 @@ cerberus::OpRes HTTPClient::makeRequest(const HTTPRequest &request)
     return ret;
 }
 //=============================================================================
-cerberus::OpResData<HTTPResponse> HTTPClient::getResponse(const TimeFrame &timeout, const TimeFrame &cyc)
+crb::OpResData<HTTPResponse> HTTPClient::getResponse(const TimeFrame &timeout, const TimeFrame &cyc)
 {
     if (!Socket::isConnected()) return OR_BadConditions;
 
@@ -192,7 +192,7 @@ cerberus::OpResData<HTTPResponse> HTTPClient::getResponse(const TimeFrame &timeo
     return _parseResponseHeader(buf);
 }
 //=============================================================================
-cerberus::OpResData<HTTPResponse> HTTPClient::getStream(const TimeFrame &timeout)
+crb::OpResData<HTTPResponse> HTTPClient::getStream(const TimeFrame &timeout)
 {
     if (!m_persistent) return OR_Unavailable;
     if (!Socket::isConnected()) return OR_BadConditions;
@@ -228,7 +228,7 @@ cerberus::OpResData<HTTPResponse> HTTPClient::getStream(const TimeFrame &timeout
     return m_currentStreamResponse;
 }
 //=============================================================================
-cerberus::OpResData<HTTPResponse> HTTPClient::get(const HTTPRequest &request, const TimeFrame &timeout,
+crb::OpResData<HTTPResponse> HTTPClient::get(const HTTPRequest &request, const TimeFrame &timeout,
                                                   const TimeFrame &cycTimeout)
 {
     auto r = makeRequest(request);

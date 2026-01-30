@@ -5,7 +5,6 @@
 #include <cstring>
 
 #include "core/cerberusutils.h"
-#include "core/cerberusregister.h"
 #include "exception/exception.h"
 #include "network/socket.h"
 #include "src/cerberus.h"
@@ -15,44 +14,44 @@
 #error "Please define constants"
 #else
 #include <netinet/in.h>
-const uint32_t cerberus::Host::ADDR_ANY       = INADDR_ANY;
-const uint32_t cerberus::Host::ADDR_LOOPBACK  = INADDR_LOOPBACK;
-const uint32_t cerberus::Host::ADDR_BROADCAST = INADDR_BROADCAST;
+const uint32_t crb::Host::ADDR_ANY       = INADDR_ANY;
+const uint32_t crb::Host::ADDR_LOOPBACK  = INADDR_LOOPBACK;
+const uint32_t crb::Host::ADDR_BROADCAST = INADDR_BROADCAST;
 #endif
 
 //=============================================================================
-cerberus::HASH32::HASH32(const char* str)
+crb::HASH32::HASH32(const char* str)
     : m_value(0)
 {
-    if (str) m_value = hashFunc_res(str);
+    if (str) m_value = hashFunc_res(std::string(str));
 }
 //=============================================================================
-cerberus::HASH32::HASH32(const std::string& str)
+crb::HASH32::HASH32(const std::string& str)
     : m_value(hashFunc_res(str))
 {
 }
 //=============================================================================
-cerberus::HASH32& cerberus::HASH32::operator=(const char* str)
+crb::HASH32& crb::HASH32::operator=(const char* str)
 {
-    m_value = str ? hashFunc_res(str) : 0u;
+    m_value = str ? hashFunc_res(std::string(str)) : 0u;
     return *this;
 }
 //=============================================================================
-cerberus::HASH32& cerberus::HASH32::operator=(const std::string& str)
+crb::HASH32& crb::HASH32::operator=(const std::string& str)
 {
     m_value = hashFunc_res(str);
     return *this;
 }
 //=============================================================================
 //=============================================================================
-cerberus::Host::Host()
+crb::Host::Host()
     : octet_networkOrder(ADDR_ANY),
       port(0),
       resolved(false)
 {
 }
 //=============================================================================
-cerberus::Host::Host(const std::string& str)
+crb::Host::Host(const std::string& str)
     : octet_networkOrder(ADDR_ANY),
       port(0),
       resolved(false)
@@ -60,7 +59,7 @@ cerberus::Host::Host(const std::string& str)
     if (!fromString(str)) logError("Host %s is invalid", str.c_str());
 }
 //=============================================================================
-cerberus::Host::Host(const char* str)
+crb::Host::Host(const char* str)
     : octet_networkOrder(ADDR_ANY),
       port(0),
       resolved(false)
@@ -68,7 +67,7 @@ cerberus::Host::Host(const char* str)
     if (!fromString(str)) logError("Host %s is invalid", str);
 }
 //=============================================================================
-cerberus::Host cerberus::Host::stringToHost(const std::string& str)
+crb::Host crb::Host::stringToHost(const std::string& str)
 {
     Host ret{};
     ret.port = Host::getPort(str);
@@ -135,7 +134,7 @@ cerberus::Host cerberus::Host::stringToHost(const std::string& str)
     return ret;
 }
 //=============================================================================
-uint16_t cerberus::Host::getPort(const std::string& str)
+uint16_t crb::Host::getPort(const std::string& str)
 {
     auto col    = str.find_last_of(':');
     int portint = 0;
@@ -151,7 +150,7 @@ uint16_t cerberus::Host::getPort(const std::string& str)
     return portint;
 }
 //=============================================================================
-bool cerberus::Host::fromString(const std::string& str)
+bool crb::Host::fromString(const std::string& str)
 {
     auto h = Host::stringToHost(str);
 
@@ -166,22 +165,22 @@ bool cerberus::Host::fromString(const std::string& str)
     return false;
 }
 //=============================================================================
-std::string cerberus::Host::toString() const
+std::string crb::Host::toString() const
 {
     return CerberusUtils::strPrint("%u.%u.%u.%u:%u", octect[0], octect[1], octect[2], octect[3], port);
 }
 //=============================================================================
-bool cerberus::Host::isValid() const { return (isNumeric() || isTextual() || hasPort()); }
+bool crb::Host::isValid() const { return (isNumeric() || isTextual() || hasPort()); }
 //=============================================================================
-bool cerberus::Host::isValidRemote() const { return (isNumeric() || isTextual()) && hasPort(); }
+bool crb::Host::isValidRemote() const { return (isNumeric() || isTextual()) && hasPort(); }
 //=============================================================================
-bool cerberus::Host::isNumeric() const { return octet_networkOrder != 0; }
+bool crb::Host::isNumeric() const { return octet_networkOrder != 0; }
 //=============================================================================
-bool cerberus::Host::isTextual() const { return !hostname.empty(); }
+bool crb::Host::isTextual() const { return !hostname.empty(); }
 //=============================================================================
-bool cerberus::Host::hasPort() const { return port != 0; }
+bool crb::Host::hasPort() const { return port != 0; }
 //=============================================================================
-cerberus::OpRes cerberus::Host::resolve()
+crb::OpRes crb::Host::resolve()
 {
     addrinfo* res = nullptr;
     addrinfo info;
@@ -236,19 +235,19 @@ cerberus::OpRes cerberus::Host::resolve()
     }
 }
 //=============================================================================
-cerberus::OpRes::OpRes()
+crb::OpRes::OpRes()
     : res(OR_Undefined)
 {
 }
 //=============================================================================
-cerberus::OpRes::OpRes(Result r, const std::string& reason, const std::string& reason2)
+crb::OpRes::OpRes(Result r, const std::string& reason, const std::string& reason2)
     : res(r),
       reason(reason)
 {
     addInfo(reason2);
 }
 //=============================================================================
-cerberus::OpRes::OpRes(const OpRes& opres, const std::string& reason)
+crb::OpRes::OpRes(const OpRes& opres, const std::string& reason)
     : res(opres.res),
       reason(opres.reason),
       optional(opres.optional)
@@ -256,25 +255,25 @@ cerberus::OpRes::OpRes(const OpRes& opres, const std::string& reason)
     addInfo(reason);
 }
 //=============================================================================
-bool cerberus::OpRes::operator==(Result r) { return (res == r); }
+bool crb::OpRes::operator==(Result r) { return (res == r); }
 //=============================================================================
-bool cerberus::OpRes::operator!=(Result r) { return (res != r); }
+bool crb::OpRes::operator!=(Result r) { return (res != r); }
 //=============================================================================
-cerberus::OpRes& cerberus::OpRes::expect(const std::string& str)
+crb::OpRes& crb::OpRes::expect(const std::string& str)
 {
     if (fail()) throw cOpResExc(str.c_str());
 
     return *this;
 }
 //=============================================================================
-cerberus::OpRes& cerberus::OpRes::expect(Result reason, const std::string& str)
+crb::OpRes& crb::OpRes::expect(Result reason, const std::string& str)
 {
     if (fail() && res == reason) throw cOpResExc(str.c_str());
 
     return *this;
 }
 //=============================================================================
-cerberus::OpRes& cerberus::OpRes::expect()
+crb::OpRes& crb::OpRes::expect()
 {
     if (fail())
     {
@@ -292,7 +291,7 @@ cerberus::OpRes& cerberus::OpRes::expect()
     return *this;
 }
 //=============================================================================
-bool cerberus::OpRes::ok(const std::string& str)
+bool crb::OpRes::ok(const std::string& str)
 {
     if (res == Result::OR_OK) return true;
 
@@ -310,9 +309,9 @@ bool cerberus::OpRes::ok(const std::string& str)
     return false;
 }
 //=============================================================================
-bool cerberus::OpRes::fail(const std::string& str) { return !ok(str); }
+bool crb::OpRes::fail(const std::string& str) { return !ok(str); }
 //=============================================================================
-std::string cerberus::OpRes::errorString() const
+std::string crb::OpRes::errorString() const
 {
     switch (res)
     {
@@ -389,7 +388,7 @@ std::string cerberus::OpRes::errorString() const
     return "Undefined";
 }
 //=============================================================================
-std::string cerberus::OpRes::toStr() const
+std::string crb::OpRes::toStr() const
 {
     std::string ret;
     ret.append(errorString());
@@ -398,13 +397,13 @@ std::string cerberus::OpRes::toStr() const
     return ret;
 }
 //=============================================================================
-cerberus::OpRes& cerberus::OpRes::addOptional(Result opt)
+crb::OpRes& crb::OpRes::addOptional(Result opt)
 {
     optional.push_back(opt);
     return *this;
 }
 //=============================================================================
-bool cerberus::OpRes::hasOptional(Result opt)
+bool crb::OpRes::hasOptional(Result opt)
 {
     for (auto& el : optional)
         if (el == opt) return true;
@@ -412,14 +411,14 @@ bool cerberus::OpRes::hasOptional(Result opt)
     return false;
 }
 //=============================================================================
-cerberus::SIZE cerberus::OpRes::memfp() const
+crb::SIZE crb::OpRes::memfp() const
 {
     SIZE s = reason.capacity();
     for (auto& el : optional) s += sizeof(Result);
     return s;
 }
 //=============================================================================
-cerberus::OpRes& cerberus::OpRes::addInfo(const std::string& str)
+crb::OpRes& crb::OpRes::addInfo(const std::string& str)
 {
     if (str.empty()) return *this;
     reason.append(", ");
@@ -427,7 +426,7 @@ cerberus::OpRes& cerberus::OpRes::addInfo(const std::string& str)
     return *this;
 }
 //=============================================================================
-StringOpRes cerberus::Dictionary::getFieldValue(const std::string& key, WordMatch match) const
+StringOpRes crb::Dictionary::getFieldValue(const std::string& key, WordMatch match) const
 {
     for (auto& el : (*this))
     {
@@ -436,7 +435,7 @@ StringOpRes cerberus::Dictionary::getFieldValue(const std::string& key, WordMatc
     return OR_NotFound;
 }
 //=============================================================================
-cerberus::OpRes cerberus::Dictionary::getFieldMatch(const std::string& key, const std::string& value,
+crb::OpRes crb::Dictionary::getFieldMatch(const std::string& key, const std::string& value,
                                                     WordMatch keymatch, WordMatch valmatch) const
 {
     auto res = getFieldValue(key, keymatch);
@@ -448,51 +447,51 @@ cerberus::OpRes cerberus::Dictionary::getFieldMatch(const std::string& key, cons
     return OR_Mismatch;
 }
 //=============================================================================
-std::string cerberus::Dictionary::getNameAt(SIZE index) const
+std::string crb::Dictionary::getNameAt(SIZE index) const
 {
     if (index >= size()) throw cIllegalArgExc("Index out of bounds");
     return at(index).key;
 }
 //=============================================================================
-std::string cerberus::Dictionary::getValueAt(SIZE index) const
+std::string crb::Dictionary::getValueAt(SIZE index) const
 {
     if (index >= size()) throw cIllegalArgExc("Index out of bounds");
     return at(index).val;
 }
 //=============================================================================
-cerberus::Dictionary& cerberus::Dictionary::addKey(const std::string& key, const std::string& value)
+crb::Dictionary& crb::Dictionary::addKey(const std::string& key, const std::string& value)
 {
     push_back({key, value});
     return *this;
 }
 //=============================================================================
-cerberus::DictLine& cerberus::Dictionary::get(SIZE index)
+crb::DictLine& crb::Dictionary::get(SIZE index)
 {
     if (index >= size()) throw cIllegalArgExc("Index out of bounds");
     return at(index);
 }
 //=============================================================================
-cerberus::DictLine& cerberus::Dictionary::get(const std::string& key, WordMatch match)
+crb::DictLine& crb::Dictionary::get(const std::string& key, WordMatch match)
 {
     for (auto it = begin(); it < end(); it++)
     {
-        if (cerberus::CerberusUtils::areEqual((*it).key, key, match)) return (*it);
+        if (crb::CerberusUtils::areEqual((*it).key, key, match)) return (*it);
     }
 
     throw cIllegalArgExc("Name not found");
 }
 //=============================================================================
-bool cerberus::Dictionary::exists(const std::string& key, WordMatch match)
+bool crb::Dictionary::exists(const std::string& key, WordMatch match)
 {
     for (auto it = begin(); it < end(); it++)
     {
-        if (cerberus::CerberusUtils::areEqual((*it).key, key, match)) return true;
+        if (crb::CerberusUtils::areEqual((*it).key, key, match)) return true;
     }
 
     return false;
 }
 //=============================================================================
-std::string cerberus::Dictionary::toString() const
+std::string crb::Dictionary::toString() const
 {
     std::string ret;
 
@@ -507,7 +506,7 @@ std::string cerberus::Dictionary::toString() const
     return ret;
 }
 //=============================================================================
-cerberus::SIZE cerberus::Dictionary::memfp() const
+crb::SIZE crb::Dictionary::memfp() const
 {
     SIZE s = 0;
     for (auto& el : *this) s += el.sz();
@@ -515,7 +514,7 @@ cerberus::SIZE cerberus::Dictionary::memfp() const
 }
 //=============================================================================
 #if defined(LINUX_SYSTEM)
-void cerberus::FileMetadata::fromStat(const struct statx& stat_struct)
+void crb::FileMetadata::fromStat(const struct statx& stat_struct)
 {
     // time
     accTime.fromTimespec(stat_struct.stx_atime.tv_sec, stat_struct.stx_atime.tv_nsec);
@@ -570,7 +569,7 @@ void cerberus::FileMetadata::fromStat(const struct statx& stat_struct)
     ownGID = stat_struct.stx_gid;
 }
 #elif defined(APPLE_SYSTEM)
-void cerberus::FileMetadata::fromStat(const struct stat& stat_struct)
+void crb::FileMetadata::fromStat(const struct stat& stat_struct)
 {
     // time
     accTime.fromTimespec(stat_struct.st_atimespec.tv_sec, stat_struct.st_atimespec.tv_nsec);
@@ -626,7 +625,7 @@ void cerberus::FileMetadata::fromStat(const struct stat& stat_struct)
 }
 #endif
 //=============================================================================
-cerberus::SocketCloser::~SocketCloser()
+crb::SocketCloser::~SocketCloser()
 {
     if (socket) socket->close();
 }

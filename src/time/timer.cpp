@@ -2,7 +2,7 @@
 
 #include "src/cerberus.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 void Timer::defaultTimeoutCallback(void *ctx)
@@ -17,7 +17,7 @@ Timer::Timer()
       m_type(TT_OneShot),
       m_callback(defaultTimeoutCallback),
       m_ctx(nullptr),
-      m_recipient(CERBERUS_INVALID_ID)
+      m_recipient(CRB_INVALID_ID)
 {
 }
 //=============================================================================
@@ -29,7 +29,7 @@ Timer::Timer(const TimeFrame &time, TimerType type, const DateTime &delay)
       m_delay(delay),
       m_callback(defaultTimeoutCallback),
       m_ctx(nullptr),
-      m_recipient(CERBERUS_INVALID_ID)
+      m_recipient(CRB_INVALID_ID)
 {
 }
 //=============================================================================

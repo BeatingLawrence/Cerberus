@@ -8,7 +8,7 @@
 #include "../types.h"
 #include "loggerthread.h"
 
-namespace cerberus
+namespace crb
 {
     class Cerberus;
 
@@ -16,7 +16,7 @@ namespace cerberus
     {
         class CerberusLog
         {
-            friend class cerberus::Cerberus;
+            friend class crb::Cerberus;
 
             typedef void* HANDLE;
 
@@ -83,6 +83,6 @@ namespace cerberus
             static void llDebug(const std::string& str);
         };
     }  // namespace core
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_CORE_CERBERUSLOG_H

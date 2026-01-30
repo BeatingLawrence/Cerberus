@@ -7,7 +7,7 @@
 
 #include "../../cerberus.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 void Directory::path(const Path& path) { m_path = path; }

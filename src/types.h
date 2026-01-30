@@ -23,11 +23,11 @@
 #include "thread/mutexlocker.h"
 #include "time/datetime.h"
 
-#define StringOpRes ::cerberus::OpResData<std::string>
-#define BoolOpRes ::cerberus::OpResData<bool>
-#define IntOpRes ::cerberus::OpResData<int64_t>
-#define FloatOpRes ::cerberus::OpResData<long double>
-#define SizeOpRes ::cerberus::OpResData<::cerberus::LSIZE>
+#define StringOpRes ::crb::OpResData<std::string>
+#define BoolOpRes ::crb::OpResData<bool>
+#define IntOpRes ::crb::OpResData<int64_t>
+#define FloatOpRes ::crb::OpResData<long double>
+#define SizeOpRes ::crb::OpResData<::crb::LSIZE>
 
 #define condret(cond)                       \
     {                                       \
@@ -41,7 +41,7 @@
         if (_result.fail()) return {_result, str}; \
     }
 
-namespace cerberus
+namespace crb
 {
     typedef uint32_t SIZE;
     typedef uint64_t LSIZE;
@@ -57,10 +57,9 @@ namespace cerberus
         {
         }
 
-        constexpr HASH32(int value) noexcept
-            : m_value(static_cast<uint32_t>(value))
-        {
-        }
+        constexpr HASH32(int value) noexcept : m_value(static_cast<uint32_t>(value)) {}
+        constexpr HASH32(uint64_t value) noexcept : m_value(static_cast<uint32_t>(value)) {}
+        constexpr HASH32(int64_t value) noexcept : m_value(static_cast<uint32_t>(value)) {}
 
         HASH32(const char* str);
         HASH32(const std::string& str);
@@ -72,6 +71,16 @@ namespace cerberus
         }
 
         HASH32& operator=(int value) noexcept
+        {
+            m_value = static_cast<uint32_t>(value);
+            return *this;
+        }
+        HASH32& operator=(uint64_t value) noexcept
+        {
+            m_value = static_cast<uint32_t>(value);
+            return *this;
+        }
+        HASH32& operator=(int64_t value) noexcept
         {
             m_value = static_cast<uint32_t>(value);
             return *this;
@@ -89,6 +98,10 @@ namespace cerberus
 
     constexpr inline bool operator==(HASH32 a, HASH32 b) noexcept { return a.value() == b.value(); }
     constexpr inline bool operator!=(HASH32 a, HASH32 b) noexcept { return a.value() != b.value(); }
+    constexpr inline bool operator==(HASH32 a, uint32_t b) noexcept { return a.value() == b; }
+    constexpr inline bool operator!=(HASH32 a, uint32_t b) noexcept { return a.value() != b; }
+    constexpr inline bool operator==(uint32_t a, HASH32 b) noexcept { return a == b.value(); }
+    constexpr inline bool operator!=(uint32_t a, HASH32 b) noexcept { return a != b.value(); }
 
     typedef HASH32 CHANDLE;
 
@@ -727,9 +740,9 @@ namespace cerberus
     class SlotBase;
     class Socket;
 
-    typedef managed_ptr<::cerberus::Message> msg_ptr;
-    typedef managed_ptr<::cerberus::SlotBase> slot_ptr;
-    typedef std::unique_ptr<::cerberus::Socket> cerberus_socket;
+    typedef managed_ptr<::crb::Message> msg_ptr;
+    typedef managed_ptr<::crb::SlotBase> slot_ptr;
+    typedef std::unique_ptr<::crb::Socket> cerberus_socket;
 
     enum IniDataType : uint8_t
     {
@@ -1093,5 +1106,5 @@ namespace cerberus
     class ByteBuffer;
     class JsonData;
 
-}  // namespace cerberus
+}  // namespace crb
 #endif  // CERBERUS_TYPES_H

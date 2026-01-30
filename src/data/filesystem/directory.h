@@ -6,7 +6,7 @@
 #include "../../types.h"
 #include "file.h"
 
-namespace cerberus
+namespace crb
 {
     class Directory
     {
@@ -38,6 +38,6 @@ namespace cerberus
 
         void toStr(std::string& str, int level = 0) const;
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_DIRECTORY_H

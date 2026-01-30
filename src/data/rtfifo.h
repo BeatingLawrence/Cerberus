@@ -12,7 +12,7 @@
 #include "../Cerberus_global.h"
 #include "../types.h"
 
-namespace cerberus
+namespace crb
 {
     class CERBERUS_EXPORT RTFifo
     {
@@ -80,6 +80,6 @@ namespace cerberus
         bool overflowed() const { return m_overflow.load(std::memory_order_relaxed); }
         void clearOverflow() { m_overflow.store(false, std::memory_order_relaxed); }
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_DATA_RTFIFO_H

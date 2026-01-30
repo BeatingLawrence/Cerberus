@@ -22,8 +22,8 @@
 #error "WRONG VERSION TYPE"
 #endif
 
-using namespace cerberus;
-using namespace cerberus::core;
+using namespace crb;
+using namespace crb::core;
 
 FrameworkData Cerberus::framework;
 
@@ -144,31 +144,31 @@ msg_ptr Cerberus::stdTemplate(HASH32 id)
 
     switch (id)
     {
-        case CERBERUS_MESSAGE_LOG_ID:
+        case CRB_MESSAGE_LOG_ID:
             tmplt->addSlotType<StringSlot>();
             break;
 
-        case CERBERUS_MESSAGE_TERM_ID:
+        case CRB_MESSAGE_TERM_ID:
             // nothing to add
             break;
 
-        case CERBERUS_MESSAGE_TASK_ID:
+        case CRB_MESSAGE_TASK_ID:
             tmplt->addSlotType<UInt64Slot>("client");
             tmplt->addSlotType<TaskSlot>("task");
             break;
 
-        case CERBERUS_MESSAGE_TASKEND_ID:
+        case CRB_MESSAGE_TASKEND_ID:
             tmplt->addSlotType<ResultSlot>("result");
             tmplt->addSlotType<VoidPSlot>("player");
             break;
 
-        case CERBERUS_MESSAGE_SOCKETDATA_ID:
+        case CRB_MESSAGE_SOCKETDATA_ID:
             tmplt->addSlotType<ResultSlot>("result");
             tmplt->addSlotType<HostSlot>("host");
             tmplt->addSlotType<BufferSlot>("buffer");
             break;
 
-        case CERBERUS_MESSAGE_TIMEREXPIRY_ID:
+        case CRB_MESSAGE_TIMEREXPIRY_ID:
             // nothing to add
             break;
 
@@ -230,7 +230,7 @@ void* Cerberus::checkPlugin(HASH32 id)
     return Cerberus::framework.core.data->checkPlugin(id);
 }
 //=============================================================================
-bool Cerberus::updatePlugin(uint32_t id, const std::string& path, void* handle)
+bool Cerberus::updatePlugin(HASH32 id, const std::string& path, void* handle)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
@@ -533,7 +533,7 @@ OpRes Cerberus::send_deep(const msg_ptr& message, HASH32 recipientID, HASH32 cha
 {
     if (!message) return OR_WrongArgument;
 
-    if (recipientID != CERBERUS_INVALID_ID) message->setRecipient(recipientID);
+    if (recipientID != CRB_INVALID_ID) message->setRecipient(recipientID);
 
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
@@ -545,7 +545,7 @@ OpRes Cerberus::send(msg_ptr& message, HASH32 recipientID, HASH32 channel_in)
 {
     if (!message) return OR_WrongArgument;
 
-    if (recipientID != CERBERUS_INVALID_ID) message->setRecipient(recipientID);
+    if (recipientID != CRB_INVALID_ID) message->setRecipient(recipientID);
 
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
@@ -563,9 +563,9 @@ OpRes Cerberus::registerTemplate(const msg_ptr& tmplt)
 //=============================================================================
 msg_ptr Cerberus::constructMessage(HASH32 id)
 {
-    if (id == CERBERUS_INVALID_ID) return Message::create();
+    if (id == CRB_INVALID_ID) return Message::create();
 
-    if (id < CERBERUS_REG_RANGE_START) return stdTemplate(id);
+    if (id < CRB_REGISTER_RANGE_START) return stdTemplate(id);
 
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();

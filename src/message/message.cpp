@@ -6,7 +6,7 @@
 #include "../exception/exceptioncatalog.h"
 #include "slot.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 slot_ptr* Message::_slot(const std::string& name) const
@@ -87,7 +87,7 @@ bool Message::is(HASH32 id) const { return m_id == id; }
 //=============================================================================
 HASH32 Message::recipient() const
 {
-    if (m_recipientIds.empty()) return CERBERUS_INVALID_ID;
+    if (m_recipientIds.empty()) return CRB_INVALID_ID;
     return m_recipientIds.front();
 }
 //=============================================================================
@@ -96,7 +96,7 @@ const std::vector<HASH32>& Message::recipients() const { return m_recipientIds; 
 bool Message::hasValidRecipient() const
 {
     for (const auto& id : m_recipientIds)
-        if (id != CERBERUS_INVALID_ID) return true;
+        if (id != CRB_INVALID_ID) return true;
 
     return false;
 }

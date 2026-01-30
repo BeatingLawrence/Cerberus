@@ -6,7 +6,7 @@
 #include "src/core/cerberusutils.h"
 #include "src/exception/exception.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 static inline tm toTm(const DateTime& dt)

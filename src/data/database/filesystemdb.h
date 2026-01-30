@@ -4,7 +4,7 @@
 #include "../../data/filesystem/file.h"
 #include "idatabase.h"
 
-namespace cerberus
+namespace crb
 {
     namespace db
     {
@@ -84,6 +84,6 @@ namespace cerberus
             virtual ~FilesystemDB();
         };
     }  // namespace db
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // FILESYSTEMDB_H

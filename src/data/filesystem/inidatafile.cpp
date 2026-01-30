@@ -4,7 +4,7 @@
 #include "../../types.h"
 #include "src/cerberus.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 bool IniDataFile::isValid(const std::string& line) { return std::regex_match(line, m_isValidRegex); }
@@ -113,7 +113,7 @@ int16_t IniDataFile::addNewSection(const std::string& name)
     return newId;
 }
 //=============================================================================
-cerberus::IniDataType IniDataFile::valueType(const std::string& value)
+crb::IniDataType IniDataFile::valueType(const std::string& value)
 {
     if (isDouble(value))
         return IDT_Double;
@@ -174,7 +174,7 @@ void IniDataFile::insertLine(const Line& line)
     }
 }
 //=============================================================================
-cerberus::OpRes IniDataFile::syncFile()
+crb::OpRes IniDataFile::syncFile()
 {
     m_file.setOpenMode(FOM_ReadWriteTrunc);
 
@@ -350,7 +350,7 @@ bool IniDataFile::isType(const std::string& key, IniDataType type)
     return (this->type(key) == type);
 }
 //=============================================================================
-cerberus::IniDataType IniDataFile::type(const std::string& key, const std::string& section)
+crb::IniDataType IniDataFile::type(const std::string& key, const std::string& section)
 {
     auto found = search(key, section);
 
@@ -362,9 +362,9 @@ cerberus::IniDataType IniDataFile::type(const std::string& key, const std::strin
     return valueType(found->value);
 }
 //=============================================================================
-cerberus::OpRes IniDataFile::rewrite() { return syncFile(); }
+crb::OpRes IniDataFile::rewrite() { return syncFile(); }
 //=============================================================================
-cerberus::OpRes IniDataFile::write_string(const std::string& key, const std::string& value,
+crb::OpRes IniDataFile::write_string(const std::string& key, const std::string& value,
                                           const std::string& section)
 {
     std::string k = CerberusUtils::removeBlank_copy(key);
@@ -395,43 +395,43 @@ cerberus::OpRes IniDataFile::write_string(const std::string& key, const std::str
     return syncFile();
 }
 //=============================================================================
-cerberus::OpRes IniDataFile::write_integer(const std::string& key, int64_t value, const std::string& section)
+crb::OpRes IniDataFile::write_integer(const std::string& key, int64_t value, const std::string& section)
 {
     return write_string(key, CerberusUtils::strPrint("%lli", value), section);
 }
 //=============================================================================
-cerberus::OpRes IniDataFile::write_double(const std::string& key, double value, const std::string& section)
+crb::OpRes IniDataFile::write_double(const std::string& key, double value, const std::string& section)
 {
     return write_string(key, CerberusUtils::strPrint("%f", value), section);
 }
 //=============================================================================
-cerberus::OpRes IniDataFile::write_bool(const std::string& key, bool value, const std::string& section)
+crb::OpRes IniDataFile::write_bool(const std::string& key, bool value, const std::string& section)
 {
     return write_string(key, value ? "true" : "false", section);
 }
 //=============================================================================
-cerberus::OpRes IniDataFile::enforce_string(const std::string& key, const std::string& value,
+crb::OpRes IniDataFile::enforce_string(const std::string& key, const std::string& value,
                                             const std::string& section)
 {
     if (exists(key, section)) return OR_OK;
     return write_string(key, value, section);
 }
 //=============================================================================
-cerberus::OpRes IniDataFile::enforce_integer(const std::string& key, int64_t value,
+crb::OpRes IniDataFile::enforce_integer(const std::string& key, int64_t value,
                                              const std::string& section)
 {
     if (type(key, section) == IDT_Integer) return OR_OK;
     return write_integer(key, value, section);
 }
 //=============================================================================
-cerberus::OpRes IniDataFile::enforce_double(const std::string& key, double value,
+crb::OpRes IniDataFile::enforce_double(const std::string& key, double value,
                                             const std::string& section)
 {
     if (type(key, section) == IDT_Double) return OR_OK;
     return write_double(key, value, section);
 }
 //=============================================================================
-cerberus::OpRes IniDataFile::enforce_bool(const std::string& key, bool value,
+crb::OpRes IniDataFile::enforce_bool(const std::string& key, bool value,
                                           const std::string& section)
 {
     if (type(key, section) == IDT_Bool) return OR_OK;

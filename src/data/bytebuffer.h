@@ -4,13 +4,13 @@
 #include "../Cerberus_global.h"
 #include "../types.h"
 
-namespace cerberus
+namespace crb
 {
     class SharedByteBuffer;
 
     class CERBERUS_EXPORT ByteBuffer
     {
-        friend class cerberus::SharedByteBuffer;
+        friend class crb::SharedByteBuffer;
 
        private:
         BYTE* m_bytes;  // heap
@@ -256,6 +256,6 @@ namespace cerberus
         // Decrement the cursor by one (same as calling moveCursor(-1))
         const ByteBuffer& prev() const;
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_DATA_BYTEBUFFER_H

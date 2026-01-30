@@ -8,7 +8,7 @@
 #include "../types.h"
 #include "slot.h"  // IWYU pragma: export
 
-namespace cerberus
+namespace crb
 {
     class CERBERUS_EXPORT Message : public Clonable
     {
@@ -21,14 +21,14 @@ namespace cerberus
 
         slot_ptr* _slot(const std::string& name) const;
 
-        Message(HASH32 id = CERBERUS_INVALID_ID);
+        Message(HASH32 id = CRB_INVALID_ID);
 
         Message(const Message& other);
 
         Message& operator=(const Message& other) = delete;
 
        public:
-        static msg_ptr create(HASH32 id = CERBERUS_INVALID_ID);
+        static msg_ptr create(HASH32 id = CRB_INVALID_ID);
 
         virtual ~Message();
 
@@ -141,6 +141,6 @@ namespace cerberus
         // calculate the memory footprint of this message, iterating over all of its slots
         virtual SIZE memfp() const;
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_MESSAGE_MESSAGE_H

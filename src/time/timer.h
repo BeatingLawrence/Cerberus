@@ -6,7 +6,7 @@
 #include "../types.h"
 #include "timeframe.h"
 
-namespace cerberus
+namespace crb
 {
     class Timer
     {
@@ -52,6 +52,6 @@ namespace cerberus
         // Sets a recipient to be notified when the timer expires
         void setRecipient(HASH32 recipientId);
     };
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_TIME_TIMER_H

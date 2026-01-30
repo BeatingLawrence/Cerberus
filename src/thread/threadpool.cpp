@@ -4,7 +4,7 @@
 #include "mutexlocker.h"
 #include "player.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 void ThreadPool::taskEndCb(void* ctx, void* data, OpRes res) { ((ThreadPool*)ctx)->_taskEndCb(data, res); }
@@ -204,7 +204,7 @@ OpRes ThreadPool::runTask(Task t)
     return OR_OK;
 }
 //=============================================================================
-OpRes ThreadPool::runTask(cerberus::OpRes (*cb)(void*, void*), void* ctx, void* data)
+OpRes ThreadPool::runTask(crb::OpRes (*cb)(void*, void*), void* ctx, void* data)
 {
     Task t = {};
     t.cb   = cb;

@@ -5,7 +5,7 @@
 #include "src/thread/mutex.h"
 #include "src/thread/mutexlocker.h"
 
-using namespace cerberus;
+using namespace crb;
 
 //=============================================================================
 void SharedByteBuffer::becomeOwner(bool force) const
@@ -132,14 +132,14 @@ SharedByteBuffer::~SharedByteBuffer()
     }
 }
 //=============================================================================
-cerberus::BYTE* SharedByteBuffer::data()
+crb::BYTE* SharedByteBuffer::data()
 {
     MutexLocker ml(m_mutex);
     becomeOwner(true);
     return m_buffer->data();
 }
 //=============================================================================
-const cerberus::BYTE* SharedByteBuffer::data() const
+const crb::BYTE* SharedByteBuffer::data() const
 {
     MutexLocker ml(m_mutex);
     becomeOwner();
@@ -219,7 +219,7 @@ void SharedByteBuffer::appendString(const char* str)
     m_buffer->appendString(str);
 }
 //=============================================================================
-cerberus::SIZE SharedByteBuffer::size() const
+crb::SIZE SharedByteBuffer::size() const
 {
     MutexLocker ml(m_mutex);
     becomeOwner();

@@ -3,7 +3,7 @@
 
 #include "thread.h"
 
-namespace cerberus
+namespace crb
 {
     class Player final : public Thread
     {
@@ -42,6 +42,6 @@ namespace cerberus
         OpRes setTaskEndCB(taskEndCallback cb, void* ctx = nullptr, void* data = nullptr);
     };
 
-}  // namespace cerberus
+}  // namespace crb
 
 #endif  // CERBERUS_PLAYER_H
