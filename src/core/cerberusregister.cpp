@@ -118,7 +118,7 @@ OpRes CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in)
     MutexLocker locker(m_objMutex);
     auto found = objById(id);
 
-    if (found.fail()) return OR_Failure;
+    if (found.fail()) return found.res;
 
     auto* obj = found.value;
     if (!obj)
@@ -142,7 +142,7 @@ OpRes CerberusRegister::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 
     MutexLocker locker(m_objMutex);
     auto found = objById(id);
 
-    if (found.fail()) return OR_Failure;
+    if (found.fail()) return found.res;
 
     auto* obj = found.value;
     if (!obj)
