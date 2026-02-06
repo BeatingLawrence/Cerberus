@@ -854,8 +854,8 @@ namespace crb
         bool operator==(const OpRes& other) = delete;
         bool operator!=(const OpRes& other) = delete;
 
-        bool operator==(Result r);
-        bool operator!=(Result r);
+        bool operator==(Result r) const;
+        bool operator!=(Result r) const;
 
         // Throw a generic exception with the given text only if the result is failed
         OpRes& expect(const std::string& str);

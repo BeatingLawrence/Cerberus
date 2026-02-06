@@ -255,9 +255,9 @@ crb::OpRes::OpRes(const OpRes& opres, const std::string& reason)
     addInfo(reason);
 }
 //=============================================================================
-bool crb::OpRes::operator==(Result r) { return (res == r); }
+bool crb::OpRes::operator==(Result r) const { return (res == r); }
 //=============================================================================
-bool crb::OpRes::operator!=(Result r) { return (res != r); }
+bool crb::OpRes::operator!=(Result r) const { return (res != r); }
 //=============================================================================
 crb::OpRes& crb::OpRes::expect(const std::string& str)
 {

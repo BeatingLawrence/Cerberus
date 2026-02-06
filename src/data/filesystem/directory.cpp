@@ -22,7 +22,12 @@ OpRes Directory::_get(int parentFd, bool recursive)
 
     if (m_path.empty()) return {OR_Empty, "path is empty"};
 
-    int fd = openat(parentFd, m_path.back().c_str(), O_RDONLY | O_DIRECTORY);
+    // If we're opening from the filesystem root (AT_FDCWD), we must use the full
+    // path string (it can be multi-component or absolute).
+    // If we're recursing using a parent directory fd, we must open only the last
+    // component relative to that fd.
+    const std::string openPath = (parentFd == AT_FDCWD) ? m_path.toStr() : m_path.back();
+    int fd = openat(parentFd, openPath.c_str(), O_RDONLY | O_DIRECTORY);
 
     if (fd == -1) return {OR_Failure, "openat error", strerror(errno)};
 

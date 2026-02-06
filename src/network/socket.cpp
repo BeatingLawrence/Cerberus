@@ -721,20 +721,54 @@ OpRes Socket::send(const ByteBuffer &buffer, bool donotblock)
 
     if (TLS_hasSession()) return _TLS_send(buffer);
 
-    int flags = 0;
+    const size_t len = buffer.size();
+    if (len == 0) return OR_OK;
 
-    if (donotblock) flags |= MSG_DONTWAIT;
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer.data());
 
-    auto ret = ::send(m_fd, buffer.data(), buffer.size(), flags);
-
-    if (ret == -1)
+    if (donotblock)
     {
-        if (errno == ENOTCONN || errno == ECONNRESET || errno == EPIPE) m_streamConnected = false;
-        return {OR_Failure, CerberusUtils::strPrint("socket send error, %s", strerror(errno))};
+        const int flags = MSG_DONTWAIT;
+        const auto ret = ::send(m_fd, data, len, flags);
+
+        if (ret == -1)
+        {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) return OR_WouldBlock;
+            if (errno == ENOTCONN || errno == ECONNRESET || errno == EPIPE) m_streamConnected = false;
+            return {OR_Failure, CerberusUtils::strPrint("socket send error, %s", strerror(errno))};
+        }
+
+        // Treat partial send as failure to avoid corrupting framed protocols.
+        if (static_cast<size_t>(ret) != len)
+            return {OR_Failure, CerberusUtils::strPrint("socket send partial (%zu/%zu)", (size_t)ret, len)};
+
+        return OR_OK;
+    }
+
+    size_t off = 0;
+    while (off < len)
+    {
+        const auto ret = ::send(m_fd, data + off, len - off, 0);
+
+        if (ret == -1)
+        {
+            if (errno == EINTR) continue;
+            if (errno == ENOTCONN || errno == ECONNRESET || errno == EPIPE) m_streamConnected = false;
+            return {OR_Failure, CerberusUtils::strPrint("socket send error, %s", strerror(errno))};
+        }
+
+        if (ret == 0)
+        {
+            m_streamConnected = false;
+            return {OR_Hangup, "socket send returned 0"};
+        }
+
+        off += static_cast<size_t>(ret);
     }
 
     return OR_OK;
 }
+
 //=============================================================================
 OpRes Socket::recv_cyc(ByteBuffer &buffer, const TimeFrame &timeout, const TimeFrame &cyc)
 {
@@ -873,6 +907,12 @@ OpRes Socket::canRead()
 {
     if (isFailed()) return OR_FailedInstance;
 
+    if (TLS_hasSession())
+    {
+        auto p = TLS_pending();
+        if (p.ok() && p.value > 0) return OR_OK;
+    }
+
     pollfd set{};
     set.fd     = m_fd;
     set.events = POLLIN;
@@ -900,6 +940,12 @@ OpRes Socket::canRead()
 OpRes Socket::waitRead(const TimeFrame &timeout)
 {
     if (isFailed()) return OR_FailedInstance;
+
+    if (TLS_hasSession())
+    {
+        auto p = TLS_pending();
+        if (p.ok() && p.value > 0) return OR_OK;
+    }
 
     pollfd set{};
     set.fd     = m_fd;

@@ -467,7 +467,19 @@ FloatOpRes IniDataFile::read_double(const std::string& key, const std::string& s
 
     if (res.fail()) return res;
 
-    if (!isDouble(res.value)) return OR_WrongType;
+    // Accept integer values as doubles (e.g. "10" can be read as 10.0).
+    // This is intentionally *not* changing valueType(): type() should still report IDT_Integer
+    // for integer literals, but callers may treat them as doubles when convenient.
+    if (!isDouble(res.value))
+    {
+        if (isInteger(res.value))
+        {
+            auto intRes = CerberusUtils::stringToInt(res.value);
+            if (intRes.fail()) return OR_WrongType;
+            return static_cast<double>(intRes.value);
+        }
+        return OR_WrongType;
+    }
 
     return CerberusUtils::stringToDouble(res.value);
 }

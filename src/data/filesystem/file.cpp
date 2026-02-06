@@ -514,7 +514,16 @@ OpRes File::write(const ByteBuffer& bytes)
 {
     if (!isOpen()) return OR_BadConditions;
 
-    if (fwrite(bytes.data(), 1, bytes.size(), m_file) != bytes.size()) return OR_Failure;
+    clearerr(m_file);
+    const size_t expected = (size_t)bytes.size();
+    const size_t written = fwrite(bytes.data(), 1, expected, m_file);
+    if (written != expected)
+    {
+        const int err = errno;
+        return {OR_SystemFailure,
+                CerberusUtils::strPrint("fwrite failed (%zu/%zu): %s",
+                                       written, expected, strerror(err))};
+    }
 
     fflush(m_file);
 
