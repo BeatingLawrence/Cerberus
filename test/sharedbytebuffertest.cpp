@@ -3,7 +3,7 @@
 #include <data/sharedbytebuffer.h>
 #include <gtest/gtest.h>
 
-using namespace cerberus;
+using namespace crb;
 
 TEST(SharedByteBufferTest, equalityOperator)
 {
@@ -63,10 +63,10 @@ TEST(SharedByteBufferTest, SubBuffer)
     // EXPECT_EQ(b2.instances(), 1);
     //
     char a[20] = {};
-    b1.copyTo((cerberus::BYTE*)&a[0]);
+    b1.copyTo((crb::BYTE*)&a[0]);
 
     char b[20] = {};
-    b2.copyTo((cerberus::BYTE*)&b[0]);
+    b2.copyTo((crb::BYTE*)&b[0]);
 
     logInfo(CerberusUtils::strPrint("b1: %u, b2: %u", b1.size(), b2.size()));
     logInfo(b);
@@ -75,14 +75,14 @@ TEST(SharedByteBufferTest, SubBuffer)
     ByteBuffer bb("hello hello hello");
 
     char c[20] = {};
-    bb.copyTo((cerberus::BYTE*)&c[0]);
+    bb.copyTo((crb::BYTE*)&c[0]);
     logInfo(CerberusUtils::strPrint("bb: %u", bb.size()));
     logInfo(c);
 
     auto bbb = bb.subBuffer(0, 5);
 
     char d[20] = {};
-    bbb.copyTo((cerberus::BYTE*)&d[0]);
+    bbb.copyTo((crb::BYTE*)&d[0]);
     logInfo(CerberusUtils::strPrint("bbb: %u", bbb.size()));
     logInfo(d);
 }

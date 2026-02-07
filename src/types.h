@@ -49,6 +49,8 @@ namespace crb
     typedef int64_t OFFSET;
     typedef uint64_t DBMOD;
 
+    typedef std::vector<std::string> MultiString;
+
     class HASH32
     {
        public:
@@ -57,9 +59,18 @@ namespace crb
         {
         }
 
-        constexpr HASH32(int value) noexcept : m_value(static_cast<uint32_t>(value)) {}
-        constexpr HASH32(uint64_t value) noexcept : m_value(static_cast<uint32_t>(value)) {}
-        constexpr HASH32(int64_t value) noexcept : m_value(static_cast<uint32_t>(value)) {}
+        constexpr HASH32(int value) noexcept
+            : m_value(static_cast<uint32_t>(value))
+        {
+        }
+        constexpr HASH32(uint64_t value) noexcept
+            : m_value(static_cast<uint32_t>(value))
+        {
+        }
+        constexpr HASH32(int64_t value) noexcept
+            : m_value(static_cast<uint32_t>(value))
+        {
+        }
 
         HASH32(const char* str);
         HASH32(const std::string& str);
@@ -133,8 +144,17 @@ namespace crb
             }
             return out;
         }
-    };
 
+        // Create an empty CoreSet
+        CoreSet() = default;
+
+        // Create a CoreSet with just one core
+        CoreSet(int core)
+            : cores()
+        {
+            cores.push_back(core);
+        };
+    };
 
     struct VAR_256_BITS
     {
@@ -594,7 +614,7 @@ namespace crb
     {
         SIZE threadPool;  // set the size of the Cerberus thread pool. a value of zero disables it
         uint32_t backupThreadMaxTime;  // set the maximum time to keep backup threads alive (in ms)
-        CoreSet coreSet;  // default core set for Cerberus threads (empty = no affinity)
+        CoreSet coreSet;               // default core set for Cerberus threads (empty = no affinity)
 
         CoreConf()
             : threadPool(0),
@@ -606,7 +626,7 @@ namespace crb
     {
         LogConf logSetup;
         CoreConf coreSetup;
-        bool useCiphers;  // enable cerberus to init and use the OpenSSL library
+        bool useCiphers;                   // enable cerberus to init and use the OpenSSL library
         std::string appConfigurationFile;  // application configuration file path
         bool initFromFile;                 // override init params from configuration file
     };
@@ -744,12 +764,42 @@ namespace crb
     typedef managed_ptr<::crb::SlotBase> slot_ptr;
     typedef std::unique_ptr<::crb::Socket> cerberus_socket;
 
-    enum IniDataType : uint8_t
+    enum DataType : uint8_t
     {
-        IDT_Invalid = 0,  // specified when a value has an unknown type
-        IDT_Integer = 2,  // false if key value contains a letter or a symbol
-        IDT_Double  = 3,  // false if key value does not contain a '.' or if it contains a letter
-        IDT_Bool    = 4,  // true only if key value equals "true" or "false" (case insensitive)
+        DT_Invalid = 0,  // specified when a value has an unknown type
+        DT_Integer = 2,  // false if the value contains a letter or a symbol
+        DT_Double  = 3,  // false if the value does not contain a '.' or if it contains a letter
+        DT_Bool    = 4,  // true only if the value equals "true" or "false" (case insensitive)
+    };
+
+    class Opaque
+    {
+        std::string value;
+
+       public:
+        Opaque()
+            : value() {}
+        Opaque(const std::string& str);
+        Opaque(int64_t val);
+        explicit Opaque(double val);
+        explicit Opaque(float val);
+        explicit Opaque(bool val);
+
+        // return the contained type of data. priority: double(highest) > integer > bool > invalid
+        DataType type() const;
+        const std::string& get() const;
+
+        void set(const std::string& str);  // set the string value
+        void setInt(int64_t val);          // set the integer value
+        void setDouble(double val);        // set the double value
+        void setBool(bool val);            // set the bool value
+
+        Opaque& operator=(const std::string& str);  // set the string value
+
+        // value getters. Throw if invalid data type is requested
+        int64_t getInt();
+        double getDouble();
+        bool getBool();
     };
 
     enum JsonDataType : uint8_t

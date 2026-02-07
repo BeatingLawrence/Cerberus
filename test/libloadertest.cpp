@@ -2,7 +2,7 @@
 #include <core/libloader.h>
 #include <gtest/gtest.h>
 
-using namespace cerberus::core;
+using namespace crb::core;
 
 TEST(libLoaderTest, standalone_libloading)
 {

@@ -3,24 +3,24 @@
 
 TEST(messageFactoryTest, registering_message)
 {
-    auto msg = cerberus::Message::create("Test-Message");
-    msg->addSlot(cerberus::ByteSlot::create(10));
-    msg->addSlot(cerberus::ByteSlot::create(12));
-    msg->addSlot(cerberus::ByteSlot::create(14));
+    auto msg = crb::Message::create("Test-Message");
+    msg->addSlot(crb::ByteSlot::create(10));
+    msg->addSlot(crb::ByteSlot::create(12));
+    msg->addSlot(crb::ByteSlot::create(14));
 
     EXPECT_EQ(msg->count(), 3);
 
-    EXPECT_NO_THROW(cerberus::Cerberus::registerTemplate(msg));
+    EXPECT_NO_THROW(crb::Cerberus::registerTemplate(msg));
 }
 
 TEST(messageFactoryTest, constructing_message)
 {
-    auto msg = cerberus::Cerberus::constructMessage("Test-Message");
+    auto msg = crb::Cerberus::constructMessage("Test-Message");
     EXPECT_EQ(msg->count(), 3);
 
-    auto def = cerberus::Cerberus::constructMessage(CERBERUS_MESSAGE_SOCKETDATA_ID);
+    auto def = crb::Cerberus::constructMessage(CRB_MESSAGE_SOCKETDATA_ID);
     EXPECT_EQ(def->count(), 3);
-    // def->getSlot("result")->to<cerberus::ResultSlot>();  //->value(cerberus::OR_OK);
+    // def->getSlot("result")->to<crb::ResultSlot>();  //->value(crb::OR_OK);
 
     auto& x = def->getSlot("result");
     logInfo("%x", x->id());
@@ -37,7 +37,7 @@ static const char* charp = "testcharp";
 
 new_slot_from_cstruct(CSTRUCT_SLOT, testStruct);
 
-static int facTestCallback(cerberus::msg_ptr msg, cerberus::Thread* thread)
+static int facTestCallback(crb::msg_ptr msg, crb::Thread* thread)
 {
     logInfo("Tick of factory test thread");
 
@@ -63,7 +63,7 @@ static int facTestCallback(cerberus::msg_ptr msg, cerberus::Thread* thread)
 
 TEST(messageFactoryTest, slotFromCStruct_creation)
 {
-    cerberus::Thread t;
+    crb::Thread t;
     t.provideTickCallback(facTestCallback);
     t.start();
 
@@ -85,11 +85,11 @@ TEST(messageFactoryTest, slotFromCStruct_creation)
     und2.ch    = charp;
     und2.val   = 1.14f;
 
-    auto msg = cerberus::Message::create("cstructmessage");
+    auto msg = crb::Message::create("cstructmessage");
     msg->addSlot(std::move(s1)).addSlot(std::move(s2));
 
     // also dynamically register the message for the subsequent test
-    cerberus::Cerberus::registerTemplate(msg);
+    crb::Cerberus::registerTemplate(msg);
 
     t.send(msg);
 
@@ -100,7 +100,7 @@ TEST(messageFactoryTest, slotFromCStruct_part2)
 {
     // THIS TEST DEPENDS ON THE slotFromCStruct_creation TEST
 
-    auto msg = cerberus::Cerberus::constructMessage("cstructmessage");
+    auto msg = crb::Cerberus::constructMessage("cstructmessage");
 
     ASSERT_TRUE(msg->is("cstructmessage"));
 

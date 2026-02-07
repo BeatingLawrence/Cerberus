@@ -2,20 +2,20 @@
 #include <core/cerberusutils.h>
 #include <gtest/gtest.h>
 
-using namespace cerberus;
+using namespace crb;
 
 TEST(utilityTest, misc)
 {
     logInfo("%s", CerberusUtils::toLower("Hello").c_str());
     logInfo("%s", CerberusUtils::toUpper("Hello").c_str());
 
-    EXPECT_TRUE(CerberusUtils::areEqual("Hello", "Hello", cerberus::WM_CaseSensitive));
-    EXPECT_FALSE(CerberusUtils::areEqual("Hello", "hello", cerberus::WM_CaseSensitive));
-    EXPECT_TRUE(CerberusUtils::areEqual("Hello", "hello", cerberus::WM_CaseInsensitive));
-    EXPECT_TRUE(CerberusUtils::areEqual("hello", "hello", cerberus::WM_CaseInsensitive));
+    EXPECT_TRUE(CerberusUtils::areEqual("Hello", "Hello", crb::WM_CaseSensitive));
+    EXPECT_FALSE(CerberusUtils::areEqual("Hello", "hello", crb::WM_CaseSensitive));
+    EXPECT_TRUE(CerberusUtils::areEqual("Hello", "hello", crb::WM_CaseInsensitive));
+    EXPECT_TRUE(CerberusUtils::areEqual("hello", "hello", crb::WM_CaseInsensitive));
 
-    EXPECT_FALSE(CerberusUtils::areEqual("hello", "hey", cerberus::WM_CaseInsensitive));
-    EXPECT_FALSE(CerberusUtils::areEqual("hello", "hey", cerberus::WM_CaseSensitive));
+    EXPECT_FALSE(CerberusUtils::areEqual("hello", "hey", crb::WM_CaseInsensitive));
+    EXPECT_FALSE(CerberusUtils::areEqual("hello", "hey", crb::WM_CaseSensitive));
 }
 
 TEST(utilityTest, regex)

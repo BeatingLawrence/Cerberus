@@ -1315,7 +1315,7 @@ OpRes Socket::useKeepAlive(bool use, int maxprobes, int idleTime, int interval)
 
     auto ret = useKeepAlive(use);
 
-    if (ret != OR_OK) return ret;
+    if (ret.fail()) return ret;
 
     if (!use) return OR_OK;
 

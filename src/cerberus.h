@@ -181,29 +181,16 @@ namespace crb
         static void setFileName(const std::string& fileName);
         static OpRes load();
         static bool exists(const std::string& key, const std::string& section = MAIN_SECTION);
-        static IniDataType type(const std::string& key, const std::string& section = MAIN_SECTION);
-        static bool isType(const std::string& key, IniDataType type);
+        static DataType type(const std::string& key, const std::string& section = MAIN_SECTION);
+        static bool isType(const std::string& key, DataType type);
         static OpRes rewrite();
 
-        static OpRes write_string(const std::string& key, const std::string& value,
-                                  const std::string& section = MAIN_SECTION);
-        static OpRes write_integer(const std::string& key, int64_t value, const std::string& section = MAIN_SECTION);
-        static OpRes write_double(const std::string& key, double value, const std::string& section = MAIN_SECTION);
-        static OpRes write_bool(const std::string& key, bool value, const std::string& section = MAIN_SECTION);
-
-        static OpRes enforce_string(const std::string& key, const std::string& value,
-                                    const std::string& section = MAIN_SECTION);
-        static OpRes enforce_integer(const std::string& key, int64_t value,
-                                     const std::string& section = MAIN_SECTION);
-        static OpRes enforce_double(const std::string& key, double value,
-                                    const std::string& section = MAIN_SECTION);
-        static OpRes enforce_bool(const std::string& key, bool value,
-                                  const std::string& section = MAIN_SECTION);
-
-        static StringOpRes read_string(const std::string& key, const std::string& section = MAIN_SECTION);
-        static IntOpRes read_integer(const std::string& key, const std::string& section = MAIN_SECTION);
-        static FloatOpRes read_double(const std::string& key, const std::string& section = MAIN_SECTION);
-        static BoolOpRes read_bool(const std::string& key, const std::string& section = MAIN_SECTION);
+        // Generic Opaque-based API
+        static OpRes write(const std::string& key, const Opaque& value,
+                           const std::string& section = MAIN_SECTION);
+        static OpRes enforce(const std::string& key, const Opaque& value,
+                             const std::string& section = MAIN_SECTION);
+        static OpResData<Opaque> read(const std::string& key, const std::string& section = MAIN_SECTION);
 
         // send with deep copy
         static OpRes send_deep(const msg_ptr& message, HASH32 recipientID = CRB_INVALID_ID,

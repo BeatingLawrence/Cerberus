@@ -2,19 +2,19 @@
 #include <core/libloader.h>
 #include <gtest/gtest.h>
 
-using namespace cerberus;
-using namespace cerberus::core;
+using namespace crb;
+using namespace crb::core;
 
 int main(int argc, char* argv[])
 {
     auto parms                               = Cerberus::cerberusDefaultParms();
-    parms.logSetup.cerbLogLevel              = cerberus::LL_Debug;
-    parms.logSetup.appLogLevel               = cerberus::LL_Debug;
+    parms.logSetup.fwLogLevel                = crb::LL_Debug;
+    parms.logSetup.appLogLevel               = crb::LL_Debug;
     parms.coreSetup.threadPool               = 1;       // 1 thread in the threadpool
     parms.coreSetup.backupThreadMaxTime      = 2000;    // 2 seconds
     parms.logSetup.fileLogConf.logDirMaxSize = 500000;  //~ 500K
     Cerberus::init(parms);
-    // cerberus::core::LibLoader::fastload("libtestobject.dylib");
+    // crb::core::LibLoader::fastload("libtestobject.dylib");
     //   start testing
     logInfo("=================================");
     logInfo("  START TESTING CERBERUS %s", Cerberus::cerberusVersion().text.c_str());

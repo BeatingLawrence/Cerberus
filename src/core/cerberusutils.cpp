@@ -1,7 +1,11 @@
 #include "cerberusutils.h"
 
 #include <inttypes.h>
+#ifndef APPLE_SYSTEM
 #include <sys/sysinfo.h>
+#else
+#include <sys/sysctl.h>
+#endif
 
 #include <algorithm>
 #include <boost/regex.hpp>
@@ -626,9 +630,15 @@ uint8_t CerberusUtils::reqBytes(LSIZE num)
 //=============================================================================
 OpResData<CoreSet> CerberusUtils::getOnlineCoreSet()
 {
-    int cores = get_nprocs();
-
+    int cores = 0;
+#ifndef APPLE_SYSTEM
+    cores = get_nprocs();
     if (cores <= 0) return OpResData<CoreSet>(OR_Failure, "get_nprocs fail");
+#else
+    size_t len = sizeof(cores);
+    if (sysctlbyname("hw.logicalcpu", &cores, &len, nullptr, 0) != 0 || cores <= 0)
+        return OpResData<CoreSet>(OR_Failure, "sysctl hw.logicalcpu fail");
+#endif
 
     CoreSet set;
     set.cores.reserve(static_cast<size_t>(cores));

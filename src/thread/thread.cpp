@@ -10,8 +10,8 @@
 #include <cstring>
 
 #include "../cerberus.h"
+#include "../core/cerberusutils.h"
 #include "../exception/exception.h"
-#include "../message/message.h"  // IWYU pragma: export
 
 using namespace crb;
 
@@ -26,6 +26,14 @@ void* Thread::_staticThread(void* context)
 //=============================================================================
 void Thread::_thread()
 {
+    // set system thread name if supported
+#if defined(APPLE_SYSTEM)
+    if (!m_threadName.empty()) pthread_setname_np(CerberusUtils::truncStr(m_threadName, 63).c_str());
+#elif defined(LINUX_SYSTEM)
+    if (!m_threadName.empty())
+        pthread_setname_np(pthread_self(), CerberusUtils::truncStr(m_threadName, 15).c_str());
+#endif
+
     bool firstRun = true;
 
     while (true)
@@ -157,6 +165,7 @@ void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, LS
         effectiveCoreSet = s_defaultCoreSet;
     }
 
+#ifndef APPLE_SYSTEM
     if (!effectiveCoreSet.empty())
     {
         cpu_set_t cpuset;
@@ -185,6 +194,7 @@ void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, LS
             throw cSystemExc("pthread_attr_setaffinity_np function failed: %s", strerror(affRet));
         }
     }
+#endif
 
     void* rtStack      = nullptr;
     LSIZE rtStackBytes = 0;
@@ -209,9 +219,9 @@ void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, LS
             size = attrSize;
         }
 
-        const long page = sysconf(_SC_PAGESIZE);
+        const long page    = sysconf(_SC_PAGESIZE);
         const size_t align = (page > 0) ? static_cast<size_t>(page) : 4096u;
-        size = (size + align - 1) & ~(align - 1);
+        size               = (size + align - 1) & ~(align - 1);
 
         int mmapFlags = MAP_PRIVATE | MAP_ANONYMOUS;
 #ifdef MAP_STACK
@@ -262,8 +272,7 @@ void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, LS
 
     if (ret)
     {
-        if (rtStack)
-            munmap(rtStack, rtStackBytes);
+        if (rtStack) munmap(rtStack, rtStackBytes);
 
         throw cSystemExc("pthread_create function failed: %s", strerror(ret));
     }
@@ -276,28 +285,19 @@ void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, LS
         sched_param param{};
         int prio = sched_get_priority_max(SCHED_FIFO);
 
-        if (prio < 0)
-            throw cSystemExc("sched_get_priority_max function failed: %s", strerror(errno));
+        if (prio < 0) throw cSystemExc("sched_get_priority_max function failed: %s", strerror(errno));
 
         param.sched_priority = prio;
 
         int schedRet = pthread_setschedparam(m_pthread, SCHED_FIFO, &param);
 
-        if (schedRet)
-            throw cSystemExc("pthread_setschedparam function failed: %s", strerror(schedRet));
+        if (schedRet) throw cSystemExc("pthread_setschedparam function failed: %s", strerror(schedRet));
     }
 }
 //=============================================================================
 int Thread::tick() { return m_tickCallback(next(), this); }
 //=============================================================================
-void Thread::setThreadName(const std::string& name)
-{
-#ifdef LINUX_SYSTEM
-    if (!name.empty()) pthread_setname_np(m_pthread, CerberusUtils::truncStr(name, 15).c_str());
-#else
-    (void)name;
-#endif
-}
+void Thread::setThreadName(const std::string& name) { m_threadName = name; }
 //=============================================================================
 void Thread::setDefaultCoreSet(const CoreSet& coreSet) { s_defaultCoreSet = coreSet; }
 //=============================================================================
@@ -365,7 +365,7 @@ Thread::~Thread()
     if (m_stack)
     {
         munmap(m_stack, m_stackSize);
-        m_stack = nullptr;
+        m_stack     = nullptr;
         m_stackSize = 0;
     }
 }

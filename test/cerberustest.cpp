@@ -2,7 +2,7 @@
 #include <core/cerberusutils.h>
 #include <gtest/gtest.h>
 
-using namespace cerberus;
+using namespace crb;
 
 TEST(cerberusTest, strPrint)
 {
@@ -49,7 +49,7 @@ TEST(cerberusTest, cerberusVersion)
 TEST(cerberusTest, hostTest)
 {
     {
-        cerberus::Host h;
+        crb::Host h;
         EXPECT_FALSE(h.isValidRemote());
         h.fromString("192.168.3.67:9000");
         EXPECT_EQ(h.octect[0], 192);
@@ -74,7 +74,7 @@ TEST(cerberusTest, hostTest)
     }
     //
     {
-        cerberus::Host h("192.168.100.1:4444");
+        crb::Host h("192.168.100.1:4444");
         EXPECT_TRUE(h.isValidRemote());
         EXPECT_EQ(h.octect[0], 192);
         EXPECT_EQ(h.octect[1], 168);
@@ -84,7 +84,7 @@ TEST(cerberusTest, hostTest)
     }
     //
     {
-        cerberus::Host h("google.com:80");
+        crb::Host h("google.com:80");
         EXPECT_TRUE(h.isValidRemote());
         EXPECT_EQ(h.octect[0], 0);
         EXPECT_EQ(h.octect[1], 0);
@@ -94,7 +94,7 @@ TEST(cerberusTest, hostTest)
     }
     //
     {
-        cerberus::Host h("0.0.0.400:4444");
+        crb::Host h("0.0.0.400:4444");
         EXPECT_FALSE(h.isValidRemote());
         EXPECT_EQ(h.octect[0], 0);
         EXPECT_EQ(h.octect[1], 0);
@@ -104,7 +104,7 @@ TEST(cerberusTest, hostTest)
     }
     //
     {
-        cerberus::Host h("www.google.com:4444");
+        crb::Host h("www.google.com:4444");
         EXPECT_TRUE(h.isValidRemote());
         EXPECT_EQ(h.octect[0], 0);
         EXPECT_EQ(h.octect[1], 0);
@@ -117,9 +117,9 @@ TEST(cerberusTest, hostTest)
 
 TEST(cerberusTest, dictionaryTest)
 {
-    cerberus::Dictionary dict;
+    crb::Dictionary dict;
     dict.addKey("Transfer-Encoding", "chunked");
-    EXPECT_TRUE(dict.getFieldMatch("transfer-encoding", "chunked", cerberus::WM_CaseInsensitive,
-                                   cerberus::WM_CaseSensitive)
+    EXPECT_TRUE(dict.getFieldMatch("transfer-encoding", "chunked", crb::WM_CaseInsensitive,
+                                   crb::WM_CaseSensitive)
                     .ok());
 }

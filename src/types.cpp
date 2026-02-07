@@ -2,6 +2,7 @@
 
 #include <netdb.h>
 
+#include <boost/regex.hpp>
 #include <cstring>
 
 #include "core/cerberusutils.h"
@@ -436,7 +437,7 @@ StringOpRes crb::Dictionary::getFieldValue(const std::string& key, WordMatch mat
 }
 //=============================================================================
 crb::OpRes crb::Dictionary::getFieldMatch(const std::string& key, const std::string& value,
-                                                    WordMatch keymatch, WordMatch valmatch) const
+                                          WordMatch keymatch, WordMatch valmatch) const
 {
     auto res = getFieldValue(key, keymatch);
 
@@ -628,5 +629,112 @@ void crb::FileMetadata::fromStat(const struct stat& stat_struct)
 crb::SocketCloser::~SocketCloser()
 {
     if (socket) socket->close();
+}
+//=============================================================================
+namespace
+{
+    const char* kOpaqueIntPattern    = "\\d+";
+    const char* kOpaqueDoublePattern = "\\d+\\.\\d+";
+    const char* kOpaqueBoolPattern   = "(true|false)";
+
+    inline bool matches_pattern(const std::string& value, const char* pattern)
+    {
+        static const boost::regex intRegex(
+            kOpaqueIntPattern, boost::regex::ECMAScript | boost::regex::icase | boost::regex::optimize);
+        static const boost::regex doubleRegex(
+            kOpaqueDoublePattern, boost::regex::ECMAScript | boost::regex::icase | boost::regex::optimize);
+        static const boost::regex boolRegex(
+            kOpaqueBoolPattern, boost::regex::ECMAScript | boost::regex::icase | boost::regex::optimize);
+
+        const boost::regex* rx = nullptr;
+        if (std::strcmp(pattern, kOpaqueIntPattern) == 0)
+            rx = &intRegex;
+        else if (std::strcmp(pattern, kOpaqueDoublePattern) == 0)
+            rx = &doubleRegex;
+        else
+            rx = &boolRegex;
+
+        boost::smatch m;
+        return boost::regex_match(value, m, *rx);
+    }
+}  // namespace
+//=============================================================================
+crb::Opaque::Opaque(const std::string& str)
+    : value(str)
+{
+}
+//=============================================================================
+crb::Opaque::Opaque(int64_t val) { setInt(val); }
+//=============================================================================
+crb::Opaque::Opaque(double val) { setDouble(val); }
+//=============================================================================
+crb::Opaque::Opaque(float val) { setDouble(static_cast<double>(val)); }
+//=============================================================================
+crb::Opaque::Opaque(bool val) { setBool(val); }
+//=============================================================================
+crb::DataType crb::Opaque::type() const
+{
+    if (value.empty()) return DT_Invalid;
+
+    // Priority: double > integer > bool
+    if (matches_pattern(value, kOpaqueDoublePattern)) return DT_Double;
+    if (matches_pattern(value, kOpaqueIntPattern)) return DT_Integer;
+    if (matches_pattern(value, kOpaqueBoolPattern)) return DT_Bool;
+
+    return DT_Invalid;  // treat as string/other
+}
+//=============================================================================
+const std::string& crb::Opaque::get() const { return value; }
+//=============================================================================
+void crb::Opaque::set(const std::string& str) { value = str; }
+//=============================================================================
+void crb::Opaque::setInt(int64_t val) { value = CerberusUtils::strPrint_int(val); }
+//=============================================================================
+void crb::Opaque::setDouble(double val)
+{
+    value = CerberusUtils::strPrint_float(static_cast<long double>(val));
+    CerberusUtils::cleanNumber(value);  // normalize representation (e.g., remove trailing zeros)
+}
+//=============================================================================
+void crb::Opaque::setBool(bool val) { value = val ? "true" : "false"; }
+//=============================================================================
+crb::Opaque& crb::Opaque::operator=(const std::string& str)
+{
+    set(str);
+    return *this;
+}
+//=============================================================================
+int64_t crb::Opaque::getInt()
+{
+    if (type() != DT_Integer) throw cInvalidCastExc("Opaque value \"%s\" is not an integer", value.c_str());
+
+    auto res = CerberusUtils::stringToInt(value);
+    if (res.fail()) throw cInvalidCastExc("Failed to convert \"%s\" to integer", value.c_str());
+    return res.value;
+}
+//=============================================================================
+double crb::Opaque::getDouble()
+{
+    auto t = type();
+    if (t != DT_Double && t != DT_Integer)
+        throw cInvalidCastExc("Opaque value \"%s\" is not a double-compatible value", value.c_str());
+
+    if (t == DT_Double)
+    {
+        auto res = CerberusUtils::stringToDouble(value);
+        if (res.fail()) throw cInvalidCastExc("Failed to convert \"%s\" to double", value.c_str());
+        return static_cast<double>(res.value);
+    }
+
+    // Integer string is convertible to double as a convenience.
+    auto res = CerberusUtils::stringToInt(value);
+    if (res.fail()) throw cInvalidCastExc("Failed to convert \"%s\" to double", value.c_str());
+    return static_cast<double>(res.value);
+}
+//=============================================================================
+bool crb::Opaque::getBool()
+{
+    if (type() != DT_Bool) throw cInvalidCastExc("Opaque value \"%s\" is not a boolean", value.c_str());
+    return CerberusUtils::areEqual(value, "true", WM_CaseInsensitive);
 }
 //=============================================================================

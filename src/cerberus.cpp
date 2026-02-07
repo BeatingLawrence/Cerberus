@@ -33,10 +33,10 @@ namespace
 
     bool readBoolOpt(IniDataFile& ini, const std::string& key, bool& out)
     {
-        auto r = ini.read_bool(key, kFrameworkSection);
-        if (r == OR_OK)
+        auto r = ini.read(key, kFrameworkSection);
+        if (r.ok())
         {
-            out = r.value;
+            out = r.value.getBool();
             return true;
         }
         return false;
@@ -44,10 +44,10 @@ namespace
 
     bool readIntOpt(IniDataFile& ini, const std::string& key, int64_t& out)
     {
-        auto r = ini.read_integer(key, kFrameworkSection);
-        if (r == OR_OK)
+        auto r = ini.read(key, kFrameworkSection);
+        if (r.ok())
         {
-            out = r.value;
+            out = r.value.getInt();
             return true;
         }
         return false;
@@ -55,10 +55,10 @@ namespace
 
     bool readDoubleOpt(IniDataFile& ini, const std::string& key, double& out)
     {
-        auto r = ini.read_double(key, kFrameworkSection);
-        if (r == OR_OK)
+        auto r = ini.read(key, kFrameworkSection);
+        if (r.ok())
         {
-            out = static_cast<double>(r.value);
+            out = static_cast<double>(r.value.getDouble());
             return true;
         }
         return false;
@@ -66,10 +66,10 @@ namespace
 
     bool readStringOpt(IniDataFile& ini, const std::string& key, std::string& out)
     {
-        auto r = ini.read_string(key, kFrameworkSection);
-        if (r == OR_OK)
+        auto r = ini.read(key, kFrameworkSection);
+        if (r.ok())
         {
-            out = r.value;
+            out = r.value.get();
             return true;
         }
         return false;
@@ -424,14 +424,14 @@ bool Cerberus::exists(const std::string& key, const std::string& section)
     return Cerberus::framework.core.data->iniFile().exists(key, section);
 }
 //=============================================================================
-IniDataType Cerberus::type(const std::string& key, const std::string& section)
+DataType Cerberus::type(const std::string& key, const std::string& section)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
     return Cerberus::framework.core.data->iniFile().type(key, section);
 }
 //=============================================================================
-bool Cerberus::isType(const std::string& key, IniDataType type)
+bool Cerberus::isType(const std::string& key, DataType type)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
@@ -445,88 +445,25 @@ OpRes Cerberus::rewrite()
     return Cerberus::framework.core.data->iniFile().rewrite();
 }
 //=============================================================================
-OpRes Cerberus::write_string(const std::string& key, const std::string& value, const std::string& section)
+OpRes Cerberus::write(const std::string& key, const Opaque& value, const std::string& section)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().write_string(key, value, section);
+    return Cerberus::framework.core.data->iniFile().write(key, value, section);
 }
 //=============================================================================
-OpRes Cerberus::write_integer(const std::string& key, int64_t value, const std::string& section)
+OpRes Cerberus::enforce(const std::string& key, const Opaque& value, const std::string& section)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().write_integer(key, value, section);
+    return Cerberus::framework.core.data->iniFile().enforce(key, value, section);
 }
 //=============================================================================
-OpRes Cerberus::write_double(const std::string& key, double value, const std::string& section)
+OpResData<Opaque> Cerberus::read(const std::string& key, const std::string& section)
 {
     Cerberus::framework.core.isReadySevere();
     auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().write_double(key, value, section);
-}
-//=============================================================================
-OpRes Cerberus::write_bool(const std::string& key, bool value, const std::string& section)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().write_bool(key, value, section);
-}
-//=============================================================================
-OpRes Cerberus::enforce_string(const std::string& key, const std::string& value, const std::string& section)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().enforce_string(key, value, section);
-}
-//=============================================================================
-OpRes Cerberus::enforce_integer(const std::string& key, int64_t value, const std::string& section)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().enforce_integer(key, value, section);
-}
-//=============================================================================
-OpRes Cerberus::enforce_double(const std::string& key, double value, const std::string& section)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().enforce_double(key, value, section);
-}
-//=============================================================================
-OpRes Cerberus::enforce_bool(const std::string& key, bool value, const std::string& section)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().enforce_bool(key, value, section);
-}
-//=============================================================================
-StringOpRes Cerberus::read_string(const std::string& key, const std::string& section)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().read_string(key, section);
-}
-//=============================================================================
-IntOpRes Cerberus::read_integer(const std::string& key, const std::string& section)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().read_integer(key, section);
-}
-//=============================================================================
-FloatOpRes Cerberus::read_double(const std::string& key, const std::string& section)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().read_double(key, section);
-}
-//=============================================================================
-BoolOpRes Cerberus::read_bool(const std::string& key, const std::string& section)
-{
-    Cerberus::framework.core.isReadySevere();
-    auto locker = Cerberus::framework.core.getLocker();
-    return Cerberus::framework.core.data->iniFile().read_bool(key, section);
+    return Cerberus::framework.core.data->iniFile().read(key, section);
 }
 //=============================================================================
 OpRes Cerberus::send_deep(const msg_ptr& message, HASH32 recipientID, HASH32 channel_in)

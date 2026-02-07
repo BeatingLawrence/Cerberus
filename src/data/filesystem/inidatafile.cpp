@@ -1,5 +1,7 @@
 #include "inidatafile.h"
 
+#include <boost/regex.hpp>
+
 #include "../../core/cerberusutils.h"
 #include "../../types.h"
 #include "src/cerberus.h"
@@ -7,13 +9,7 @@
 using namespace crb;
 
 //=============================================================================
-bool IniDataFile::isValid(const std::string& line) { return std::regex_match(line, m_isValidRegex); }
-//=============================================================================
-bool IniDataFile::isInteger(const std::string& val) { return std::regex_match(val, m_isIntegerRegex); }
-//=============================================================================
-bool IniDataFile::isDouble(const std::string& val) { return std::regex_match(val, m_isDoubleRegex); }
-//=============================================================================
-bool IniDataFile::isBool(const std::string& val) { return std::regex_match(val, m_isBoolRegex); }
+bool IniDataFile::isValid(const std::string& line) { return boost::regex_match(line, m_isValidRegex); }
 //=============================================================================
 IniDataFile::Line* IniDataFile::search(const std::string& key, int16_t sectionId)
 {
@@ -113,17 +109,7 @@ int16_t IniDataFile::addNewSection(const std::string& name)
     return newId;
 }
 //=============================================================================
-crb::IniDataType IniDataFile::valueType(const std::string& value)
-{
-    if (isDouble(value))
-        return IDT_Double;
-    else if (isInteger(value))
-        return IDT_Integer;
-    else if (isBool(value))
-        return IDT_Bool;
-
-    return IDT_Invalid;
-}
+crb::DataType IniDataFile::valueType(const std::string& value) { return Opaque(value).type(); }
 //=============================================================================
 void IniDataFile::insertLine(const Line& line)
 {
@@ -235,15 +221,8 @@ void IniDataFile::printDebug()
 //=============================================================================
 IniDataFile::IniDataFile(const std::string& fileName)
     : m_file(fileName),
-      m_isValidRegex("[a-z][^=]*[=]{1} *[^=]+", std::regex_constants::ECMAScript |
-                                                    std::regex_constants::optimize |
-                                                    std::regex_constants::icase),
-      m_isIntegerRegex("\\d+", std::regex_constants::ECMAScript | std::regex_constants::optimize |
-                                   std::regex_constants::icase),
-      m_isDoubleRegex("\\d+\\.\\d+", std::regex_constants::ECMAScript | std::regex_constants::optimize |
-                                         std::regex_constants::icase),
-      m_isBoolRegex("(true|false)", std::regex_constants::ECMAScript | std::regex_constants::optimize |
-                                        std::regex_constants::icase)
+      m_isValidRegex("[a-z][^=]*[=]{1} *[^=]+",
+                     boost::regex::ECMAScript | boost::regex::optimize | boost::regex::icase)
 {
     // noop
 }
@@ -345,35 +324,28 @@ bool IniDataFile::exists(const std::string& key, const std::string& section)
     return (search(key, section) != nullptr);
 }
 //=============================================================================
-bool IniDataFile::isType(const std::string& key, IniDataType type)
-{
-    return (this->type(key) == type);
-}
+bool IniDataFile::isType(const std::string& key, DataType type) { return (this->type(key) == type); }
 //=============================================================================
-crb::IniDataType IniDataFile::type(const std::string& key, const std::string& section)
+crb::DataType IniDataFile::type(const std::string& key, const std::string& section)
 {
     auto found = search(key, section);
 
-    if (found == nullptr)
-    {
-        return IDT_Invalid;
-    }
+    if (found == nullptr) return DT_Invalid;
 
     return valueType(found->value);
 }
 //=============================================================================
 crb::OpRes IniDataFile::rewrite() { return syncFile(); }
 //=============================================================================
-crb::OpRes IniDataFile::write_string(const std::string& key, const std::string& value,
-                                          const std::string& section)
+crb::OpRes IniDataFile::write(const std::string& key, const Opaque& value, const std::string& section)
 {
     std::string k = CerberusUtils::removeBlank_copy(key);
-    std::string v = CerberusUtils::removeBlank_copy(value);
+    std::string v = CerberusUtils::removeBlank_copy(value.get());
 
-    if (k.empty() || v.empty())
-    {
-        return OR_WrongArgument;
-    }
+    if (k.empty() || v.empty()) return OR_WrongArgument;
+
+    DataType type = value.type();
+    if (type == DT_Invalid) type = valueType(v);
 
     Line* found = search(k, section);
 
@@ -382,63 +354,43 @@ crb::OpRes IniDataFile::write_string(const std::string& key, const std::string& 
         auto sectionId = addNewSection(section);  // add OR get an existing one
         Line newLine;
         newLine.sectionId = sectionId;
-        // newLine.comment
         newLine.key       = k;
         newLine.value     = v;
         insertLine(newLine);
     }
     else
     {
+        // keep type consistency when both sides have a concrete type
+        auto existingType = valueType(found->value);
+        if (type != DT_Invalid && existingType != DT_Invalid && existingType != type) return OR_WrongType;
         found->value = v;
     }
 
     return syncFile();
 }
 //=============================================================================
-crb::OpRes IniDataFile::write_integer(const std::string& key, int64_t value, const std::string& section)
+crb::OpRes IniDataFile::enforce(const std::string& key, const Opaque& value, const std::string& section)
 {
-    return write_string(key, CerberusUtils::strPrint("%lli", value), section);
+    if (key.empty() || value.get().empty()) return OR_WrongArgument;
+
+    auto res = read(key, section);
+
+    if (res.fail()) return write(key, value, section);
+
+    // key exists: ensure type consistency
+    DataType expected = value.type() == DT_Double    ? DT_Double
+                        : value.type() == DT_Integer ? DT_Integer
+                        : value.type() == DT_Bool    ? DT_Bool
+                                                     : DT_Invalid;
+
+    if (expected == DT_Invalid) expected = valueType(value.get());
+
+    if (!isType(key, expected)) return write(key, value, section);
+
+    return OR_OK;
 }
 //=============================================================================
-crb::OpRes IniDataFile::write_double(const std::string& key, double value, const std::string& section)
-{
-    return write_string(key, CerberusUtils::strPrint("%f", value), section);
-}
-//=============================================================================
-crb::OpRes IniDataFile::write_bool(const std::string& key, bool value, const std::string& section)
-{
-    return write_string(key, value ? "true" : "false", section);
-}
-//=============================================================================
-crb::OpRes IniDataFile::enforce_string(const std::string& key, const std::string& value,
-                                            const std::string& section)
-{
-    if (exists(key, section)) return OR_OK;
-    return write_string(key, value, section);
-}
-//=============================================================================
-crb::OpRes IniDataFile::enforce_integer(const std::string& key, int64_t value,
-                                             const std::string& section)
-{
-    if (type(key, section) == IDT_Integer) return OR_OK;
-    return write_integer(key, value, section);
-}
-//=============================================================================
-crb::OpRes IniDataFile::enforce_double(const std::string& key, double value,
-                                            const std::string& section)
-{
-    if (type(key, section) == IDT_Double) return OR_OK;
-    return write_double(key, value, section);
-}
-//=============================================================================
-crb::OpRes IniDataFile::enforce_bool(const std::string& key, bool value,
-                                          const std::string& section)
-{
-    if (type(key, section) == IDT_Bool) return OR_OK;
-    return write_bool(key, value, section);
-}
-//=============================================================================
-StringOpRes IniDataFile::read_string(const std::string& key, const std::string& section)
+OpResData<Opaque> IniDataFile::read(const std::string& key, const std::string& section)
 {
     auto found = search(key, section);
 
@@ -447,53 +399,6 @@ StringOpRes IniDataFile::read_string(const std::string& key, const std::string& 
         return OR_NotFound;
     }
 
-    return found->value;
-}
-//=============================================================================
-IntOpRes IniDataFile::read_integer(const std::string& key, const std::string& section)
-{
-    auto res = read_string(key, section);
-
-    if (res.fail()) return res;
-
-    if (!isInteger(res.value)) return OR_WrongType;
-
-    return CerberusUtils::stringToInt(res.value);
-}
-//=============================================================================
-FloatOpRes IniDataFile::read_double(const std::string& key, const std::string& section)
-{
-    auto res = read_string(key, section);
-
-    if (res.fail()) return res;
-
-    // Accept integer values as doubles (e.g. "10" can be read as 10.0).
-    // This is intentionally *not* changing valueType(): type() should still report IDT_Integer
-    // for integer literals, but callers may treat them as doubles when convenient.
-    if (!isDouble(res.value))
-    {
-        if (isInteger(res.value))
-        {
-            auto intRes = CerberusUtils::stringToInt(res.value);
-            if (intRes.fail()) return OR_WrongType;
-            return static_cast<double>(intRes.value);
-        }
-        return OR_WrongType;
-    }
-
-    return CerberusUtils::stringToDouble(res.value);
-}
-//=============================================================================
-BoolOpRes IniDataFile::read_bool(const std::string& key, const std::string& section)
-{
-    auto res = read_string(key, section);
-
-    if (res.fail()) return res;
-
-    if (!isBool(res.value)) return OR_WrongType;
-
-    if (CerberusUtils::areEqual(CerberusUtils::toLower(res.value), "true")) return true;
-
-    return false;
+    return OpResData<Opaque>(Opaque(found->value));
 }
 //=============================================================================

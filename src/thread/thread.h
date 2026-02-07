@@ -89,6 +89,8 @@ namespace crb
         void _construct(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize,
                         const CoreSet& coreSet);
 
+        std::string m_threadName;
+
        protected:
         virtual int tick();
 
@@ -99,6 +101,7 @@ namespace crb
        public:
         // Set thread name (pthread) if supported by the platform.
         void setThreadName(const std::string& name);
+        const std::string& getThreadName() const { return m_threadName; }
 
         // Construct a thread with optional stack size.
         // If periodicity is TP_Periodic, TP_Periodic_realtime, or TP_PeriodicMessage a valid time must be specified.

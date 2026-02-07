@@ -4,7 +4,7 @@
 
 #define CRYPTO_KEY "thisisthekey112233"
 
-using namespace cerberus;
+using namespace crb;
 
 TEST(cryptoTest, sha256)
 {

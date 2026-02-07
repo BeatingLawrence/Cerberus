@@ -49,7 +49,7 @@ void LoggerThread::coolDown()
         m_logFile.close();
     }
 
-    tlogInfo("Stopping Logger Thread");
+    tlogInfo("Exiting");
 }
 //=============================================================================
 LoggerThread::LoggerThread()
@@ -93,7 +93,7 @@ void LoggerThread::open()
     }
     else
     {
-        tlogError("LogFile open failed");
+        tlogError("logfile open failed");
         m_failed.store(true);
         return;
     }

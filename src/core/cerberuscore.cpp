@@ -1,11 +1,11 @@
 #include "cerberuscore.h"
 
-#include "../cerberus.h"
-#include "../thread/thread.h"
-
 #include <iomanip>
 #include <sstream>
 #include <vector>
+
+#include "../cerberus.h"
+#include "../thread/thread.h"
 
 using namespace crb::core;
 using namespace crb;
@@ -27,7 +27,7 @@ void CerberusCore::initializeThreadPool()
 {
     if (m_conf.threadPool == 0) return;
 
-    logDebug("Building thread pool");
+    tlogDebug("Building thread pool");
 
     m_pool.build(m_conf.threadPool, m_conf.backupThreadMaxTime);
 }
@@ -36,7 +36,7 @@ void CerberusCore::deinitializeThreadPool()
 {
     if (m_pool.size() == 0) return;
 
-    logDebug("Deallocating thread pool");
+    tlogDebug("Deallocating thread pool");
 
     m_pool.clear();
 }
@@ -74,7 +74,7 @@ int CerberusCore::tick()
 //=============================================================================
 void CerberusCore::warmUp()
 {
-    logInfo("Starting Core Thread");
+    tlogInfo("Starting Core Thread");
 
     logDebug("Starting Event Scheduler");
     m_eventScheduler.start();
@@ -84,12 +84,12 @@ void CerberusCore::warmUp()
 //=============================================================================
 void CerberusCore::coolDown()
 {
-    logDebug("Stopping event scheduler");
+    tlogDebug("Stopping event scheduler");
     m_eventScheduler.join(true);
 
     deinitializeThreadPool();
 
-    logInfo("Stopping Core Thread");
+    tlogInfo("Stopping Core Thread");
 }
 //=============================================================================
 void CerberusCore::processTaskMsg(msg_ptr& msg)
@@ -124,12 +124,14 @@ void CerberusCore::processMsg(msg_ptr& msg)
         }
     }
 }
+//=============================================================================
 CerberusCore::CerberusCore()
     : Thread(TP_Message)
 {
-    setThreadName("Cerberus core");
+    setThreadName("Core");
 }
 //=============================================================================
 CerberusCore::~CerberusCore() {}
 //=============================================================================
 void CerberusCore::setup(const CoreConf& parms) { m_conf = parms; }
+//=============================================================================

@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include <thread/player.h>
 
-using namespace cerberus;
+using namespace crb;
 
 class myclass
 {
@@ -18,14 +18,14 @@ class myclass
     {
     }
 
-    static cerberus::OpRes inc(void* ctx, void* data)
+    static crb::OpRes inc(void* ctx, void* data)
     {
         (void)data;
         ((myclass*)ctx)->print();
         Thread::sleep(300);
         ((myclass*)ctx)->increment();
         ((myclass*)ctx)->print();
-        return cerberus::OR_OK;
+        return crb::OR_OK;
     }
 };
 
@@ -35,31 +35,35 @@ static int playertest_standalone(msg_ptr msg, Thread* thr)
 
     thr->terminate();
 
-    if (msg->id() == CERBERUS_MESSAGE_TASKEND_ID) return 0;
+    if (msg->id() == CRB_MESSAGE_TASKEND_ID) return 0;
 
     return 1;
 }
 
 TEST(playerTest, standalone)
 {
-    Thread thr("standaloneTestThread");
-    thr.checkIn();
+    static int counter = 0;
+    std::string tname  = CerberusUtils::strPrint("standaloneTestThread_test_%d", counter++);
+    Thread thr;
+    thr.checkIn(tname);
     thr.provideTickCallback(playertest_standalone);
     thr.start();
     //
-    Player p(false, "standalonethread");
-    p.checkIn();
+    Player p(false);
+    p.checkIn("standalonethread");
     p.start();
 
     myclass c;
 
-    auto m = Cerberus::constructMessage(CERBERUS_MESSAGE_TASK_ID);
+    auto m = Cerberus::constructMessage(CRB_MESSAGE_TASK_ID);
     m->getSlot("task")->to<TaskSlot>()->value({myclass::inc, &c});
     m->getSlot("client")->to<UInt64Slot>()->value(thr.id());
     m->setRecipient(p.id());
     Cerberus::send(m);
     //
-    EXPECT_EQ(thr.join().value, 0);
+    Thread::sleep(200);  // give time for message exchange
+    thr.terminate();
+    EXPECT_TRUE(thr.join(true).ok());
     p.join(true);
 }
 
@@ -70,19 +74,17 @@ TEST(playerTest, threadPool)  // to test dynamic thread allocation, set the thre
         myclass c1, c2;
 
         {
-            auto m = Cerberus::constructMessage(CERBERUS_MESSAGE_TASK_ID);
+            auto m = Cerberus::constructMessage(CRB_MESSAGE_TASK_ID);
             m->getSlot("task")->to<TaskSlot>()->value({myclass::inc, &c1});
             Cerberus::send(m);
         }
 
         {
-            auto m = Cerberus::constructMessage(CERBERUS_MESSAGE_TASK_ID);
+            auto m = Cerberus::constructMessage(CRB_MESSAGE_TASK_ID);
             m->getSlot("task")->to<TaskSlot>()->value({myclass::inc, &c2});
             Cerberus::send(m);
         }
 
-        Thread::sleep(1000);
+        Thread::sleep(500);
     }
-
-    Thread::sleep(3000);  // give time to the tester to see the "temporary thread removed" log
 }

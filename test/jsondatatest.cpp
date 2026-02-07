@@ -2,7 +2,7 @@
 #include <data/jsondata.h>
 #include <gtest/gtest.h>
 
-using namespace cerberus;
+using namespace crb;
 
 static bool resources()
 {

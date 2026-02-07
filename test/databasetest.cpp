@@ -3,7 +3,7 @@
 #include <data/database/dbdata.h>
 #include <gtest/gtest.h>
 
-using namespace cerberus;
+using namespace crb;
 
 //==========================Postgres backend tests============================
 
@@ -51,7 +51,7 @@ TEST_F(PGDatabaseTest, createTable)
         .add("country", DBDataType::DDT_VarChar, 255)
         .add("heigth", DBDataType::DDT_Double)
         .add("drivingLicense", DBDataType::DDT_Boolean);
-    ASSERT_EQ(db->createTable(prototype).res, cerberus::OR_OK);
+    ASSERT_EQ(db->createTable(prototype).res, crb::OR_OK);
 }
 
 TEST_F(PGDatabaseTest, insertInto)
@@ -138,7 +138,7 @@ TEST_F(PGDatabaseTest, dropTable)
 
     ASSERT_TRUE(db->ready());
 
-    EXPECT_EQ(db->dropTable("test").res, cerberus::OR_OK);
+    EXPECT_EQ(db->dropTable("test").res, crb::OR_OK);
 }
 
 //=========================Filesystem backend tests===========================

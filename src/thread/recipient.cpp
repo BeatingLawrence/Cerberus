@@ -421,11 +421,11 @@ OpRes Recipient::broadcast(msg_ptr& message, HASH32 channel_out)
     {
         if (!target.recipient || &target == last) continue;
         OpRes r = target.recipient->send_deep(message, target.channel_in);
-        if (r != OR_OK) res = OR_Failure;
+        if (r.fail()) res = OR_Failure;
     }
 
     OpRes r = last->recipient->send(message, last->channel_in);
-    if (r != OR_OK) res = OR_Failure;
+    if (r.fail()) res = OR_Failure;
 
     return res;
 }
@@ -460,7 +460,7 @@ OpRes Recipient::broadcast_deep(msg_ptr& message, HASH32 channel_out)
     {
         if (!target.recipient) continue;
         OpRes r = target.recipient->send_deep(message, target.channel_in);
-        if (r != OR_OK) res = OR_Failure;
+        if (r.fail()) res = OR_Failure;
     }
 
     return res;

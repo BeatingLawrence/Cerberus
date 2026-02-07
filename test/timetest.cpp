@@ -4,7 +4,7 @@
 #include <time/timeframe.h>
 #include <time/timer.h>
 
-using namespace cerberus;
+using namespace crb;
 
 TEST(timeFrameTest, creation)
 {
