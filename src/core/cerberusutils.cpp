@@ -13,9 +13,9 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "../cerberus.h"               // IWYU pragma: export
+#include "../cerberus.h"              // IWYU pragma: export
 #include "../data/filesystem/file.h"  // IWYU pragma: export
-#include "../message/slot.h"           // IWYU pragma: export
+#include "../message/slot.h"          // IWYU pragma: export
 
 #define FNV_OFFSET_BASIS 0x811c9dc5
 #define FNV_PRIME 0x01000193
@@ -572,34 +572,34 @@ std::string CerberusUtils::fromDBDataType(DBDataType type)
             return "";
 
         case DBDataType::DDT_Int:
-            return "integer";
+            return "int";
 
         case DBDataType::DDT_SmallInt:
-            return "smallint";
+            return "sint";
 
         case DBDataType::DDT_BigInt:
-            return "bigint";
+            return "bint";
 
         case DBDataType::DDT_Real:
             return "real";
 
         case DBDataType::DDT_Double:
-            return "double precision";
+            return "double";
 
         case DBDataType::DDT_Boolean:
-            return "boolean";
+            return "bool";
 
         case DBDataType::DDT_Bit:
             return "bit";
 
         case DBDataType::DDT_VarBit:
-            return "bit varying";
+            return "varbit";
 
         case DBDataType::DDT_Char:
             return "char";
 
         case DBDataType::DDT_VarChar:
-            return "char varying";
+            return "varchar";
 
         case DBDataType::DDT_Money:
             return "money";
@@ -643,8 +643,7 @@ OpResData<CoreSet> CerberusUtils::getOnlineCoreSet()
     CoreSet set;
     set.cores.reserve(static_cast<size_t>(cores));
 
-    for (int i = 0; i < cores; ++i)
-        set.addCore(i);
+    for (int i = 0; i < cores; ++i) set.addCore(i);
 
     return set;
 }

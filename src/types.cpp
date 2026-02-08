@@ -360,6 +360,10 @@ std::string crb::OpRes::errorString() const
             return "Query failure";
         case OR_DBFailure:
             return "Database failure";
+        case OR_DBMissingColumns:
+            return "Database missing columns";
+        case OR_DBFieldSizeMismatch:
+            return "Database field size mismatch";
         case OR_AlreadyPresent:
             return "Table already present";
         case OR_InvalidFile:
@@ -368,6 +372,8 @@ std::string crb::OpRes::errorString() const
             return "Item is not empty";
         case OR_Duplicate:
             return "Object is a duplicate";
+        case OR_DuplicateKey:
+            return "Duplicate primary key";
         case OR_EOF:
             return "End of file";
         case OR_WrongType:

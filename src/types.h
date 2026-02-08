@@ -47,7 +47,9 @@ namespace crb
     typedef uint64_t LSIZE;
     typedef uint8_t BYTE;
     typedef int64_t OFFSET;
-    typedef uint64_t DBMOD;
+    typedef uint32_t DBMOD;
+
+    constexpr DBMOD DBMOD_KEY_FLAG = 0x80000000u;  // primary key bit (highest bit)
 
     typedef std::vector<std::string> MultiString;
 
@@ -106,6 +108,10 @@ namespace crb
        private:
         uint32_t m_value;
     };
+
+    using DBFLAGS = uint32_t;
+    constexpr DBFLAGS DBF_None       = 0x00000000;
+    constexpr DBFLAGS DBF_PrimaryKey = 0x00000001;
 
     constexpr inline bool operator==(HASH32 a, HASH32 b) noexcept { return a.value() == b.value(); }
     constexpr inline bool operator!=(HASH32 a, HASH32 b) noexcept { return a.value() != b.value(); }
@@ -244,6 +250,13 @@ namespace crb
     {
         DBB_PostgreSQL,
         DBB_Filesystem,
+    };
+
+    enum UpdatePolicy : uint8_t
+    {
+        UP_UpdateOnly,
+        UP_InsertOnly,
+        UP_UpdateInsert,
     };
 
     enum MemorySize : size_t
@@ -837,6 +850,7 @@ namespace crb
         OR_NotEnoughData,             // [general] the requested operation requires more data
         OR_InvalidFile,               // [general] the provided file instance is not valid
         OR_Duplicate,                 // [general] the item is a duplicate
+        OR_DuplicateKey,              // [general] duplicate primary key detected
         OR_WrongType,                 // [general] the item type is wrong
         OR_NotEmpty,                  // [general] the item is not empty
         OR_Empty,                     // [general] the item is empty
@@ -857,6 +871,8 @@ namespace crb
                                       //
         OR_QueryFailure,              // [database] query error
         OR_DBFailure,                 // [database] DB error
+        OR_DBMissingColumns,          // [database] missing required columns for operation
+        OR_DBFieldSizeMismatch,       // [database] serialized field size mismatch
                                       //
         OR_ThreadNotJoinable,         // [thread] the thread is not joinable
     };

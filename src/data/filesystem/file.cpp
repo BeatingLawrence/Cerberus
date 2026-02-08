@@ -482,6 +482,49 @@ OpRes File::remove()
     return remove(m_path.toStr());
 }
 //=============================================================================
+OpRes File::erase(LSIZE start, LSIZE span)
+{
+    if (!isOpen()) return OR_BadConditions;
+
+    auto sz = size();
+    condret_str(sz, "size() in erase");
+    if (start > sz.value) return OR_WrongArgument;
+    if (start + span > sz.value) span = sz.value - start;  // clamp to EOF
+
+    // create temp file in same directory when possible
+    std::string dirStr = m_path.toStr();
+    auto slash = dirStr.find_last_of('/');
+    Path tempDir;
+    if (slash != std::string::npos && slash > 0)
+        tempDir = Path(dirStr.substr(0, slash));
+    File tmp = File::tmpFile(tempDir, FOM_ReadWriteTrunc);
+    condret(tmp.open());
+
+    // copy head
+    if (start > 0)
+    {
+        condret(seek(0));
+        condret(File::zeroCopy(*this, tmp, start));
+    }
+
+    // copy tail
+    LSIZE tailStart = start + span;
+    if (tailStart < sz.value)
+    {
+        condret(seek(tailStart));
+        condret(File::zeroCopy(*this, tmp, sz.value - tailStart));
+    }
+
+    tmp.close();
+    close();
+
+    auto mv = File::move(tmp.path().toStr(), m_path.toStr());
+    condret_str(mv, "move temp in erase");
+
+    // reopen with previous open mode
+    return open();
+}
+//=============================================================================
 OpRes File::move(const Path& newPath)
 {
     auto res = move(m_path.toStr(), newPath.toStr());

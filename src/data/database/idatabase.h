@@ -29,6 +29,7 @@ namespace crb
             virtual OpRes command(const string& command) = 0;
 
             virtual OpResData<DBTableBlock> queryBlock(const string& query) = 0;
+            virtual OpResData<DBTableBlock> queryBlock(const DBQuery& query) = 0;
 
             virtual OpResData<DBTableProto> queryPrototype(const string& tableName) = 0;
 
@@ -36,7 +37,11 @@ namespace crb
 
             virtual OpRes insertBlock(const DBTableBlock& block) = 0;
 
+            virtual OpRes updateBlock(const DBTableBlock& block, UpdatePolicy policy = UP_UpdateInsert) = 0;
+
             virtual OpRes dropTable(const std::string& table) = 0;
+            virtual OpRes renameColumn(const std::string& table, const std::string& oldName,
+                                       const std::string& newName) = 0;
 
             virtual OpResData<DBTableBlock> querytable(const std::string& tableName) = 0;
 

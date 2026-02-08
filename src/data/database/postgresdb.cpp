@@ -111,6 +111,13 @@ OpResData<DBTableBlock> PostgresDB::queryBlock(const string& query)
     return ret;
 }
 //=============================================================================
+OpResData<DBTableBlock> PostgresDB::queryBlock(const DBQuery& query)
+{
+    // Not implemented yet for Postgres backend
+    (void)query;
+    return OR_Unavailable;
+}
+//=============================================================================
 OpResData<DBTableProto> PostgresDB::queryPrototype(const string& tableName)
 {
     if (!m_ready) return OR_BadConditions;
@@ -224,9 +231,26 @@ OpRes PostgresDB::insertBlock(const DBTableBlock& block)  // PURE SQL
     return command(cmd);
 }
 //=============================================================================
+OpRes PostgresDB::updateBlock(const DBTableBlock& block, UpdatePolicy policy)
+{
+    // Not implemented yet for Postgres backend
+    (void)block;
+    (void)policy;
+    return OR_Unavailable;
+}
+//=============================================================================
 OpRes PostgresDB::dropTable(const string& table)  // PURE SQL
 {
     return command(CerberusUtils::strPrint("DROP TABLE %s;", table.c_str()));
+}
+//=============================================================================
+OpRes PostgresDB::renameColumn(const std::string& table, const std::string& oldName,
+                               const std::string& newName)
+{
+    (void)table;
+    (void)oldName;
+    (void)newName;
+    return OR_Unavailable;
 }
 //=============================================================================
 OpResData<DBTableBlock> PostgresDB::querytable(const string& tableName)  // PURE SQL

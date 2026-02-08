@@ -61,6 +61,11 @@ namespace crb
         // Delete a file or directory. If path is a directory, it must be empty
         static OpRes remove(const std::string& path);
 
+        // Erase a span of bytes from a file, starting at offset start for length span.
+        // The content after the erased block is shifted forward.
+        // Uses a temporary file under the same directory and replaces the original on success.
+        OpRes erase(LSIZE start, LSIZE span);
+
         // Move a file referenced by oldPath to newPath
         static OpRes move(const std::string& oldPath, const std::string& newPath);
 

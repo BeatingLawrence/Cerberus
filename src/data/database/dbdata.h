@@ -13,6 +13,8 @@
  */
 
 #include <cstddef>
+#include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -32,7 +34,6 @@ namespace crb
         DBCell() = default;
 
         DBCell(int64_t value);
-        DBCell(int32_t value);
         DBCell(float value);
         DBCell(long double value);
         DBCell(bool value);
@@ -65,20 +66,101 @@ namespace crb
 
     class DBTableProto;
 
+    enum DBQueryConditionType : uint8_t
+    {
+        DBQC_None = 0,
+        DBQC_Range,
+        DBQC_Exact,
+        DBQC_Regex,
+    };
+
+    struct DBQueryCondition
+    {
+        DBQueryConditionType type;
+        std::string column;
+        std::optional<long double> min;
+        std::optional<long double> max;
+        std::string exactValue;
+        std::string regexPattern;
+        bool invertOrder;
+
+        DBQueryCondition()
+            : type(DBQC_None),
+              column(),
+              min(),
+              max(),
+              exactValue(),
+              regexPattern(),
+              invertOrder(false)
+        {
+        }
+    };
+
+    class DBQuery
+    {
+        std::string m_table;
+        DBQueryCondition m_condition;
+        std::vector<std::string> m_columns;
+
+       public:
+        DBQuery() = default;
+        explicit DBQuery(const std::string& tableName);
+
+        const std::string& table() const;
+        void setTable(const std::string& tableName);
+
+        const DBQueryCondition& condition() const;
+        DBQueryCondition& condition();
+
+        const std::vector<std::string>& columns() const;
+        void setColumns(const std::vector<std::string>& columns);
+        void addColumn(const std::string& column);
+        bool selectAllColumns() const;
+
+        OpRes validate() const;
+
+        static OpResData<DBQuery> fromString(const std::string& query);
+    };
+
     class DBRow
     {
         std::vector<DBCell> m_values;
+        const DBTableProto* m_protoRef;
+        std::unique_ptr<DBTableProto> m_protoOwned;
 
        public:
-        DBRow() = default;
+        DBRow();
 
-        DBRow(const DBRow& other) = default;
+        DBRow(const DBRow& other);
 
-        DBRow& operator=(const DBRow& other) = default;
+        DBRow& operator=(const DBRow& other);
+
+        DBRow(DBRow&& other) noexcept = default;
+        DBRow& operator=(DBRow&& other) noexcept = default;
 
         ~DBRow();
 
+        void bindPrototype(const DBTableProto* proto);
+        void detachPrototype();
+        bool hasPrototype() const;
+        const DBTableProto* prototype() const;
+
         void append(const DBCell& value);
+        void append(int64_t v) { append(DBCell(v)); }
+        void append(int32_t v) { append(DBCell((int64_t)v)); }
+        void append(int16_t v) { append(DBCell((int64_t)v)); }
+        void append(int8_t v) { append(DBCell((int64_t)v)); }
+        void append(uint64_t v) { append(DBCell((int64_t)v)); }
+        void append(uint32_t v) { append(DBCell((int64_t)v)); }
+        void append(uint16_t v) { append(DBCell((int64_t)v)); }
+        void append(uint8_t v) { append(DBCell((int64_t)v)); }
+        void append(long double v) { append(DBCell(v)); }
+        void append(double v) { append(DBCell((long double)v)); }
+        void append(float v) { append(DBCell(v)); }
+        void append(bool v) { append(DBCell(v)); }
+        void append(const std::string& v) { append(DBCell(v)); }
+        void append(const char* v) { append(DBCell(v)); }
+        void append(const std::vector<bool>& v) { append(DBCell(v)); }
 
         size_t size() const;
 
@@ -90,6 +172,8 @@ namespace crb
 
         const DBCell& operator[](size_t pos) const;
         DBCell& operator[](size_t pos);
+        const DBCell& operator[](const std::string& column) const;
+        DBCell& operator[](const std::string& column);
 
         Iterator<DBCell> begin();
         Iterator<DBCell> end();
@@ -102,10 +186,13 @@ namespace crb
     {
        public:
         DBColumn() = delete;
-        DBColumn(const std::string& name, DBDataType type, DBMOD mod = 0)
+        DBColumn(const std::string& name, DBDataType type, DBMOD mod = 0, DBFLAGS flags = DBF_None,
+                 const DBCell& defaultValue = DBCell())
             : m_columnName(name),
               m_type(type),
-              m_mod(mod) {};
+              m_mod(mod),
+              m_flags(flags),
+              m_defaultValue(defaultValue) {};
 
         std::string name() const { return m_columnName; };
         void setName(const std::string& name) { m_columnName = name; };
@@ -114,7 +201,14 @@ namespace crb
 
         DBMOD mod() const { return m_mod; };
 
+        DBFLAGS flags() const { return m_flags; };
+
         std::string typeString() const { return CerberusUtils::fromDBDataType(m_type); };
+
+        bool isPrimary() const { return (m_flags & DBF_PrimaryKey) != 0; };
+
+        const DBCell& defaultValue() const { return m_defaultValue; };
+        void setDefaultValue(const DBCell& value) { m_defaultValue = value; };
 
         bool operator==(const DBColumn& other) const;
 
@@ -122,6 +216,8 @@ namespace crb
         std::string m_columnName;
         DBDataType m_type;
         DBMOD m_mod;
+        DBFLAGS m_flags;
+        DBCell m_defaultValue;
     };
 
     class DBTableProto
@@ -133,7 +229,17 @@ namespace crb
        public:
         DBTableProto(const std::string& name = "");
 
-        DBTableProto& add(const std::string& name, DBDataType type, DBMOD mod = 0);
+        DBTableProto& add(const std::string& name, DBDataType type, DBMOD mod = 0, DBFLAGS flags = DBF_None);
+        DBTableProto& add(const std::string& name, DBDataType type, DBMOD mod, DBFLAGS flags,
+                          const DBCell& defaultValue);
+
+        // Mark a single column as primary key (by name or index)
+        OpRes setPrimaryKey(const std::string& name);
+        OpRes setPrimaryKey(size_t index);
+
+        int primaryKeyIndex() const;
+        int columnIndex(const std::string& name) const;
+        OpRes renameColumn(const std::string& oldName, const std::string& newName);
 
         const DBColumn& operator[](int index) const;
         DBColumn& operator[](int index);
@@ -199,7 +305,12 @@ namespace crb
 
         const DBTableProto& prototype() const;
 
-        DBTableBlock& addColumn(const std::string& name, DBDataType type, DBMOD mod = 0);
+        DBTableBlock& addColumn(const std::string& name, DBDataType type, DBMOD mod = 0,
+                                DBFLAGS flags = DBF_None);
+        DBTableBlock& addColumn(const std::string& name, DBDataType type, DBMOD mod, DBFLAGS flags,
+                                const DBCell& defaultValue);
+
+        std::string toString() const;
 
         const DBRow& operator[](size_t pos) const;
         DBRow& operator[](size_t pos);

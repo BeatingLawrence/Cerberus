@@ -28,6 +28,7 @@ namespace crb
         {
             return m_db->queryBlock(query);
         }
+        inline OpResData<DBTableBlock> queryBlock(const DBQuery& query) { return m_db->queryBlock(query); }
 
         inline OpResData<DBTableProto> queryPrototype(const std::string& tableName)
         {
@@ -38,7 +39,18 @@ namespace crb
 
         inline OpRes insertBlock(const DBTableBlock& block) { return m_db->insertBlock(block); }
 
+        inline OpRes updateBlock(const DBTableBlock& block, UpdatePolicy policy = UP_UpdateInsert)
+        {
+            return m_db->updateBlock(block, policy);
+        }
+
         inline OpRes dropTable(const std::string& table) { return m_db->dropTable(table); }
+
+        inline OpRes renameColumn(const std::string& table, const std::string& oldName,
+                                  const std::string& newName)
+        {
+            return m_db->renameColumn(table, oldName, newName);
+        }
 
         inline OpResData<DBTableBlock> querytable(const std::string& tableName)
         {

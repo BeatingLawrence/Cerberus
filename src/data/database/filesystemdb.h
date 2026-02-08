@@ -3,6 +3,7 @@
 
 #include "../../data/filesystem/file.h"
 #include "idatabase.h"
+#include <boost/regex.hpp>
 
 namespace crb
 {
@@ -16,24 +17,49 @@ namespace crb
                 DBTableProto proto;
                 LSIZE header;  // position in file where the table header begins
                 LSIZE buffer;  // position in file where the table data begins
+                bool hasDupKey;
 
                 Table()
                     : tableID(0),
                       proto(),
                       header(0),
-                      buffer(0) {};
+                      buffer(0),
+                      hasDupKey(false) {};
 
                 Table(HASH32 id, const DBTableProto& proto, LSIZE h, LSIZE b)
                     : tableID(id),
                       proto(proto),
                       header(h),
-                      buffer(b) {};
+                      buffer(b),
+                      hasDupKey(false) {};
             };
 
             struct Buf_Size
             {
                 ByteBuffer buf;
                 LSIZE size;
+            };
+
+            struct ParsedQuery
+            {
+                std::string table;
+                std::string pattern;
+                std::string columns;
+            };
+
+            struct Pattern
+            {
+                enum Type
+                {
+                    Range,
+                    Exact,
+                    Regex
+                } type;
+                std::string col;
+                std::optional<long double> min;
+                std::optional<long double> max;
+                std::string exactStr;
+                boost::regex rx;
             };
 
             File m_file;
@@ -54,9 +80,21 @@ namespace crb
 
             OpResData<DBCell> _parseField(DBDataType type, DBMOD mod);
 
+            OpRes _skipTable(Table& tab, LSIZE* endPos);
+
             OpResData<DBTableBlock> _getTable(Table& tab);
 
             OpRes _insertBlock(Table* tab, const DBTableBlock& block);
+
+            ParsedQuery _splitQuery(const std::string& query) const;
+            int _columnIndex(const DBTableProto& proto, const std::string& name) const;
+            std::vector<int> _parseColumns(const std::vector<std::string>& columns, const DBTableProto& proto,
+                                           DBTableProto& outProto) const;
+
+            std::string _cellToString(const DBCell& cell, DBDataType t) const;
+
+            bool _matchRow(const DBQueryCondition& cond, int colIndex, const DBRow& row,
+                           const DBTableProto& proto) const;
 
            public:
             FilesystemDB();
@@ -69,7 +107,8 @@ namespace crb
 
             virtual OpRes command(const string& query);
 
-            virtual OpResData<DBTableBlock> queryBlock(const string& query);  // not impl
+            virtual OpResData<DBTableBlock> queryBlock(const string& query);
+            virtual OpResData<DBTableBlock> queryBlock(const DBQuery& query);
 
             virtual OpResData<DBTableProto> queryPrototype(const string& tableName);
 
@@ -77,7 +116,11 @@ namespace crb
 
             virtual OpRes insertBlock(const DBTableBlock& block);
 
-            virtual OpRes dropTable(const std::string& table);  // not impl
+            virtual OpRes updateBlock(const DBTableBlock& block, UpdatePolicy policy = UP_UpdateInsert);
+
+            virtual OpRes dropTable(const std::string& table);
+            virtual OpRes renameColumn(const std::string& table, const std::string& oldName,
+                                       const std::string& newName);
 
             inline virtual OpResData<DBTableBlock> querytable(const std::string& tableName);
 
