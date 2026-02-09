@@ -917,8 +917,8 @@ namespace crb
 
         OpRes(const OpRes& opres, const std::string& reason = "");
 
-        bool operator==(const OpRes& other) = delete;
-        bool operator!=(const OpRes& other) = delete;
+        bool operator==(const OpRes& other) const noexcept { return res == other.res; }
+        bool operator!=(const OpRes& other) const noexcept { return res != other.res; }
 
         bool operator==(Result r) const;
         bool operator!=(Result r) const;
