@@ -1,5 +1,6 @@
 #include "./socket.h"
 
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
 #include <openssl/bio.h>
@@ -260,8 +261,11 @@ OpRes Socket::_recv(ByteBuffer &buffer, bool donotblock)
 
     auto ret = ::recvfrom(m_fd, m_recvBuffer.data(), m_recvBuffer.size(), flags, (sockaddr *)&addr, &len);
 
-    m_remote.octet_networkOrder = addr.sin_addr.s_addr;
-    m_remote.port               = ntohs(addr.sin_port);
+    if (transportType() == UDP)
+    {
+        m_remote.octet_networkOrder = addr.sin_addr.s_addr;
+        m_remote.port               = ntohs(addr.sin_port);
+    }
 
     if (ret == -1)
     {
@@ -700,11 +704,19 @@ OpRes Socket::connect(const Host &dest)
 
     if (ret == -1)
     {
+        const int savedErrno = errno;
+        char ipbuf[INET_ADDRSTRLEN] = {};
+        const char *ip = inet_ntop(AF_INET, &addr.sin_addr, ipbuf, sizeof(ipbuf));
+        if (!ip) ip = "<invalid-ip>";
         if (transportType() == TCP) close();  // the socket is not usable anymore
-        return {OR_Failure, CerberusUtils::strPrint("error in socket connect: %s", strerror(errno))};
+        return {OR_Failure,
+                CerberusUtils::strPrint("error in socket connect to %s:%u: %s",
+                                        ip, static_cast<unsigned>(ntohs(addr.sin_port)),
+                                        strerror(savedErrno))};
     }
 
     if (transportType() == TCP) m_streamConnected = true;
+    m_remote = h;
 
     if (!isTLS()) return OR_OK;
 
@@ -1220,9 +1232,16 @@ OpRes Socket::connectP2P(const Host &dest, const TimeFrame &timeout)
     if (isFailed()) return OR_FailedInstance;
     if (m_type != Socket_TCPP2P || m_streamConnected) return OR_Unavailable;
 
-    auto res = _connectP2P(dest, timeout);
+    Host h = dest;
+    if (!h.hostname.empty() && !h.resolved) h.resolve();
 
-    if (res.ok()) m_streamConnected = true;
+    auto res = _connectP2P(h, timeout);
+
+    if (res.ok())
+    {
+        m_streamConnected = true;
+        m_remote          = h;
+    }
 
     return res;
 }

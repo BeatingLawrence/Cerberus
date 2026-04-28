@@ -1,0 +1,67 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 23,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "local",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": {
+          "type": "FILEPATH",
+          "value": "/usr/bin/make"
+        },
+        "GOOGLETEST": {
+          "type": "BOOL",
+          "value": "OFF"
+        },
+        "POSTGRESQL": {
+          "type": "BOOL",
+          "value": "OFF"
+        },
+        "CMAKE_EXPORT_COMPILE_COMMANDS": {
+          "type": "BOOL",
+          "value": "ON"
+        },
+        "CMAKE_INSTALL_PREFIX": {
+          "type": "PATH",
+          "value": "${sourceDir}/build/dist-local"
+        }
+      }
+    },
+    {
+      "name": "remote-arm64",
+      "generator": "Unix Makefiles",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/remote-arm64.cmake",
+      "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": {
+          "type": "FILEPATH",
+          "value": "/usr/bin/make"
+        },
+        "GOOGLETEST": {
+          "type": "BOOL",
+          "value": "OFF"
+        },
+        "POSTGRESQL": {
+          "type": "BOOL",
+          "value": "OFF"
+        },
+        "CMAKE_EXPORT_COMPILE_COMMANDS": {
+          "type": "BOOL",
+          "value": "ON"
+        },
+        "CERBERUS_USE_REMOTE_ARM64_TOOLCHAIN": {
+          "type": "BOOL",
+          "value": "ON"
+        },
+        "CMAKE_INSTALL_PREFIX": {
+          "type": "PATH",
+          "value": "${sourceDir}/build/dist-remote-arm64"
+        }
+      }
+    }
+  ]
+}

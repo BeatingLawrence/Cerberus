@@ -135,6 +135,13 @@ crb::Host crb::Host::stringToHost(const std::string& str)
     return ret;
 }
 //=============================================================================
+crb::Host crb::Host::fromAddressPort(const std::string& address, uint16_t port)
+{
+    Host ret = Host::stringToHost(address);
+    ret.port = port;
+    return ret;
+}
+//=============================================================================
 uint16_t crb::Host::getPort(const std::string& str)
 {
     auto col    = str.find_last_of(':');
@@ -168,12 +175,21 @@ bool crb::Host::fromString(const std::string& str)
 //=============================================================================
 std::string crb::Host::toString() const
 {
-    return CerberusUtils::strPrint("%u.%u.%u.%u:%u", octect[0], octect[1], octect[2], octect[3], port);
+    const std::string host = isTextual() ? hostname : ipToString();
+    if (hasPort()) return CerberusUtils::strPrint("%s:%u", host.c_str(), port);
+    return host;
+}
+//=============================================================================
+std::string crb::Host::ipToString() const
+{
+    return CerberusUtils::strPrint("%u.%u.%u.%u", octect[0], octect[1], octect[2], octect[3]);
 }
 //=============================================================================
 bool crb::Host::isValid() const { return (isNumeric() || isTextual() || hasPort()); }
 //=============================================================================
 bool crb::Host::isValidRemote() const { return (isNumeric() || isTextual()) && hasPort(); }
+//=============================================================================
+bool crb::Host::isValidNumericRemote() const { return isNumeric() && hasPort(); }
 //=============================================================================
 bool crb::Host::isNumeric() const { return octet_networkOrder != 0; }
 //=============================================================================
@@ -639,8 +655,8 @@ crb::SocketCloser::~SocketCloser()
 //=============================================================================
 namespace
 {
-    const char* kOpaqueIntPattern    = "\\d+";
-    const char* kOpaqueDoublePattern = "\\d+\\.\\d+";
+    const char* kOpaqueIntPattern    = "[-+]?\\d+";
+    const char* kOpaqueDoublePattern = "[-+]?(\\d+\\.\\d+|\\d+\\.|\\.\\d+)";
     const char* kOpaqueBoolPattern   = "(true|false)";
 
     inline bool matches_pattern(const std::string& value, const char* pattern)
@@ -665,12 +681,23 @@ namespace
     }
 }  // namespace
 //=============================================================================
+crb::Opaque::Opaque(const char* str)
+    : value(str ? str : "")
+{
+}
+//=============================================================================
 crb::Opaque::Opaque(const std::string& str)
     : value(str)
 {
 }
 //=============================================================================
+crb::Opaque::Opaque(int val) { setInt(val); }
+//=============================================================================
+crb::Opaque::Opaque(unsigned int val) { setUInt(val); }
+//=============================================================================
 crb::Opaque::Opaque(int64_t val) { setInt(val); }
+//=============================================================================
+crb::Opaque::Opaque(uint64_t val) { setUInt(val); }
 //=============================================================================
 crb::Opaque::Opaque(double val) { setDouble(val); }
 //=============================================================================
@@ -695,6 +722,8 @@ const std::string& crb::Opaque::get() const { return value; }
 void crb::Opaque::set(const std::string& str) { value = str; }
 //=============================================================================
 void crb::Opaque::setInt(int64_t val) { value = CerberusUtils::strPrint_int(val); }
+//=============================================================================
+void crb::Opaque::setUInt(uint64_t val) { value = CerberusUtils::strPrint("%llu", (unsigned long long)val); }
 //=============================================================================
 void crb::Opaque::setDouble(double val)
 {

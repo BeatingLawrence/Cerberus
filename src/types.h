@@ -792,8 +792,12 @@ namespace crb
        public:
         Opaque()
             : value() {}
+        Opaque(const char* str);
         Opaque(const std::string& str);
+        Opaque(int val);
+        Opaque(unsigned int val);
         Opaque(int64_t val);
+        Opaque(uint64_t val);
         explicit Opaque(double val);
         explicit Opaque(float val);
         explicit Opaque(bool val);
@@ -804,6 +808,7 @@ namespace crb
 
         void set(const std::string& str);  // set the string value
         void setInt(int64_t val);          // set the integer value
+        void setUInt(uint64_t val);        // set the unsigned integer value
         void setDouble(double val);        // set the double value
         void setBool(bool val);            // set the bool value
 
@@ -1134,6 +1139,10 @@ namespace crb
         // An invalid Host is returned if the conversion fails
         static Host stringToHost(const std::string& str);
 
+        // Build a Host from address and port without concatenating "address:port" manually.
+        // Address may be numeric IPv4 or textual hostname. Port 0 yields an invalid remote host.
+        static Host fromAddressPort(const std::string& address, uint16_t port);
+
         // Extract the port number from the given string.
         // The port number must be the last element in the string and must
         // be preceded by a column :
@@ -1144,8 +1153,12 @@ namespace crb
         // The instance becomes invalid if the conversion fails
         bool fromString(const std::string& str);
 
-        // Print the numeric IP address and port (not the hostname) to string.
+        // Print only the host part when port==0, otherwise print host:port.
+        // Host part is hostname when textual, numeric IPv4 otherwise.
         std::string toString() const;
+
+        // Print the numeric IPv4 address only (x.x.x.x), regardless of port.
+        std::string ipToString() const;
 
         // Tells if the Host is valid
         bool isValid() const;
@@ -1154,6 +1167,9 @@ namespace crb
         // For this method to return true, the Host must have a valid port
         // and either an hostname OR a numerical IP address
         bool isValidRemote() const;
+
+        // Tell if the Host is valid for remote usage with numeric IPv4 only.
+        bool isValidNumericRemote() const;
 
         // Tell if the Host has a valid numerical IP
         bool isNumeric() const;

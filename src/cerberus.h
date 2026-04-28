@@ -8,6 +8,7 @@
 #include "log.h"              // IWYU pragma: export
 #include "message/message.h"  // IWYU pragma: export
 #include "message/slot.h"     // IWYU pragma: export
+#include "network/serialport.h"
 #include "time/datetime.h"    // IWYU pragma: export
 #include "time/timeframe.h"   // IWYU pragma: export
 #include "types.h"
