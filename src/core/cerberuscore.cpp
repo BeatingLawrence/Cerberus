@@ -1,110 +1,143 @@
 #include "cerberuscore.h"
-#include "../mutex/mutexlocker.h"
-#include "../message/slot/stringslot.h"
-#include "./cerberuslog.h"
-#include "src/cerberusobject.h"
-#include "./cerberusfactory.h"
+
+#include <iomanip>
+#include <sstream>
+#include <vector>
+
+#include "../cerberus.h"
 #include "../thread/thread.h"
 
-using namespace cerberus::core;
+using namespace crb::core;
+using namespace crb;
 
+//=============================================================================
+static std::string idsToStr(const std::vector<HASH32>& ids)
+{
+    std::ostringstream ss;
+    for (size_t i = 0; i < ids.size(); ++i)
+    {
+        if (i != 0) ss << ",";
+        ss << "0x" << std::hex << std::setw(8) << std::setfill('0') << ids[i];
+        ss << std::dec;
+    }
+    return ss.str();
+}
+//=============================================================================
+void CerberusCore::initializeThreadPool()
+{
+    if (m_conf.threadPool == 0) return;
+
+    tlogDebug("Building thread pool");
+
+    m_pool.build(m_conf.threadPool, m_conf.backupThreadMaxTime);
+}
+//=============================================================================
+void CerberusCore::deinitializeThreadPool()
+{
+    if (m_pool.size() == 0) return;
+
+    tlogDebug("Deallocating thread pool");
+
+    m_pool.clear();
+}
 //=============================================================================
 int CerberusCore::tick()
 {
-    message::cerberus_message message = nextMessage();
+    msg_ptr message;
 
-    if(!(message->isValid()))
-    {
-        return 0;
-    }
-
-    if(message->id() == CERBERUS_MESSAGE_LOG_ID)
-    {
-        _writeLineOnFile(message->getSlotAt(0)->to<message::slot::StringSlot>()->value());
-        return 0;
-    }
-
-    //Process message queue..
-    uint32_t destination = message->destinationId();
-
-    if(destination == CERBERUS_INVALID_ID)
-    {
-        logInfo("Destination of message is invalid, dropping..");
-    }
+    if (size(1) > 0)
+        message = next(1);  // retry queue first to preserve per-recipient order
     else
+        message = next();
+
+    if (!message) return 0;
+
+    // Process message queue..
+
+    if (message->hasValidRecipient())
     {
-        CerberusObject* found = core::CerberusFactory::_cerberusObjectById(destination);
-
-        if(found == nullptr)
-        {
-            logInfo("Destination of message is unknown, dropping..");
-        }
-        else
-        {
-            if(found->type() == CerberusObject::ObjectType::OT_Thread)
-            {
-                thread::Thread* foundThread = found->to<thread::Thread>();
-                foundThread->addMessage(message);    //ownership transferred
-            }
-            else
-            {
-                logInfo("Destination of message cannot accept messages, dropping..");
-            }
-
-            //ADD other messages receivers here..
-        }
+        // normally forward
+        processMsg(message);
+        return 0;
     }
 
-    //Do other stuff..
+    switch (message->id())
+    {
+        case CRB_MESSAGE_TASK_ID:
+            processTaskMsg(message);
+            break;
+    }
+
+    // Do other stuff..
     return 0;
 }
 //=============================================================================
 void CerberusCore::warmUp()
 {
-    logInfo("Starting Core Thread..");
+    tlogInfo("Starting Core Thread");
 
-    if(!m_logFile.open())
-    {
-        logWarning("LogFile open failed");
-    }
+    tlogDebug("Starting signal handler");
+    m_signalHandler.start();
+
+    logDebug("Starting Event Scheduler");
+    m_eventScheduler.start();
+
+    initializeThreadPool();
 }
 //=============================================================================
 void CerberusCore::coolDown()
 {
-    logInfo("Stopping Cerberus Core..");
-    _writeLineOnFile("---LOG-END---");
-    core::CerberusFactory::_freeMemory();
-    logInfo("Closing log file..");
-    m_logFile.close();
-}
-//=============================================================================
-void CerberusCore::_writeLineOnFile(const std::string& line)
-{
-    mutex::MutexLocker locker(&m_fileMutex);
-    m_logFile.writeLine(line);
-}
-//=============================================================================
-CerberusCore::CerberusCore() : cerberus::core::CoreThread(), m_logFile(CERBERUS_FILE_WRITE | CERBERUS_FILE_TRUNCATE)
-{
-}
-//=============================================================================
-CerberusCore::~CerberusCore()
-{
-}
-//=============================================================================
-void CerberusCore::setLogFileName(const std::string& filename)
-{
-    mutex::MutexLocker locker(&m_fileMutex);
+    tlogDebug("Stopping signal handler");
+    m_signalHandler.join(true);
 
-    if(m_logFile.isOpen())
+    tlogDebug("Stopping event scheduler");
+    m_eventScheduler.join(true);
+
+    deinitializeThreadPool();
+
+    tlogInfo("Stopping Core Thread");
+}
+//=============================================================================
+void CerberusCore::processTaskMsg(msg_ptr& msg)
+{
+    auto tm = msg->getSlot("task")->to<TaskSlot>()->value();
+    m_pool.runTask(tm);
+}
+//=============================================================================
+void CerberusCore::processMsg(msg_ptr& msg)
+{
+    auto recipients = msg->recipients();
+
+    for (size_t i = 0; i < recipients.size(); i++)
     {
-        m_logFile.close();  //Could block
-        m_logFile.setFileName(filename);
-        m_logFile.open();
-    }
-    else
-    {
-        m_logFile.setFileName(filename);
+        if (i == (recipients.size() - 1))  // last, avoid deep copy
+        {
+            msg->setRecipient(recipients[i]);
+            if (sendMsgToObj(recipients[i], msg).fail())
+            {
+                requeueFront(msg, 1).expect("requeue failed");
+            }
+        }
+        else  // not last, use deep copy
+        {
+            auto aux = msg.duplicate();
+            if (!aux) continue;
+            aux->setRecipient(recipients[i]);
+            if (sendMsgToObj(recipients[i], aux).fail())
+            {
+                requeueFront(aux, 1).expect("requeue failed");
+            }
+        }
     }
 }
+//=============================================================================
+CerberusCore::CerberusCore()
+    : Thread(TP_Message)
+{
+    setThreadName("Core");
+}
+//=============================================================================
+CerberusCore::~CerberusCore() {}
+//=============================================================================
+void CerberusCore::setup(const CoreConf& parms) { m_conf = parms; }
 //=============================================================================

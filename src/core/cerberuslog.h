@@ -1,87 +1,88 @@
 #ifndef CERBERUS_CORE_CERBERUSLOG_H
 #define CERBERUS_CORE_CERBERUSLOG_H
 
+#include <cstdint>
 #include <string>
-#include "../mutex/mutex.h"
-#include "../Cerberus_global.h"
+
+#include "../log.h"  // IWYU pragma: export
 #include "../types.h"
-#include "./cerberusutils.h"
+#include "loggerthread.h"
 
-//#define logInfo(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Info)
-//#define logWarning(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Warning)
-//#define logError(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Error)
-//#define debug(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Debug)
-
-#define logInfo(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::core::CerberusLog::LogLevel::LL_Info)
-#define logWarning(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::core::CerberusLog::LogLevel::LL_Warning)
-#define logError(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::core::CerberusLog::LogLevel::LL_Error)
-#define debug(text, ...) ::cerberus::core::CerberusLog::log(::cerberus::core::CerberusUtils::strPrint(text, ##__VA_ARGS__), ::cerberus::core::CerberusLog::LogLevel::LL_Debug)
-
-#define thrLogInfo(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Info, this->name())
-#define thrLogWarning(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Warning, this->name())
-#define thrLogError(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Error, this->name())
-#define thrDebug(text) ::cerberus::core::CerberusLog::log(text, ::cerberus::core::CerberusLog::LogLevel::LL_Debug, this->name())
-
-namespace cerberus
+namespace crb
 {
     class Cerberus;
 
     namespace core
     {
-        class CERBERUS_EXPORT CerberusLog
+        class CerberusLog
         {
-                friend class cerberus::Cerberus;
+            friend class crb::Cerberus;
 
-            public:
-                typedef void* HANDLE;
+            typedef void* HANDLE;
 
-                enum LogLevel
-                {
-                    LL_Info,
-                    LL_Warning,
-                    LL_Error,
-                    LL_Debug,
-                };
+           private:
+            CerberusLog(const CerberusLog& other) = delete;
 
-            private:
-                CerberusLog(const CerberusLog& other) = delete;
+            LogConf m_logConf;
+            LoggerThread* m_logger;
+            std::atomic<bool> m_loggerFlag;
 
-                bool m_useFormattedTerminal;
-                bool m_fileLogEnable;
+#if defined LINUX_SYSTEM || defined APPLE_SYSTEM
+            std::string m_infoForm;
+            std::string m_warnForm;
+            std::string m_errForm;
+            std::string m_debForm;
+            static const char* m_endForm;
+            std::string parseFormdata(const LogRole& data);
+#else
+            HANDLE m_stdoutHandle_Windows;                             // used for Windows only
+            HANDLE m_stderrHandle_Windows;                             // used for Windows only
+            uint8_t m_infoLogTerminalFormatting_Windows;               // used for Windows only
+            uint8_t m_warningLogTerminalFormatting_Windows;            // used for Windows only
+            uint8_t m_errorLogTerminalFormatting_Windows;              // used for Windows only
+            uint8_t m_debugLogTerminalFormatting_Windows;              // used for Windows only
+            static const uint8_t EndOfFormatting_Windows;              // used for Windows only
+            uint8_t parseFormattingData_Windows(const LogRole& data);  // used for Windows only
+#endif
+            static bool isMultiLine(const std::string& str);
 
-                std::string m_infoLogTerminalFormatting_Linux;                                  //used for Linux only
-                std::string m_warningLogTerminalFormatting_Linux;                               //used for Linux only
-                std::string m_errorLogTerminalFormatting_Linux;                                 //used for Linux only
-                std::string m_debugLogTerminalFormatting_Linux;                                 //used for Linux only
-                static const char* EndOfFormatting_Linux;                                       //used for Linux only
-                std::string _parseFormattingData_Linux(const CerberusLogRole& data);            //used for Linux only
+            static void align(std::string& str, LogLevel logLevel, uint32_t authorLen);
 
-                HANDLE m_stdoutHandle_Windows;                                                  //used for Windows only
-                HANDLE m_stderrHandle_Windows;                                                  //used for Windows only
-                uint8_t m_infoLogTerminalFormatting_Windows;                                    //used for Windows only
-                uint8_t m_warningLogTerminalFormatting_Windows;                                 //used for Windows only
-                uint8_t m_errorLogTerminalFormatting_Windows;                                   //used for Windows only
-                uint8_t m_debugLogTerminalFormatting_Windows;                                   //used for Windows only
-                static const uint8_t EndOfFormatting_Windows;                                   //used for Windows only
-                uint8_t _parseFormattingData_Windows(const CerberusLogRole& data);              //used for Windows only
+            static std::string toRawLog(const std::string& str, LogLevel ll, const std::string& a,
+                                        const std::string& t);
 
-                cerberus::mutex::Mutex m_mutex;
+            std::string toFormattedLog(const std::string& str, LogLevel ll, const std::string& a,
+                                       const std::string& t);
 
-                static CerberusLog* _instance();
+            bool rawLogNeeded();
+            bool fileLoggerAvail();
 
-                CerberusLog();
+            static FILE* stream(LogLevel ll);
 
-                ~CerberusLog();
+            static void sysPrint(FILE* f, const std::string& str);
 
-                //Setups the logging singleton using given structure
-                static void _setup(const CerberusLogSetup& setup);
+            static std::string authStr(const std::string& str, bool app);
 
-            public:
-                //Logs the given string to stdout/stderr according to the specified logLevel
-                static void log(const std::string& str, LogLevel logLevel = LL_Info, const std::string& author = std::string());
+           public:
+            CerberusLog();
 
+            ~CerberusLog();
+
+            // Setup the log features
+            void setup(const LogConf& parms);
+
+            void start();
+
+            // Stop and destroy the logger thread
+            void stop();
+
+            // Log the given string to stdout/stderr according to the specified logLevel
+            void log(const std::string& str, LogLevel logLevel = LL_Info,
+                     const std::string& author = std::string(), bool application = true);
+
+            static void llDebug(const std::string& str);
         };
-    }
-}
+    }  // namespace core
+}  // namespace crb
 
-#endif // CERBERUS_CORE_CERBERUSLOG_H
+#endif  // CERBERUS_CORE_CERBERUSLOG_H

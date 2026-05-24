@@ -1,0 +1,614 @@
+#include "jsondata.h"
+
+#include "src/cerberus.h"
+
+using namespace crb;
+
+//=============================================================================
+BoolOpRes JsonData::_parse(const ByteBuffer &buffer, ParseMode mode)
+{
+    m_type     = JDT_Null;
+    bool value = false;
+
+    while (!buffer.isEnd())
+    {
+        if (buffer.consumeBlank().isEnd()) break;
+
+        auto b = buffer.readByte();
+        // logDebug("PARSED %c", (char)b);
+
+        switch (b)
+        {
+            case '{':
+            case '[':
+            {
+                ParseMode currentMode = Unspecified;
+                if (b == '{')
+                {
+                    m_type      = JDT_Object;
+                    currentMode = ParsingObject;
+                }
+                else
+                {
+                    m_type      = JDT_Array;
+                    currentMode = ParsingArray;
+                }
+
+                // process the object
+                bool flag = true;
+                while (flag)
+                {
+                    JsonData data;
+                    auto res = data._parse(buffer, currentMode);
+                    if (res.fail()) return res;
+                    flag = res.value;
+                    m_elements.push_back(data);
+                }
+            }
+            break;
+
+            case '}':
+                switch (mode)
+                {
+                    case Unspecified:
+                        return {OR_WrongArgument, CerberusUtils::strPrint("Unexpected bracket at char %u",
+                                                                          buffer.prev().pos())};
+                    case ParsingObject:
+                        return false;
+                    case ParsingArray:
+                        return {OR_WrongArgument,
+                                CerberusUtils::strPrint("Block terminated by wrong bracket at char %u",
+                                                        buffer.prev().pos())};
+                }
+
+            case ']':
+                switch (mode)
+                {
+                    case Unspecified:
+                        return {OR_WrongArgument, CerberusUtils::strPrint("Unexpected bracket at char %u",
+                                                                          buffer.prev().pos())};
+                    case ParsingObject:
+                        return {OR_WrongArgument,
+                                CerberusUtils::strPrint("Block terminated by wrong bracket at char %u",
+                                                        buffer.prev().pos())};
+                    case ParsingArray:
+                        return false;
+                }
+
+            case '"':
+            {
+                auto str = buffer.consumeUntil("(?<!\\\\)\\\"").expect().value.toString();
+                buffer.next();  // consume the next "
+
+                if (mode == ParsingArray)
+                {
+                    setString(str);
+                }
+                else
+                {
+                    if (value)
+                        setString(str);
+                    else
+                        m_name = str;
+                }
+            }
+            break;
+
+            case ':':
+            {
+                if (value || mode == ParsingArray)
+                    return {OR_WrongArgument,
+                            CerberusUtils::strPrint("Unexpected column at char %u", buffer.prev().pos())};
+                value = true;
+            }
+            break;
+
+            case ',':
+                return (int64_t)1;
+
+            default:
+            {
+                ByteBuffer bb(1, b);
+                bb.append(
+                    buffer.consumeUntil("[ \\,\\[\\]\\{\\}\\n\\r\\\"\\'\\<\\>\\?\\/\\!\\\\]").expect().value);
+                auto res = bb.toNormalizedString();
+                // logDebug("Captured non-string: %s", res.str.c_str());
+                if (!value && mode == ParsingObject)
+                    return {OR_WrongArgument,
+                            CerberusUtils::strPrint("No column before value at char %u", buffer.pos())};
+
+                if (CerberusUtils::isNumber(res.value))
+                {
+                    m_type  = JDT_Number;
+                    m_value = res.value;
+                }
+                else if (CerberusUtils::isBool(res.value))
+                {
+                    m_type  = JDT_Boolean;
+                    m_value = res.value;
+                }
+                else if (CerberusUtils::areEqual(res.value, "null", WM_CaseInsensitive))
+                {
+                    m_type = JDT_Null;
+                    m_value.clear();
+                }
+                else
+                {
+                    return {OR_WrongArgument, CerberusUtils::strPrint("Invalid token: '%s' at %u",
+                                                                      res.value.c_str(), buffer.pos())};
+                }
+            }
+        }
+    }
+
+    return OR_OK;
+}
+//=============================================================================
+void JsonData::_generate(ByteBuffer &buffer) const
+{
+    if (!m_name.empty())
+    {
+        buffer += '"';
+        buffer += m_name;
+        buffer += "\": ";
+    }
+
+    switch (m_type)
+    {
+        case JDT_Undefined:
+        case JDT_Null:
+            buffer += "null";
+            return;
+        case JDT_Number:
+        case JDT_Boolean:
+            buffer += CerberusUtils::strPrint("%s", m_value.c_str());
+            return;
+        case JDT_String:
+            buffer += CerberusUtils::strPrint("\"%s\"", m_value.c_str());
+            return;
+        case JDT_Array:
+            buffer += "[";
+            break;
+        case JDT_Object:
+            buffer += "{";
+            break;
+    }
+
+    auto counter = m_elements.size();
+
+    for (auto &el : m_elements)
+    {
+        el._generate(buffer);
+        if (--counter != 0) buffer += ',';
+    }
+
+    if (m_type == JDT_Array)
+        buffer += ']';
+    else
+        buffer += '}';
+}
+//=============================================================================
+JsonData::Integrity JsonData::checkIntegrity() const
+{
+    if (m_elements.empty()) return None;
+
+    Integrity integrity = m_elements.front().m_name.empty() ? GoodArray : GoodObject;
+
+    for (auto &el : m_elements)
+    {
+        if (el.m_name.empty())
+        {
+            if (integrity == GoodObject) return Degraded;
+        }
+        else if (integrity == GoodArray)
+            return Degraded;
+    }
+
+    return integrity;
+}
+//=============================================================================
+JsonData::JsonData()
+    : m_name(),
+      m_value(),
+      m_elements(),
+      m_type(JDT_Undefined)
+{
+}
+//=============================================================================
+JsonData::JsonData(const std::string &name)
+    : m_name(name),
+      m_value(),
+      m_elements(),
+      m_type(JDT_Null)
+{
+}
+//=============================================================================
+JsonData::JsonData(const std::string &name, const std::string &value)
+    : m_name(name),
+      m_value(value),
+      m_elements(),
+      m_type(JDT_String)
+{
+}
+//=============================================================================
+JsonData::JsonData(const std::string &name, const char *value)
+    : m_name(name),
+      m_value(value),
+      m_elements(),
+      m_type(JDT_String)
+{
+}
+//=============================================================================
+JsonData::JsonData(const std::string &name, long double value)
+    : m_name(name),
+      m_value(),
+      m_elements(),
+      m_type(JDT_Number)
+{
+    setNumber(value);
+}
+//=============================================================================
+JsonData::JsonData(const std::string &name, float value)
+    : m_name(name),
+      m_value(),
+      m_elements(),
+      m_type(JDT_Number)
+{
+    setNumber(value);
+}
+//=============================================================================
+JsonData::JsonData(const std::string &name, int64_t value)
+    : m_name(name),
+      m_value(),
+      m_elements(),
+      m_type(JDT_Number)
+{
+    setNumber(value);
+}
+//=============================================================================
+JsonData::JsonData(const std::string &name, bool value)
+    : m_name(name),
+      m_value(),
+      m_elements(),
+      m_type(JDT_Boolean)
+{
+    setBoolean(value);
+}
+//=============================================================================
+JsonData::JsonData(const std::string &name, const JsonData &data)
+    : m_name(name),
+      m_value(),
+      m_elements(1, data),
+      m_type(JDT_Object)
+{
+}
+//=============================================================================
+crb::Iterator<JsonData> JsonData::begin()
+{
+    if (m_elements.empty()) return nullptr;
+    return &m_elements.front();
+}
+//=============================================================================
+crb::Iterator<JsonData> JsonData::end()
+{
+    if (m_elements.empty()) return nullptr;
+    return ((&m_elements.back()) + 1);
+}
+//=============================================================================
+crb::ConstIterator<JsonData> JsonData::begin() const
+{
+    if (m_elements.empty()) return nullptr;
+    return &m_elements.front();
+}
+//=============================================================================
+crb::ConstIterator<JsonData> JsonData::end() const
+{
+    if (m_elements.empty()) return nullptr;
+    return ((&m_elements.back()) + 1);
+}
+//=============================================================================
+JsonData JsonData::getAt(SIZE index)
+{
+    if (index >= size()) return JsonData();
+    return m_elements[index];
+}
+//=============================================================================
+JsonData JsonData::get(const std::string &name)
+{
+    for (auto &el : m_elements)
+        if (CerberusUtils::areEqual(el.m_name, name)) return el;
+
+    return JsonData();
+}
+//=============================================================================
+JsonData JsonData::search(const std::string &name)
+{
+    if (!isValid()) return JsonData();
+
+    auto found = get(name);
+    if (found.isValid()) return found;
+
+    for (auto &el : m_elements)
+    {
+        found = el.search(name);
+        if (found.isValid()) return found;
+    }
+
+    return JsonData();
+}
+//=============================================================================
+crb::JsonDataType JsonData::type() const { return m_type; }
+//=============================================================================
+bool JsonData::isValid() const { return m_type != JDT_Undefined; }
+//=============================================================================
+bool JsonData::isNull() const { return m_type == JDT_Null; }
+//=============================================================================
+bool JsonData::isNumber() const { return m_type == JDT_Number; }
+//=============================================================================
+bool JsonData::isString() const { return m_type == JDT_String; }
+//=============================================================================
+bool JsonData::isBoolean() const { return m_type == JDT_Boolean; }
+//=============================================================================
+bool JsonData::isArray() const { return m_type == JDT_Array; }
+//=============================================================================
+bool JsonData::isObject() const { return m_type == JDT_Object; }
+//=============================================================================
+crb::SIZE JsonData::size() const { return m_elements.size(); }
+//=============================================================================
+bool JsonData::empty() const { return m_elements.empty(); }
+//=============================================================================
+bool JsonData::check() const
+{
+    if (m_type == JDT_Array || m_type == JDT_Object)
+    {
+        auto integrity = checkIntegrity();
+        if (integrity == Degraded) return false;
+        if (integrity == GoodArray && m_type != JDT_Array) return false;
+        if (integrity == GoodObject && m_type != JDT_Object) return false;
+    }
+
+    for (auto &el : m_elements)
+        if (!el.check()) return false;
+
+    return true;
+}
+//=============================================================================
+crb::OpRes JsonData::checkFix()
+{
+    if (m_type == JDT_Array || m_type == JDT_Object)
+    {
+        auto integrity = checkIntegrity();
+        if (integrity == Degraded) return OR_WrongArgument;
+
+        if (integrity == GoodArray)
+            m_type = JDT_Array;
+        else if (integrity == GoodObject)
+            m_type = JDT_Object;
+    }
+
+    for (auto &el : m_elements)
+    {
+        auto res = el.checkFix();
+        if (res.fail()) return res;
+    }
+
+    return OR_OK;
+}
+//=============================================================================
+FloatOpRes JsonData::toNumber() const
+{
+    if (m_type != JDT_Number) return OR_Unavailable;
+    return CerberusUtils::stringToDouble(m_value);
+}
+//=============================================================================
+IntOpRes JsonData::toIntNumber() const
+{
+    if (m_type != JDT_Number) return OR_Unavailable;
+    return CerberusUtils::stringToInt(m_value);
+}
+//=============================================================================
+StringOpRes JsonData::toString() const
+{
+    if (m_type != JDT_String) return OR_Unavailable;
+    return m_value;
+}
+//=============================================================================
+BoolOpRes JsonData::toBool() const
+{
+    if (m_type != JDT_Boolean) return OR_Unavailable;
+    if (CerberusUtils::areEqual(m_value, "true", WM_CaseInsensitive)) return (int64_t)1;
+    return (int64_t)0;
+}
+//=============================================================================
+JsonData &JsonData::setName(const std::string &name)
+{
+    m_name = name;
+    return *this;
+}
+//=============================================================================
+JsonData &JsonData::setNumber(long double value)
+{
+    m_elements.clear();
+    m_value = CerberusUtils::strPrint("%Lf", value);
+    CerberusUtils::cleanNumber(m_value);
+    m_type = JDT_Number;
+    return *this;
+}
+//=============================================================================
+JsonData &JsonData::setNumber(float value)
+{
+    m_elements.clear();
+    m_value = CerberusUtils::strPrint("%f", value);
+    CerberusUtils::cleanNumber(m_value);
+    m_type = JDT_Number;
+    return *this;
+}
+//=============================================================================
+JsonData &JsonData::setNumber(int64_t value)
+{
+    m_elements.clear();
+    m_value = CerberusUtils::strPrint("%lli", value);
+    CerberusUtils::cleanNumber(m_value);
+    m_type = JDT_Number;
+    return *this;
+}
+//=============================================================================
+JsonData &JsonData::setString(const std::string &value)
+{
+    m_elements.clear();
+    m_value = value;
+    m_type  = JDT_String;
+    return *this;
+}
+//=============================================================================
+JsonData &JsonData::setBoolean(bool value)
+{
+    m_elements.clear();
+
+    if (value)
+        m_value = "true";
+    else
+        m_value = "false";
+
+    m_type = JDT_Boolean;
+
+    return *this;
+}
+//=============================================================================
+JsonData &JsonData::add(const JsonData &object)
+{
+    m_elements.push_back(object);
+
+    switch (m_type)
+    {
+        case JDT_Undefined:
+        case JDT_Null:
+        case JDT_Number:
+        case JDT_String:
+        case JDT_Boolean:
+            m_value.clear();
+            if (object.m_name.empty())
+                m_type = JDT_Array;
+            else
+                m_type = JDT_Object;
+            break;
+        case JDT_Array:
+            if (!object.m_name.empty()) m_type = JDT_Object;
+            break;
+        case JDT_Object:
+            break;
+    }
+
+    return *this;
+}
+//=============================================================================
+JsonData &JsonData::add(const std::string &value) { return add(JsonData("", value)); }
+//=============================================================================
+JsonData &JsonData::add(const char *value) { return add(JsonData("", value)); }
+//=============================================================================
+JsonData &JsonData::add(long double value) { return add(JsonData("", value)); }
+//=============================================================================
+JsonData &JsonData::add(float value) { return add(JsonData("", value)); }
+//=============================================================================
+JsonData &JsonData::add(int64_t value) { return add(JsonData("", value)); }
+//=============================================================================
+JsonData &JsonData::add(bool value) { return add(JsonData("", value)); }
+//=============================================================================
+JsonData &JsonData::clear()
+{
+    m_elements.clear();
+    return *this;
+}
+//=============================================================================
+crb::OpRes JsonData::parse(const ByteBuffer &buffer)
+{
+    m_elements.clear();
+    m_name.clear();
+    m_value.clear();
+    buffer.resetCursor();
+
+    auto res = _parse(buffer);
+    return res;
+}
+//=============================================================================
+crb::OpRes JsonData::parse(const File &file)
+{
+    ByteBuffer buffer;
+    auto res = file.read(buffer);
+
+    if (res.fail()) return res;
+
+    return parse(buffer);
+}
+//=============================================================================
+OpResData<ByteBuffer> JsonData::generate() const
+{
+    ByteBuffer buffer;
+    _generate(buffer);
+
+    return buffer;
+}
+//=============================================================================
+crb::OpRes JsonData::generate(File &file) const
+{
+    auto res = generate();
+    if (res.fail()) return res;
+
+    return file.write(res.value);
+}
+//=============================================================================
+void JsonData::toStr(std::string &str, uint8_t level) const
+{
+    std::string indent(level * 2, ' ');
+
+    str.append("\n").append(indent);
+
+    str.append("Type: ");
+
+    switch (m_type)
+    {
+        case JDT_Null:
+            str.append("null");
+            break;
+        case JDT_Number:
+            str.append("number");
+            break;
+        case JDT_String:
+            str.append("string");
+            break;
+        case JDT_Boolean:
+            str.append("boolean");
+            break;
+        case JDT_Array:
+            str.append("array");
+            break;
+        case JDT_Object:
+            str.append("object");
+            break;
+        default:
+            str.append("UNDEFINED");
+            break;
+    }
+
+    if (!m_name.empty()) str.append(", Name: ").append(m_name);
+
+    if (!m_value.empty()) str.append(", Value: ").append(m_value);
+
+    if (m_elements.empty()) return;
+
+    str.append("\n").append(indent);
+
+    str.append("Contains:");
+
+    for (auto &el : m_elements) el.toStr(str, level + 1);
+
+    str.append("\n").append(indent).append("end");
+}
+//=============================================================================
+SIZE JsonData::memfp() const
+{
+    SIZE s = sizeof(JsonData);
+    for (auto &el : m_elements) s += el.memfp();
+    return s;
+}
+//=============================================================================

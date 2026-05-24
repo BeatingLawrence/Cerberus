@@ -1,49 +1,71 @@
 #ifndef CERBERUS_THREAD_THREADBASE_H
 #define CERBERUS_THREAD_THREADBASE_H
 
-#include "../mutex/mutex.h"
-#include "../message/messagequeue.h"
+#include <pthread.h>
 
-namespace cerberus
+#include "../core/recordable.h"
+#include "./recipient.h"
+#include "mutex.h"
+
+namespace crb
 {
-    namespace thread
+    class ThreadBase : public core::Recordable, public Recipient
     {
-        class ThreadBase
-        {
-            private:
-                mutable mutex::Mutex m_mutex;
+       private:
+        mutable Mutex m_mutex;
 
-                message::MessageQueue m_queue;
+        pthread_cond_t m_cond;
 
-                bool m_pausedFlag;
+        bool m_pausedFlag, m_terminateFlag, m_dead, m_rescheduling;
 
-                bool m_terminateFlag;
+        // Call this method with the mutex locked!
+        void setPausedFlag(bool state);
 
-            protected:
-                ThreadBase();
+        virtual void newMsg_first() override;
 
-                virtual ~ThreadBase();
+       protected:
+        ThreadBase() = delete;
 
-                void setPausedFlag(bool state);
+        ThreadBase(const ThreadBase &other) = delete;
 
-                void setTerminateFlag(bool state);
+        ThreadBase(ThreadBase &&other) = delete;
 
-                bool getPausedFlag();
+        ThreadBase(ThreadPeriodicity periodicity);
 
-                bool getTerminateFlag() const;
+        virtual ~ThreadBase();
 
-                message::cerberus_message nextMessage();
+        ThreadPeriodicity m_periodicity;
 
-                message::cerberus_message nextMessageKeep() const;
+        void pause();
 
-                bool isQueueEmpty() const;
+        bool getTerminateFlag() const;
 
-            public:
-                void addMessage(message::cerberus_message message);
+        bool getPausedFlag() const;
 
-                size_t messageCount() const;
-        };
-    }
-}
+        void dead();
 
-#endif // CERBERUS_THREAD_THREADBASE_H
+        void reschedule();
+
+        void resetRescheduling();
+
+        bool isRescheduling();
+
+        // stop only if the queue is empty
+        void queueCheckStop();
+
+       public:
+        void start();
+
+        void stop();
+
+        void terminate();
+
+        bool isDead();
+
+        inline ThreadPeriodicity getPeriodicity() const { return m_periodicity; }
+
+        using Recipient::size;
+    };
+}  // namespace crb
+
+#endif  // CERBERUS_THREAD_THREADBASE_H

@@ -1,75 +1,146 @@
 #ifndef CERBERUS_MESSAGE_MESSAGE_H
 #define CERBERUS_MESSAGE_MESSAGE_H
 
-#include <memory>
 #include <vector>
-#include "../define.h"
+
 #include "../Cerberus_global.h"
+#include "../define.h"
+#include "../types.h"
+#include "slot.h"  // IWYU pragma: export
 
-namespace cerberus
+namespace crb
 {
-    namespace message
+    class CERBERUS_EXPORT Message : public Clonable
     {
-        typedef std::shared_ptr<class Message> cerberus_message;
-        typedef std::shared_ptr<const class Message> cerberus_const_message;
+       private:
+        mutable std::vector<slot_ptr> m_slots;
 
-        namespace slot
+        HASH32 m_id;
+
+        mutable std::vector<HASH32> m_recipientIds;
+
+        slot_ptr* _slot(const std::string& name) const;
+
+        Message(HASH32 id = CRB_INVALID_ID);
+
+        Message(const Message& other);
+
+        Message& operator=(const Message& other) = delete;
+
+       public:
+        static msg_ptr create(HASH32 id = CRB_INVALID_ID);
+
+        virtual ~Message();
+
+        // get the number of slots
+        size_t count() const;
+
+        // add a slot copying it
+        Message& addSlot(const slot_ptr& slot);
+
+        // add a slot moving it
+        Message& addSlot(slot_ptr&& slot);
+
+        // add a slot specifying just the type and name (no content)
+        template <typename T>
+        Message& addSlotType(const std::string& name = "")
         {
-            typedef std::shared_ptr<class BaseSlot> cerberus_slot;
+            static_assert(std::is_base_of<SlotBase, T>::value,
+                          "MessageTemplate::addSlotType<T>: T must derive from SlotBase");
 
-            enum SlotType
-            {
-                ST_UCHAR,       //1 byte
-                ST_CHAR,        //1 byte
-                ST_USHORT,      //2 byte
-                ST_SHORT,       //2 byte
-                ST_ULONG,       //4 byte
-                ST_LONG,        //4 byte
-                ST_ULONGLONG,   //8 byte
-                ST_LONGLONG,    //8 byte
-                ST_FLOAT,       //4 byte
-                ST_DOUBLE,      //8 byte
-                ST_BOOL,        //1 byte
-                ST_VOIDP,       //pointer
-                ST_STDSTRINGP,  //pointer
-            };
+            slot_ptr p = T::create();
+            p->setId(name);
+            m_slots.push_back(std::move(p));
+            return *this;
         }
 
-        class CERBERUS_EXPORT Message
+        // get a slot
+        slot_ptr& getSlotAt(size_t index);
+        slot_ptr getSlotAt(size_t index) const;
+        slot_ptr& getSlot(const std::string& name);
+        slot_ptr getSlot(const std::string& name) const;
+
+        // quick access helper. Access directly to the underlying object of one slot (value type)
+        template <typename T>
+        decltype(auto) get(const std::string& name)
         {
-            private:
-                std::vector<slot::cerberus_slot> m_slots;
+            static_assert(std::is_base_of<SlotBase, T>::value,
+                          "Message::get<TSlot>: TSlot must derive from SlotBase");
 
-                uint32_t m_id;
+            auto* slot = getSlot(name)->to<T>();
+            return (slot->value());
+        }
 
-                uint32_t m_destinationId;
+        template <typename T>
+        decltype(auto) get(const std::string& name) const
+        {
+            static_assert(std::is_base_of<SlotBase, T>::value,
+                          "Message::get<TSlot>: TSlot must derive from SlotBase");
 
-            public:
-                static cerberus_message create(uint32_t id = CERBERUS_INVALID_ID);
+            const auto* slot = getSlot(name)->to<T>();
+            return (slot->value());
+        }
 
-                static cerberus_message createFrom(const Message& other);
+        // check if a slot exists and can be cast to the requested slot type
+        template <typename T>
+        bool has(const std::string& name) const
+        {
+            static_assert(std::is_base_of<SlotBase, T>::value,
+                          "Message::has<TSlot>: TSlot must derive from SlotBase");
 
-                Message(uint32_t id = CERBERUS_INVALID_ID);
+            slot_ptr* slot = _slot(name);
+            if (!slot || !(*slot)) return false;
+            try
+            {
+                (*slot)->to<T>();
+            }
+            catch (...)
+            {
+                return false;
+            }
+            return true;
+        }
 
-                Message(const Message& other);
+        // return the ID of this message
+        HASH32 id() const;
 
-                size_t count() const;
+        // checks if the ID of this equals the given ID
+        bool is(HASH32 id) const;
 
-                void addSlot(slot::cerberus_slot slot);
+        // return the first recipient of the message (if any)
+        HASH32 recipient() const;
 
-                slot::cerberus_slot getSlotAt(size_t index) const;
+        // get all recipients
+        const std::vector<HASH32>& recipients() const;
 
-                slot::cerberus_slot getSlotById(uint32_t id) const;
+        // check if at least one recipient is valid
+        bool hasValidRecipient() const;
 
-                uint32_t id() const;
+        // set a single recipient (clears any existing recipients)
+        void setRecipient(HASH32 id) const;
 
-                uint32_t destinationId() const;
+        // set recipients
+        void setRecipients(const std::vector<HASH32>& ids) const;
 
-                void setDestinationId(uint32_t id);
+        // add a recipient
+        void addRecipient(HASH32 id) const;
 
-                bool isValid() const;
-        };
-    }
-}
+        // clear all recipients
+        void clearRecipients() const;
 
-#endif // CERBERUS_MESSAGE_MESSAGE_H
+        // convert the message to a plain buffer
+        ByteBuffer toBuffer() const;
+
+        // iterators
+        ConstIterator<slot_ptr> begin() const;
+        ConstIterator<slot_ptr> end() const;
+
+        // clone this message and all of its slots
+        virtual Clonable* clone() const;
+
+        // calculate the memory footprint of this message, iterating over all of its slots
+        virtual SIZE memfp() const;
+    };
+}  // namespace crb
+
+#endif  // CERBERUS_MESSAGE_MESSAGE_H

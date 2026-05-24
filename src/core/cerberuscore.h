@@ -1,38 +1,97 @@
 #ifndef CERBERUS_CORE_CERBERUSCORE_H
 #define CERBERUS_CORE_CERBERUSCORE_H
 
-#include "./corethread.h"
-#include "../data/filesystem/file.h"
+/*  This is the CerberusCore class.
+ *
+ *  The CerberusCore is the main thread of execution of the framework.
+ *  It's used to route messages, manage thread pool, sockets and other stuff..
+ *
+ */
 
-namespace cerberus
+#include <utility>
+
+#include "../thread/thread.h"
+#include "../thread/threadpool.h"
+#include "../data/filesystem/inidatafile.h"
+#include "signalhandler.h"
+#include "eventscheduler.h"
+#include "cerberusregister.h"
+
+namespace crb
 {
-    class CerberusObject;
+    class Timer;
 
     namespace core
     {
-        class CerberusCore : public cerberus::core::CoreThread
+        class CerberusCore : public crb::Thread
         {
-            private:
-                virtual int tick() override;
+           private:
+            CoreConf m_conf;
 
-                virtual void warmUp() override;
+            ThreadPool m_pool;
 
-                virtual void coolDown() override;
+            CerberusRegister m_reg;
 
-                data::filesystem::File m_logFile;
+            IniDataFile m_iniFile;
 
-                mutex::Mutex m_fileMutex;
+            void initializeThreadPool();
+            void deinitializeThreadPool();
 
-                void _writeLineOnFile(const std::string& line);
+            virtual int tick() override;
+            virtual void warmUp() override;
+            virtual void coolDown() override;
 
-            public:
-                CerberusCore();
+            void processTaskMsg(msg_ptr& msg);
+            void processMsg(msg_ptr& msg);
 
-                virtual ~CerberusCore();
+           public:
+            EventScheduler m_eventScheduler;
+            SignalHandler m_signalHandler;
 
-                void setLogFileName(const std::string& filename);
+            CerberusCore();
+
+            virtual ~CerberusCore();
+
+            void setup(const CoreConf& parms);
+
+            IniDataFile& iniFile() { return m_iniFile; }
+            const IniDataFile& iniFile() const { return m_iniFile; }
+            void setIniFile(const IniDataFile& other) { m_iniFile = other; }
+            void setIniFile(IniDataFile&& other) { m_iniFile = std::move(other); }
+            void setIniFileName(const std::string& fileName) { m_iniFile.setFileName(fileName); }
+
+            //=====================REGISTER========================
+
+            void registerObj(Recordable* object, const std::string& name) { m_reg.registerObj(object, name); }
+            void unregisterObj(HASH32 id) { m_reg.unregisterObj(id); }
+            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in = 0)
+            {
+                return m_reg.sendMsgToObj(id, msg, channel_in);
+            }
+
+            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in = 0)
+            {
+                return m_reg.sendMsgToObj_deep(id, msg, channel_in);
+            }
+
+
+            OpRes addMsgTemplate(const msg_ptr& tmplt) { return m_reg.addMsgTemplate(tmplt); }
+            msg_ptr constructMessage(HASH32 id) { return m_reg.constructMessage(id); }
+
+            HASH32 addPlugin(void* handle, const std::string& path, bool& exists) { return m_reg.addPlugin(handle, path, exists); }
+            MutexLocker getPluginMutex(HASH32 id) { return m_reg.getPluginMutex(id); }
+            void* checkPlugin(HASH32 id) { return m_reg.checkPlugin(id); }
+            bool updatePlugin(HASH32 id, const std::string& path, void* handle) { return m_reg.updatePlugin(id, path, handle); }
+            void cleanupPlugins() { m_reg.cleanupPlugins(); }
+            void subscribeTerminationEvents(Recipient* r)
+            {
+                if (!r) return;
+                m_signalHandler.setRecipient(r, 0, TERMINATION_MSG_QUEUE);
+            }
+
+            //=====================SOCKETS========================
         };
-    }
-}
+    }  // namespace core
+}  // namespace crb
 
-#endif // CERBERUS_CORE_CERBERUSCORE_H
+#endif  // CERBERUS_CORE_CERBERUSCORE_H

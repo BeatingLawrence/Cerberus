@@ -3,140 +3,158 @@
 
 /*  This class provides an implementation of a thread.
  *
- *  To run code using this Thread class, the developer has to write a derived class which extends this one
- *  and overrides the tick() method [protected virtual] (and eventually warmUp() and coolDown()).
+ *  [Inheritance] To run code using this Thread class, the developer has to write a derived class which
+ * extends this one and overrides the tick() method [protected virtual] (and eventually warmUp() and
+ * coolDown()).
  *
- *  Alternatively, the developer can use the provideTickCallback(), provideWarmUpCallback() and provideCoolDownCallback() to pass some code
- *  to the Thread, without the need to write a derived class. In this case, a message will be always passed to the tick callback
- *  and it will be invalid if no message is present in the queue.
+ *  [Composition] To run code using this Thread class, the developer can use the provideTickCallback(),
+ * provideWarmUpCallback() and provideCoolDownCallback() to pass some code to the Thread, without the need to
+ * write a derived class. In this case, a message will be always passed to the tick callback and it will be
+ * invalid if no message is present in the queue.
  *
- *  The Thread may be of three different types:
+ *  The Thread type may be one of these:
  *
  *      - Non-Periodic:  The Thread will constantly wake up as long as messages are present in the queue.
- *                       The start() method will enable the thread and make it consuming all the queue constantly with no delay between cycles.
- *                       The stop() method will disable it. Be careful with this, the message queue could grew up hugely.
+ *                       The start() method will enable the thread and make it consuming all the queue
+ * constantly with no delay between cycles. The stop() method will disable it. Be careful with this, the
+ * message queue could grew up hugely. The terminate() method terminates the Thread.
  *
  *      - Periodic:      The Thread will wake up from sleep state every time a period of time passes.
- *                       The start() method will resume the cycle.
- *                       The stop() method will pause the cycle.
+ *                       The start() method resumes the thread.
+ *                       The stop() method pauses the thread.
+ *                       The terminate() method terminates the Thread.
+ *
+ *      - Periodic RT:   Same as Periodic, but the thread is started with real-time scheduling.
  *
  *      - PeriodicQueue: The Thread will wake up from sleep state every time a period of time passes.
- *                       If messages are present in the queue, the Thread will temporary act as a Non-Periodic Thread.
- *                       The start() method will resume the cycle.
- *                       The stop() method will pause the cycle.
+ *                       If messages are present in the queue, the Thread will temporary act as a Non-Periodic
+ * Thread. The start() method resumes the thread. The stop() method pauses the thread. The terminate() method
+ * terminates the Thread.
  *
- *      - One-Shot:      The Thread will run only once.
- *                       The start() method will begin the execution.
- *                       The stop() method does nothing.
- *                       The terminate() method does nothing.
+ *      - One-Shot:      The Thread will run only once. It will be terminated at the end of the passed code
+ * execution. The start() method starts the execution. The stop() method does nothing. The terminate() method
+ * does nothing.
  *
- *  join() can be used for any Thread type to wait for the Thread to terminate and to retrieve the return value.
+ *  join() can be used for any Thread type to wait for the Thread to terminate and to retrieve the return
+ * value.
  *
- *  When a periodic Thread is paused or when a Non-Periodic Thread is waiting for messages, the system scheduler is informed
- *  and the Thread will be de-scheduled.
+ *  When a periodic Thread is paused or when a Non-Periodic Thread is waiting for messages, the system
+ * scheduler is informed and the Thread will be de-scheduled.
  *
  *  A terminated Thread cannot be resumed.
  *
- *  User can access the queue at any time inside the tick() using the nextMessage() nextMessageKeep() or isQueueEmpty() methods
+ *  User can access the queue at any time inside the tick() using the nextMessage() nextMessageKeep() or
+ * isQueueEmpty() methods
  *
  *  warmUp() will be called on the first start, before the first tick() execution.
- *  coolDown() will be called after the last run of tick(), after terminate() is called. When coolDown() execution finishes, the join() releases.
+ *  coolDown() will be called after the last run of tick(), when terminate() is called. When coolDown()
+ * execution finishes, the join() returns.
  */
 
-#include <thread>
-#include <chrono>
-#include "../mutex/mutex.h"
-#include "../time/time.h"
+#include "../time/systimer.h"
+#include "../time/timeframe.h"
 #include "./threadbase.h"
-#include "../cerberusobject.h"
 
-namespace cerberus
+namespace crb
 {
-    namespace thread
+    class CERBERUS_EXPORT Thread : public ThreadBase
     {
-        class CERBERUS_EXPORT Thread : public cerberus::thread::ThreadBase, public CerberusObject
-        {
-            public:
-                enum ThreadPeriodicity
-                {
-                    TP_NonPeriodic,
-                    TP_Periodic,
-                    TP_PeriodicQueue,
-                    TP_OneShot,
-                };
+       private:
+        pthread_t m_pthread;
 
-            private:
-                std::thread m_thread;
+        SplittedTime m_time;
+        time::SysTimer m_periodTimer;
+        bool m_overrun;
 
-                std::chrono::microseconds m_period;
+        void* m_stack;
+        LSIZE m_stackSize;
 
-                static void _staticThread(Thread* context);
+        static void* _staticThread(void* context);
 
-                void _thread();
+        void _thread();
 
-                ThreadPeriodicity m_periodicity;
+        int m_retValue;
 
-                int m_retValue;
+        threadTickCallback m_tickCallback;
 
-                typedef int (*customTickCallback)(message::cerberus_message, Thread*);
+        threadCallback m_warmUpCallback, m_coolDownCallback;
 
-                typedef void (*customCallback)();
+        static CoreSet s_defaultCoreSet;
 
-                customTickCallback m_tickCallback;
+        static int defaultTickCallback(msg_ptr msg, Thread* thread);
 
-                customCallback m_warmUpCallback;
+        static void defaultWarmUpCallback(Thread* thread);
 
-                customCallback m_coolDownCallback;
+        static void defaultCoolDownCallback(Thread* thread);
 
-                static int defaultTickCallback(message::cerberus_message msg, Thread* thread);
+        void _wait();
 
-                static void defaultWarmUpCallback();
+        void _construct(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize,
+                        const CoreSet& coreSet);
 
-                static void defaultCoolDownCallback();
+        std::string m_threadName;
 
-            protected:
-                virtual int tick();
+       protected:
+        virtual int tick();
 
-                virtual void warmUp();
+        virtual void warmUp();
 
-                virtual void coolDown();
+        virtual void coolDown();
 
-                void sleep(const time::Time& time);
+       public:
+        // Set thread name (pthread) if supported by the platform.
+        void setThreadName(const std::string& name);
+        const std::string& getThreadName() const { return m_threadName; }
 
-            public:
-                //Constructs a non-periodic thread by default. If periodicity is TP_Periodic a valid time must be specified.
-                Thread(const std::string& name, ThreadPeriodicity periodicity = TP_NonPeriodic, const time::Time& time = time::Time());
+        // Construct a thread with optional stack size.
+        // If periodicity is TP_Periodic, TP_Periodic_realtime, or TP_PeriodicMessage a valid time must be specified.
+        Thread(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize = 0,
+               const CoreSet& coreSet = CoreSet());
 
-                Thread(const Thread& other) = delete;
+        // Construct a non-periodic thread with optional stack size
+        Thread(LSIZE stackSize = 0, const CoreSet& coreSet = CoreSet());
 
-                Thread(Thread&& other) = delete;
+        // Construct a non-timed thread with given periodicity and optional stack size.
+        // TP_Continuos_realtime uses realtime scheduling without a period timer.
+        Thread(ThreadPeriodicity periodicity, LSIZE stackSize = 0, const CoreSet& coreSet = CoreSet());
 
-                //Terminates the Thread if not already terminated, before destructing it. Could block (join)
-                virtual ~Thread();
+        Thread(const Thread& other) = delete;
 
-                //Starts the thread execution
-                void start();
+        Thread(Thread&& other) = delete;
 
-                //Stops the thread execution
-                void stop();
+        virtual ~Thread();
 
-                //Blocks until thread terminates and returns the last tick() exit value.
-                //If stop is true (default), the Thread is also terminated.
-                int join(bool stop = true);
+        void checkIn(const std::string& name) override;
 
-                //Terminates the Thread. This operation is irreversible
-                void terminate();
+        SplittedTime getTime() const;
 
-                //Sets a custom callback to be executed as tick()
-                void provideTickCallback(customTickCallback callback);
+        bool isOverrun() const;
 
-                //Sets a custom callback to be executed as warmUp()
-                void provideWarmUpCallback(customCallback callback);
+        // Put the calling thread in sleep state for a given time
+        static void sleep(const TimeFrame& time);
 
-                //Sets a custom callback to be executed as coolDown()
-                void provideCoolDownCallback(customCallback callback);
-        };
-    }
-}
+        // Block until thread terminates and return the last tick() exit value.
+        // If stop is true, the Thread is also started and terminated.
+        IntOpRes join(bool stop = false);
 
-#endif // THREAD_THREAD_H
+        // Detach the Thread from the owner Thread
+        OpRes detach();
+
+        // Set a custom callback to be executed as tick()
+        void provideTickCallback(threadTickCallback callback);
+
+        // Set a custom callback to be executed as warmUp()
+        void provideWarmUpCallback(threadCallback callback);
+
+        // Set a custom callback to be executed as coolDown()
+        void provideCoolDownCallback(threadCallback callback);
+
+       private:
+        // Set default core set for new threads (empty = no default affinity).
+        static void setDefaultCoreSet(const CoreSet& coreSet);
+
+        friend class Cerberus;
+    };
+}  // namespace crb
+
+#endif  // THREAD_THREAD_H

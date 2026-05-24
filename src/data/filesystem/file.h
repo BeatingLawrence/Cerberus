@@ -1,100 +1,217 @@
 #ifndef CERBERUS_DATA_FILESYSTEM_FILE_H
 #define CERBERUS_DATA_FILESYSTEM_FILE_H
 
-#include <string>
-#include <fstream>
+#include <stdio.h>
+
 #include "../../Cerberus_global.h"
-#include "../../define.h"
+#include "../../data/bytebuffer.h"
+#include "../../types.h"
 
-namespace cerberus
+namespace crb
 {
-    namespace data
+    class Socket;
+
+    class Directory;
+
+    class CERBERUS_EXPORT File
     {
-        class ByteBuffer;
+        friend class ::crb::Socket;
+        friend class ::crb::Directory;
 
-        namespace filesystem
-        {
-            class CERBERUS_EXPORT File
-            {
-                private:
-                    std::string m_filePath;
+       private:
+        Path m_path;
 
-                    std::fstream m_stream;
+        FileOpenMode m_openMode;
 
-                    std::ios_base::openmode m_openMode;
+        FILE* m_file;
 
-                public:
-                    //Checks wether a file exists on filesystem
-                    //Throws an exception if the operation was not completed successfully
-                    static bool existsAsFile(const std::string& path);
+        int m_fd;
 
-                    //Checks wether a directory exists on filesystem
-                    //Throws an exception if the operation was not completed successfully
-                    static bool existsAsDirectory(const std::string& path);
+        std::string getOpenModeString();
 
-                    //Creates a directory
-                    //Throws an exception if the operation was not completed successfully
-                    static void createDirectory(const std::string& path);
+        OpRes _seek(LSIZE pos) const;
 
-                    //Deletes a directory (must be empty)
-                    //Throws an exception if the operation was not completed successfully
-                    static void deleteDirectory(const std::string& path);
+        OpRes _read(ByteBuffer& buf, LSIZE start, LSIZE span = 0) const;
 
-                    //Checks if a given directory is empty
-                    //Throws an exception if the operation was not completed successfully
-                    static bool isEmptyDirectory(const std::string& path);
+        OpRes _read_cursor(ByteBuffer& buf, LSIZE span) const;
 
-                    File(uint8_t openMode = 0); //Default: read-only
+        File(int fd, const Path& path,
+             FileOpenMode openMode);  // used internally, set openmode to FOM_ReadWrite
 
-                    File(const std::string& filePath, uint8_t openMode = 0);
+       public:
+        // Check wether a regular file exists on filesystem
+        // This method returns:
+        //      OR_OK if the file exists
+        //      OR_InvalidPath if it's not a regular file
+        //      OR_NotFound if it does not exist
+        //      OR_SystemFailure if a system error occurred
+        static OpRes existsAsFile(const std::string& path);
 
-                    ~File();
+        // Check wether a directory exists on filesystem
+        // This method returns:
+        //      OR_OK if the directory exists
+        //      OR_InvalidPath if it's not a directory
+        //      OR_NotFound if it does not exist
+        //      OR_SystemFailure if a system error occurred
+        static OpRes existsAsDirectory(const std::string& path);
 
-                    void setFileName(const std::string& filePath);
+        // Create a directory
+        static OpRes createDirectory(const std::string& path);
 
-                    void setOpenMode(uint8_t openMode = 0);
+        // Delete a file or directory. If path is a directory, it must be empty
+        static OpRes remove(const std::string& path);
 
-                    bool isOpen() const;
+        // Erase a span of bytes from a file, starting at offset start for length span.
+        // The content after the erased block is shifted forward.
+        // Uses a temporary file under the same directory and replaces the original on success.
+        OpRes erase(LSIZE start, LSIZE span);
 
-                    bool open();
+        // Move a file referenced by oldPath to newPath
+        static OpRes move(const std::string& oldPath, const std::string& newPath);
 
-                    bool close();
+        // Check if a given directory is empty
+        // This method returns OR_OK if the directory is empty,
+        // OR_NotEmpty if the directory is not empty, or other values to signal system errors
+        static OpRes isEmptyDirectory(const std::string& path);
 
-                    bool deleteFromDisk();
+        // Stat the file or directory
+        static OpResData<FileMetadata> stat(const std::string& path);
 
-                    bool rename(const std::string& newName);
+        // Open a new temp file and return it.
+        // If path is not empty, it must refer to the directory where
+        // the file will be created. If path is empty, P_tmpdir macro will be used
+        static File tmpFile(const Path& path = Path(), FileOpenMode openMode = FOM_ReadWrite);
 
-                    uint64_t size();
+        // Copy len bytes from src file to the dst file.
+        // If len is equal to 0, the copy will continue till EOF (of any file)
+        // The current cursor state of both files will be used.
+        // Please note that this method uses in-kernel data transfer when possible,
+        // and so it's much more efficient and faster.
+        static OpRes zeroCopy(File& src, File& dst, LSIZE len = 0);
 
-                    bool write(const ByteBuffer& bytes);
+        // Create a File instance
+        File(FileOpenMode openMode = FOM_Read);
+        File(const Path& path, FileOpenMode openMode = FOM_Read);
 
-                    bool writeLine(const std::string& line);
+        File(const File& other);
+        File(File&& other);
 
-                    void read(ByteBuffer& bytes, std::streampos start = 0);
+        File& operator=(const File& other);
 
-                    void read(ByteBuffer& bytes, std::streampos start, std::streamsize span);
+        ~File();
 
-                    //Returns false when EOF is reached and no more lines are available
-                    bool readLine(std::string& line);
+        // Get file metadata (see FileMetadata structure)
+        OpResData<FileMetadata> stat();
 
-                    void resetReadCursor();
+        // Set the path of the file
+        void path(const Path& path);
 
-                    void resetWriteCursor();
+        // Set the open mode of the file. This method will throw
+        // an exception if the file is already open
+        void setOpenMode(FileOpenMode openMode);
 
-                    std::streampos readCursor();
+        // Tell if the instance can write with the currently set open mode
+        bool canWrite() const;
 
-                    std::streampos writeCursor();
+        // Get the filename associated to this instance
+        std::string name() const;
 
-                    void setReadCursor(std::streampos pos);
+        // Get the set path
+        Path path() const;
 
-                    void setWriteCursor(std::streampos pos);
+        // Get the complete absolute path of the file
+        Path completePath() const;
 
-                    void moveReadCursor(std::streamoff offset);
+        // Get the directory path
+        Path directory() const;
 
-                    void moveWriteCursor(std::streamoff offset);
-            };
-        }
-    }
-}
+        // Check if the file is currently open
+        bool isOpen() const;
 
-#endif // CERBERUS_DATA_FILESYSTEM_FILE_H
+        // Open the file with the set file path and open mode.
+        // If the path is empty, OR_InvalidPath is returned.
+        // If the open fails, OR_Failure is returned, and info about the error
+        // are written inside str.
+        OpRes open();
+
+        // Close the file if open
+        void close();
+
+        // Close the current file and reopen it
+        OpRes reopen();
+
+        // Close the file if open, and remove it from filesystem
+        OpRes remove();
+
+        // Move the current file to another path name
+        OpRes move(const Path& newPath);
+
+        // Get the file size
+        SizeOpRes size() const;
+
+        // Write buffer to file
+        OpRes write(const ByteBuffer& bytes);
+
+        // Write a single line of text on file
+        OpRes writeLine(const std::string& line = "");
+
+        // Write the buffer at the end of the file, effectively increasing its size.
+        // This method temporary closes and reopen the file with append flag if that
+        // was not present while opening. After that, it reopens the file again with the
+        // previous open mode.
+        OpRes writeExpand(const ByteBuffer& bytes);
+
+        // Insert the given buffer at the cursor position, increasing the file size.
+        // This method makes use of tempfile
+        OpRes insert(const ByteBuffer& bytes);
+
+        // Read the file starting from start pos till the end of file.
+        // If the call reach EOF and was able to read some data, an optional EOF will
+        // be added to the return opres. If EOF is reached with no data retrieved, an EOF error
+        // is returned
+        OpRes read(ByteBuffer& buf, LSIZE start = 0) const;
+
+        // Read span buf from file starting from start pos
+        OpRes read(ByteBuffer& buf, LSIZE start, LSIZE span) const;
+
+        // Read a chunk of data from the current cursor position
+        OpRes readChunk(ByteBuffer& buf, LSIZE chunksize) const;
+
+        // Read a chunk of data from the current cursor position until a sequence is found.
+        // The read sequence is inserted into the returned buffer
+        OpResData<ByteBuffer> readUntil(const ByteBuffer& sequence) const;
+
+        // Advance the cursor until the wanted sequence is found.
+        // The position before this call is not reset, thus only the
+        // bytes after the cursor position are searched.
+        // Please note: this method will return the sequence starting
+        // position but will leave the file cursor at the end of the sequence
+        // (the byte after the sequence, or EOF)
+        SizeOpRes search(const ByteBuffer& sequence) const;
+
+        // Read a single line till \n or EOF
+        // If the EOF is reached and the bytes read are zero, OR_EOF is returned
+        // If an error occurs during read, OR_Failure is returned
+        StringOpRes readLine() const;
+
+        // Move the cursor to the absolute position pos
+        OpRes seek(LSIZE pos) const;
+
+        // Move the cursor back or forth according to the sign of the parameter pos
+        OpRes seekOffset(OFFSET pos) const;
+
+        // Move the cursor to the end of file
+        OpRes seekToEOF() const;
+
+        // Reset the cursor moving it to the beginning of the file
+        void resetCursor() const;
+
+        // Get the cursor position.
+        SizeOpRes getCursor() const;
+
+        // Check if this file and other file are equal (same size, same content)
+        BoolOpRes isEqual(File& other) const;
+    };
+}  // namespace crb
+
+#endif  // CERBERUS_DATA_FILESYSTEM_FILE_H

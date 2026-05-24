@@ -1,0 +1,53 @@
+#ifndef IDATABASE_H
+#define IDATABASE_H
+
+/*  This file describes the database interface.
+ *
+ *  New database backends must implement this interface to
+ *  be used as database interface
+ *
+ */
+
+#include "../../types.h"
+#include "dbdata.h"
+
+using namespace std;
+
+namespace crb
+{
+    namespace db
+    {
+        class IDatabase
+        {
+           public:
+            virtual OpRes init(const std::string& parameters) = 0;
+
+            virtual void deinit() = 0;
+
+            virtual bool ready() const = 0;
+
+            virtual OpRes command(const string& command) = 0;
+
+            virtual OpResData<DBTableBlock> queryBlock(const string& query) = 0;
+            virtual OpResData<DBTableBlock> queryBlock(const DBQuery& query) = 0;
+
+            virtual OpResData<DBTableProto> queryPrototype(const string& tableName) = 0;
+
+            virtual OpRes createTable(const DBTableProto& prototype) = 0;
+
+            virtual OpRes insertBlock(const DBTableBlock& block) = 0;
+
+            virtual OpRes updateBlock(const DBTableBlock& block, UpdatePolicy policy = UP_UpdateInsert) = 0;
+
+            virtual OpRes dropTable(const std::string& table) = 0;
+            virtual OpRes renameColumn(const std::string& table, const std::string& oldName,
+                                       const std::string& newName) = 0;
+
+            virtual OpResData<DBTableBlock> querytable(const std::string& tableName) = 0;
+
+            virtual ~IDatabase() {};
+        };
+    }  // namespace db
+}  // namespace crb
+
+#endif  // IDATABASE_H

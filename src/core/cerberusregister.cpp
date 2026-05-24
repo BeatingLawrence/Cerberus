@@ -1,0 +1,258 @@
+#include "cerberusregister.h"
+
+#include <dlfcn.h>
+
+#include "../cerberus.h"
+#include "../define.h"
+#include "../exception/exception.h"
+#include "../thread/mutexlocker.h"
+#include "../thread/recipient.h"
+#include "recordable.h"
+
+using namespace crb;
+using namespace crb::core;
+
+//=============================================================================
+HASH32 CerberusRegister::findAvailableObjId(const std::string& name)
+{
+    HASH32 h = hashFunc_res(name);
+
+    for (auto&& el : m_objects)  // collision detection
+        if (h == el->id()) throw cFatalExc("collision encountered while hashing %s", name.c_str());
+
+    return h;
+}
+//=============================================================================
+HASH32 CerberusRegister::findAvailablePluginId(const std::string& path)
+{
+    HASH32 h = hashFunc(path);
+
+    for (auto&& el : m_plugins)  // collision detection
+        if (h == el.id) throw cFatalExc("collision encountered while hashing %s", path.c_str());
+
+    return h;
+}
+//=============================================================================
+bool CerberusRegister::_templateIdCheck(HASH32 id) const
+{
+    // siimply check if given id exists in the register
+    for (auto&& el : m_templates)
+        if (el->id() == id) return true;
+
+    return false;
+}
+//=============================================================================
+OpResData<Recordable*> CerberusRegister::objById(HASH32 id)
+{
+    if (id == CRB_INVALID_ID) return OR_WrongArgument;
+
+    for (auto&& el : m_objects)
+        if (el->m_id == id) return el;
+
+    return OR_NotFound;
+}
+//=============================================================================
+void CerberusRegister::cleanup() { m_objects.clear(); }
+//=============================================================================
+CerberusRegister::CerberusRegister() {}
+//=============================================================================
+CerberusRegister::~CerberusRegister() { cleanup(); }
+//=============================================================================
+OpRes CerberusRegister::addMsgTemplate(const msg_ptr& tmplt)
+{
+    MutexLocker locker(m_tmpltMutex);
+
+    if (tmplt->id() == CRB_INVALID_ID) return OR_WrongArgument;
+    if (_templateIdCheck(tmplt->id())) return OR_AlreadyPresent;
+
+    m_templates.push_back(tmplt.duplicate());
+
+    return OR_OK;
+}
+//=============================================================================
+msg_ptr CerberusRegister::constructMessage(HASH32 id)
+{
+    MutexLocker locker(m_tmpltMutex);
+
+    for (auto&& el : m_templates)
+
+        if (el->id() == id) return el.duplicate();
+
+    return msg_ptr();
+}
+//=============================================================================
+void CerberusRegister::registerObj(Recordable* object, const std::string& name)
+{
+    if (object == nullptr) return;
+
+    if (name.empty()) throw cIllegalArgExc("Registering objects must have a name");
+
+    MutexLocker locker(m_objMutex);
+
+    object->m_id = findAvailableObjId(name);
+
+    m_objects.push_back(object);
+
+    logDebug("New %s, NAME:%s", object->toObjStr().c_str(), name.c_str());
+}
+//=============================================================================
+void CerberusRegister::unregisterObj(HASH32 id)
+{
+    if (id == CRB_INVALID_ID) return;
+
+    MutexLocker locker(m_objMutex);
+
+    for (auto it = m_objects.begin(); it != m_objects.end(); it++)
+    {
+        if ((*it)->id() == id)
+        {
+            logDebug("Unregistering %s", (*it)->toObjStr().c_str());
+            m_objects.erase(it);
+            return;
+        }
+    }
+}
+//=============================================================================
+OpRes CerberusRegister::sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in)
+{
+    MutexLocker locker(m_objMutex);
+    auto found = objById(id);
+
+    if (found.fail()) return found.res;
+
+    auto* obj = found.value;
+    if (!obj)
+    {
+        logError("Dropping message: target object is null (id=%u)", id);
+        return OR_Failure;
+    }
+
+    Recipient* r = dynamic_cast<Recipient*>(obj);
+    if (!r)
+    {
+        logError("Dropping message: target is not a Recipient (id=%u, obj=%s)", id, obj->toObjStr().c_str());
+        return OR_Failure;
+    }
+
+    return r->send(msg, channel_in);
+}
+//=============================================================================
+OpRes CerberusRegister::sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in)
+{
+    MutexLocker locker(m_objMutex);
+    auto found = objById(id);
+
+    if (found.fail()) return found.res;
+
+    auto* obj = found.value;
+    if (!obj)
+    {
+        logError("Dropping message: target object is null (id=%u)", id);
+        return OR_Failure;
+    }
+
+    Recipient* r = dynamic_cast<Recipient*>(obj);
+    if (!r)
+    {
+        logError("Dropping message: target is not a Recipient (id=%u, obj=%s)", id, obj->toObjStr().c_str());
+        return OR_Failure;
+    }
+
+    return r->send_deep(msg, channel_in);
+}
+//=============================================================================
+HASH32 CerberusRegister::addPlugin(void* handle, const std::string& path, bool& exists)
+{
+    MutexLocker locker(m_pluginMutex);
+
+    // check if plugin exists
+
+    for (auto&& el : m_plugins)
+    {
+        if (el.handle == handle)
+        {
+            exists = true;
+            return el.id;
+        }
+    }
+
+    exists = false;
+
+    uint32_t id = findAvailablePluginId(path);
+
+    if (id == CRB_INVALID_ID) throw cIllegalArgExc("Plugin is a duplicate");
+
+    m_plugins.push_back(std::move(Plugin(id, handle, path)));
+
+    return id;
+}
+//=============================================================================
+void CerberusRegister::removePlugin(HASH32 id)
+{
+    MutexLocker locker(m_pluginMutex);
+
+    for (auto it = m_plugins.begin(); it != m_plugins.end(); it++)
+    {
+        if ((*it).id == id)
+        {
+            (*it).mutex.lock();  // wait the lock
+            (*it).mutex.unlock();
+            m_plugins.erase(it);
+            return;
+        }
+    }
+}
+//=============================================================================
+void CerberusRegister::cleanupPlugins()
+{
+    MutexLocker locker(m_pluginMutex);
+
+    for (auto&& el : m_plugins)
+    {
+        el.mutex.lock();  // wait the lock
+        el.mutex.unlock();
+        int ret = dlclose(el.handle);
+
+        if (ret != 0) logError("Error while unloading plugin %u %s", el.id, el.path.c_str());
+    }
+
+    m_plugins.clear();
+}
+//=============================================================================
+void* CerberusRegister::checkPlugin(HASH32 id)
+{
+    MutexLocker locker(m_pluginMutex);
+
+    for (auto&& el : m_plugins)
+        if (el.id == id) return el.handle;
+
+    return nullptr;
+}
+//=============================================================================
+MutexLocker CerberusRegister::getPluginMutex(HASH32 id)
+{
+    MutexLocker locker(m_pluginMutex);
+
+    for (auto&& el : m_plugins)
+        if (el.id == id) return el.mutex;
+
+    return MutexLocker();  // invalid
+}
+//=============================================================================
+bool CerberusRegister::updatePlugin(HASH32 id, const std::string& path, void* handle)
+{
+    MutexLocker locker(m_pluginMutex);
+
+    for (auto&& el : m_plugins)
+    {
+        if (el.id == id)
+        {
+            el.handle = handle;
+            el.path   = path;
+            return true;
+        }
+    }
+
+    return false;
+}
+//=============================================================================

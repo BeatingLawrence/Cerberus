@@ -1,186 +1,465 @@
 #include "thread.h"
-#include <chrono>
-#include <iostream>
 
-#include "../mutex/mutexlocker.h"
-#include "../exception/exceptioncatalog.h"
-#include "../core/cerberuslog.h"
+#include <limits.h>
+#include <pthread.h>
+#include <sched.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
+#include <cerrno>
+#include <cstring>
+
+#include "../cerberus.h"
+#include "../core/signalhandler.h"
+#include "../core/cerberusutils.h"
+#include "../exception/exception.h"
+
+using namespace crb;
+
+CoreSet Thread::s_defaultCoreSet;
 
 //=============================================================================
-void cerberus::thread::Thread::_staticThread(Thread* context)
+void* Thread::_staticThread(void* context)
 {
-    context->_thread();
+    ((Thread*)context)->_thread();
+    return nullptr;
 }
 //=============================================================================
-void cerberus::thread::Thread::_thread()
+void Thread::_thread()
 {
+#ifndef WINDOWS_SYSTEM
+    crb::core::maskTerminationSignalsForCurrentThread();
+#endif
+
+    // set system thread name if supported
+#if defined(APPLE_SYSTEM)
+    if (!m_threadName.empty()) pthread_setname_np(CerberusUtils::truncStr(m_threadName, 63).c_str());
+#elif defined(LINUX_SYSTEM)
+    if (!m_threadName.empty())
+        pthread_setname_np(pthread_self(), CerberusUtils::truncStr(m_threadName, 15).c_str());
+#endif
+
     bool firstRun = true;
 
-    while(!getTerminateFlag())
+    while (true)
     {
-        if(getPausedFlag())     // paused
+        pause();
+
+        resetRescheduling();
+
+        while (true)
         {
-            std::this_thread::yield();
+            auto terminationMsg = next(TERMINATION_MSG_QUEUE);
+            if (!terminationMsg) break;
+            if (terminationMsg->id() == CRB_MESSAGE_TERM_ID)
+            {
+                terminate();
+                break;
+            }
         }
-        else                    // execute
+
+        if (getTerminateFlag()) break;
+
+        if (firstRun)
         {
-            if(firstRun)
-            {
-                warmUp();
-                firstRun = false;
-            }
+            warmUp();
+            firstRun = false;
+        }
 
-            if(m_periodicity == TP_OneShot)
-            {
-                m_retValue = tick();
-                setTerminateFlag(true);
-            }
-            else if(m_periodicity == TP_NonPeriodic)
-            {
-                if(isQueueEmpty())
-                {
-                    std::this_thread::yield();
-                }
-                else
-                {
-                    m_retValue = tick();
-                }
-            }
-            else if(m_periodicity == TP_Periodic)
-            {
-                m_retValue = tick();
-                std::this_thread::sleep_for(m_period);
-            }
-            else if(m_periodicity == TP_PeriodicQueue)
-            {
-                m_retValue = tick();
+        if (m_periodicity == TP_Periodic || m_periodicity == TP_Periodic_realtime ||
+            m_periodicity == TP_PeriodicMessage)
+        {
+            m_periodTimer.startDeadline();
+        }
 
-                if(isQueueEmpty())
-                {
-                    std::this_thread::sleep_for(m_period);
-                }
+        switch (m_periodicity)
+        {
+            case TP_Message:
+            {
+                if (hasMessage()) m_retValue = tick();
+                queueCheckStop();
             }
+            break;
+
+            case TP_Periodic:
+            case TP_Periodic_realtime:
+            {
+                m_retValue = tick();
+                _wait();
+            }
+            break;
+
+            case TP_PeriodicMessage:
+            {
+                m_retValue = tick();
+                if (!hasMessage()) _wait();
+            }
+            break;
+
+            case TP_OneShot:
+            {
+                m_retValue = tick();
+                terminate();
+            }
+            break;
+
+            case TP_Continuos:
+            case TP_Continuos_realtime:
+            {
+                m_retValue = tick();
+            }
+            break;
+
+            case TP_Trigger:
+            {
+                m_retValue = tick();
+                if (!isRescheduling()) stop();
+            }
+            break;
         }
     }
 
-    coolDown();
+    if (!firstRun) coolDown();  // cool down only if warmUp() was called
+
+    dead();
 }
 //=============================================================================
-int cerberus::thread::Thread::defaultTickCallback(message::cerberus_message msg, Thread* thread)
-{
-    std::this_thread::yield();
-    return 0;
-}
+int Thread::defaultTickCallback(msg_ptr msg, Thread* thread) { return 0; }
 //=============================================================================
-void cerberus::thread::Thread::defaultWarmUpCallback()
+void Thread::defaultWarmUpCallback(Thread* thread)
 {
+    (void)thread;
     // noop
 }
 //=============================================================================
-void cerberus::thread::Thread::defaultCoolDownCallback()
+void Thread::defaultCoolDownCallback(Thread* thread)
 {
+    (void)thread;
     // noop
 }
 //=============================================================================
-int cerberus::thread::Thread::tick()
+void Thread::_wait()
 {
-    return m_tickCallback(nextMessage(), this);
+    if (isRescheduling()) return;  // bypass wait if thread is rescheduling
+    m_overrun = m_periodTimer.waitDeadline();
 }
 //=============================================================================
-void cerberus::thread::Thread::warmUp()
+void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize,
+                        const CoreSet& coreSet)
 {
-    m_warmUpCallback();
-}
-//=============================================================================
-void cerberus::thread::Thread::coolDown()
-{
-    m_coolDownCallback();
-}
-//=============================================================================
-void cerberus::thread::Thread::sleep(const time::Time& time)
-{
-    std::this_thread::sleep_for(std::chrono::microseconds(time.microseconds()));
-}
-//=============================================================================
-cerberus::thread::Thread::Thread(const std::string& name, ThreadPeriodicity periodicity, const time::Time& time) :
-    ThreadBase(),
-    CerberusObject(CerberusObject::ObjectType::OT_Thread, name),
-    m_thread(_staticThread, this),
-    m_periodicity(periodicity),
-    m_retValue(0),
-    m_tickCallback(&defaultTickCallback),
-    m_warmUpCallback(&defaultWarmUpCallback),
-    m_coolDownCallback(&defaultCoolDownCallback)
-{
-    if(periodicity == ThreadPeriodicity::TP_NonPeriodic)
+    if (periodicity == ThreadPeriodicity::TP_Periodic ||
+        periodicity == ThreadPeriodicity::TP_Periodic_realtime ||
+        periodicity == ThreadPeriodicity::TP_PeriodicMessage)
     {
-        logInfo("New non-periodic Thread '%s' with ID: %u", name.c_str(), id());
+        if (time.isNull()) throw cIllegalArgExc("Invalid time in Thread creation");
+        m_time = time.splittedTime();
+        m_periodTimer.setTime(time);
     }
-    else if(periodicity == ThreadPeriodicity::TP_Periodic || periodicity == ThreadPeriodicity::TP_PeriodicQueue)
+
+    pthread_attr_t attr{};
+
+    if (pthread_attr_init(&attr))  // default attributes
+        throw cSystemExc("pthread_attr_init function failed");
+
+    const bool isRealtime = (periodicity == ThreadPeriodicity::TP_Periodic_realtime ||
+                             periodicity == ThreadPeriodicity::TP_Continuos_realtime);
+
+    if (stackSize > 0 && stackSize < PTHREAD_STACK_MIN)
     {
-        if(time.isValid())
+        pthread_attr_destroy(&attr);
+        throw cIllegalArgExc("Invalid stack size: below PTHREAD_STACK_MIN");
+    }
+
+    if (isRealtime)
+    {
+        int attrRet = pthread_attr_setinheritsched(&attr, PTHREAD_EXPLICIT_SCHED);
+
+        if (attrRet)
         {
-            m_period = std::chrono::microseconds(time.microseconds());
-            logInfo("New periodic Thread '%s' with ID: %u, period: %u ms", name.c_str(), id(), time.milliseconds());
+            pthread_attr_destroy(&attr);
+            throw cSystemExc("pthread_attr_setinheritsched function failed: %s", strerror(attrRet));
         }
+    }
+
+    CoreSet effectiveCoreSet = coreSet;
+    if (effectiveCoreSet.empty() && !s_defaultCoreSet.empty())
+    {
+        effectiveCoreSet = s_defaultCoreSet;
+    }
+
+#ifndef APPLE_SYSTEM
+    if (!effectiveCoreSet.empty())
+    {
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+
+        std::string list;
+        for (size_t i = 0; i < effectiveCoreSet.cores.size(); ++i)
+        {
+            int core = effectiveCoreSet.cores[i];
+            if (core < 0 || core >= CPU_SETSIZE)
+            {
+                pthread_attr_destroy(&attr);
+                throw cIllegalArgExc("Invalid core index in CoreSet");
+            }
+            CPU_SET(core, &cpuset);
+
+            if (!list.empty()) list.append(",");
+            list.append(CerberusUtils::strPrint("%d", core));
+        }
+
+        int affRet = pthread_attr_setaffinity_np(&attr, sizeof(cpuset), &cpuset);
+
+        if (affRet)
+        {
+            pthread_attr_destroy(&attr);
+            throw cSystemExc("pthread_attr_setaffinity_np function failed: %s", strerror(affRet));
+        }
+    }
+#endif
+
+    void* rtStack      = nullptr;
+    LSIZE rtStackBytes = 0;
+
+    if (isRealtime)
+    {
+        size_t size = 0;
+
+        if (stackSize > 0)
+            size = static_cast<size_t>(stackSize);
         else
         {
-            throw cerberusIllegalArgumentExc("cannot construct a periodic thread using an invalid time");
+            size_t attrSize = 0;
+            int sizeRet     = pthread_attr_getstacksize(&attr, &attrSize);
+
+            if (sizeRet)
+            {
+                pthread_attr_destroy(&attr);
+                throw cSystemExc("pthread_attr_getstacksize function failed: %s", strerror(sizeRet));
+            }
+
+            size = attrSize;
+        }
+
+        const long page    = sysconf(_SC_PAGESIZE);
+        const size_t align = (page > 0) ? static_cast<size_t>(page) : 4096u;
+        size               = (size + align - 1) & ~(align - 1);
+
+        int mmapFlags = MAP_PRIVATE | MAP_ANONYMOUS;
+#ifdef MAP_STACK
+        mmapFlags |= MAP_STACK;
+#endif
+
+        rtStack = mmap(nullptr, size, PROT_READ | PROT_WRITE, mmapFlags, -1, 0);
+
+        if (rtStack == MAP_FAILED)
+        {
+            pthread_attr_destroy(&attr);
+            throw cSystemExc("mmap function failed: %s", strerror(errno));
+        }
+
+        memset(rtStack, 0, size);  // touch the memory pages
+
+        if (mlock(rtStack, size) != 0)
+        {
+            munmap(rtStack, size);
+            pthread_attr_destroy(&attr);
+            throw cSystemExc("mlock function failed: %s", strerror(errno));
+        }
+
+        int attrRet = pthread_attr_setstack(&attr, rtStack, size);
+
+        if (attrRet)
+        {
+            munmap(rtStack, size);
+            pthread_attr_destroy(&attr);
+            throw cSystemExc("pthread_attr_setstack function failed: %s", strerror(attrRet));
+        }
+
+        rtStackBytes = size;
+    }
+    else if (stackSize > 0)
+    {
+        int attrRet = pthread_attr_setstacksize(&attr, stackSize);  // use kernel-provided stack
+
+        if (attrRet)
+        {
+            pthread_attr_destroy(&attr);
+            throw cSystemExc("pthread_attr_setstacksize function failed: %s", strerror(attrRet));
         }
     }
-    else if(periodicity == ThreadPeriodicity::TP_OneShot)
+
+    auto ret = pthread_create(&m_pthread, &attr, &_staticThread, this);
+    pthread_attr_destroy(&attr);
+
+    if (ret)
     {
-        logInfo("New one-shot Thread '%s' with ID: %u", name.c_str(), id());
-    }
-}
-//=============================================================================
-cerberus::thread::Thread::~Thread()
-{
-    join(true);
-}
-//=============================================================================
-void cerberus::thread::Thread::start()
-{
-    setPausedFlag(false);
-}
-//=============================================================================
-void cerberus::thread::Thread::stop()
-{
-    setPausedFlag(true);
-}
-//=============================================================================
-int cerberus::thread::Thread::join(bool stop)
-{
-    if(stop)
-    {
-        terminate();
+        if (rtStack) munmap(rtStack, rtStackBytes);
+
+        throw cSystemExc("pthread_create function failed: %s", strerror(ret));
     }
 
-    if(m_thread.joinable())
+    m_stack     = rtStack;
+    m_stackSize = rtStackBytes;
+
+    if (isRealtime)
     {
-        m_thread.join();
+        sched_param param{};
+        int prio = sched_get_priority_max(SCHED_FIFO);
+
+        if (prio < 0) throw cSystemExc("sched_get_priority_max function failed: %s", strerror(errno));
+
+        param.sched_priority = prio;
+
+        int schedRet = pthread_setschedparam(m_pthread, SCHED_FIFO, &param);
+
+        if (schedRet) throw cSystemExc("pthread_setschedparam function failed: %s", strerror(schedRet));
+    }
+}
+//=============================================================================
+int Thread::tick() { return m_tickCallback(next(), this); }
+//=============================================================================
+void Thread::setThreadName(const std::string& name) { m_threadName = name; }
+//=============================================================================
+void Thread::setDefaultCoreSet(const CoreSet& coreSet) { s_defaultCoreSet = coreSet; }
+//=============================================================================
+void Thread::warmUp() { m_warmUpCallback(this); }
+//=============================================================================
+void Thread::coolDown() { m_coolDownCallback(this); }
+//=============================================================================
+void Thread::sleep(const TimeFrame& time)
+{
+    auto splitted = time.splittedTime();
+    timespec t{};
+    t.tv_nsec = splitted.nanoseconds;
+    t.tv_sec  = splitted.seconds;
+    nanosleep(&t, NULL);
+}
+//=============================================================================
+void Thread::checkIn(const std::string& name)
+{
+    setThreadName(name);
+    crb::core::Recordable::checkIn(name);
+}
+//=============================================================================
+Thread::Thread(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize, const CoreSet& coreSet)
+    : ThreadBase(periodicity),
+      m_pthread(),
+      m_time{},
+      m_periodTimer(),
+      m_overrun(false),
+      m_stack(nullptr),
+      m_stackSize(0),
+      m_retValue(0),
+      m_tickCallback(&defaultTickCallback),
+      m_warmUpCallback(&defaultWarmUpCallback),
+      m_coolDownCallback(&defaultCoolDownCallback)
+{
+#ifndef WINDOWS_SYSTEM
+    crb::core::maskTerminationSignalsForCurrentThread();
+#endif
+    _construct(periodicity, time, stackSize, coreSet);
+}
+//=============================================================================
+Thread::Thread(LSIZE stackSize, const CoreSet& coreSet)
+    : ThreadBase(TP_Message),
+      m_pthread(),
+      m_time{},
+      m_periodTimer(),
+      m_overrun(false),
+      m_stack(nullptr),
+      m_stackSize(0),
+      m_retValue(0),
+      m_tickCallback(&defaultTickCallback),
+      m_warmUpCallback(&defaultWarmUpCallback),
+      m_coolDownCallback(&defaultCoolDownCallback)
+{
+#ifndef WINDOWS_SYSTEM
+    crb::core::maskTerminationSignalsForCurrentThread();
+#endif
+    _construct(TP_Message, TimeFrame(), stackSize, coreSet);
+}
+//=============================================================================
+Thread::Thread(ThreadPeriodicity periodicity, LSIZE stackSize, const CoreSet& coreSet)
+    : ThreadBase(periodicity),
+      m_pthread(),
+      m_time{},
+      m_periodTimer(),
+      m_overrun(false),
+      m_stack(nullptr),
+      m_stackSize(0),
+      m_retValue(0),
+      m_tickCallback(&defaultTickCallback),
+      m_warmUpCallback(&defaultWarmUpCallback),
+      m_coolDownCallback(&defaultCoolDownCallback)
+{
+#ifndef WINDOWS_SYSTEM
+    crb::core::maskTerminationSignalsForCurrentThread();
+#endif
+    _construct(periodicity, TimeFrame(), stackSize, coreSet);
+}
+//=============================================================================
+Thread::~Thread()
+{
+    checkOut();
+    if (m_stack)
+    {
+        munmap(m_stack, m_stackSize);
+        m_stack     = nullptr;
+        m_stackSize = 0;
+    }
+}
+//=============================================================================
+SplittedTime Thread::getTime() const { return m_time; }
+//=============================================================================
+bool Thread::isOverrun() const { return m_overrun; }
+//=============================================================================
+IntOpRes Thread::join(bool stop)
+{
+    if (isDead()) return m_retValue;
+
+    if (stop)
+    {
+        terminate();  // set termination flag
+        start();      // force the thread to run
+    }
+
+    int ret = pthread_join(m_pthread, NULL);
+
+    if (ret)
+    {
+        if (ret == EINVAL)
+        {
+            return OR_ThreadNotJoinable;
+        }
+        else if (ret != ESRCH)  // ESRCH = not executing anymore
+        {
+            IntOpRes toReturn(OR_Failure);
+            toReturn.reason = strerror(ret);
+            return toReturn;
+        }
     }
 
     return m_retValue;
 }
 //=============================================================================
-void cerberus::thread::Thread::terminate()
+crb::OpRes Thread::detach()
 {
-    setTerminateFlag(true);
+    int ret = pthread_detach(m_pthread);
+
+    if (ret)
+    {
+        OpRes toReturn(OR_Failure);
+        toReturn.reason = strerror(ret);
+        return toReturn;
+    }
+
+    return OR_OK;
 }
 //=============================================================================
-void cerberus::thread::Thread::provideTickCallback(customTickCallback callback)
-{
-    m_tickCallback = callback;
-}
+void Thread::provideTickCallback(threadTickCallback callback) { m_tickCallback = callback; }
 //=============================================================================
-void cerberus::thread::Thread::provideWarmUpCallback(customCallback callback)
-{
-    m_warmUpCallback = callback;
-}
+void Thread::provideWarmUpCallback(threadCallback callback) { m_warmUpCallback = callback; }
 //=============================================================================
-void cerberus::thread::Thread::provideCoolDownCallback(customCallback callback)
-{
-    m_coolDownCallback = callback;
-}
+void Thread::provideCoolDownCallback(threadCallback callback) { m_coolDownCallback = callback; }
 //=============================================================================

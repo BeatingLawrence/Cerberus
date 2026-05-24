@@ -1,9 +1,22 @@
 TODO list for Cerberus:
 
--Implement a way to convert strings from SQL calls (results and rows) to actual values (bool, float, int..)
--Implement a system to convert results into queries to add data to a table
+[Corrections - High priority]
 -LogError and Debug must log on stderr(unbuffered)
+
+[New Functionalities]
+-Add the Task class. this class will store a task (block of code) and will be given to Threads that will be able to execute it
+-Implement a plugin loader and test it
+
+[Network]
 -Implement sockets (UDP, TCP, HTTP, HTTPS, FTP, ICMP)
 -Test sockets
--Implement a plugin loader and test it
--Implement a thread pool
+-Implement ICMP socket (or a ping functionality)
+-Implement IPC socket
+
+[Database]
+-Implement a way to convert strings from SQL calls (results and rows) to actual values (bool, float, int..)
+-Implement a system to convert results into queries to add data to a table
+-Implement a custom thread that takes an sql database and processes a queue of transactions from other threads on the db
+
+[Threads]
+-Implement the ThreadPool system

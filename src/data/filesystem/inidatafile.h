@@ -2,108 +2,107 @@
 #define CERBERUS_DATA_FILESYSTEM_INIDATAFILE_H
 
 #include <list>
-#include <regex>
-#include "./file.h"
-#include "../../types.h"
+#define MAIN_SECTION "MAIN"
 
-namespace cerberus
+#include <boost/regex.hpp>
+
+#include "file.h"
+
+namespace crb
 {
-    namespace data
+    class CERBERUS_EXPORT IniDataFile
     {
-        namespace filesystem
+       private:
+        File m_file;
+
+        boost::regex m_isValidRegex;
+
+        struct Line
         {
-            class CERBERUS_EXPORT IniDataFile
+            bool sectionSpecifier;
+            int16_t sectionId;
+            std::string comment;
+            std::string key;
+            std::string value;
+
+            Line()
+                : sectionSpecifier(false),
+                  sectionId(0),
+                  comment(),
+                  key(),
+                  value()
             {
-                private:
-                    File m_file;
+            }
+        };
 
-                    std::regex m_isValidRegex;
-                    std::regex m_isIntegerRegex;
-                    std::regex m_isDoubleRegex;
-                    std::regex m_isBoolRegex;
+        struct Section
+        {
+            int16_t id;
+            std::string name;
+        };
 
-                    bool _isValid(const std::string& line);
+        std::list<Line> m_lines;
 
-                    bool _isInteger(const std::string& line);
+        std::vector<Section> m_sections;
 
-                    bool _isDouble(const std::string& line);
+        bool isValid(const std::string& line);
+        Line* search(const std::string& key, int16_t sectionId);
+        Line* search(const std::string& key, const std::string& section);
 
-                    bool _isBool(const std::string& line);
+        std::string getSectionName(int16_t sectionId);
+        int16_t getSectionId(const std::string& name);
+        int16_t addNewSection(const std::string& name);
 
-                    std::string _getKey(const std::string& line);   //use only on valid lines!
+        DataType valueType(const std::string& value);
 
-                    std::string _getValue(const std::string& line); //use only on valid lines!
+        void insertLine(const Line& line);
 
-                    struct Entry
-                    {
-                        std::string key;
-                        uint8_t type;
-                        std::string stringValue;
-                        int64_t integerValue;
-                        double doubleValue;
-                        bool boolValue;
-                    };
+        OpRes syncFile();  // rewrites the file using cached values
 
-                    Entry* _search(const std::string& key);
+        void printDebug();
 
-                    void _syncFile();    //rewrites the file starting from memory
+       public:
+        // Construct an IniDataFile object with a file name
+        IniDataFile(const std::string& fileName = std::string(""));
 
-                    std::vector<Entry> m_entries;
+        // Close the file if open
+        ~IniDataFile();
 
-                public:
-                    //Creates an IniDataFile object
-                    IniDataFile(const std::string& fileName);
-                    IniDataFile();
+        // Sets a file name for the .ini file.
+        void setFileName(const std::string& fileName);
 
-                    //Destroyes an IniDataFile object and closes the file
-                    ~IniDataFile();
+        // Attempt to load an .ini file.
+        // If load() manages to parse all the file with no errors, the result is OR_OK.
+        // If load() finds errors while parsing the file, the result is still OR_OK but it has the
+        // optional OR_Failure, to indicate that the operation retrieved all possible information
+        // from the file but some data was not correctly loaded and has been discarded.
+        // If a not ignoreable error has been encountered, OR_Failure is returned.
+        // If the given path is not valid, OR_InvalidFile is returned.
+        OpRes load();
 
-                    //Sets a file name for the .ini file
-                    void setFileName(const std::string& fileName);
+        // Checks if a key exists in the memory
+        bool exists(const std::string& key, const std::string& section = MAIN_SECTION);
 
-                    //Returns true if the file is a valid .ini file or if it is empty.
-                    //When an invalid line is found, the method will still attempt to load the following valid ones.
-                    //Calling this method will result in a synchronization between file and memory.
-                    //Entries that are in the memory but not in the file will be lost.
-                    //This method open the .ini file in read-only mode
-                    bool load();
+        // Returns the value type of the requested key.
+        // If key was not found, IDT_Invalid is returned
+        DataType type(const std::string& key, const std::string& section = MAIN_SECTION);
 
-                    //Checks if a key exists in the memory
-                    bool exists(const std::string& key);
+        // Check if the key object is convertible to the given type
+        bool isType(const std::string& key, DataType type);
 
-                    //Returns an OR of possible data types of a key. Values used are defined in DataType enum.
-                    //Returns DataType::DT_NotAType if provided key was not found
-                    uint8_t type(const std::string& key);
+        // Force the re-write of the entire file
+        OpRes rewrite();
 
-                    //Write methods:
-                    //These methods perform a write operation on the file (and memory), modifying or adding a key=value entry.
-                    //If provided key exists, its value will be modified.
-                    //In this case it is important to ensure that the type is correct using type(). An exception will be thrown if type is not correct
-                    //If provided key does not exist, it will be created and added to the memory and file.
-                    //An exception will be thrown if provided key=value string pair is not valid
-                    void write_string(const std::string& key, const std::string& value);
+        // Write one key with an Opaque value; creates section if missing.
+        OpRes write(const std::string& key, const Opaque& value, const std::string& section = MAIN_SECTION);
 
-                    void write_integer(const std::string& key, int64_t value);
+        // Enforce a key/value with Opaque. If key exists with different type it is overwritten.
+        OpRes enforce(const std::string& key, const Opaque& value, const std::string& section = MAIN_SECTION);
 
-                    void write_double(const std::string& key, double value);
+        // Read a key into an Opaque value.
+        OpResData<Opaque> read(const std::string& key, const std::string& section = MAIN_SECTION);
+    };
 
-                    void write_bool(const std::string& key, bool value);
+}  // namespace crb
 
-                    //Read methods:
-                    //These methods perform a read operation on the memory copied using load().
-                    //Calling a read on a wrong data type will throw an exception.
-                    //Calling a read on an non-existing key will throw an exception.
-                    //Please ensure the data exists and is type-correct using exists() and type()
-                    std::string read_string(const std::string& key);
-
-                    int64_t read_integer(const std::string& key);
-
-                    double read_double(const std::string& key);
-
-                    bool read_bool(const std::string& key);
-            };
-        }
-    }
-}
-
-#endif // CERBERUS_DATA_FILESYSTEM_INIDATAFILE_H
+#endif  // CERBERUS_DATA_FILESYSTEM_INIDATAFILE_H

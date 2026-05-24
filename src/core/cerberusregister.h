@@ -1,0 +1,121 @@
+#ifndef CERBERUS_CERBERUSREGISTER_H
+#define CERBERUS_CERBERUSREGISTER_H
+
+#include <list>
+#include <string>
+
+#include "../thread/mutex.h"
+#include "../thread/mutexlocker.h"
+#include "recordable.h"
+
+namespace crb
+{
+    namespace core
+    {
+        class CerberusObject;
+
+        class CerberusRegister
+        {
+            struct Plugin
+            {
+                Plugin(HASH32 id, void* h, const std::string& p)
+                    : id(id),
+                      handle(h),
+                      path(p),
+                      mutex() {};
+
+                Plugin(Plugin&& other)
+                    : id(other.id),
+                      handle(other.handle),
+                      path(other.path),
+                      mutex(std::move(other.mutex))
+                {
+                    other.id     = 0;
+                    other.handle = nullptr;
+                    other.path   = "";
+                };
+
+                HASH32 id;
+                void* handle;
+                std::string path;
+                Mutex mutex;
+            };
+
+            std::list<Recordable*> m_objects;
+            Mutex m_objMutex;
+
+            std::list<Plugin> m_plugins;
+            Mutex m_pluginMutex;
+
+            std::list<msg_ptr> m_templates;
+            Mutex m_tmpltMutex;
+
+            HASH32 findAvailableObjId(const std::string& name);
+            HASH32 findAvailablePluginId(const std::string& path);
+
+            bool _templateIdCheck(HASH32 id) const;
+
+            // Give a cerberus object from its ID, or nullptr if it does not exist
+            // This method does not lock the mutex!
+            OpResData<Recordable*> objById(HASH32 id);
+
+            // delete all the cerberus-owned objects
+            void cleanup();
+
+           public:
+            CerberusRegister();
+
+            ~CerberusRegister();
+
+            //==================TEMPLATES====================
+
+            // Register a new message template
+            OpRes addMsgTemplate(const msg_ptr& tmplt);
+
+            // Return a new copy of the stored template of given id
+            // an invalid pointer will be returned if id is not found
+            msg_ptr constructMessage(HASH32 id);
+
+            //===================OBJECTS=====================
+
+            // Register a given object and return its id
+            // Return an invalid ID if the registering failed
+            void registerObj(Recordable* object, const std::string& name);
+
+            // Unregiste an object by its id
+            // Nothing happens if the ID does not exist
+            void unregisterObj(HASH32 id);
+
+            // Send a message to a cerberus object.
+            // If the id is not valid or the message cannot be sent, nothing happens
+            OpRes sendMsgToObj(HASH32 id, msg_ptr& msg, HASH32 channel_in = 0);
+
+            // Send a message to a cerberus object using deep-copy.
+            // The copy is created only if the destination queue can accept it.
+            OpRes sendMsgToObj_deep(HASH32 id, const msg_ptr& msg, HASH32 channel_in = 0);
+
+            //===================PLUGINS=====================
+
+            // Add a plugin handle to the register. If the handle already exixst, exists is true
+            // The new (or found) ID is returned
+            HASH32 addPlugin(void* handle, const std::string& path, bool& exists);
+
+            // Remove the handle from the register
+            void removePlugin(HASH32 id);
+
+            // Remove and unload all the loaded plugins
+            void cleanupPlugins();
+
+            // Return the requested handle if it is registered, otherwise nullptr
+            void* checkPlugin(HASH32 id);
+
+            // Get the mutexlocker of a loaded shared object. The mutex is locked before return
+            MutexLocker getPluginMutex(HASH32 id);
+
+            // Replaces data of an existing plugin. Returns false if id does not exist, true otherwise
+            bool updatePlugin(HASH32 id, const std::string& path, void* handle);
+        };
+    }  // namespace core
+}  // namespace crb
+
+#endif  // CERBERUS_CERBERUSREGISTER_H

@@ -1,38 +1,69 @@
 #include "threadbase.h"
-#include "../mutex/mutexlocker.h"
 
-using namespace cerberus::thread;
-using namespace cerberus::mutex;
+#include <cstring>
+
+#include "../exception/exception.h"
+#include "../message/message.h"  // IWYU pragma: export
+#include "mutexlocker.h"
+
+using namespace crb;
 
 //=============================================================================
-ThreadBase::ThreadBase() :
-    m_mutex(),
-    m_pausedFlag(true),
-    m_terminateFlag(false)
+ThreadBase::ThreadBase(ThreadPeriodicity periodicity)
+    : Recordable(),
+      Recipient(&m_mutex),
+      m_mutex(),
+      m_cond(),
+      m_pausedFlag(true),
+      m_terminateFlag(false),
+      m_dead(false),
+      m_rescheduling(false),
+      m_periodicity(periodicity)
 {
+    pthread_condattr_t attr{};
+
+    int ret = pthread_condattr_init(&attr);
+
+    if (ret) throw cSystemExc("pthread_condattr_init error %s", strerror(ret));
+
+    ret = pthread_cond_init(&m_cond, &attr);
+
+    if (ret) throw cSystemExc("pthread_cond_init error %s", strerror(ret));
+
+    pthread_condattr_destroy(&attr);
 }
 //=============================================================================
-ThreadBase::~ThreadBase()
-{
-    // noop
-}
+ThreadBase::~ThreadBase() { pthread_cond_destroy(&m_cond); }
 //=============================================================================
 void ThreadBase::setPausedFlag(bool state)
 {
-    MutexLocker locker(&m_mutex);
     m_pausedFlag = state;
+
+    int ret = pthread_cond_signal(&m_cond);
+
+    if (ret) throw cSystemExc("pthread_cond_signal error %s", strerror(ret));
 }
 //=============================================================================
-void ThreadBase::setTerminateFlag(bool state)
+void ThreadBase::newMsg_first()
 {
     MutexLocker locker(&m_mutex);
-    m_terminateFlag = state;
+    if (m_periodicity == TP_Message && m_pausedFlag) setPausedFlag(false);
 }
 //=============================================================================
-bool ThreadBase::getPausedFlag()
+void ThreadBase::pause()
 {
     MutexLocker locker(&m_mutex);
-    return m_pausedFlag;
+
+    if (m_terminateFlag) return;  // skip pause if the termination is requested
+
+    if (m_rescheduling) return;  // skip pause if rescheduling has been requested
+
+    while (m_pausedFlag)
+    {
+        int ret = pthread_cond_wait(&m_cond, &m_mutex.m_pmutex);  // this call internally unlocks the mutex
+
+        if (ret) throw cSystemExc("pthread_cond_wait error %s", strerror(ret));
+    }
 }
 //=============================================================================
 bool ThreadBase::getTerminateFlag() const
@@ -41,49 +72,63 @@ bool ThreadBase::getTerminateFlag() const
     return m_terminateFlag;
 }
 //=============================================================================
-cerberus::message::cerberus_message ThreadBase::nextMessage()
+bool ThreadBase::getPausedFlag() const
 {
     MutexLocker locker(&m_mutex);
-
-    try
-    {
-        return m_queue.next();
-    }
-    catch(...)
-    {
-        return message::Message::create();
-    }
+    return m_pausedFlag;
 }
 //=============================================================================
-cerberus::message::cerberus_message ThreadBase::nextMessageKeep() const
+void ThreadBase::dead()
 {
     MutexLocker locker(&m_mutex);
-
-    try
-    {
-        return m_queue.nextKeep();
-    }
-    catch(...)
-    {
-        return message::Message::create();
-    }
+    m_dead = true;
 }
 //=============================================================================
-bool ThreadBase::isQueueEmpty() const
+void ThreadBase::reschedule()
 {
     MutexLocker locker(&m_mutex);
-    return m_queue.isEmpty();
+    m_rescheduling = true;
 }
 //=============================================================================
-void ThreadBase::addMessage(message::cerberus_message message)
+void ThreadBase::resetRescheduling()
 {
     MutexLocker locker(&m_mutex);
-    m_queue.add(message);
+    m_rescheduling = false;
 }
 //=============================================================================
-size_t ThreadBase::messageCount() const
+bool ThreadBase::isRescheduling()
 {
     MutexLocker locker(&m_mutex);
-    return m_queue.size();
+    return m_rescheduling;
+}
+//=============================================================================
+void ThreadBase::queueCheckStop()
+{
+    MutexLocker locker(&m_mutex);
+    if (!size_nomutex()) setPausedFlag(true);
+}
+//=============================================================================
+void ThreadBase::start()
+{
+    MutexLocker locker(&m_mutex);
+    setPausedFlag(false);
+}
+//=============================================================================
+void ThreadBase::stop()
+{
+    MutexLocker locker(&m_mutex);
+    setPausedFlag(true);
+}
+//=============================================================================
+void ThreadBase::terminate()
+{
+    MutexLocker locker(&m_mutex);
+    m_terminateFlag = true;
+}
+//=============================================================================
+bool ThreadBase::isDead()
+{
+    MutexLocker locker(&m_mutex);
+    return m_dead;
 }
 //=============================================================================
