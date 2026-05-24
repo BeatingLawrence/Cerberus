@@ -76,6 +76,9 @@ void CerberusCore::warmUp()
 {
     tlogInfo("Starting Core Thread");
 
+    tlogDebug("Starting signal handler");
+    m_signalHandler.start();
+
     logDebug("Starting Event Scheduler");
     m_eventScheduler.start();
 
@@ -84,6 +87,9 @@ void CerberusCore::warmUp()
 //=============================================================================
 void CerberusCore::coolDown()
 {
+    tlogDebug("Stopping signal handler");
+    m_signalHandler.join(true);
+
     tlogDebug("Stopping event scheduler");
     m_eventScheduler.join(true);
 

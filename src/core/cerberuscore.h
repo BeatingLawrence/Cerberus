@@ -13,6 +13,7 @@
 #include "../thread/thread.h"
 #include "../thread/threadpool.h"
 #include "../data/filesystem/inidatafile.h"
+#include "signalhandler.h"
 #include "eventscheduler.h"
 #include "cerberusregister.h"
 
@@ -45,6 +46,7 @@ namespace crb
 
            public:
             EventScheduler m_eventScheduler;
+            SignalHandler m_signalHandler;
 
             CerberusCore();
 
@@ -81,6 +83,11 @@ namespace crb
             void* checkPlugin(HASH32 id) { return m_reg.checkPlugin(id); }
             bool updatePlugin(HASH32 id, const std::string& path, void* handle) { return m_reg.updatePlugin(id, path, handle); }
             void cleanupPlugins() { m_reg.cleanupPlugins(); }
+            void subscribeTerminationEvents(Recipient* r)
+            {
+                if (!r) return;
+                m_signalHandler.setRecipient(r, 0, TERMINATION_MSG_QUEUE);
+            }
 
             //=====================SOCKETS========================
         };

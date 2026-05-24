@@ -201,6 +201,8 @@ namespace crb
         static OpRes send(msg_ptr& message, HASH32 recipientID = CRB_INVALID_ID,
                           HASH32 channel_in = 0);
 
+        static void subscribeTerminationEvents(Recipient* r);
+
         // ======================Public Register===========================
 
         // ===========================Factory==============================

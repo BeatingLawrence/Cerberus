@@ -51,6 +51,9 @@ std::string Recordable::toThreadStr(const Recordable& obj)
         case TP_Continuos:
             return "Configuration: Continuos";
 
+        case TP_Continuos_realtime:
+            return "Configuration: Continuos realtime";
+
         case TP_Trigger:
             return "Configuration: Trigger";
     }

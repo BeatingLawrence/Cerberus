@@ -10,6 +10,7 @@
 #include <cstring>
 
 #include "../cerberus.h"
+#include "../core/signalhandler.h"
 #include "../core/cerberusutils.h"
 #include "../exception/exception.h"
 
@@ -26,6 +27,10 @@ void* Thread::_staticThread(void* context)
 //=============================================================================
 void Thread::_thread()
 {
+#ifndef WINDOWS_SYSTEM
+    crb::core::maskTerminationSignalsForCurrentThread();
+#endif
+
     // set system thread name if supported
 #if defined(APPLE_SYSTEM)
     if (!m_threadName.empty()) pthread_setname_np(CerberusUtils::truncStr(m_threadName, 63).c_str());
@@ -42,12 +47,29 @@ void Thread::_thread()
 
         resetRescheduling();
 
+        while (true)
+        {
+            auto terminationMsg = next(TERMINATION_MSG_QUEUE);
+            if (!terminationMsg) break;
+            if (terminationMsg->id() == CRB_MESSAGE_TERM_ID)
+            {
+                terminate();
+                break;
+            }
+        }
+
         if (getTerminateFlag()) break;
 
         if (firstRun)
         {
             warmUp();
             firstRun = false;
+        }
+
+        if (m_periodicity == TP_Periodic || m_periodicity == TP_Periodic_realtime ||
+            m_periodicity == TP_PeriodicMessage)
+        {
+            m_periodTimer.startDeadline();
         }
 
         switch (m_periodicity)
@@ -82,6 +104,7 @@ void Thread::_thread()
             break;
 
             case TP_Continuos:
+            case TP_Continuos_realtime:
             {
                 m_retValue = tick();
             }
@@ -90,7 +113,7 @@ void Thread::_thread()
             case TP_Trigger:
             {
                 m_retValue = tick();
-                stop();
+                if (!isRescheduling()) stop();
             }
             break;
         }
@@ -118,10 +141,7 @@ void Thread::defaultCoolDownCallback(Thread* thread)
 void Thread::_wait()
 {
     if (isRescheduling()) return;  // bypass wait if thread is rescheduling
-    timespec t{};
-    t.tv_nsec = m_time.nanoseconds;
-    t.tv_sec  = m_time.seconds;
-    nanosleep(&t, NULL);
+    m_overrun = m_periodTimer.waitDeadline();
 }
 //=============================================================================
 void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize,
@@ -133,6 +153,7 @@ void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, LS
     {
         if (time.isNull()) throw cIllegalArgExc("Invalid time in Thread creation");
         m_time = time.splittedTime();
+        m_periodTimer.setTime(time);
     }
 
     pthread_attr_t attr{};
@@ -140,7 +161,8 @@ void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, LS
     if (pthread_attr_init(&attr))  // default attributes
         throw cSystemExc("pthread_attr_init function failed");
 
-    const bool isRealtime = (periodicity == ThreadPeriodicity::TP_Periodic_realtime);
+    const bool isRealtime = (periodicity == ThreadPeriodicity::TP_Periodic_realtime ||
+                             periodicity == ThreadPeriodicity::TP_Continuos_realtime);
 
     if (stackSize > 0 && stackSize < PTHREAD_STACK_MIN)
     {
@@ -323,39 +345,57 @@ void Thread::checkIn(const std::string& name)
 Thread::Thread(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize, const CoreSet& coreSet)
     : ThreadBase(periodicity),
       m_pthread(),
+      m_time{},
+      m_periodTimer(),
+      m_overrun(false),
+      m_stack(nullptr),
+      m_stackSize(0),
       m_retValue(0),
       m_tickCallback(&defaultTickCallback),
       m_warmUpCallback(&defaultWarmUpCallback),
-      m_coolDownCallback(&defaultCoolDownCallback),
-      m_stack(nullptr),
-      m_stackSize(0)
+      m_coolDownCallback(&defaultCoolDownCallback)
 {
+#ifndef WINDOWS_SYSTEM
+    crb::core::maskTerminationSignalsForCurrentThread();
+#endif
     _construct(periodicity, time, stackSize, coreSet);
 }
 //=============================================================================
 Thread::Thread(LSIZE stackSize, const CoreSet& coreSet)
     : ThreadBase(TP_Message),
       m_pthread(),
+      m_time{},
+      m_periodTimer(),
+      m_overrun(false),
+      m_stack(nullptr),
+      m_stackSize(0),
       m_retValue(0),
       m_tickCallback(&defaultTickCallback),
       m_warmUpCallback(&defaultWarmUpCallback),
-      m_coolDownCallback(&defaultCoolDownCallback),
-      m_stack(nullptr),
-      m_stackSize(0)
+      m_coolDownCallback(&defaultCoolDownCallback)
 {
+#ifndef WINDOWS_SYSTEM
+    crb::core::maskTerminationSignalsForCurrentThread();
+#endif
     _construct(TP_Message, TimeFrame(), stackSize, coreSet);
 }
 //=============================================================================
 Thread::Thread(ThreadPeriodicity periodicity, LSIZE stackSize, const CoreSet& coreSet)
     : ThreadBase(periodicity),
       m_pthread(),
+      m_time{},
+      m_periodTimer(),
+      m_overrun(false),
+      m_stack(nullptr),
+      m_stackSize(0),
       m_retValue(0),
       m_tickCallback(&defaultTickCallback),
       m_warmUpCallback(&defaultWarmUpCallback),
-      m_coolDownCallback(&defaultCoolDownCallback),
-      m_stack(nullptr),
-      m_stackSize(0)
+      m_coolDownCallback(&defaultCoolDownCallback)
 {
+#ifndef WINDOWS_SYSTEM
+    crb::core::maskTerminationSignalsForCurrentThread();
+#endif
     _construct(periodicity, TimeFrame(), stackSize, coreSet);
 }
 //=============================================================================
@@ -371,6 +411,8 @@ Thread::~Thread()
 }
 //=============================================================================
 SplittedTime Thread::getTime() const { return m_time; }
+//=============================================================================
+bool Thread::isOverrun() const { return m_overrun; }
 //=============================================================================
 IntOpRes Thread::join(bool stop)
 {

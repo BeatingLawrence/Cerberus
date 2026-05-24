@@ -68,5 +68,6 @@
 #define CRB_MESSAGE_TIMEREXPIRY_ID 6u  // sent by cerberus timer to a recipient
 
 #define CRB_CHANNEL_TIMER 1000u  // the channel used by EventScheduler to send a timerexpiry message
+#define TERMINATION_MSG_QUEUE 1024u
 
 #endif  // CERBERUS_DEFINE_H

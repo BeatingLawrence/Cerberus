@@ -6,6 +6,7 @@
 #include <sstream>
 
 #include "core/cerberuscore.h"
+#include "core/signalhandler.h"
 #include "core/cerberusregister.h"
 #include "define.h"
 #include "exception/exception.h"
@@ -263,6 +264,10 @@ void Cerberus::init(const CerberusInitConf& parms)
 {
     CerberusInitConf conf = parms;
 
+#ifndef WINDOWS_SYSTEM
+    crb::core::maskTerminationSignalsForCurrentThread();
+#endif
+
     IniDataFile ini;
     bool iniLoaded = false;
     if (!conf.appConfigurationFile.empty() || conf.initFromFile)
@@ -488,6 +493,15 @@ OpRes Cerberus::send(msg_ptr& message, HASH32 recipientID, HASH32 channel_in)
     auto locker = Cerberus::framework.core.getLocker();
 
     return Cerberus::framework.core.data->sendMsgToObj(recipientID, message, channel_in);
+}
+//=============================================================================
+void Cerberus::subscribeTerminationEvents(Recipient* r)
+{
+    if (!r) return;
+
+    Cerberus::framework.core.isReadySevere();
+    auto locker = Cerberus::framework.core.getLocker();
+    Cerberus::framework.core.data->subscribeTerminationEvents(r);
 }
 //=============================================================================
 OpRes Cerberus::registerTemplate(const msg_ptr& tmplt)

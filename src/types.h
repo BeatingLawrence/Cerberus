@@ -544,6 +544,7 @@ namespace crb
         TP_PeriodicMessage,
         TP_OneShot,
         TP_Continuos,
+        TP_Continuos_realtime,
         TP_Trigger,
     };
 

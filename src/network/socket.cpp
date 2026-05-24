@@ -400,10 +400,21 @@ OpRes Socket::_TLS_send(const ByteBuffer &buffer)
 
         if (err == SSL_ERROR_SYSCALL)
         {
-            if (errno == EPIPE) m_streamConnected = false;
-            r.reason.append(", ");
-            r.reason.append(strerror(errno));
-            r = OR_SystemFailure;
+            m_streamConnected = false;
+
+            if (errno == 0)
+            {
+                // Peer closed the TCP/TLS stream without sending close_notify.
+                // Treat it as a hangup for upper layers instead of a generic system failure.
+                close();
+                r = OR_Hangup;
+            }
+            else
+            {
+                r.reason.append(", ");
+                r.reason.append(strerror(errno));
+                r = OR_SystemFailure;
+            }
         }
         else if (err == SSL_ERROR_ZERO_RETURN)
         {

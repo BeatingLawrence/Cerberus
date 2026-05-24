@@ -51,6 +51,7 @@
  * execution finishes, the join() returns.
  */
 
+#include "../time/systimer.h"
 #include "../time/timeframe.h"
 #include "./threadbase.h"
 
@@ -62,6 +63,8 @@ namespace crb
         pthread_t m_pthread;
 
         SplittedTime m_time;
+        time::SysTimer m_periodTimer;
+        bool m_overrun;
 
         void* m_stack;
         LSIZE m_stackSize;
@@ -111,7 +114,8 @@ namespace crb
         // Construct a non-periodic thread with optional stack size
         Thread(LSIZE stackSize = 0, const CoreSet& coreSet = CoreSet());
 
-        // Construct a thread with given periodicity and optional stack size
+        // Construct a non-timed thread with given periodicity and optional stack size.
+        // TP_Continuos_realtime uses realtime scheduling without a period timer.
         Thread(ThreadPeriodicity periodicity, LSIZE stackSize = 0, const CoreSet& coreSet = CoreSet());
 
         Thread(const Thread& other) = delete;
@@ -123,6 +127,8 @@ namespace crb
         void checkIn(const std::string& name) override;
 
         SplittedTime getTime() const;
+
+        bool isOverrun() const;
 
         // Put the calling thread in sleep state for a given time
         static void sleep(const TimeFrame& time);
