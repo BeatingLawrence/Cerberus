@@ -9,10 +9,19 @@
 using namespace crb;
 
 //=============================================================================
-slot_ptr* Message::_slot(const std::string& name) const
+slot_ptr* Message::_slot(const std::string& name)
 {
     HASH32 h = hashFunc(name);
     for (auto& el : m_slots)
+        if (el->id() == h) return &el;
+
+    return nullptr;
+}
+//=============================================================================
+const slot_ptr* Message::_slot(const std::string& name) const
+{
+    HASH32 h = hashFunc(name);
+    for (const auto& el : m_slots)
         if (el->id() == h) return &el;
 
     return nullptr;

@@ -19,7 +19,8 @@ namespace crb
 
         mutable std::vector<HASH32> m_recipientIds;
 
-        slot_ptr* _slot(const std::string& name) const;
+        slot_ptr* _slot(const std::string& name);
+        const slot_ptr* _slot(const std::string& name) const;
 
         Message(HASH32 id = CRB_INVALID_ID);
 
@@ -77,7 +78,9 @@ namespace crb
             static_assert(std::is_base_of<SlotBase, T>::value,
                           "Message::get<TSlot>: TSlot must derive from SlotBase");
 
-            const auto* slot = getSlot(name)->to<T>();
+            const slot_ptr* p = _slot(name);
+            if (!p) throw cIllegalArgExc("Slot \"%s\" not found", name.c_str());
+            const auto* slot = (*p)->to<T>();
             return (slot->value());
         }
 
@@ -88,7 +91,7 @@ namespace crb
             static_assert(std::is_base_of<SlotBase, T>::value,
                           "Message::has<TSlot>: TSlot must derive from SlotBase");
 
-            slot_ptr* slot = _slot(name);
+            const slot_ptr* slot = _slot(name);
             if (!slot || !(*slot)) return false;
             try
             {

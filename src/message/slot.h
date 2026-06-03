@@ -71,6 +71,23 @@ namespace crb
 
             return casted;
         }
+
+        template <class T>
+        const T* to() const
+        {
+            const T* casted = dynamic_cast<const T*>(this);
+
+            if (casted == nullptr)
+            {
+                throw cIllegalArgExc(
+                    CerberusUtils::strPrint("Invalid slot cast from %s to %s",
+                                            boost::core::demangle(typeid(*this).name()).c_str(),
+                                            boost::core::demangle(typeid(T).name()).c_str())
+                        .c_str());
+            }
+
+            return casted;
+        }
     };
 
     template <typename T>

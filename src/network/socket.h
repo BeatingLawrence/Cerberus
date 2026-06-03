@@ -114,6 +114,10 @@ namespace crb
         // then this method will also do a client TLS handshake.
         OpRes connect(const Host& dest);
 
+        // Connect within timeout, including the client TLS handshake when enabled.
+        // A null timeout retains the blocking behaviour of connect(dest).
+        OpRes connect(const Host& dest, const TimeFrame& timeout);
+
         // Send out a buffer
         OpRes send(const ByteBuffer& buffer, bool donotblock = false);
 
