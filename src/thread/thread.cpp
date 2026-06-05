@@ -45,6 +45,7 @@ void Thread::_thread()
     {
         pause();
 
+        const bool wasRescheduled = isRescheduling();
         resetRescheduling();
 
         while (true)
@@ -76,7 +77,7 @@ void Thread::_thread()
         {
             case TP_Message:
             {
-                if (hasMessage()) m_retValue = tick();
+                if (wasRescheduled || hasMessage()) m_retValue = tick();
                 queueCheckStop();
             }
             break;

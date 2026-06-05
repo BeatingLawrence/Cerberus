@@ -8,6 +8,9 @@
 #include <openssl/ssl.h>
 #include <poll.h>
 #include <src/thread/thread.h>
+#include <chrono>
+#include <climits>
+#include <fcntl.h>
 #include <string.h>
 
 #include "src/cerberus.h"
@@ -58,6 +61,46 @@ static inline int SSL_read_ex(SSL *ssl, void *buf, size_t num, size_t *readbytes
 #define DEFAULT_MAX_CONNECTIONS 15
 
 using namespace crb;
+
+namespace
+{
+    int pollTimeoutMs(const std::chrono::steady_clock::time_point& deadline)
+    {
+        const auto remainingUs =
+            std::chrono::duration_cast<std::chrono::microseconds>(deadline - std::chrono::steady_clock::now())
+                .count();
+        if (remainingUs <= 0) return 0;
+
+        const auto remainingMs = (remainingUs + 999) / 1000;
+        return remainingMs > INT_MAX ? INT_MAX : static_cast<int>(remainingMs);
+    }
+
+    OpRes waitSocketEvent(int fd, short events, const std::chrono::steady_clock::time_point& deadline)
+    {
+        while (true)
+        {
+            pollfd set{};
+            set.fd = fd;
+            set.events = events;
+
+            const int timeoutMs = pollTimeoutMs(deadline);
+            if (timeoutMs == 0) return OR_TimedOut;
+
+            const int ret = poll(&set, 1, timeoutMs);
+            if (ret == 0) return OR_TimedOut;
+            if (ret == -1)
+            {
+                if (errno == EINTR) continue;
+                return {OR_SystemFailure, CerberusUtils::strPrint("error in poll: %s", strerror(errno))};
+            }
+            if (set.revents & events) return OR_OK;
+            if (set.revents & POLLHUP) return OR_Hangup;
+            if (set.revents & POLLNVAL) return OR_BadConditions;
+            if (set.revents & POLLERR) return OR_Failure;
+            return OR_Failure;
+        }
+    }
+}
 
 //=============================================================================
 Socket::Socket(SocketType type, int fd, const Host &remote, SSL_CTX *ctx)
@@ -735,6 +778,121 @@ OpRes Socket::connect(const Host &dest)
 
     if (_TLS_handshake(false, dest).fail()) return OR_Failure;
 
+    return OR_OK;
+}
+//=============================================================================
+OpRes Socket::connect(const Host &dest, const TimeFrame &timeout)
+{
+    if (timeout.isNull()) return connect(dest);
+    if (isFailed()) return OR_FailedInstance;
+    if (m_streamConnected) return OR_Unavailable;
+    if (transportType() != TCP) return connect(dest);
+
+    Host h = dest;
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(h.port);
+
+    if (!h.hostname.empty() && !h.resolved) h.resolve();
+
+    if (h.octet_networkOrder == 0)
+        addr.sin_addr.s_addr = INADDR_ANY;
+    else
+        addr.sin_addr.s_addr = h.octet_networkOrder;
+
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::microseconds(timeout.toMicroseconds());
+    const int oldFlags = fcntl(m_fd, F_GETFL, 0);
+    if (oldFlags == -1)
+        return {OR_SystemFailure, CerberusUtils::strPrint("fcntl(F_GETFL) failed: %s", strerror(errno))};
+    if (fcntl(m_fd, F_SETFL, oldFlags | O_NONBLOCK) == -1)
+        return {OR_SystemFailure, CerberusUtils::strPrint("fcntl(F_SETFL) failed: %s", strerror(errno))};
+
+    auto restoreBlockingMode = [this, oldFlags]() -> OpRes
+    {
+        if (fcntl(m_fd, F_SETFL, oldFlags) == -1)
+            return {OR_SystemFailure, CerberusUtils::strPrint("fcntl(F_SETFL) failed: %s", strerror(errno))};
+        return OR_OK;
+    };
+
+    int ret = ::connect(m_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_in));
+    if (ret == -1 && errno == EINPROGRESS)
+    {
+        auto wait = waitSocketEvent(m_fd, POLLOUT, deadline);
+        if (wait.fail())
+        {
+            close();
+            return wait;
+        }
+
+        int socketError = 0;
+        socklen_t errorLen = sizeof(socketError);
+        if (getsockopt(m_fd, SOL_SOCKET, SO_ERROR, &socketError, &errorLen) == -1)
+        {
+            const auto reason = CerberusUtils::strPrint("getsockopt(SO_ERROR) failed: %s", strerror(errno));
+            close();
+            return {OR_SystemFailure, reason};
+        }
+        if (socketError != 0)
+        {
+            const auto reason = CerberusUtils::strPrint("error in socket connect: %s", strerror(socketError));
+            close();
+            return {OR_Failure, reason};
+        }
+    }
+    else if (ret == -1)
+    {
+        const int savedErrno = errno;
+        close();
+        return {OR_Failure, CerberusUtils::strPrint("error in socket connect: %s", strerror(savedErrno))};
+    }
+
+    m_streamConnected = true;
+    m_remote = h;
+
+    if (isTLS())
+    {
+        _TLS_destroy();
+        auto res = _TLS_create();
+        if (res.ok()) res = _TLS_associate();
+        if (res.ok())
+        {
+            SSL_set_connect_state(m_ssl);
+            if (dest.isTextual() && SSL_set_tlsext_host_name(m_ssl, dest.hostname.c_str()) == 0)
+                res = {OR_Failure, "SSL_set_tlsext_host_name failed"};
+        }
+
+        while (res.ok())
+        {
+            const int handshake = SSL_do_handshake(m_ssl);
+            if (handshake == 1) break;
+
+            const int sslError = SSL_get_error(m_ssl, handshake);
+            if (sslError != SSL_ERROR_WANT_READ && sslError != SSL_ERROR_WANT_WRITE)
+            {
+                res = {OR_Failure, "SSL_do_handshake failed", printSSLErrors()};
+                break;
+            }
+
+            res = waitSocketEvent(m_fd,
+                                  sslError == SSL_ERROR_WANT_READ ? POLLIN : POLLOUT,
+                                  deadline);
+        }
+
+        if (res.fail())
+        {
+            _TLS_destroy();
+            close();
+            return res;
+        }
+    }
+
+    auto restore = restoreBlockingMode();
+    if (restore.fail())
+    {
+        close();
+        return restore;
+    }
     return OR_OK;
 }
 //=============================================================================
