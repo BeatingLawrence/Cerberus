@@ -10,7 +10,7 @@
 
 namespace crb
 {
-    class CERBERUS_EXPORT Exception : public std::exception
+    class Exception : public std::exception
     {
        private:
         std::string m_error;
@@ -30,18 +30,19 @@ namespace crb
             ET_Fatal,                  // exception thrown for crucial pieces of code
         };
 
-        Exception() noexcept;
+        CERBERUS_EXPORT Exception() noexcept;
 
-        Exception(const Exception& other) noexcept;
+        CERBERUS_EXPORT Exception(const Exception& other) noexcept;
 
-        Exception(ExceptionType type, uint32_t line = 0, const char* fileName = nullptr,
-                  const char* format = nullptr, ...) noexcept;
+        CERBERUS_EXPORT Exception(ExceptionType type, uint32_t line = 0,
+                                  const char* fileName = nullptr,
+                                  const char* format = nullptr, ...) noexcept;
 
-        Exception& operator=(const Exception& other) noexcept;
+        CERBERUS_EXPORT Exception& operator=(const Exception& other) noexcept;
 
-        virtual ~Exception();
+        CERBERUS_EXPORT virtual ~Exception();
 
-        virtual const char* what() const noexcept;
+        CERBERUS_EXPORT virtual const char* what() const noexcept;
     };
 }  // namespace crb
 #endif  // CERBERUS_EXCEPTION_H

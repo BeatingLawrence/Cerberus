@@ -33,14 +33,14 @@ namespace crb
        public:
         DBCell() = default;
 
-        DBCell(int64_t value);
-        DBCell(float value);
-        DBCell(long double value);
-        DBCell(bool value);
-        DBCell(const std::vector<bool>& value);
-        DBCell(const std::string& str);
-        DBCell(const char* str);
-        DBCell(const ByteBuffer& raw);
+        CERBERUS_EXPORT DBCell(int64_t value);
+        CERBERUS_EXPORT DBCell(float value);
+        CERBERUS_EXPORT DBCell(long double value);
+        CERBERUS_EXPORT DBCell(bool value);
+        CERBERUS_EXPORT DBCell(const std::vector<bool>& value);
+        CERBERUS_EXPORT DBCell(const std::string& str);
+        CERBERUS_EXPORT DBCell(const char* str);
+        CERBERUS_EXPORT DBCell(const ByteBuffer& raw);
 
         void set(const std::string& str);
         void set(const char* str);
@@ -49,14 +49,14 @@ namespace crb
         void set(bool value);
         void set(const std::vector<bool>& value);
 
-        ByteBuffer& raw();
-        const ByteBuffer& raw() const;
+        CERBERUS_EXPORT ByteBuffer& raw();
+        CERBERUS_EXPORT const ByteBuffer& raw() const;
 
         ByteBuffer serialize(DBDataType type, DBMOD mod) const;
 
-        int64_t toInt() const;
-        long double toReal() const;
-        bool toBool() const;
+        CERBERUS_EXPORT int64_t toInt() const;
+        CERBERUS_EXPORT long double toReal() const;
+        CERBERUS_EXPORT bool toBool() const;
         std::vector<bool> toBits() const;
 
         LSIZE size() const;
@@ -104,17 +104,17 @@ namespace crb
 
        public:
         DBQuery() = default;
-        explicit DBQuery(const std::string& tableName);
+        explicit CERBERUS_EXPORT DBQuery(const std::string& tableName);
 
         const std::string& table() const;
         void setTable(const std::string& tableName);
 
         const DBQueryCondition& condition() const;
-        DBQueryCondition& condition();
+        CERBERUS_EXPORT DBQueryCondition& condition();
 
         const std::vector<std::string>& columns() const;
         void setColumns(const std::vector<std::string>& columns);
-        void addColumn(const std::string& column);
+        CERBERUS_EXPORT void addColumn(const std::string& column);
         bool selectAllColumns() const;
 
         OpRes validate() const;
@@ -129,23 +129,23 @@ namespace crb
         std::unique_ptr<DBTableProto> m_protoOwned;
 
        public:
-        DBRow();
+        CERBERUS_EXPORT DBRow();
 
-        DBRow(const DBRow& other);
+        CERBERUS_EXPORT DBRow(const DBRow& other);
 
-        DBRow& operator=(const DBRow& other);
+        CERBERUS_EXPORT DBRow& operator=(const DBRow& other);
 
         DBRow(DBRow&& other) noexcept = default;
         DBRow& operator=(DBRow&& other) noexcept = default;
 
-        ~DBRow();
+        CERBERUS_EXPORT ~DBRow();
 
         void bindPrototype(const DBTableProto* proto);
         void detachPrototype();
         bool hasPrototype() const;
         const DBTableProto* prototype() const;
 
-        void append(const DBCell& value);
+        CERBERUS_EXPORT void append(const DBCell& value);
         void append(int64_t v) { append(DBCell(v)); }
         void append(int32_t v) { append(DBCell((int64_t)v)); }
         void append(int16_t v) { append(DBCell((int64_t)v)); }
@@ -164,19 +164,19 @@ namespace crb
 
         size_t size() const;
 
-        void clear();
+        CERBERUS_EXPORT void clear();
 
-        bool verify(const DBTableProto& proto) const;
+        CERBERUS_EXPORT bool verify(const DBTableProto& proto) const;
 
         ByteBuffer serialize(const DBTableProto& proto) const;
 
-        const DBCell& operator[](size_t pos) const;
-        DBCell& operator[](size_t pos);
-        const DBCell& operator[](const std::string& column) const;
-        DBCell& operator[](const std::string& column);
+        CERBERUS_EXPORT const DBCell& operator[](size_t pos) const;
+        CERBERUS_EXPORT DBCell& operator[](size_t pos);
+        CERBERUS_EXPORT const DBCell& operator[](const std::string& column) const;
+        CERBERUS_EXPORT DBCell& operator[](const std::string& column);
 
-        Iterator<DBCell> begin();
-        Iterator<DBCell> end();
+        CERBERUS_EXPORT Iterator<DBCell> begin();
+        CERBERUS_EXPORT Iterator<DBCell> end();
 
         ConstIterator<DBCell> begin() const;
         ConstIterator<DBCell> end() const;
@@ -227,37 +227,38 @@ namespace crb
         std::vector<DBColumn> m_types;
 
        public:
-        DBTableProto(const std::string& name = "");
+        CERBERUS_EXPORT DBTableProto(const std::string& name = "");
 
-        DBTableProto& add(const std::string& name, DBDataType type, DBMOD mod = 0, DBFLAGS flags = DBF_None);
-        DBTableProto& add(const std::string& name, DBDataType type, DBMOD mod, DBFLAGS flags,
-                          const DBCell& defaultValue);
+        CERBERUS_EXPORT DBTableProto& add(const std::string& name, DBDataType type, DBMOD mod = 0,
+                                          DBFLAGS flags = DBF_None);
+        CERBERUS_EXPORT DBTableProto& add(const std::string& name, DBDataType type, DBMOD mod,
+                                          DBFLAGS flags, const DBCell& defaultValue);
 
         // Mark a single column as primary key (by name or index)
         OpRes setPrimaryKey(const std::string& name);
         OpRes setPrimaryKey(size_t index);
 
         int primaryKeyIndex() const;
-        int columnIndex(const std::string& name) const;
+        CERBERUS_EXPORT int columnIndex(const std::string& name) const;
         OpRes renameColumn(const std::string& oldName, const std::string& newName);
 
-        const DBColumn& operator[](int index) const;
-        DBColumn& operator[](int index);
+        CERBERUS_EXPORT const DBColumn& operator[](int index) const;
+        CERBERUS_EXPORT DBColumn& operator[](int index);
 
         void clear();
 
-        size_t size() const;
+        CERBERUS_EXPORT size_t size() const;
 
-        bool isEqual(const DBTableProto& other) const;
+        CERBERUS_EXPORT bool isEqual(const DBTableProto& other) const;
 
         std::string name() const;
         void setName(const std::string& name);
 
-        Iterator<DBColumn> begin();
-        Iterator<DBColumn> end();
+        CERBERUS_EXPORT Iterator<DBColumn> begin();
+        CERBERUS_EXPORT Iterator<DBColumn> end();
 
-        ConstIterator<DBColumn> begin() const;
-        ConstIterator<DBColumn> end() const;
+        CERBERUS_EXPORT ConstIterator<DBColumn> begin() const;
+        CERBERUS_EXPORT ConstIterator<DBColumn> end() const;
     };
 
     class DBTableBlock
@@ -271,58 +272,58 @@ namespace crb
 
         DBTableBlock(const DBTableBlock& other) = default;
 
-        DBTableBlock(const std::string& name);
+        CERBERUS_EXPORT DBTableBlock(const std::string& name);
 
-        DBTableBlock(const DBTableProto& proto);
+        CERBERUS_EXPORT DBTableBlock(const DBTableProto& proto);
 
         DBTableBlock(const DBRow& row);
 
-        ~DBTableBlock();
+        CERBERUS_EXPORT ~DBTableBlock();
 
-        OpRes append(const DBRow& row);
+        CERBERUS_EXPORT OpRes append(const DBRow& row);
 
-        size_t size() const;
+        CERBERUS_EXPORT size_t size() const;
 
-        bool empty() const;
+        CERBERUS_EXPORT bool empty() const;
 
         void clear();
 
-        bool structured() const;
+        CERBERUS_EXPORT bool structured() const;
 
         void clearStructure();
 
         void clearRows();
 
-        void setPrototype(const DBTableProto& prototype);
+        CERBERUS_EXPORT void setPrototype(const DBTableProto& prototype);
 
         void assignRows(const DBTableBlock& other);
 
         bool verify() const;
 
-        bool verify(const DBTableProto& proto) const;
+        CERBERUS_EXPORT bool verify(const DBTableProto& proto) const;
 
         ByteBuffer serialize(const DBTableProto& proto) const;
 
-        const DBTableProto& prototype() const;
+        CERBERUS_EXPORT const DBTableProto& prototype() const;
 
         DBTableBlock& addColumn(const std::string& name, DBDataType type, DBMOD mod = 0,
                                 DBFLAGS flags = DBF_None);
         DBTableBlock& addColumn(const std::string& name, DBDataType type, DBMOD mod, DBFLAGS flags,
                                 const DBCell& defaultValue);
 
-        std::string toString() const;
+        CERBERUS_EXPORT std::string toString() const;
 
         const DBRow& operator[](size_t pos) const;
-        DBRow& operator[](size_t pos);
+        CERBERUS_EXPORT DBRow& operator[](size_t pos);
 
         bool operator==(const DBTableBlock& other) const;
         bool operator!=(const DBTableBlock& other) const;
 
-        Iterator<DBRow> begin();
-        Iterator<DBRow> end();
+        CERBERUS_EXPORT Iterator<DBRow> begin();
+        CERBERUS_EXPORT Iterator<DBRow> end();
 
-        ConstIterator<DBRow> begin() const;
-        ConstIterator<DBRow> end() const;
+        CERBERUS_EXPORT ConstIterator<DBRow> begin() const;
+        CERBERUS_EXPORT ConstIterator<DBRow> end() const;
     };
 }  // namespace crb
 

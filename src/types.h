@@ -74,8 +74,8 @@ namespace crb
         {
         }
 
-        HASH32(const char* str);
-        HASH32(const std::string& str);
+        CERBERUS_EXPORT HASH32(const char* str);
+        CERBERUS_EXPORT HASH32(const std::string& str);
 
         HASH32& operator=(uint32_t value) noexcept
         {
@@ -99,8 +99,8 @@ namespace crb
             return *this;
         }
 
-        HASH32& operator=(const char* str);
-        HASH32& operator=(const std::string& str);
+        CERBERUS_EXPORT HASH32& operator=(const char* str);
+        CERBERUS_EXPORT HASH32& operator=(const std::string& str);
 
         constexpr operator uint32_t() const noexcept { return m_value; }
         constexpr uint32_t value() const noexcept { return m_value; }
@@ -324,7 +324,7 @@ namespace crb
                 ret.append("/");
             }
 
-            ret.pop_back();  // remove last '/'
+            if (!ret.empty()) ret.pop_back();  // remove last '/'
 
             return ret;
         }
@@ -334,11 +334,26 @@ namespace crb
             clear();
             std::string tmp;
 
+            if (str.empty())
+            {
+                absolute = false;
+                return;
+            }
+
+#ifdef WINDOWS_SYSTEM
+            absolute = str.front() == '/' || str.front() == '\\';
+#else
             absolute = str.front() == '/';
+#endif
 
             for (auto& el : str)
             {
-                if (el == '/')
+#ifdef WINDOWS_SYSTEM
+                const bool separator = el == '/' || el == '\\';
+#else
+                const bool separator = el == '/';
+#endif
+                if (separator)
                 {
                     if (!tmp.empty()) push_back(tmp);  // TODO USE REGEX
                     tmp.clear();
@@ -669,7 +684,7 @@ namespace crb
     {
         virtual ~Clonable()             = default;
         virtual Clonable* clone() const = 0;  // return a copy-constructed instance of this
-        virtual SIZE memfp() const      = 0;  // return the memory footprint of this
+        virtual LSIZE memfp() const     = 0;  // return the memory footprint of this
     };
 
     // -------------------------------------------------------------------------------
@@ -692,14 +707,7 @@ namespace crb
         {
             _enforce_clonable();
             if (!p) return nullptr;
-            Clonable* base = p->clone();
-            T* casted      = dynamic_cast<T*>(base);
-            if (!casted)
-            {
-                delete base;
-                throw cInvalidCastExc("");
-            }
-            return casted;
+            return reinterpret_cast<T*>(reinterpret_cast<const Clonable*>(p)->clone());
         }
 
        public:
@@ -719,9 +727,17 @@ namespace crb
         managed_ptr(managed_ptr&&) noexcept            = default;
         managed_ptr& operator=(managed_ptr&&) noexcept = default;
 
-        // copy (deleted)
-        managed_ptr(const managed_ptr& other)            = delete;
-        managed_ptr& operator=(const managed_ptr& other) = delete;
+        // deep copy
+        managed_ptr(const managed_ptr& other)
+            : _ptr(clone_to_T(other.get()))
+        {
+        }
+
+        managed_ptr& operator=(const managed_ptr& other)
+        {
+            if (this != &other) _ptr.reset(clone_to_T(other.get()));
+            return *this;
+        }
 
         T* get() const noexcept { return _ptr.get(); }
 
@@ -762,11 +778,11 @@ namespace crb
             return managed_ptr{clone_to_T(get())};
         }
 
-        size_t memFootprint() const
+        LSIZE memFootprint() const
         {
             _enforce_clonable();
-            if (!get()) return sizeof(*this);
-            return get()->memfp() + sizeof(*this);
+            if (!get()) return static_cast<LSIZE>(sizeof(*this));
+            return get()->memfp() + static_cast<LSIZE>(sizeof(*this));
         }
     };
 
@@ -793,19 +809,19 @@ namespace crb
        public:
         Opaque()
             : value() {}
-        Opaque(const char* str);
-        Opaque(const std::string& str);
-        Opaque(int val);
-        Opaque(unsigned int val);
-        Opaque(int64_t val);
-        Opaque(uint64_t val);
-        explicit Opaque(double val);
-        explicit Opaque(float val);
-        explicit Opaque(bool val);
+        CERBERUS_EXPORT Opaque(const char* str);
+        CERBERUS_EXPORT Opaque(const std::string& str);
+        CERBERUS_EXPORT Opaque(int val);
+        CERBERUS_EXPORT Opaque(unsigned int val);
+        CERBERUS_EXPORT Opaque(int64_t val);
+        CERBERUS_EXPORT Opaque(uint64_t val);
+        explicit CERBERUS_EXPORT Opaque(double val);
+        explicit CERBERUS_EXPORT Opaque(float val);
+        explicit CERBERUS_EXPORT Opaque(bool val);
 
         // return the contained type of data. priority: double(highest) > integer > bool > invalid
-        DataType type() const;
-        const std::string& get() const;
+        CERBERUS_EXPORT DataType type() const;
+        CERBERUS_EXPORT const std::string& get() const;
 
         void set(const std::string& str);  // set the string value
         void setInt(int64_t val);          // set the integer value
@@ -816,9 +832,9 @@ namespace crb
         Opaque& operator=(const std::string& str);  // set the string value
 
         // value getters. Throw if invalid data type is requested
-        int64_t getInt();
-        double getDouble();
-        bool getBool();
+        CERBERUS_EXPORT int64_t getInt();
+        CERBERUS_EXPORT double getDouble();
+        CERBERUS_EXPORT bool getBool();
     };
 
     enum JsonDataType : uint8_t
@@ -917,49 +933,49 @@ namespace crb
 
         std::vector<Result> optional;
 
-        OpRes();
+        CERBERUS_EXPORT OpRes();
 
-        OpRes(Result r, const std::string& reason = "", const std::string& reason2 = "");
+        CERBERUS_EXPORT OpRes(Result r, const std::string& reason = "", const std::string& reason2 = "");
 
-        OpRes(const OpRes& opres, const std::string& reason = "");
+        CERBERUS_EXPORT OpRes(const OpRes& opres, const std::string& reason = "");
 
         bool operator==(const OpRes& other) const noexcept { return res == other.res; }
         bool operator!=(const OpRes& other) const noexcept { return res != other.res; }
 
-        bool operator==(Result r) const;
-        bool operator!=(Result r) const;
+        CERBERUS_EXPORT bool operator==(Result r) const;
+        CERBERUS_EXPORT bool operator!=(Result r) const;
 
         // Throw a generic exception with the given text only if the result is failed
-        OpRes& expect(const std::string& str);
+        CERBERUS_EXPORT OpRes& expect(const std::string& str);
 
         // Throw a generic exception with the given text only if the result fails and
         // only if it fails with the given reason
-        OpRes& expect(Result reason, const std::string& str);
+        CERBERUS_EXPORT OpRes& expect(Result reason, const std::string& str);
 
         // Throw a generic exception with the result status text only if the result fails
-        OpRes& expect();
+        CERBERUS_EXPORT OpRes& expect();
 
         // Return true if the Result is OR_OK, false otherwise.
         // If print is specified, the error string will be printed with the internal error info
-        bool ok(const std::string& str = "");
+        CERBERUS_EXPORT bool ok(const std::string& str = "");
 
         // Return false if the Result is OR_OK, true otherwise.
         // If print is specified, the error string will be printed with the internal error info
-        bool fail(const std::string& str = "");
+        CERBERUS_EXPORT bool fail(const std::string& str = "");
 
         // Translate the Result variable into a string
-        std::string errorString() const;
+        CERBERUS_EXPORT std::string errorString() const;
 
         // Translate the entire Result into a string
-        std::string toStr() const;
+        CERBERUS_EXPORT std::string toStr() const;
 
-        OpRes& addOptional(Result opt);
+        CERBERUS_EXPORT OpRes& addOptional(Result opt);
 
-        bool hasOptional(Result opt);
+        CERBERUS_EXPORT bool hasOptional(Result opt);
 
-        OpRes& addInfo(const std::string& str);
+        CERBERUS_EXPORT OpRes& addInfo(const std::string& str);
 
-        SIZE memfp() const;
+        CERBERUS_EXPORT LSIZE memfp() const;
     };
 
     // The OpResData template class is useful to exchange some custom data alongside with the result
@@ -1058,7 +1074,11 @@ namespace crb
     struct DictLine
     {
         std::string key, val;
-        SIZE sz() const { return key.capacity() + val.capacity() + (sizeof(std::string) * 2); }
+        LSIZE sz() const
+        {
+            return static_cast<LSIZE>(key.capacity()) + static_cast<LSIZE>(val.capacity()) +
+                   static_cast<LSIZE>(sizeof(std::string) * 2);
+        }
     };
 
     class Dictionary : public std::vector<DictLine>
@@ -1066,44 +1086,45 @@ namespace crb
        public:
         // Get the value of a field as text.
         // This method will return OR_NotFound if the requested field name was not found.
-        StringOpRes getFieldValue(const std::string& key, WordMatch match = WM_CaseSensitive) const;
+        CERBERUS_EXPORT StringOpRes getFieldValue(const std::string& key,
+                                                  WordMatch match = WM_CaseSensitive) const;
 
         // Check if a field value matches with value
         // This method will return OR_OK if the key value of the dictionary matches against
         // the provided value argument (the match policy is specified in the valmatch argument),
         // OR_NotFound if the requested field name was not found,
         // OR_Mismatch if the field name was found but it does not match with the specified value.
-        OpRes getFieldMatch(const std::string& key, const std::string& value,
-                            WordMatch keymatch = WM_CaseSensitive,
-                            WordMatch valmatch = WM_CaseSensitive) const;
+        CERBERUS_EXPORT OpRes getFieldMatch(const std::string& key, const std::string& value,
+                                            WordMatch keymatch = WM_CaseSensitive,
+                                            WordMatch valmatch = WM_CaseSensitive) const;
 
         // Get the name of the field at the index position.
         // An exception is thrown if index is out of bounds
-        std::string getNameAt(SIZE index) const;
+        CERBERUS_EXPORT std::string getNameAt(SIZE index) const;
 
         // Get the value of the field at the index position.
         // An exception is thrown if index is out of bounds
-        std::string getValueAt(SIZE index) const;
+        CERBERUS_EXPORT std::string getValueAt(SIZE index) const;
 
         // Add a key at the end of the dictionary
-        Dictionary& addKey(const std::string& key, const std::string& value);
+        CERBERUS_EXPORT Dictionary& addKey(const std::string& key, const std::string& value);
 
         // Get a line by reference
         // An exception is thrown if index is out of bounds
-        DictLine& get(SIZE index);
+        CERBERUS_EXPORT DictLine& get(SIZE index);
 
         // Get a line by reference
         // An exception is thrown if key does not exist
-        DictLine& get(const std::string& key, WordMatch match = WM_CaseSensitive);
+        CERBERUS_EXPORT DictLine& get(const std::string& key, WordMatch match = WM_CaseSensitive);
 
         // Tell if a key is present in the dictionary
-        bool exists(const std::string& key, WordMatch match = WM_CaseSensitive);
+        CERBERUS_EXPORT bool exists(const std::string& key, WordMatch match = WM_CaseSensitive);
 
         // Print all the lines of the dictionary on a string
-        std::string toString() const;
+        CERBERUS_EXPORT std::string toString() const;
 
         // Return the allocated memory
-        SIZE memfp() const;
+        CERBERUS_EXPORT LSIZE memfp() const;
     };
 
     struct Host
@@ -1124,66 +1145,66 @@ namespace crb
         bool resolved;
 
         // Construct an invalid Host (0.0.0.0:0)
-        Host();
+        CERBERUS_EXPORT Host();
 
         // Construct an Host with str as hostname if it contains at least one letter,
         // otherwise str will be used to extract ip:port with a stringToHost() call.
-        Host(const std::string& str);
+        CERBERUS_EXPORT Host(const std::string& str);
 
         // Same as above
-        Host(const char* str);
+        CERBERUS_EXPORT Host(const char* str);
 
         // Take an ip address in the form of x.x.x.x or x.x.x.x:yyyyy
         // and return an Host object with numeric IP and port members filled
         // It is possible to use "any", "local" or "broadcast" (case insensitive) in place of the
         // IP address to specify 'any interface', 'localhost' and '255.255.255.255' respectively.
         // An invalid Host is returned if the conversion fails
-        static Host stringToHost(const std::string& str);
+        CERBERUS_EXPORT static Host stringToHost(const std::string& str);
 
         // Build a Host from address and port without concatenating "address:port" manually.
         // Address may be numeric IPv4 or textual hostname. Port 0 yields an invalid remote host.
-        static Host fromAddressPort(const std::string& address, uint16_t port);
+        CERBERUS_EXPORT static Host fromAddressPort(const std::string& address, uint16_t port);
 
         // Extract the port number from the given string.
         // The port number must be the last element in the string and must
         // be preceded by a column :
         // If no port is found, 0 is returned
-        static uint16_t getPort(const std::string& str);
+        CERBERUS_EXPORT static uint16_t getPort(const std::string& str);
 
         // Extract a numeric IP address and port and saves them in this Host instance.
         // The instance becomes invalid if the conversion fails
-        bool fromString(const std::string& str);
+        CERBERUS_EXPORT bool fromString(const std::string& str);
 
         // Print only the host part when port==0, otherwise print host:port.
         // Host part is hostname when textual, numeric IPv4 otherwise.
-        std::string toString() const;
+        CERBERUS_EXPORT std::string toString() const;
 
         // Print the numeric IPv4 address only (x.x.x.x), regardless of port.
-        std::string ipToString() const;
+        CERBERUS_EXPORT std::string ipToString() const;
 
         // Tells if the Host is valid
-        bool isValid() const;
+        CERBERUS_EXPORT bool isValid() const;
 
         // Tell if the Host is valid for remote usage, e.g. connect() or sendTo().
         // For this method to return true, the Host must have a valid port
         // and either an hostname OR a numerical IP address
-        bool isValidRemote() const;
+        CERBERUS_EXPORT bool isValidRemote() const;
 
         // Tell if the Host is valid for remote usage with numeric IPv4 only.
-        bool isValidNumericRemote() const;
+        CERBERUS_EXPORT bool isValidNumericRemote() const;
 
         // Tell if the Host has a valid numerical IP
-        bool isNumeric() const;
+        CERBERUS_EXPORT bool isNumeric() const;
 
         // Tell if the Host has an hostname
-        bool isTextual() const;
+        CERBERUS_EXPORT bool isTextual() const;
 
         // Tell if the Host has a valid port (port != 0)
-        bool hasPort() const;
+        CERBERUS_EXPORT bool hasPort() const;
 
         // Resolve the given Host using the hostname member.
         // The resulting numeric IP address is written in the ip parameter
-        OpRes resolve();
+        CERBERUS_EXPORT OpRes resolve();
     };
 
     class ByteBuffer;

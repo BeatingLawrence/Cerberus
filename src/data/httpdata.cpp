@@ -1,15 +1,18 @@
 #include "httpdata.h"
 
 #include "../core/cerberusutils.h"
+#include "../exception/exception.h"
+
+#include <limits>
 
 using namespace crb;
 
 static constexpr const char *contentlen = "Content-Length";
 
 //=============================================================================
-void HTTPData::setPayloadSize(SIZE s)
+void HTTPData::setPayloadSize(crb::LSIZE s)
 {
-    auto str = CerberusUtils::strPrint("%u", s);
+    auto str = CerberusUtils::strPrint_uint(s);
 
     if (m_header.exists(contentlen, WM_CaseInsensitive))
     {
@@ -106,7 +109,15 @@ HTTPData &HTTPData::clearHeader()
     return *this;
 }
 //=============================================================================
-SIZE HTTPData::getHeaderSize() const { return m_header.size(); }
+crb::SIZE HTTPData::getHeaderSize() const
+{
+    if (m_header.size() > std::numeric_limits<SIZE>::max())
+    {
+        throw cIllegalStateExc("HTTP header has too many fields");
+    }
+
+    return static_cast<SIZE>(m_header.size());
+}
 //=============================================================================
 StringOpRes HTTPData::getHeaderField(const std::string &key) const
 {
@@ -118,9 +129,9 @@ OpRes HTTPData::getHeaderMatch(const std::string &key, const std::string &value)
     return m_header.getFieldMatch(key, value, WM_CaseInsensitive, WM_CaseSensitive);
 }
 //=============================================================================
-std::string HTTPData::getHeaderFieldName(SIZE index) const { return m_header.getNameAt(index); }
+std::string HTTPData::getHeaderFieldName(crb::SIZE index) const { return m_header.getNameAt(index); }
 //=============================================================================
-std::string HTTPData::getHeaderFieldValue(SIZE index) const { return m_header.getValueAt(index); }
+std::string HTTPData::getHeaderFieldValue(crb::SIZE index) const { return m_header.getValueAt(index); }
 //=============================================================================
 HTTPRequest::HTTPRequest()
     : method(HTTP_GET),
@@ -188,7 +199,7 @@ ByteBuffer HTTPRequest::data() const
             break;
     }
 
-    for (SIZE i = 0; i < getHeaderSize(); i++)
+    for (crb::SIZE i = 0; i < getHeaderSize(); i++)
     {
         buf.appendString(CerberusUtils::strPrint("%s: %s\r\n", getHeaderFieldName(i).c_str(),
                                                  getHeaderFieldValue(i).c_str())
@@ -237,7 +248,7 @@ ByteBuffer HTTPResponse::data() const
     buf.appendString(message.c_str());
     buf.append("\r\n");
 
-    for (SIZE i = 0; i < getHeaderSize(); i++)
+    for (crb::SIZE i = 0; i < getHeaderSize(); i++)
     {
         buf.appendString(CerberusUtils::strPrint("%s: %s\r\n", getHeaderFieldName(i).c_str(),
                                                  getHeaderFieldValue(i).c_str())

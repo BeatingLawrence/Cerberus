@@ -254,7 +254,18 @@ void SysTimer::provideTimeoutCallback(timerCallback callback, void *ctx)
 #else
 #include "src/cerberus.h"
 
+#include <chrono>
+#include <thread>
+
 using namespace crb::time;
+
+namespace
+{
+uint64_t toNs(const crb::TimeFrame& time)
+{
+    return time.toMicroseconds() * 1000u;
+}
+}  // namespace
 
 //=============================================================================
 void SysTimer::defaultTimeoutCallback(void *ctx)
@@ -263,23 +274,16 @@ void SysTimer::defaultTimeoutCallback(void *ctx)
     // noop
 }
 //=============================================================================
-void SysTimer::mainCallback(sigval val)
-{
-    (void)val;
-    // noop
-}
-//=============================================================================
 bool SysTimer::ensureTimer()
 {
-    m_failed = true;
-    return false;
+    m_timerCreated = true;
+    return true;
 }
 //=============================================================================
 SysTimer::SysTimer()
     : m_callback(&defaultTimeoutCallback),
       m_ctx(nullptr),
       m_running(false),
-      m_timerId(0),
       m_timerCreated(false),
       m_failed(false),
       m_periodic(false),
@@ -297,12 +301,11 @@ SysTimer::SysTimer(const TimeFrame &time, bool periodic)
     : m_callback(&defaultTimeoutCallback),
       m_ctx(nullptr),
       m_running(false),
-      m_timerId(0),
       m_timerCreated(false),
       m_failed(false),
       m_periodic(periodic),
       m_time(time),
-      m_periodNs(time.toMicroseconds() * 1000u),
+      m_periodNs(toNs(time)),
       m_nextDeadline{},
       m_deadlineArmed(false),
       m_overrun(false)
@@ -312,15 +315,25 @@ SysTimer::SysTimer(const TimeFrame &time, bool periodic)
 void SysTimer::setTime(const TimeFrame &time)
 {
     m_time = time;
-    m_periodNs = time.toMicroseconds() * 1000u;
+    m_periodNs = toNs(time);
     m_deadlineArmed = false;
     m_overrun = false;
 }
 //=============================================================================
 void SysTimer::start()
 {
-    m_failed = true;
-    m_running = false;
+    if (!ensureTimer() || m_periodNs == 0) return;
+
+    m_running = true;
+    std::thread([this]() {
+        do
+        {
+            std::this_thread::sleep_for(std::chrono::nanoseconds(m_periodNs));
+            if (!m_running.load()) break;
+            m_callback(m_ctx);
+            if (!m_periodic) m_running = false;
+        } while (m_running.load() && m_periodic);
+    }).detach();
 }
 //=============================================================================
 void SysTimer::stop() { m_running = false; }
@@ -333,15 +346,39 @@ void SysTimer::reset()
 //=============================================================================
 void SysTimer::startDeadline()
 {
-    m_failed = true;
-    m_deadlineArmed = false;
+    if (m_periodNs == 0)
+    {
+        m_deadlineArmed = false;
+        m_overrun = false;
+        return;
+    }
+
+    m_nextDeadline = std::chrono::steady_clock::now() + std::chrono::nanoseconds(m_periodNs);
+    m_deadlineArmed = true;
     m_overrun = false;
 }
 //=============================================================================
 bool SysTimer::waitDeadline()
 {
-    m_failed = true;
-    m_overrun = false;
+    if (m_periodNs == 0)
+    {
+        m_overrun = false;
+        return m_overrun;
+    }
+
+    if (!m_deadlineArmed) startDeadline();
+    if (!m_deadlineArmed) return m_overrun;
+
+    const auto now = std::chrono::steady_clock::now();
+    m_overrun = now >= m_nextDeadline;
+
+    if (!m_overrun) std::this_thread::sleep_until(m_nextDeadline);
+
+    do
+    {
+        m_nextDeadline += std::chrono::nanoseconds(m_periodNs);
+    } while (m_nextDeadline <= std::chrono::steady_clock::now());
+
     return m_overrun;
 }
 //=============================================================================

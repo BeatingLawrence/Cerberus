@@ -1,6 +1,10 @@
 #include "libloader.h"
 
+#ifdef WINDOWS_SYSTEM
+#include <windows.h>
+#else
 #include <dlfcn.h>
+#endif
 
 #include "../cerberus.h"
 
@@ -9,24 +13,40 @@ using namespace crb::core;
 //=============================================================================
 crb::OpRes LibLoader::close(void* handle)
 {
+#ifdef WINDOWS_SYSTEM
+    if (FreeLibrary(static_cast<HMODULE>(handle)) == 0)
+    {
+        logError("Error while calling FreeLibrary: %lu", GetLastError());
+        return OR_Failure;
+    }
+#else
     if (dlclose(handle) != 0)
     {
         // error
         logError("Error while calling dlclose: %s", dlerror());
         return OR_Failure;
     }
+#endif
 
     return OR_OK;
 }
 //=============================================================================
 crb::OpRes LibLoader::open(const std::string& path)
 {
+#ifdef WINDOWS_SYSTEM
+    void* p = LoadLibraryA(path.c_str());
+#else
     void* p = dlopen(path.c_str(), RTLD_LOCAL | RTLD_NOW);
+#endif
 
     if (p == nullptr)
     {
         // error
+#ifdef WINDOWS_SYSTEM
+        logError("Error while loading plugin %s: %lu", path.c_str(), GetLastError());
+#else
         logError("Error while loading plugin %s: %s", path.c_str(), dlerror());
+#endif
         return OR_Failure;
     }
 
@@ -36,11 +56,17 @@ crb::OpRes LibLoader::open(const std::string& path)
 //=============================================================================
 bool LibLoader::isLoaded(const std::string& path) const
 {
+#ifdef WINDOWS_SYSTEM
+    HMODULE p = GetModuleHandleA(path.c_str());
+#else
     void* p = dlopen(path.c_str(), RTLD_NOLOAD | RTLD_LOCAL | RTLD_NOW);
+#endif
 
     if (p)
     {
+#ifndef WINDOWS_SYSTEM
         close(p);
+#endif
         return true;
     }
 
@@ -60,7 +86,6 @@ LibLoader::~LibLoader() { unload(); }
 crb::OpRes LibLoader::load(const std::string& path, bool noreg)
 {
     OpRes ret;
-    void* p;
 
     if (m_handle && m_noreg)  // handle the current loaded library (unload)
     {
@@ -162,9 +187,17 @@ crb::LoaderFunc LibLoader::get(const std::string& symbol)
         if (!ml.isValid()) return {nullptr, MutexLocker()};
     }
 
+#ifdef WINDOWS_SYSTEM
+    void* p = reinterpret_cast<void*>(GetProcAddress(static_cast<HMODULE>(m_handle), symbol.c_str()));
+#else
     void* p = dlsym(m_handle, symbol.c_str());
+#endif
 
+#ifdef WINDOWS_SYSTEM
+    if (!p) logDebug("Error while searching symbol %s: %lu", symbol.c_str(), GetLastError());
+#else
     if (!p) logDebug("Error while searching symbol %s: %s", symbol.c_str(), dlerror());
+#endif
 
     return {p, ml};
 }

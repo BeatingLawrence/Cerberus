@@ -16,7 +16,7 @@ int LoggerThread::tick()
 
     if (m_conf.fileMaxSize)  // log rotation enabled
     {
-        SIZE s = str.size() + 1;  // add \n char
+        LSIZE s = static_cast<LSIZE>(str.size()) + 1;  // add \n char
 
         if ((m_currentSize + s) > m_conf.fileMaxSize)
         {

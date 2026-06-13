@@ -1,8 +1,12 @@
 #include "directory.h"
 
+#ifdef WINDOWS_SYSTEM
+#include <filesystem>
+#else
 #include <dirent.h>
 #include <sys/fcntl.h>
 #include <sys/types.h>
+#endif
 #include <string.h>
 
 #include "../../cerberus.h"
@@ -16,6 +20,51 @@ Path Directory::path() const { return m_path; }
 //=============================================================================
 OpRes Directory::_get(int parentFd, bool recursive)
 {
+#ifdef WINDOWS_SYSTEM
+    (void)parentFd;
+    m_files.clear();
+    m_dirs.clear();
+    m_size = 0;
+
+    if (m_path.empty()) return {OR_Empty, "path is empty"};
+
+    std::error_code ec;
+    const std::filesystem::path base(m_path.toStr());
+    if (!std::filesystem::is_directory(base, ec)) return OR_InvalidPath;
+
+    for (const auto& entry : std::filesystem::directory_iterator(base, ec))
+    {
+        if (ec) return {OR_Failure, ec.message()};
+
+        const std::string name = entry.path().filename().string();
+        Path child             = m_path.copy_append(name);
+
+        if (entry.is_directory(ec))
+        {
+            m_dirs.push_back(Directory(child));
+        }
+        else if (entry.is_regular_file(ec))
+        {
+            File f(child);
+            m_files.push_back(f);
+
+            auto res = f.size();
+            if (res.ok("error when getting file size")) m_size += res.value;
+        }
+    }
+
+    if (ec) return {OR_Failure, ec.message()};
+
+    if (recursive)
+        for (auto& el : m_dirs)
+        {
+            auto res = el._get(0, true);
+            if (res.fail()) return res;
+            m_size += el.size();
+        }
+
+    return OR_OK;
+#else
     m_files.clear();
     m_dirs.clear();
     m_size = 0;
@@ -84,6 +133,7 @@ OpRes Directory::_get(int parentFd, bool recursive)
     closedir(dir);
 
     return OR_OK;
+#endif
 }
 //=============================================================================
 Directory::Directory(const Path& path)
@@ -95,7 +145,14 @@ Path Directory::completePath() const { return CerberusUtils::completePath(m_path
 //=============================================================================
 std::string Directory::name() const { return m_path.back(); }
 //=============================================================================
-OpRes Directory::get(bool recursive) { return _get(AT_FDCWD, recursive); }
+OpRes Directory::get(bool recursive)
+{
+#ifdef WINDOWS_SYSTEM
+    return _get(0, recursive);
+#else
+    return _get(AT_FDCWD, recursive);
+#endif
+}
 //=============================================================================
 std::list<File> Directory::files() const { return m_files; }
 //=============================================================================

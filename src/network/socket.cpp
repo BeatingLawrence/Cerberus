@@ -1,25 +1,59 @@
 #include "./socket.h"
 
+#ifdef WINDOWS_SYSTEM
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+typedef SSIZE_T ssize_t;
+typedef WSAPOLLFD pollfd;
+#define poll WSAPoll
+#ifndef MSG_DONTWAIT
+#define MSG_DONTWAIT 0
+#endif
+#ifndef SHUT_WR
+#define SHUT_WR SD_SEND
+#endif
+static int cerb_setsockopt(crb::SocketHandle s, int level, int optname, const void* optval, socklen_t optlen)
+{
+    return ::setsockopt(static_cast<SOCKET>(s), level, optname, static_cast<const char*>(optval), optlen);
+}
+static int cerb_getsockopt(crb::SocketHandle s, int level, int optname, void* optval, socklen_t* optlen)
+{
+    return ::getsockopt(static_cast<SOCKET>(s), level, optname, static_cast<char*>(optval), optlen);
+}
+#define setsockopt cerb_setsockopt
+#define getsockopt cerb_getsockopt
+#else
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
+#include <poll.h>
+#include <fcntl.h>
+#include <unistd.h>
+#ifdef LINUX_SYSTEM
+#include <sys/sendfile.h>
+#endif
+#endif
+
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/ssl.h>
-#include <poll.h>
 #include <src/thread/thread.h>
+#include <algorithm>
 #include <chrono>
 #include <climits>
-#include <fcntl.h>
+#include <limits>
 #include <string.h>
 
 #include "src/cerberus.h"
 #include "src/time/timer.h"
-#ifdef LINUX_SYSTEM
-#include <sys/sendfile.h>
-#endif
 #include <openssl/opensslv.h>
-#include <unistd.h>
 
 #include "src/data/filesystem/file.h"
 #include "src/exception/exceptioncatalog.h"
@@ -64,6 +98,85 @@ using namespace crb;
 
 namespace
 {
+    constexpr SocketHandle invalidSocketHandle() { return static_cast<SocketHandle>(-1); }
+
+#ifdef WINDOWS_SYSTEM
+    std::string winsockErrorString(int error)
+    {
+        char* message = nullptr;
+        DWORD len = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                                       FORMAT_MESSAGE_IGNORE_INSERTS,
+                                   nullptr, static_cast<DWORD>(error), 0,
+                                   reinterpret_cast<LPSTR>(&message), 0, nullptr);
+
+        std::string ret = CerberusUtils::strPrint("Winsock error %d", error);
+        if (len != 0 && message != nullptr)
+        {
+            ret.append(": ");
+            ret.append(message, len);
+            LocalFree(message);
+        }
+
+        return ret;
+    }
+
+    OpRes ensureWinsockInitialized()
+    {
+        static const int startupError = [] {
+            WSADATA data{};
+            return WSAStartup(MAKEWORD(2, 2), &data);
+        }();
+
+        if (startupError != 0) return {OR_SystemFailure, "WSAStartup failed", winsockErrorString(startupError)};
+
+        return OR_OK;
+    }
+
+    constexpr size_t maxSocketTransferSize()
+    {
+        return static_cast<size_t>(std::numeric_limits<int>::max());
+    }
+
+    ssize_t socketSend(SocketHandle fd, const uint8_t* data, size_t len, int flags)
+    {
+        return ::send(static_cast<SOCKET>(fd), reinterpret_cast<const char*>(data), static_cast<int>(len), flags);
+    }
+
+    ssize_t socketRecvFrom(SocketHandle fd, uint8_t* data, size_t len, int flags, sockaddr* addr, socklen_t* addrLen)
+    {
+        return ::recvfrom(static_cast<SOCKET>(fd), reinterpret_cast<char*>(data), static_cast<int>(len), flags, addr,
+                          addrLen);
+    }
+
+    ssize_t socketSendTo(SocketHandle fd, const uint8_t* data, size_t len, int flags, const sockaddr* addr,
+                         socklen_t addrLen)
+    {
+        return ::sendto(static_cast<SOCKET>(fd), reinterpret_cast<const char*>(data), static_cast<int>(len), flags,
+                        addr, addrLen);
+    }
+#else
+    constexpr size_t maxSocketTransferSize()
+    {
+        return std::numeric_limits<size_t>::max();
+    }
+
+    ssize_t socketSend(SocketHandle fd, const uint8_t* data, size_t len, int flags)
+    {
+        return ::send(fd, data, len, flags);
+    }
+
+    ssize_t socketRecvFrom(SocketHandle fd, uint8_t* data, size_t len, int flags, sockaddr* addr, socklen_t* addrLen)
+    {
+        return ::recvfrom(fd, data, len, flags, addr, addrLen);
+    }
+
+    ssize_t socketSendTo(SocketHandle fd, const uint8_t* data, size_t len, int flags, const sockaddr* addr,
+                         socklen_t addrLen)
+    {
+        return ::sendto(fd, data, len, flags, addr, addrLen);
+    }
+#endif
+
     int pollTimeoutMs(const std::chrono::steady_clock::time_point& deadline)
     {
         const auto remainingUs =
@@ -75,7 +188,15 @@ namespace
         return remainingMs > INT_MAX ? INT_MAX : static_cast<int>(remainingMs);
     }
 
-    OpRes waitSocketEvent(int fd, short events, const std::chrono::steady_clock::time_point& deadline)
+    int pollTimeoutMs(const TimeFrame& timeout)
+    {
+        if (timeout.isNull()) return -1;
+
+        const uint64_t milliseconds = timeout.toMilliseconds();
+        return milliseconds > static_cast<uint64_t>(INT_MAX) ? INT_MAX : static_cast<int>(milliseconds);
+    }
+
+    OpRes waitSocketEvent(SocketHandle fd, short events, const std::chrono::steady_clock::time_point& deadline)
     {
         while (true)
         {
@@ -103,7 +224,7 @@ namespace
 }
 
 //=============================================================================
-Socket::Socket(SocketType type, int fd, const Host &remote, SSL_CTX *ctx)
+Socket::Socket(SocketType type, SocketHandle fd, const Host &remote, SSL_CTX *ctx)
     : m_type(type),
       m_extern(true),
       m_maxConnections(DEFAULT_MAX_CONNECTIONS),
@@ -128,9 +249,13 @@ void Socket::createUdpSocket()
 {
     m_fd = ::socket(AF_INET, SOCK_DGRAM, 0);
 
-    if (m_fd == -1)
+    if (m_fd == invalidSocketHandle())
     {
+#ifdef WINDOWS_SYSTEM
+        logDebug("error in UDP socket creation: %s", winsockErrorString(WSAGetLastError()).c_str());
+#else
         logDebug("error in UDP socket creation: %s", strerror(errno));
+#endif
     }
 }
 //=============================================================================
@@ -138,9 +263,13 @@ void Socket::createTcpSocket()
 {
     m_fd = ::socket(AF_INET, SOCK_STREAM, 0);
 
-    if (m_fd == -1)
+    if (m_fd == invalidSocketHandle())
     {
+#ifdef WINDOWS_SYSTEM
+        logError("error in TCP socket creation: %s", winsockErrorString(WSAGetLastError()).c_str());
+#else
         logError("error in TCP socket creation: %s", strerror(errno));
+#endif
         return;
     }
 
@@ -242,14 +371,14 @@ Socket::TransportType Socket::transportType()
     throw cImplMissExc("requested socket has not been implemented yet");
 }
 //=============================================================================
-IntOpRes Socket::_accept(Host &peer)
+OpResData<SocketHandle> Socket::_accept(Host &peer)
 {
     sockaddr_in addr{};
     socklen_t len = sizeof(sockaddr_in);
 
-    int ret = ::accept(m_fd, (sockaddr *)&addr, &len);
+    SocketHandle ret = static_cast<SocketHandle>(::accept(m_fd, (sockaddr *)&addr, &len));
 
-    if (ret == -1)
+    if (ret == invalidSocketHandle())
     {
         return {OR_Failure, "error in socket accept", strerror(errno)};
     }
@@ -302,7 +431,11 @@ OpRes Socket::_recv(ByteBuffer &buffer, bool donotblock)
     sockaddr_in addr{};
     socklen_t len = sizeof(sockaddr_in);
 
-    auto ret = ::recvfrom(m_fd, m_recvBuffer.data(), m_recvBuffer.size(), flags, (sockaddr *)&addr, &len);
+    auto recvLen = m_recvBuffer.size();
+    if (recvLen > maxSocketTransferSize()) recvLen = maxSocketTransferSize();
+
+    auto ret = socketRecvFrom(m_fd, reinterpret_cast<uint8_t*>(m_recvBuffer.data()), recvLen, flags,
+                              (sockaddr *)&addr, &len);
 
     if (transportType() == UDP)
     {
@@ -325,7 +458,7 @@ OpRes Socket::_recv(ByteBuffer &buffer, bool donotblock)
         return OR_Hangup;
     }
 
-    buffer.assign(m_recvBuffer, ret);
+    buffer.assign(m_recvBuffer, static_cast<LSIZE>(ret));
 
     return OR_OK;
 }
@@ -431,52 +564,67 @@ void Socket::_TLS_CTX_destroy()
 //=============================================================================
 OpRes Socket::_TLS_send(const ByteBuffer &buffer)
 {
-    ERR_clear_error();
+    if (buffer.size() == 0) return OR_OK;
 
-    int ret = SSL_write(m_ssl, buffer.data(), buffer.size());
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(buffer.data());
+    LSIZE sent = 0;
 
-    if (ret <= 0 || ret != buffer.size())
+    while (sent < buffer.size())
     {
-        auto err = SSL_get_error(m_ssl, ret);
+        ERR_clear_error();
 
-        OpRes r(OR_Failure, CerberusUtils::strPrint("SSL_write error %i", err));
+        const LSIZE remaining = buffer.size() - sent;
+        const int chunk = remaining > static_cast<LSIZE>(std::numeric_limits<int>::max())
+                              ? std::numeric_limits<int>::max()
+                              : static_cast<int>(remaining);
 
-        if (err == SSL_ERROR_SYSCALL)
+        int ret = SSL_write(m_ssl, data + static_cast<size_t>(sent), chunk);
+
+        if (ret <= 0)
         {
-            m_streamConnected = false;
+            auto err = SSL_get_error(m_ssl, ret);
 
-            if (errno == 0)
+            OpRes r(OR_Failure, CerberusUtils::strPrint("SSL_write error %i", err));
+
+            if (err == SSL_ERROR_SYSCALL)
             {
-                // Peer closed the TCP/TLS stream without sending close_notify.
-                // Treat it as a hangup for upper layers instead of a generic system failure.
+                m_streamConnected = false;
+
+                if (errno == 0)
+                {
+                    // Peer closed the TCP/TLS stream without sending close_notify.
+                    // Treat it as a hangup for upper layers instead of a generic system failure.
+                    close();
+                    r = OR_Hangup;
+                }
+                else
+                {
+                    r.reason.append(", ");
+                    r.reason.append(strerror(errno));
+                    r = OR_SystemFailure;
+                }
+            }
+            else if (err == SSL_ERROR_ZERO_RETURN)
+            {
                 close();
                 r = OR_Hangup;
             }
-            else
+            else if (err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
             {
-                r.reason.append(", ");
-                r.reason.append(strerror(errno));
-                r = OR_SystemFailure;
+                m_streamConnected = false;
             }
-        }
-        else if (err == SSL_ERROR_ZERO_RETURN)
-        {
-            close();
-            r = OR_Hangup;
-        }
-        else if (err == SSL_ERROR_WANT_CONNECT || err == SSL_ERROR_WANT_ACCEPT)
-        {
-            m_streamConnected = false;
-        }
-        else if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
-        {
-            r = OR_TemporaryUnavailable;
+            else if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
+            {
+                r = OR_TemporaryUnavailable;
+            }
+
+            r.reason.append(", ");
+            r.reason.append(printSSLErrors());
+
+            return r;
         }
 
-        r.reason.append(", ");
-        r.reason.append(printSSLErrors());
-
-        return r;
+        sent += static_cast<LSIZE>(ret);
     }
 
     if (check()) return OR_Hangup;
@@ -492,12 +640,14 @@ OpRes Socket::_TLS_sendFile(const File &file)
 #else
     auto res = file.size();
     if (res.fail()) return res;
+    if (res.value > static_cast<LSIZE>(std::numeric_limits<size_t>::max()))
+        return {OR_WrongArgument, "file too large for SSL_sendfile"};
 
-    auto ret = SSL_sendfile(m_ssl, file.m_fd, 0, res.value, 0);
+    auto ret = SSL_sendfile(m_ssl, file.m_fd, 0, static_cast<size_t>(res.value), 0);
 
     if (ret < 0)
     {
-        auto err = SSL_get_error(m_ssl, ret);
+        auto err = SSL_get_error(m_ssl, static_cast<int>(ret));
 
         OpRes r(OR_Failure, CerberusUtils::strPrint("SSL_sendfile error %i", err));
 
@@ -527,7 +677,7 @@ OpRes Socket::_TLS_sendFile(const File &file)
 
         return r;
     }
-    else if (ret != res.value)
+    else if (static_cast<LSIZE>(ret) != res.value)
     {
         return {OR_Failure, "SSL socket sendfile size mismatch"};
     }
@@ -543,7 +693,7 @@ OpRes Socket::_TLS_recv(ByteBuffer &buffer)
     ERR_clear_error();
 
     size_t readB = 0;
-    int ret      = SSL_read_ex(m_ssl, m_recvBuffer.data(), m_recvBuffer.size(), &readB);
+    int ret      = SSL_read_ex(m_ssl, m_recvBuffer.data(), static_cast<size_t>(m_recvBuffer.size()), &readB);
 
     if (ret == 0)
     {
@@ -612,7 +762,7 @@ OpRes Socket::_TLS_associate()
 {
     ERR_clear_error();
 
-    if (SSL_set_fd(m_ssl, m_fd) != 1)
+    if (SSL_set_fd(m_ssl, static_cast<int>(m_fd)) != 1)
     {
         return {OR_Failure, "SSL association with kernel fd failed", printSSLErrors()};
     }
@@ -685,13 +835,22 @@ Socket::Socket(SocketType type)
     : m_type(type),
       m_extern(false),
       m_maxConnections(DEFAULT_MAX_CONNECTIONS),
-      m_fd(-1),
+      m_fd(invalidSocketHandle()),
       m_streamConnected(false),
       m_recvBuffer(DEFAULT_RECV_BUFFER_SIZE),
       m_sslCtx(nullptr),
       m_ssl(nullptr),
       m_bind()
 {
+#ifdef WINDOWS_SYSTEM
+    auto winsock = ensureWinsockInitialized();
+    if (winsock.fail())
+    {
+        logError("%s", winsock.toStr().c_str());
+        return;
+    }
+#endif
+
     switch (transportType())
     {
         case TCP:
@@ -802,6 +961,20 @@ OpRes Socket::connect(const Host &dest, const TimeFrame &timeout)
 
     const auto deadline = std::chrono::steady_clock::now() +
                           std::chrono::microseconds(timeout.toMicroseconds());
+#ifdef WINDOWS_SYSTEM
+    u_long nonBlocking = 1;
+    if (ioctlsocket(m_fd, FIONBIO, &nonBlocking) != 0)
+        return {OR_SystemFailure, CerberusUtils::strPrint("ioctlsocket(FIONBIO) failed: %d", WSAGetLastError())};
+
+    auto restoreBlockingMode = [this]() -> OpRes
+    {
+        u_long blocking = 0;
+        if (ioctlsocket(m_fd, FIONBIO, &blocking) != 0)
+            return {OR_SystemFailure,
+                    CerberusUtils::strPrint("ioctlsocket(FIONBIO) failed: %d", WSAGetLastError())};
+        return OR_OK;
+    };
+#else
     const int oldFlags = fcntl(m_fd, F_GETFL, 0);
     if (oldFlags == -1)
         return {OR_SystemFailure, CerberusUtils::strPrint("fcntl(F_GETFL) failed: %s", strerror(errno))};
@@ -814,9 +987,14 @@ OpRes Socket::connect(const Host &dest, const TimeFrame &timeout)
             return {OR_SystemFailure, CerberusUtils::strPrint("fcntl(F_SETFL) failed: %s", strerror(errno))};
         return OR_OK;
     };
+#endif
 
     int ret = ::connect(m_fd, reinterpret_cast<sockaddr*>(&addr), sizeof(sockaddr_in));
+#ifdef WINDOWS_SYSTEM
+    if (ret == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK)
+#else
     if (ret == -1 && errno == EINPROGRESS)
+#endif
     {
         auto wait = waitSocketEvent(m_fd, POLLOUT, deadline);
         if (wait.fail())
@@ -827,9 +1005,19 @@ OpRes Socket::connect(const Host &dest, const TimeFrame &timeout)
 
         int socketError = 0;
         socklen_t errorLen = sizeof(socketError);
+#ifdef WINDOWS_SYSTEM
+        if (getsockopt(m_fd, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&socketError), &errorLen) ==
+            SOCKET_ERROR)
+#else
         if (getsockopt(m_fd, SOL_SOCKET, SO_ERROR, &socketError, &errorLen) == -1)
+#endif
         {
+#ifdef WINDOWS_SYSTEM
+            const auto reason =
+                CerberusUtils::strPrint("getsockopt(SO_ERROR) failed: %d", WSAGetLastError());
+#else
             const auto reason = CerberusUtils::strPrint("getsockopt(SO_ERROR) failed: %s", strerror(errno));
+#endif
             close();
             return {OR_SystemFailure, reason};
         }
@@ -840,12 +1028,21 @@ OpRes Socket::connect(const Host &dest, const TimeFrame &timeout)
             return {OR_Failure, reason};
         }
     }
+#ifdef WINDOWS_SYSTEM
+    else if (ret == SOCKET_ERROR)
+    {
+        const int savedErrno = WSAGetLastError();
+        close();
+        return {OR_Failure, CerberusUtils::strPrint("error in socket connect: %d", savedErrno)};
+    }
+#else
     else if (ret == -1)
     {
         const int savedErrno = errno;
         close();
         return {OR_Failure, CerberusUtils::strPrint("error in socket connect: %s", strerror(savedErrno))};
     }
+#endif
 
     m_streamConnected = true;
     m_remote = h;
@@ -910,7 +1107,9 @@ OpRes Socket::send(const ByteBuffer &buffer, bool donotblock)
     if (donotblock)
     {
         const int flags = MSG_DONTWAIT;
-        const auto ret = ::send(m_fd, data, len, flags);
+        if (len > maxSocketTransferSize()) return {OR_WrongArgument, "socket send buffer too large"};
+
+        const auto ret = socketSend(m_fd, data, len, flags);
 
         if (ret == -1)
         {
@@ -929,7 +1128,8 @@ OpRes Socket::send(const ByteBuffer &buffer, bool donotblock)
     size_t off = 0;
     while (off < len)
     {
-        const auto ret = ::send(m_fd, data + off, len - off, 0);
+        const size_t chunk = std::min(len - off, maxSocketTransferSize());
+        const auto ret = socketSend(m_fd, data + off, chunk, 0);
 
         if (ret == -1)
         {
@@ -1062,9 +1262,9 @@ OpRes Socket::recv(ByteBuffer &buffer, const TimeFrame &timeout)
 //=============================================================================
 OpRes Socket::recv(ByteBuffer &buffer) { return _recv(buffer, false); }
 //=============================================================================
-void Socket::setMaxConnections(size_t maxconn) { m_maxConnections = maxconn; }
+void Socket::setMaxConnections(SIZE maxconn) { m_maxConnections = maxconn; }
 //=============================================================================
-bool Socket::isFailed() const { return (m_fd == -1) || (m_type == Socket_None); }
+bool Socket::isFailed() const { return (m_fd == invalidSocketHandle()) || (m_type == Socket_None); }
 //=============================================================================
 bool Socket::isConnected() const
 {
@@ -1080,7 +1280,7 @@ bool Socket::isConnected() const
     return m_streamConnected;
 }
 //=============================================================================
-void Socket::setRecvBufferSize(size_t size) { m_recvBuffer.resize(size); }
+void Socket::setRecvBufferSize(LSIZE size) { m_recvBuffer.resize(size); }
 //=============================================================================
 const Host &Socket::remote() { return m_remote; }
 //=============================================================================
@@ -1132,7 +1332,7 @@ OpRes Socket::waitRead(const TimeFrame &timeout)
     set.fd     = m_fd;
     set.events = POLLIN;
 
-    int ret = poll(&set, 1, timeout.isNull() ? -1 : timeout.toMilliseconds());
+    int ret = poll(&set, 1, pollTimeoutMs(timeout));
 
     if (ret == 0) return OR_TimedOut;  // timeout
 
@@ -1160,7 +1360,7 @@ OpRes Socket::waitWrite(const TimeFrame &timeout)
     set.fd     = m_fd;
     set.events = POLLOUT;
 
-    int ret = poll(&set, 1, timeout.isNull() ? -1 : timeout.toMilliseconds());
+    int ret = poll(&set, 1, pollTimeoutMs(timeout));
 
     if (ret == 0) return OR_TimedOut;  // timeout
 
@@ -1193,12 +1393,19 @@ OpRes Socket::close()
 
     OpRes res(OR_OK);
 
+#ifdef WINDOWS_SYSTEM
+    if (closesocket(m_fd) == SOCKET_ERROR)
+    {
+        res = OpRes(OR_Failure, CerberusUtils::strPrint("socket close error, %d", WSAGetLastError()));
+    }
+#else
     if (::close(m_fd) == -1)
     {
         res = OpRes(OR_Failure, CerberusUtils::strPrint("socket close error, %s", strerror(errno)));
     }
+#endif
 
-    m_fd              = -1;
+    m_fd              = invalidSocketHandle();
     m_streamConnected = false;
 
     return res;
@@ -1214,13 +1421,17 @@ bool Socket::check()
 //=============================================================================
 OpRes Socket::reset()
 {
+#ifdef WINDOWS_SYSTEM
+    closesocket(m_fd);
+#else
     ::close(m_fd);
-    m_fd              = -1;
+#endif
+    m_fd              = invalidSocketHandle();
     m_streamConnected = false;
 
     createTcpSocket();  // recreate the socket
 
-    if (m_fd == -1) return OR_Failure;
+    if (m_fd == invalidSocketHandle()) return OR_Failure;
 
     if (m_bind.isValid())
         if (bind(m_bind).fail()) return OR_Failure;
@@ -1386,7 +1597,10 @@ OpRes Socket::sendTo(const ByteBuffer &buffer, const Host &dest, bool donotblock
     else
         addr.sin_addr.s_addr = h.octet_networkOrder;
 
-    auto ret = ::sendto(m_fd, buffer.data(), buffer.size(), flags, (sockaddr *)&addr, sizeof(sockaddr_in));
+    if (buffer.size() > maxSocketTransferSize()) return {OR_WrongArgument, "socket sendTo buffer too large"};
+
+    auto ret = socketSendTo(m_fd, reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size(), flags,
+                            (sockaddr *)&addr, sizeof(sockaddr_in));
 
     if (ret == -1)
     {
@@ -1415,13 +1629,16 @@ OpRes Socket::connectP2P(const Host &dest, const TimeFrame &timeout)
     return res;
 }
 //=============================================================================
-OpRes Socket::listen(size_t maxconn)
+OpRes Socket::listen(SIZE maxconn)
 {
     if (isFailed()) return OR_FailedInstance;
 
     if (m_extern || transportType() != TCP) return OR_Unavailable;
 
-    if (::listen(m_fd, maxconn == 0 ? m_maxConnections : maxconn) == -1)
+    const SIZE requested = maxconn == 0 ? m_maxConnections : maxconn;
+    const int backlog = requested > static_cast<SIZE>(INT_MAX) ? INT_MAX : static_cast<int>(requested);
+
+    if (::listen(m_fd, backlog) == -1)
     {
         return {OR_Failure, CerberusUtils::strPrint("error in socket listen: %s", strerror(errno))};
     }
@@ -1438,7 +1655,7 @@ cerberus_socket Socket::accept()
 
     if (fd.fail()) return cerberus_socket();
 
-    return cerberus_socket(new Socket(m_type, static_cast<int>(fd.value), h, m_sslCtx));
+    return cerberus_socket(new Socket(m_type, fd.value, h, m_sslCtx));
 }
 //=============================================================================
 #ifdef LINUX_SYSTEM
@@ -1481,6 +1698,10 @@ OpRes Socket::setTimeout(uint32_t timeout)
 
     if (transportType() != TCP) return OR_Unavailable;
 
+    #ifdef WINDOWS_SYSTEM
+    (void)timeout;
+    return OR_Unavailable;
+    #else
     unsigned int val = timeout;
 
 #ifdef LINUX_SYSTEM
@@ -1493,6 +1714,7 @@ OpRes Socket::setTimeout(uint32_t timeout)
     }
 
     return OR_OK;
+#endif
 }
 //=============================================================================
 OpRes Socket::useKeepAlive(bool use, int maxprobes, int idleTime, int interval)
@@ -1507,6 +1729,12 @@ OpRes Socket::useKeepAlive(bool use, int maxprobes, int idleTime, int interval)
 
     if (!use) return OR_OK;
 
+#ifdef WINDOWS_SYSTEM
+    (void)maxprobes;
+    (void)idleTime;
+    (void)interval;
+    return OR_Unavailable;
+#else
     int val = maxprobes;
 
     if (setsockopt(m_fd, IPPROTO_TCP, TCP_KEEPCNT, &val, sizeof(val)) == -1)
@@ -1536,6 +1764,7 @@ OpRes Socket::useKeepAlive(bool use, int maxprobes, int idleTime, int interval)
     }
 
     return OR_OK;
+#endif
 }
 //=============================================================================
 OpRes Socket::useKeepAlive(bool use)
@@ -1592,6 +1821,22 @@ OpRes Socket::send(const File &file)
     {
         return {OR_Failure, CerberusUtils::strPrint("socket sendfile error, %s", strerror(errno))};
     }
+#elif defined(WINDOWS_SYSTEM)
+    auto cursor = file.getCursor();
+    if (cursor.fail()) return cursor;
+
+    condret(file.seek(0));
+
+    ByteBuffer buffer;
+    while (true)
+    {
+        auto read = file.readChunk(buffer, DEFAULT_RECV_BUFFER_SIZE);
+        if (read.res == OR_EOF) break;
+        if (read.fail()) return read;
+        condret(send(buffer));
+    }
+
+    condret(file.seek(cursor.value));
 #endif
 
     return OR_OK;

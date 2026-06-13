@@ -194,10 +194,12 @@ TEST(socketTest, TCP_P2P)
     auto socket = TCPP2PSocket();
     if (socket.bind(crb::Host("localhost:57829")).res != crb::OR_OK)
     {
+        receiver.join();
         GTEST_SKIP() << "TCP P2P bind not permitted in test environment";
     }
     if (!socket.connectP2P(crb::Host("localhost:44444"), 2000).ok())
     {
+        receiver.join();
         GTEST_SKIP() << "connectP2P not permitted in test environment";
     }
     ByteBuffer buf("Hello, World!");
@@ -306,7 +308,7 @@ TEST(socketTest, HTTPClient)
     EXPECT_TRUE(response.value.isOk());
 
     logDebug("received header lines:");
-    for (int i = 0; i < response.value.getHeaderSize(); i++)
+    for (crb::SIZE i = 0; i < response.value.getHeaderSize(); i++)
     {
         logDebug("%s: %s", response.value.getHeaderFieldName(i).c_str(),
                  response.value.getHeaderFieldValue(i).c_str());

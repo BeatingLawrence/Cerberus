@@ -4,10 +4,23 @@
 #include <openssl/opensslv.h>
 #include <openssl/ssl3.h>
 
+#include <limits>
+
 #include "../../exception/exception.h"
 #include "../bytebuffer.h"
 
 using namespace crb;
+
+namespace
+{
+    OpResData<int> checkedOpenSslSize(LSIZE size)
+    {
+        if (size > static_cast<LSIZE>(std::numeric_limits<int>::max()))
+            return {OR_WrongArgument, "OpenSSL buffer size exceeds int range"};
+
+        return static_cast<int>(size);
+    }
+}
 
 //=============================================================================
 Cipher::Cipher()
@@ -59,6 +72,8 @@ OpResData<ByteBuffer> Cipher::encryptData_AES256(const ByteBuffer &input, const 
 {
     ByteBuffer ret;
     ret.resize(((input.size() / 16) + 1) * 16);
+    auto inputSize = checkedOpenSslSize(input.size());
+    if (inputSize.fail()) return inputSize;
 
     if (!EVP_CIPHER_CTX_reset(m_cipher_ctx)) return OR_Failure;
 
@@ -79,7 +94,7 @@ OpResData<ByteBuffer> Cipher::encryptData_AES256(const ByteBuffer &input, const 
 #endif
 
     int written = 0;
-    if (!EVP_EncryptUpdate(m_cipher_ctx, ret.data(), &written, input.data(), input.size())) return OR_Failure;
+    if (!EVP_EncryptUpdate(m_cipher_ctx, ret.data(), &written, input.data(), inputSize.value)) return OR_Failure;
 
     int final = 0;
     if (!EVP_EncryptFinal_ex(m_cipher_ctx, ret.data(written), &final)) return OR_Failure;
@@ -91,6 +106,8 @@ OpResData<ByteBuffer> Cipher::decryptData_AES256(const ByteBuffer &input, const 
 {
     ByteBuffer ret;
     ret.resize(input.size());
+    auto inputSize = checkedOpenSslSize(input.size());
+    if (inputSize.fail()) return inputSize;
 
     if (!EVP_CIPHER_CTX_reset(m_cipher_ctx)) return OR_Failure;
 
@@ -111,7 +128,7 @@ OpResData<ByteBuffer> Cipher::decryptData_AES256(const ByteBuffer &input, const 
 #endif
 
     int written = 0;
-    if (!EVP_DecryptUpdate(m_cipher_ctx, ret.data(), &written, input.data(), input.size())) return OR_Failure;
+    if (!EVP_DecryptUpdate(m_cipher_ctx, ret.data(), &written, input.data(), inputSize.value)) return OR_Failure;
 
     int final = 0;
     if (!EVP_DecryptFinal_ex(m_cipher_ctx, ret.data(written), &final)) return OR_Failure;

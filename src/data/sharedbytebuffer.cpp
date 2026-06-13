@@ -33,7 +33,7 @@ void SharedByteBuffer::becomeOwner(bool force) const
     m_owner     = true;
 }
 //=============================================================================
-SharedByteBuffer::SharedByteBuffer(SIZE size)
+SharedByteBuffer::SharedByteBuffer(LSIZE size)
     : m_buffer(new ByteBuffer(size)),
       m_instances(new uint32_t(1)),
       m_mutex(new Mutex(Recursive)),
@@ -42,7 +42,7 @@ SharedByteBuffer::SharedByteBuffer(SIZE size)
 {
 }
 //=============================================================================
-SharedByteBuffer::SharedByteBuffer(SIZE size, uint8_t val)
+SharedByteBuffer::SharedByteBuffer(LSIZE size, uint8_t val)
     : m_buffer(new ByteBuffer(size, val)),
       m_instances(new uint32_t(1)),
       m_mutex(new Mutex(Recursive)),
@@ -146,7 +146,7 @@ const crb::BYTE* SharedByteBuffer::data() const
     return m_buffer->data();
 }
 //=============================================================================
-void SharedByteBuffer::appendFrom(const BYTE* buffer, SIZE len)
+void SharedByteBuffer::appendFrom(const BYTE* buffer, LSIZE len)
 {
     MutexLocker ml(m_mutex);
     becomeOwner(true);
@@ -154,7 +154,7 @@ void SharedByteBuffer::appendFrom(const BYTE* buffer, SIZE len)
     m_buffer->appendFrom(buffer, len);
 }
 //=============================================================================
-void SharedByteBuffer::assignFrom(const BYTE* buffer, SIZE len)
+void SharedByteBuffer::assignFrom(const BYTE* buffer, LSIZE len)
 {
     MutexLocker ml(m_mutex);
     becomeOwner(true);
@@ -162,7 +162,7 @@ void SharedByteBuffer::assignFrom(const BYTE* buffer, SIZE len)
     m_buffer->assignFrom(buffer, len);
 }
 //=============================================================================
-void SharedByteBuffer::copyTo(BYTE* buffer, SIZE maxLen)
+void SharedByteBuffer::copyTo(BYTE* buffer, LSIZE maxLen)
 {
     MutexLocker ml(m_mutex);
     becomeOwner();
@@ -202,7 +202,7 @@ SharedByteBuffer& SharedByteBuffer::operator=(const char* str)
     return *this;
 }
 //=============================================================================
-SharedByteBuffer SharedByteBuffer::subBuffer(SIZE pos, SIZE len)
+SharedByteBuffer SharedByteBuffer::subBuffer(LSIZE pos, LSIZE len)
 {
     MutexLocker ml(m_mutex);
     becomeOwner();
@@ -219,7 +219,7 @@ void SharedByteBuffer::appendString(const char* str)
     m_buffer->appendString(str);
 }
 //=============================================================================
-crb::SIZE SharedByteBuffer::size() const
+crb::LSIZE SharedByteBuffer::size() const
 {
     MutexLocker ml(m_mutex);
     becomeOwner();
@@ -227,14 +227,14 @@ crb::SIZE SharedByteBuffer::size() const
     return m_buffer->size();
 }
 //=============================================================================
-void SharedByteBuffer::resize(SIZE size)
+void SharedByteBuffer::resize(LSIZE size)
 {
     MutexLocker ml(m_mutex);
     becomeOwner(true);
     m_buffer->resize(size);
 }
 //=============================================================================
-void SharedByteBuffer::assign(const SharedByteBuffer& other, SIZE len)
+void SharedByteBuffer::assign(const SharedByteBuffer& other, LSIZE len)
 {
     MutexLocker ml1(m_mutex);
     becomeOwner(true);

@@ -1,6 +1,8 @@
 #ifndef CERBERUS_NETWORK_SOCKET_H
 #define CERBERUS_NETWORK_SOCKET_H
 
+#include <cstdint>
+
 #include "../data/bytebuffer.h"
 #include "../time/timeframe.h"
 #include "../types.h"
@@ -22,6 +24,12 @@ namespace crb
 {
     class File;
 
+#ifdef WINDOWS_SYSTEM
+    using SocketHandle = uintptr_t;
+#else
+    using SocketHandle = int;
+#endif
+
     class Socket
     {
        private:
@@ -36,9 +44,9 @@ namespace crb
         SocketType m_type;
 
         bool m_extern;  // used for acceptable sockets
-        size_t m_maxConnections;
+        SIZE m_maxConnections;
 
-        int m_fd;
+        SocketHandle m_fd;
 
         bool m_streamConnected;
 
@@ -51,7 +59,7 @@ namespace crb
 
         // methods:
 
-        explicit Socket(SocketType type, int fd, const Host& remote, SSL_CTX* ctx = nullptr);
+        explicit Socket(SocketType type, SocketHandle fd, const Host& remote, SSL_CTX* ctx = nullptr);
 
         // This method creates a datagram socket and assigns the resulting file descriptor to
         // m_fd. Check is the socket isFailed() after this call
@@ -68,7 +76,7 @@ namespace crb
 
         TransportType transportType();
 
-        IntOpRes _accept(Host& peer);
+        OpResData<SocketHandle> _accept(Host& peer);
 
         std::string printSSLErrors();
 
@@ -99,27 +107,27 @@ namespace crb
         Socket()                    = delete;
         Socket(const Socket& other) = delete;
 
-        Socket(SocketType type);
+        CERBERUS_EXPORT Socket(SocketType type);
 
-        virtual ~Socket();
+        CERBERUS_EXPORT virtual ~Socket();
 
         // GENERAL SECTION:
 
         // Bind this socket to a given interface
-        OpRes bind(const Host& iface);
+        CERBERUS_EXPORT OpRes bind(const Host& iface);
 
         // Connect this socket to a remote Host. If hostname field is not empty and
         // not yet resolved, this method will call Host::resolve() internally.
         // If the socket is configured as a TLS socket (i.e. the TLS_init() has been called)
         // then this method will also do a client TLS handshake.
-        OpRes connect(const Host& dest);
+        CERBERUS_EXPORT OpRes connect(const Host& dest);
 
         // Connect within timeout, including the client TLS handshake when enabled.
         // A null timeout retains the blocking behaviour of connect(dest).
-        OpRes connect(const Host& dest, const TimeFrame& timeout);
+        CERBERUS_EXPORT OpRes connect(const Host& dest, const TimeFrame& timeout);
 
         // Send out a buffer
-        OpRes send(const ByteBuffer& buffer, bool donotblock = false);
+        CERBERUS_EXPORT OpRes send(const ByteBuffer& buffer, bool donotblock = false);
 
         // This is a cyclic recv helper function.
         // This method waits for data to arrive then receives and store them in the buffer.
@@ -136,49 +144,50 @@ namespace crb
         //   will return OR_OK. If no data has been received OR_TimedOut is returned.
         //
         // - If cyc is valid, the call uses timeout for the first cycle and cyc for all the other
-        OpRes recv_cyc(ByteBuffer& buffer, const TimeFrame& timeout, const TimeFrame& cyc = TimeFrame());
+        CERBERUS_EXPORT OpRes recv_cyc(ByteBuffer& buffer, const TimeFrame& timeout,
+                                       const TimeFrame& cyc = TimeFrame());
 
         // Receive a buffer, allow blocking for at most timeout time.
         // The returned amount of data will never exceed the internal buffer size.
         // The timeout parameter is used only when data are not available to be received at the moment of
         // call. If timeout is invalid the call acts as a non-blocking call and will return data, or
         // OR_WouldBlock if the operation requires blocking
-        OpRes recv(ByteBuffer& buffer, const TimeFrame& timeout);
+        CERBERUS_EXPORT OpRes recv(ByteBuffer& buffer, const TimeFrame& timeout);
 
         // Receive a buffer. This call will always block if necessary.
         // The returned amount of data will never exceed the internal buffer size
-        OpRes recv(ByteBuffer& buffer);
+        CERBERUS_EXPORT OpRes recv(ByteBuffer& buffer);
 
         // Set the maximum incoming connections number. If the queue is full, new peers
         // will receive a connection refused error when they do a connect().
         // This method is designed for TCP based sockets, calling this method on a
         // non-TCP socket will have no effect
-        void setMaxConnections(size_t maxconn);
+        CERBERUS_EXPORT void setMaxConnections(SIZE maxconn);
 
         // Check if the socket is failed
-        bool isFailed() const;
+        CERBERUS_EXPORT bool isFailed() const;
 
         // Check if the socket connection is established.
         // If the socket is a TLS socket, this method behaves exactly as TLS_hasSession(),
         // otherwise, it will tell if the transport layer is present (TCP)
-        bool isConnected() const;
+        CERBERUS_EXPORT bool isConnected() const;
 
         // Set the buffer size used for recv calls, default is 512 bytes
-        void setRecvBufferSize(size_t size);
+        CERBERUS_EXPORT void setRecvBufferSize(LSIZE size);
 
         // Get the last remote host that exchanged data with this socket
-        const Host& remote();
+        CERBERUS_EXPORT const Host& remote();
 
         // Tell if there are bytes to be read
-        OpRes canRead();
+        CERBERUS_EXPORT OpRes canRead();
 
         // Block until read operation is available.
         // Passing an invalid time will make the call block forever
-        OpRes waitRead(const TimeFrame& timeout = TimeFrame());
+        CERBERUS_EXPORT OpRes waitRead(const TimeFrame& timeout = TimeFrame());
 
         // Block until write operation is available
         // Passing an invalid time will make the call block forever
-        OpRes waitWrite(const TimeFrame& timeout = TimeFrame());
+        CERBERUS_EXPORT OpRes waitWrite(const TimeFrame& timeout = TimeFrame());
 
         // Close the socket
         // This method must be called at most one time,
@@ -187,25 +196,25 @@ namespace crb
         // so it can be reused later after a reset() call.
         // If the TLS layer is present, this method will send the close_notify alert to the peer
         // before closing the socket.
-        OpRes close();
+        CERBERUS_EXPORT OpRes close();
 
         // Check if the connection is still present.
         // If it is, this method returns false and does nothing more.
         // If the connection is not present, this method closes the socket, as calling close()
         // and returns true
-        bool check();
+        CERBERUS_EXPORT bool check();
 
         // Close the socket and create a new one bound to the same interface if any.
         // The SSL layer is kept and re-associated to the new socket file descriptor.
         // NOTE: the SSL status is cleared but not totally reset,
         // see https://www.openssl.org/docs/manmaster/man3/SSL_clear.html
         // To get a total TLS reset, call TLS_reset() after this call.
-        OpRes reset();
+        CERBERUS_EXPORT OpRes reset();
 
         // TLS-enabled sockets (stream):
 
         // Check if the socket has an initted TLS context (i.e. TLS_Init() has been called)
-        bool isTLS() const;
+        CERBERUS_EXPORT bool isTLS() const;
 
         // Initialize the TLS context. The socket is setup to negotiate the highest version
         // possible with the peer.
@@ -222,55 +231,55 @@ namespace crb
         //
         // -The ca_path parameter specifies the directory that contains several single
         //  certificates. If it is an empty string, the default path is used.
-        OpRes TLS_init(const std::string& certfile = "", const std::string& keyfile = "",
-                       const std::string& ca_file = "", const std::string& ca_path = "");
+        CERBERUS_EXPORT OpRes TLS_init(const std::string& certfile = "", const std::string& keyfile = "",
+                                       const std::string& ca_file = "", const std::string& ca_path = "");
 
         // Free all the allocated resources for the TLS features, thus, a call to initTLS() is
         // necessary for the socket to send and receive on the secure layer again.
         // This method also shuts down an active TLS session if present.
-        OpRes TLS_deinit();
+        CERBERUS_EXPORT OpRes TLS_deinit();
 
         // Perform the TLS handshake with the other peer.
         // The server parameter specifies if the socket has to be configured as client or
         // server socket.
-        OpRes TLS_handshake(bool server = false, const Host& peer = Host());
+        CERBERUS_EXPORT OpRes TLS_handshake(bool server = false, const Host& peer = Host());
 
         // Tell if the socket is currently connected to a remote peer
-        bool TLS_hasSession() const;
+        CERBERUS_EXPORT bool TLS_hasSession() const;
 
         // Shutdown the TLS connection.
         // If quick is false, the method will block until the whole shutdown
         // process is completed. This prevents truncation attacks.
         // Otherwise, if quick is true, the method will just send the close-notify alert
         // to the other peer and consider the TLS layer closed
-        OpRes TLS_shutdown(bool quick = false);
+        CERBERUS_EXPORT OpRes TLS_shutdown(bool quick = false);
 
-        OpResData<TLS_ShutdownState> TLS_getshutdown() const;
+        CERBERUS_EXPORT OpResData<TLS_ShutdownState> TLS_getshutdown() const;
 
         // Set the Socket to ignore the Hangup signal from the peer before a shutdown is
         // completed. After this call, the Socket will not give an error inside a recv()
         // operation if the peer closes the connection suddently without doing a shutdown
         // before. The ignore parameter specifies the status of the option.
-        OpRes TLS_ignoreHangup(bool ignore = true);
+        CERBERUS_EXPORT OpRes TLS_ignoreHangup(bool ignore = true);
 
         // Get the protocol name chosen after TLS handshake
-        StringOpRes TLS_getProtocolName();
+        CERBERUS_EXPORT StringOpRes TLS_getProtocolName();
 
         // Get the cipher name chosen after TLS handshake
-        StringOpRes TLS_getCipherName();
+        CERBERUS_EXPORT StringOpRes TLS_getCipherName();
 
         // Get the renegotiation support from the peer as bool
-        BoolOpRes TLS_securePeerRenegSupport();
+        CERBERUS_EXPORT BoolOpRes TLS_securePeerRenegSupport();
 
         // Tell if there are data in the buffer (processed or not)
-        BoolOpRes TLS_hasPending();
+        CERBERUS_EXPORT BoolOpRes TLS_hasPending();
 
         // Tell the number of bytes available to read
-        IntOpRes TLS_pending();
+        CERBERUS_EXPORT IntOpRes TLS_pending();
 
         // UDP SECTION:
 
-        OpRes sendTo(const ByteBuffer& buffer, const Host& dest, bool donotblock = false);
+        CERBERUS_EXPORT OpRes sendTo(const ByteBuffer& buffer, const Host& dest, bool donotblock = false);
 
         // TCP P2P SECTION:
 
@@ -279,14 +288,14 @@ namespace crb
         // If the timeout argument is invalid, the method will try to connect for ever.
         // If the Socket is a TLS socket, to reach the complete connected state, the application
         // must afterwards call TLS_handshake() and specify the mode.
-        OpRes connectP2P(const Host& dest, const TimeFrame& timeout = TimeFrame());
+        CERBERUS_EXPORT OpRes connectP2P(const Host& dest, const TimeFrame& timeout = TimeFrame());
 
         // TCP SECTION:
 
         // Mark the socket as a listening socket, so it can accept() new connections.
         // If the instance of the socket was returned by an accept or the socket transport is
         // not TCP, this method will return SO_Unavailable
-        OpRes listen(size_t maxconn = 0);
+        CERBERUS_EXPORT OpRes listen(SIZE maxconn = 0);
 
         // Block until a new connection is available and return the new socket
         // If the instance of the socket was returned by an accept or the socket transport is
@@ -294,7 +303,7 @@ namespace crb
         // with TLS, the returned Socket will inherit the basic init settings used in the
         // TLS_init() call previously
         // [Ownership: caller]
-        cerberus_socket accept();
+        CERBERUS_EXPORT cerberus_socket accept();
 
 #ifdef LINUX_SYSTEM
         //  If cork == true then stop sending out frames with send()
@@ -304,11 +313,11 @@ namespace crb
         OpRes setCork(bool cork = true);
 #endif
         //  Set the Nagle algorithm state. As default, TCP sockets have it enabled (system dependent)
-        OpRes useNagle(bool use = true);
+        CERBERUS_EXPORT OpRes useNagle(bool use = true);
 
         // Set the connection timeout of the socket. Default is 20 minutes (system dependent)
         // A value of zero corresponds to the system default
-        OpRes setTimeout(uint32_t timeout);
+        CERBERUS_EXPORT OpRes setTimeout(uint32_t timeout);
 
         // Enable keep alive probes usage.
         // When the connection goes idle and <idleTime> passed, TCP will start sending
@@ -316,15 +325,15 @@ namespace crb
         // connected. TCP will drop the connection when <maxprobes> keep alive messages did not
         // receive a response. maxprobes is the maximum number of failed probes, idleTime and
         // interval are expressed in seconds
-        OpRes useKeepAlive(bool use, int maxprobes, int idleTime, int interval);
+        CERBERUS_EXPORT OpRes useKeepAlive(bool use, int maxprobes, int idleTime, int interval);
 
         // Like the method above but leaving parameters unchanged
-        OpRes useKeepAlive(bool use = true);
+        CERBERUS_EXPORT OpRes useKeepAlive(bool use = true);
 
         // Send out a file. This method is optimized and the buffer copy procedure
         // happens in kernel space, so it's really fast and efficient.
         // The file has to be open before this call
-        OpRes send(const File& file);
+        CERBERUS_EXPORT OpRes send(const File& file);
 
         // Receive a file.
         // This method blocks until a file is received or timeout is reached.
@@ -332,8 +341,8 @@ namespace crb
         //  block for ever
         // -If timeout (or/and cycTimeout) is specified, the behavior is the same
         // as the recv_cyc() call
-        OpRes recv(File& file, const TimeFrame& timeout = TimeFrame(),
-                   const TimeFrame& cycTimeout = TimeFrame());
+        CERBERUS_EXPORT OpRes recv(File& file, const TimeFrame& timeout = TimeFrame(),
+                                   const TimeFrame& cycTimeout = TimeFrame());
     };
 }  // namespace crb
 

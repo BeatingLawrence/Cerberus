@@ -40,25 +40,25 @@ namespace crb
 
        public:
         // Construct an invalid JsonData
-        JsonData();
+        CERBERUS_EXPORT JsonData();
 
         // Construct a valid JsonData that contains a Json null
-        JsonData(const std::string& name);
+        CERBERUS_EXPORT JsonData(const std::string& name);
 
         // Construct a valid JsonData that contains a Json string
-        JsonData(const std::string& name, const std::string& value);
-        JsonData(const std::string& name, const char* value);
+        CERBERUS_EXPORT JsonData(const std::string& name, const std::string& value);
+        CERBERUS_EXPORT JsonData(const std::string& name, const char* value);
 
         // Construct a valid JsonData that contains a Json number
-        JsonData(const std::string& name, long double value);
-        JsonData(const std::string& name, float value);
-        JsonData(const std::string& name, int64_t value);
+        CERBERUS_EXPORT JsonData(const std::string& name, long double value);
+        CERBERUS_EXPORT JsonData(const std::string& name, float value);
+        CERBERUS_EXPORT JsonData(const std::string& name, int64_t value);
 
         // Construct a valid JsonData that contains a Json boolean
-        JsonData(const std::string& name, bool value);
+        CERBERUS_EXPORT JsonData(const std::string& name, bool value);
 
         // Construct a valid JsonData object that contains another JsonData (nesting)
-        JsonData(const std::string& name, const JsonData& data);
+        CERBERUS_EXPORT JsonData(const std::string& name, const JsonData& data);
 
         // Iterators
         Iterator<JsonData> begin();
@@ -78,13 +78,13 @@ namespace crb
         // If no item is found, an invalid JsonData will be returned.
         // NOTE: this method will return only the first occurrence even if
         // there are more than one
-        JsonData search(const std::string& name);
+        CERBERUS_EXPORT JsonData search(const std::string& name);
 
         // Get the type of the object
         JsonDataType type() const;
 
         // Check if the object is valid
-        bool isValid() const;
+        CERBERUS_EXPORT bool isValid() const;
 
         // Check if the object is a Json null
         bool isNull() const;
@@ -144,12 +144,12 @@ namespace crb
         JsonData& setBoolean(bool value);
 
         // Add an object to this object.
-        JsonData& add(const JsonData& object);
+        CERBERUS_EXPORT JsonData& add(const JsonData& object);
 
         // Add an unnamed value to the object.
         // This methods may change the type
         JsonData& add(const std::string& value);
-        JsonData& add(const char* value);
+        CERBERUS_EXPORT JsonData& add(const char* value);
         JsonData& add(long double value);
         JsonData& add(float value);
         JsonData& add(int64_t value);
@@ -162,19 +162,19 @@ namespace crb
         OpRes parse(const ByteBuffer& buffer);
 
         // Parse the given File content and fill this instance using the obtained data
-        OpRes parse(const File& file);
+        CERBERUS_EXPORT OpRes parse(const File& file);
 
         // Generate the instance using the JSON syntax
-        OpResData<ByteBuffer> generate() const;
+        CERBERUS_EXPORT OpResData<ByteBuffer> generate() const;
 
         // Write the generated data to the given file. The File must be open
         OpRes generate(File& file) const;
 
         // Print the content using a debug formatting rule
-        void toStr(std::string& str, uint8_t level = 0) const;
+        CERBERUS_EXPORT void toStr(std::string& str, uint8_t level = 0) const;
 
         // Calculate the memory footprint
-        SIZE memfp() const;
+        LSIZE memfp() const;
     };
 }  // namespace crb
 

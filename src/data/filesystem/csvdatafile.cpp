@@ -346,7 +346,7 @@ OpRes CSVDataFile::load()
     return out;
 }
 //=============================================================================
-SIZE CSVDataFile::size() const { return m_records.size(); }
+crb::LSIZE CSVDataFile::size() const { return m_records.size(); }
 //=============================================================================
 int CSVDataFile::columnPos(const std::string& col) const
 {
@@ -357,7 +357,7 @@ int CSVDataFile::columnPos(const std::string& col) const
 //=============================================================================
 MultiString CSVDataFile::columns() const { return m_columns; }
 //=============================================================================
-DataType CSVDataFile::type(SIZE columnIndex) const
+DataType CSVDataFile::type(crb::SIZE columnIndex) const
 {
     if (columnIndex >= m_columnTypes.size()) return DT_Invalid;
     return m_columnTypes[columnIndex];
@@ -371,7 +371,7 @@ static ParsedRow parseRowAt(const File& file, LSIZE start, char delim)
     return row;
 }
 //=============================================================================
-Opaque CSVDataFile::read(SIZE recordIndex, SIZE columnIndex) const
+Opaque CSVDataFile::read(crb::LSIZE recordIndex, crb::SIZE columnIndex) const
 {
     if (recordIndex >= m_records.size()) throw cIllegalArgExc("Record index out of range");
     if (columnIndex >= m_columns.size()) throw cIllegalArgExc("Column index out of range");
@@ -398,7 +398,6 @@ static OpRes rewriteSegment(File& src, LSIZE start, LSIZE end, const std::string
 {
     // create temp file in the same directory as src to avoid permission issues
     File tmp = File::tmpFile(src.directory(), FOM_ReadWrite);
-    condret(tmp.open());
 
     // copy 0 .. start
     condret(copyRange(src, tmp, 0, start));
@@ -421,7 +420,7 @@ static OpRes rewriteSegment(File& src, LSIZE start, LSIZE end, const std::string
     return src.open();
 }
 //=============================================================================
-void CSVDataFile::write(SIZE recordIndex, SIZE columnIndex, const Opaque& value)
+void CSVDataFile::write(crb::LSIZE recordIndex, crb::SIZE columnIndex, const Opaque& value)
 {
     if (recordIndex >= m_records.size()) throw cIllegalArgExc("Record index out of range");
     if (columnIndex >= m_columns.size()) throw cIllegalArgExc("Column index out of range");
@@ -477,7 +476,7 @@ void CSVDataFile::addRecordBlock(const CSVRecordBlock& block)
     for (auto&& rec : block) addRecord(rec);
 }
 //=============================================================================
-void CSVDataFile::insertRecord(const CSVRecord& record, SIZE recordIndex)
+void CSVDataFile::insertRecord(const CSVRecord& record, crb::LSIZE recordIndex)
 {
     if (recordIndex > m_records.size()) throw cIllegalArgExc("Record index too large");
     validateRecord(record, m_columns, m_columnTypes);
@@ -496,13 +495,13 @@ void CSVDataFile::insertRecord(const CSVRecord& record, SIZE recordIndex)
     auto res = rewriteSegment(m_file, pos, pos, line);
     if (res.fail()) throw cIllegalStateExc("Failed to insert record: %s", res.toStr().c_str());
 
-    m_records.insert(m_records.begin() + recordIndex, pos);
+    m_records.insert(m_records.begin() + static_cast<std::vector<LSIZE>::difference_type>(recordIndex), pos);
     for (size_t i = recordIndex + 1; i < m_records.size(); ++i) m_records[i] += line.size();
 }
 //=============================================================================
-void CSVDataFile::insertRecordBlock(const CSVRecordBlock& block, SIZE recordIndex)
+void CSVDataFile::insertRecordBlock(const CSVRecordBlock& block, crb::LSIZE recordIndex)
 {
-    SIZE idx = recordIndex;
+    crb::LSIZE idx = recordIndex;
     for (auto&& rec : block)
     {
         insertRecord(rec, idx);
@@ -510,7 +509,7 @@ void CSVDataFile::insertRecordBlock(const CSVRecordBlock& block, SIZE recordInde
     }
 }
 //=============================================================================
-CSVDataFile::CSVRecord CSVDataFile::getRecord(SIZE recordIndex)
+CSVDataFile::CSVRecord CSVDataFile::getRecord(crb::LSIZE recordIndex)
 {
     if (recordIndex >= m_records.size()) throw cIllegalArgExc("Record index out of range");
 
@@ -521,19 +520,19 @@ CSVDataFile::CSVRecord CSVDataFile::getRecord(SIZE recordIndex)
     return rec;
 }
 //=============================================================================
-CSVDataFile::CSVRecordBlock CSVDataFile::getRecordBlock(SIZE recordIndex, SIZE span)
+CSVDataFile::CSVRecordBlock CSVDataFile::getRecordBlock(crb::LSIZE recordIndex, crb::LSIZE span)
 {
     if (recordIndex >= m_records.size()) throw cIllegalArgExc("Record index out of range");
 
     CSVRecordBlock out;
-    SIZE end = span ? std::min<SIZE>(m_records.size(), recordIndex + span) : m_records.size();
+    crb::LSIZE end = span ? std::min<crb::LSIZE>(m_records.size(), recordIndex + span) : m_records.size();
 
     out.reserve(end - recordIndex);
-    for (SIZE i = recordIndex; i < end; ++i) out.push_back(getRecord(i));
+    for (crb::LSIZE i = recordIndex; i < end; ++i) out.push_back(getRecord(i));
     return out;
 }
 //=============================================================================
-CSVDataFile::MultiVal CSVDataFile::getColumn(SIZE index)
+CSVDataFile::MultiVal CSVDataFile::getColumn(crb::SIZE index)
 {
     if (index >= m_columns.size()) throw cIllegalArgExc("Column index out of range");
 
@@ -554,5 +553,5 @@ CSVDataFile::MultiVal CSVDataFile::getColumn(const std::string& headerName)
 {
     int idx = columnPos(headerName);
     if (idx == INVALID_COLUMN) throw cIllegalArgExc("Column not found");
-    return getColumn(static_cast<SIZE>(idx));
+    return getColumn(static_cast<crb::SIZE>(idx));
 }

@@ -10,7 +10,7 @@
 
 namespace crb
 {
-    class CERBERUS_EXPORT IniDataFile
+    class IniDataFile
     {
        private:
         File m_file;
@@ -63,13 +63,13 @@ namespace crb
 
        public:
         // Construct an IniDataFile object with a file name
-        IniDataFile(const std::string& fileName = std::string(""));
+        CERBERUS_EXPORT IniDataFile(const std::string& fileName = std::string(""));
 
         // Close the file if open
-        ~IniDataFile();
+        CERBERUS_EXPORT ~IniDataFile();
 
         // Sets a file name for the .ini file.
-        void setFileName(const std::string& fileName);
+        CERBERUS_EXPORT void setFileName(const std::string& fileName);
 
         // Attempt to load an .ini file.
         // If load() manages to parse all the file with no errors, the result is OR_OK.
@@ -78,29 +78,34 @@ namespace crb
         // from the file but some data was not correctly loaded and has been discarded.
         // If a not ignoreable error has been encountered, OR_Failure is returned.
         // If the given path is not valid, OR_InvalidFile is returned.
-        OpRes load();
+        CERBERUS_EXPORT OpRes load();
 
         // Checks if a key exists in the memory
-        bool exists(const std::string& key, const std::string& section = MAIN_SECTION);
+        CERBERUS_EXPORT bool exists(const std::string& key,
+                                    const std::string& section = MAIN_SECTION);
 
         // Returns the value type of the requested key.
         // If key was not found, IDT_Invalid is returned
-        DataType type(const std::string& key, const std::string& section = MAIN_SECTION);
+        CERBERUS_EXPORT DataType type(const std::string& key,
+                                      const std::string& section = MAIN_SECTION);
 
         // Check if the key object is convertible to the given type
-        bool isType(const std::string& key, DataType type);
+        CERBERUS_EXPORT bool isType(const std::string& key, DataType type);
 
         // Force the re-write of the entire file
-        OpRes rewrite();
+        CERBERUS_EXPORT OpRes rewrite();
 
         // Write one key with an Opaque value; creates section if missing.
-        OpRes write(const std::string& key, const Opaque& value, const std::string& section = MAIN_SECTION);
+        CERBERUS_EXPORT OpRes write(const std::string& key, const Opaque& value,
+                                    const std::string& section = MAIN_SECTION);
 
         // Enforce a key/value with Opaque. If key exists with different type it is overwritten.
-        OpRes enforce(const std::string& key, const Opaque& value, const std::string& section = MAIN_SECTION);
+        CERBERUS_EXPORT OpRes enforce(const std::string& key, const Opaque& value,
+                                      const std::string& section = MAIN_SECTION);
 
         // Read a key into an Opaque value.
-        OpResData<Opaque> read(const std::string& key, const std::string& section = MAIN_SECTION);
+        CERBERUS_EXPORT OpResData<Opaque> read(const std::string& key,
+                                               const std::string& section = MAIN_SECTION);
     };
 
 }  // namespace crb

@@ -1,6 +1,10 @@
 #include "cerberusregister.h"
 
+#ifdef WINDOWS_SYSTEM
+#include <windows.h>
+#else
 #include <dlfcn.h>
+#endif
 
 #include "../cerberus.h"
 #include "../define.h"
@@ -211,9 +215,14 @@ void CerberusRegister::cleanupPlugins()
     {
         el.mutex.lock();  // wait the lock
         el.mutex.unlock();
+#ifdef WINDOWS_SYSTEM
+        if (FreeLibrary(static_cast<HMODULE>(el.handle)) == 0)
+            logError("Error while unloading plugin %u %s", el.id, el.path.c_str());
+#else
         int ret = dlclose(el.handle);
 
         if (ret != 0) logError("Error while unloading plugin %u %s", el.id, el.path.c_str());
+#endif
     }
 
     m_plugins.clear();

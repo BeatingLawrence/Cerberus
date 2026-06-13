@@ -4,7 +4,17 @@
 #include <data/filesystem/file.h>
 #include <gtest/gtest.h>
 
+#include <filesystem>
+
 using namespace crb;
+
+namespace
+{
+std::string testTempFilePath(const std::string& filename)
+{
+    return (std::filesystem::temp_directory_path() / filename).string();
+}
+}
 
 //==========================Postgres backend tests============================
 
@@ -156,7 +166,7 @@ class FSDatabaseTest : public ::testing::Test
    protected:
     virtual void SetUp() override
     {
-        path = "/tmp/fsdb_unittest.cdb";
+        path = testTempFilePath("fsdb_unittest.cdb");
         File::remove(path);  // best-effort cleanup
     };
 
@@ -330,7 +340,7 @@ TEST_F(FSDatabaseTest, multipleTablesSingleFile)
 
 TEST_F(FSDatabaseTest, modifyTest)
 {
-    std::string modPath = "/tmp/fsdb_modify.cdb";
+    std::string modPath = testTempFilePath("fsdb_modify.cdb");
     File::remove(modPath);
 
     Database ldb(DBB_Filesystem);
@@ -386,7 +396,8 @@ TEST_F(FSDatabaseTest, modifyTest)
     */
     // for (size_t r = 0; r < block.size(); ++r)
     //     for (size_t c = 0; c < proto.size(); ++c)
-    //         logDebug("row %zu col %s size %u", r, proto[c].name().c_str(), block[r][c].raw().size());
+    //         logDebug("row %zu col %s size %llu", r, proto[c].name().c_str(),
+    //                  static_cast<unsigned long long>(block[r][c].raw().size()));
     // Verify input block is coherent with the declared schema before first write.
     EXPECT_TRUE(block.verify(proto));
 
@@ -441,7 +452,7 @@ TEST_F(FSDatabaseTest, modifyTest)
 
 TEST_F(FSDatabaseTest, updateBlock)
 {
-    std::string path = "/tmp/fsdb_update.cdb";
+    std::string path = testTempFilePath("fsdb_update.cdb");
     File::remove(path);
 
     Database db(DBB_Filesystem);
@@ -534,7 +545,7 @@ TEST_F(FSDatabaseTest, updateBlock)
 TEST_F(FSDatabaseTest, queryBlockAndDropStress)
 {
     const int ROWS = 1000;
-    std::string p  = "/tmp/fsdb_stress.cdb";
+    std::string p  = testTempFilePath("fsdb_stress.cdb");
     File::remove(p);
 
     ASSERT_TRUE(db.init(p).ok("init error"));
@@ -589,7 +600,7 @@ TEST_F(FSDatabaseTest, queryBlockAndDropStress)
 
 TEST_F(FSDatabaseTest, typedQueryPoliciesDefaultsAndRename)
 {
-    std::string p = "/tmp/fsdb_api.cdb";
+    std::string p = testTempFilePath("fsdb_api.cdb");
     File::remove(p);
 
     Database ldb(DBB_Filesystem);
@@ -731,7 +742,7 @@ TEST_F(FSDatabaseTest, fsDatabaseBenchmark)
 
     const int ROWS  = 100000;
     const int CHUNK = 5000;
-    std::string p   = "/tmp/fsdb_bench.cdb";
+    std::string p   = testTempFilePath("fsdb_bench.cdb");
     File::remove(p);
 
     ASSERT_TRUE(db.init(p).ok("init error"));
@@ -784,10 +795,10 @@ TEST_F(FSDatabaseTest, fsDatabaseBenchmark)
         // Verify first row shape quickly to print detailed diagnostics on mismatch.
         if (!block[0].verify(proto))
         {
-            for (size_t c = 0; c < proto.size(); ++c)
+            for (crb::SIZE c = 0; c < proto.size(); ++c)
             {
                 const DBCell& cell = block[0][c];
-                SIZE sz            = cell.raw().size();
+                crb::LSIZE sz      = cell.raw().size();
                 DBDataType t       = proto[c].type();
                 DBMOD mod          = proto[c].mod();
                 bool ok            = true;
@@ -824,9 +835,9 @@ TEST_F(FSDatabaseTest, fsDatabaseBenchmark)
                         ok = false;
                         break;
                 }
-                logDebug("first row fail base %d col %s size %u type %d mod %u cond %s rawhex %s", base,
-                         proto[c].name().c_str(), sz, t, proto[c].mod(), ok ? "ok" : "FAIL",
-                         cell.raw().toHex().c_str());
+                logDebug("first row fail base %d col %s size %llu type %d mod %u cond %s rawhex %s", base,
+                         proto[c].name().c_str(), static_cast<unsigned long long>(sz), t, proto[c].mod(),
+                         ok ? "ok" : "FAIL", cell.raw().toHex().c_str());
             }
             FAIL() << "first row verify failed at base " << base;
         }
@@ -836,10 +847,10 @@ TEST_F(FSDatabaseTest, fsDatabaseBenchmark)
             size_t badRow = 0;
             for (; badRow < block.size(); ++badRow)
                 if (!block[badRow].verify(proto)) break;
-            for (size_t c = 0; c < proto.size(); ++c)
+            for (crb::SIZE c = 0; c < proto.size(); ++c)
             {
                 const DBCell& cell = block[badRow][c];
-                SIZE sz            = cell.raw().size();
+                crb::LSIZE sz      = cell.raw().size();
                 DBDataType t       = proto[c].type();
                 DBMOD mod          = proto[c].mod();
                 bool ok            = true;
@@ -876,8 +887,9 @@ TEST_F(FSDatabaseTest, fsDatabaseBenchmark)
                         ok = false;
                         break;
                 }
-                logDebug("verify fail base %d row %zu col %s size %u type %d mod %u cond %s", base, badRow,
-                         proto[c].name().c_str(), sz, t, proto[c].mod(), ok ? "ok" : "FAIL");
+                logDebug("verify fail base %d row %zu col %s size %llu type %d mod %u cond %s", base, badRow,
+                         proto[c].name().c_str(), static_cast<unsigned long long>(sz), t, proto[c].mod(),
+                         ok ? "ok" : "FAIL");
             }
             FAIL() << "block verify failed at base " << base;
         }

@@ -53,9 +53,9 @@ namespace crb
             bool isLoaded(const std::string& path) const;
 
            public:
-            LibLoader();
+            CERBERUS_EXPORT LibLoader();
 
-            ~LibLoader();
+            CERBERUS_EXPORT ~LibLoader();
 
             // Load a dynamic shared object. This call will link this instance of LibLoader to a
             // defined library image (if the load process completes successfully).
@@ -64,32 +64,32 @@ namespace crb
             // If noreg is true, the object is not noted in the Cerberus registers so
             // the user must call unload() when the object it's not necessary anymore.
             // This call can also be used to setup a LibLoader instance for an already loaded object
-            OpRes load(const std::string& path, bool noreg = false);
+            CERBERUS_EXPORT OpRes load(const std::string& path, bool noreg = false);
 
             // Unload a dynamic shared object.
             // This method only works in standalone mode
-            OpRes unload();
+            CERBERUS_EXPORT OpRes unload();
 
             // Swap the loaded library with the image provided at the given path.
             // The operation is thread-safe and may be done while other threads are using the image
             // This method only works in shared mode
-            OpRes swap(const std::string& path);
+            CERBERUS_EXPORT OpRes swap(const std::string& path);
 
             // Reload the plugin. This method is equal to swap(), just without changing path
-            OpRes reload();
+            CERBERUS_EXPORT OpRes reload();
 
             // Get the pointer to an object contained in the plugin.
             // If an error occurs, an invalid LoaderFunc is returned.
             // The shared object mutex remains locked until the locker instance inside the
             // returned LoaderFunc is destroyed
-            LoaderFunc get(const std::string& symbol);
+            CERBERUS_EXPORT LoaderFunc get(const std::string& symbol);
 
             // Check if the image has been loaded in the process image
-            bool isLoaded() const;
+            CERBERUS_EXPORT bool isLoaded() const;
 
             // Load a shared object into the Cerberus framework domain, avoiding
             // to manually create a LibLoader instance
-            static OpRes fastload(const std::string& path);
+            CERBERUS_EXPORT static OpRes fastload(const std::string& path);
         };
     }  // namespace core
 }  // namespace crb

@@ -4,7 +4,22 @@
 #include "src/core/cerberusutils.h"
 #include "src/types.h"
 
+#include <limits>
+
 using namespace crb;
+
+namespace
+{
+OpResData<crb::SIZE> checkedHttpOffset(int64_t value, const char* field)
+{
+    if (value < 0 || value > std::numeric_limits<crb::SIZE>::max())
+    {
+        return {OR_WrongData, CerberusUtils::strPrint("%s out of range", field)};
+    }
+
+    return static_cast<crb::SIZE>(value);
+}
+}
 
 //=============================================================================
 OpRes HTTPClient::_connect()
@@ -75,7 +90,11 @@ crb::OpRes HTTPClient::getStatus(const ByteBuffer &statusLine, HTTPResponse &res
         return {OR_Failure, "Unrecognized HTTP version received"};
     }
 
-    response.statusCode = CerberusUtils::stringToInt(str.substr(space1 + 1, space2)).value;
+    auto status = CerberusUtils::stringToInt(str.substr(space1 + 1, space2));
+    if (status.fail()) return status;
+    if (status.value < 100 || status.value > 599) return {OR_WrongData, "HTTP status code out of range"};
+
+    response.statusCode = static_cast<uint16_t>(status.value);
     response.message    = str.substr(space2 + 1, std::string::npos);
 
     return OR_OK;
@@ -91,14 +110,18 @@ OpResData<HTTPResponse> HTTPClient::_parseResponseHeader(const ByteBuffer &buf) 
     if (res.fail())
         return {OR_WrongData, "cannot find /r/n/r/n pattern", CerberusUtils::truncStr(buf.toString(), 1000)};
 
-    SIZE gap = res.value;
+    auto gapRes = checkedHttpOffset(res.value, "HTTP header separator offset");
+    if (gapRes.fail()) return gapRes;
+    crb::SIZE gap = gapRes.value;
 
     // find the status line end
     res = buf.search("\r\n");
     if (res.fail())
         return {OR_WrongData, "cannot find status line end", CerberusUtils::truncStr(buf.toString(), 1000)};
 
-    SIZE sle = res.value;
+    auto sleRes = checkedHttpOffset(res.value, "HTTP status line offset");
+    if (sleRes.fail()) return sleRes;
+    crb::SIZE sle = sleRes.value;
 
     HTTPResponse data;
     data.setPayload(buf.subBuffer(gap + 4));
@@ -132,7 +155,12 @@ void HTTPClient::decodeChunkedData(ByteBuffer &data)
     while (true)
     {
         auto str = data.getLine();  // get until \r\n
-        int size = CerberusUtils::stringToInt(str, Radix::Hexadecimal).value;
+        auto parsedSize = CerberusUtils::stringToInt(str, Radix::Hexadecimal);
+        if (parsedSize.fail() || parsedSize.value < 0 ||
+            parsedSize.value > std::numeric_limits<crb::SIZE>::max())
+            break;
+
+        LSIZE size = static_cast<LSIZE>(parsedSize.value);
 
         if (size == 0) break;
 

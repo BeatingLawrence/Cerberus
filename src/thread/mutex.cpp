@@ -1,5 +1,15 @@
 #include "mutex.h"
 
+#ifdef WINDOWS_SYSTEM
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 #include <cstring>
 
 #include "src/cerberus.h"
@@ -9,8 +19,37 @@ using namespace crb;
 
 //============================================================================
 Mutex::Mutex(MutexType type)
-    : m_pmutex()
+    :
+#ifdef WINDOWS_SYSTEM
+      m_pmutex(nullptr),
+      m_type(type),
+#else
+      m_pmutex(),
+#endif
+      m_valid(false)
 {
+#ifdef WINDOWS_SYSTEM
+    switch (type)
+    {
+        case Simple:
+        {
+            auto lock = new SRWLOCK;
+            InitializeSRWLock(lock);
+            m_pmutex = lock;
+        }
+        break;
+
+        case Recursive:
+        {
+            auto lock = new CRITICAL_SECTION;
+            InitializeCriticalSection(lock);
+            m_pmutex = lock;
+        }
+        break;
+    }
+
+    m_valid = true;
+#else
     pthread_mutexattr_t attr{};
 
     if (pthread_mutexattr_init(&attr))
@@ -46,20 +85,44 @@ Mutex::Mutex(MutexType type)
     pthread_mutexattr_destroy(&attr);
 
     m_valid = true;
+#endif
 }
 //============================================================================
 Mutex::Mutex(Mutex &&other)
-    : m_pmutex(other.m_pmutex),
+    :
+#ifdef WINDOWS_SYSTEM
+      m_pmutex(other.m_pmutex),
+      m_type(other.m_type),
+#else
+      m_pmutex(other.m_pmutex),
+#endif
       m_valid(other.m_valid)
 {
+#ifdef WINDOWS_SYSTEM
+    other.m_pmutex = nullptr;
+#endif
     other.m_valid = false;
 }
 //============================================================================
 Mutex::~Mutex()
 {
     if (!m_valid) return;
+#ifdef WINDOWS_SYSTEM
+    if (m_type == Recursive)
+    {
+        DeleteCriticalSection(static_cast<CRITICAL_SECTION*>(m_pmutex));
+        delete static_cast<CRITICAL_SECTION*>(m_pmutex);
+    }
+    else
+    {
+        delete static_cast<SRWLOCK*>(m_pmutex);
+    }
+
+    m_pmutex = nullptr;
+#else
     pthread_mutex_unlock(&m_pmutex);
     pthread_mutex_destroy(&m_pmutex);
+#endif
 }
 //============================================================================
 bool Mutex::lock(bool block)
@@ -69,6 +132,26 @@ bool Mutex::lock(bool block)
         throw cIllegalStateExc("lock called on an invalid Mutex");
     }
 
+#ifdef WINDOWS_SYSTEM
+    if (m_type == Recursive)
+    {
+        if (block)
+        {
+            EnterCriticalSection(static_cast<CRITICAL_SECTION*>(m_pmutex));
+            return true;
+        }
+
+        return TryEnterCriticalSection(static_cast<CRITICAL_SECTION*>(m_pmutex)) != 0;
+    }
+
+    if (block)
+    {
+        AcquireSRWLockExclusive(static_cast<SRWLOCK*>(m_pmutex));
+        return true;
+    }
+
+    return TryAcquireSRWLockExclusive(static_cast<SRWLOCK*>(m_pmutex)) != 0;
+#else
     int ret = 0;
 
     if (block)
@@ -98,6 +181,7 @@ bool Mutex::lock(bool block)
     }
 
     return true;
+#endif
 }
 //=============================================================================
 void Mutex::unlock()
@@ -107,11 +191,18 @@ void Mutex::unlock()
         throw cIllegalStateExc("unlock called on an invalid Mutex");
     }
 
+#ifdef WINDOWS_SYSTEM
+    if (m_type == Recursive)
+        LeaveCriticalSection(static_cast<CRITICAL_SECTION*>(m_pmutex));
+    else
+        ReleaseSRWLockExclusive(static_cast<SRWLOCK*>(m_pmutex));
+#else
     auto ret = pthread_mutex_unlock(&m_pmutex);
 
     if (ret)
     {
         throw cSystemExc("pthread_mutex_unlock error %s", strerror(ret));
     }
+#endif
 }
 //=============================================================================

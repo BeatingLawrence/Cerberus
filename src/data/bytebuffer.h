@@ -14,25 +14,25 @@ namespace crb
 
        private:
         BYTE* m_bytes;  // heap
-        SIZE m_size;
-        mutable SIZE m_pos;
+        LSIZE m_size;
+        mutable LSIZE m_pos;
 
-        void _resize(SIZE size);
+        void _resize(LSIZE size);
 
         void _clear();
 
-        BYTE& getat(SIZE index) const;
+        BYTE& getat(LSIZE index) const;
 
        public:
         // Construct a ByteBuffer copying its content from a given buffer
-        ByteBuffer(const void* buf, SIZE size);
+        ByteBuffer(const void* buf, LSIZE size);
 
         // Construct a ByteBuffer allocating size bytes. The buffer
         // is not initialized and may contain garbage value
-        explicit ByteBuffer(SIZE size);
+        explicit ByteBuffer(LSIZE size);
 
         // Construct a ByteBuffer allocating size bytes. The buffer is initialized using val value
-        ByteBuffer(SIZE size, BYTE val);
+        ByteBuffer(LSIZE size, BYTE val);
 
         // Construct an empty ByteBuffer, no buffer memory allocation is performed
         ByteBuffer();
@@ -59,32 +59,32 @@ namespace crb
         Iterator<BYTE> end();
 
         // Obtain the main pointer of the buffer.
-        const BYTE* data(SIZE index = 0) const;
-        BYTE* data(SIZE index = 0);
+        const BYTE* data(LSIZE index = 0) const;
+        BYTE* data(LSIZE index = 0);
 
         // Obtain a single byte by reference.
         // An exception will be thrown if index >= size()
-        const BYTE& at(SIZE index) const;
-        BYTE& at(SIZE index);
+        const BYTE& at(LSIZE index) const;
+        BYTE& at(LSIZE index);
 
         // Obtain a single byte by reference.
         // An exception will be thrown if index >= size()
-        BYTE& operator[](SIZE index);
-        const BYTE& operator[](SIZE index) const;
+        BYTE& operator[](LSIZE index);
+        const BYTE& operator[](LSIZE index) const;
 
         // Append len bytes read from the given buffer to this ByteBuffer.
-        ByteBuffer& appendFrom(const void* buffer, SIZE len);
+        ByteBuffer& appendFrom(const void* buffer, LSIZE len);
 
         // Assign the content of the given buffer to this ByteBuffer. Existing content will be discarded.
-        ByteBuffer& assignFrom(const void* buffer, SIZE len);
+        ByteBuffer& assignFrom(const void* buffer, LSIZE len);
 
         // Copy the content of this ByteBuffer to the given buffer. No more than maxLen bytes will be
         // copied. If maxLen is 0, all the content of this ByteBuffer will be copied
-        const ByteBuffer& copyTo(void* buffer, SIZE maxLen = 0) const;
+        const ByteBuffer& copyTo(void* buffer, LSIZE maxLen = 0) const;
 
         // Copy the content of the given buffer to this instance of ByteBuffer. No more than maxLen bytes
         // will be copied. Note that the size of the ByteBuffer will not be altered if maxLen is smaller
-        const ByteBuffer& copyFrom(void* buffer, SIZE len);
+        const ByteBuffer& copyFrom(void* buffer, LSIZE len);
 
         // Checks if this ByteBuffer instance is equal to other
         bool operator==(const ByteBuffer& other) const;
@@ -108,16 +108,16 @@ namespace crb
         // Obtain another ByteBuffer instance that contains len bytes copied from position pos
         // If the pos is greater than or equal to the size, this call will return an empty buffer.
         // If specified len is too large, the operation will copy the buffer till the end.
-        ByteBuffer subBuffer(SIZE pos, SIZE len) const;
+        ByteBuffer subBuffer(LSIZE pos, LSIZE len) const;
 
         // Obtain another ByteBuffer instance that contains bytes copied from position pos till the end of
         // the buffer If the pos is greater than or equal to the size, this call will return an empty
         // buffer.
-        ByteBuffer subBuffer(SIZE pos) const;
+        ByteBuffer subBuffer(LSIZE pos) const;
 
         // Return another ByteBuffer that is equal to this except for the size that now
         // is trimmed to len bytes.
-        ByteBuffer trim(SIZE len) const;
+        ByteBuffer trim(LSIZE len) const;
 
         // Append the given c-string str to the end of this buffer.
         // The string must end with a \0, that will NOT be appended.
@@ -134,18 +134,18 @@ namespace crb
         ByteBuffer& append_16b(void* src);  // Append 16 bytes buffer
 
         // Get the current buffer size
-        SIZE size() const;
+        LSIZE size() const;
 
         // Tell if the buffer is empty
         bool isEmpty() const;
 
         // Change the size of the ByteBuffer.
         // If the new size is less than the current one, data loss may take place.
-        ByteBuffer& resize(SIZE size);
+        ByteBuffer& resize(LSIZE size);
 
         // Assign first len bytes of another ByteBuffer value to this instance, the memory is deep-copied.
         // If len is 0, all the buffer is assigned
-        ByteBuffer& assign(const ByteBuffer& other, SIZE len = 0);
+        ByteBuffer& assign(const ByteBuffer& other, LSIZE len = 0);
 
         // Assign the c-string str value to this buffer.
         // After this call the size will be equal to the size of the given string.
@@ -222,17 +222,17 @@ namespace crb
         // The cursor position is incremented by len.
         // If specified len would exceed the buffer size,
         // the operation will return data till the end.
-        ByteBuffer read(SIZE len) const;
+        ByteBuffer read(LSIZE len) const;
 
         // Read a single byte, incrementing the cursor by one.
         // This method will throw an exception if end() returns true
         BYTE readByte() const;
 
         // Seek to the position pos
-        const ByteBuffer& seek(SIZE pos) const;
+        const ByteBuffer& seek(LSIZE pos) const;
 
         // Return the current cursor position
-        SIZE pos() const;
+        LSIZE pos() const;
 
         // Seek to zero if end == false,
         // Seek to the last byte if end == true

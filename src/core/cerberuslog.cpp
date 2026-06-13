@@ -84,7 +84,7 @@ void CerberusLog::log(const std::string& str, LogLevel logLevel, const std::stri
 
     // multiline check
     std::string s = str;
-    if (isMultiLine(s)) align(s, logLevel, logAuth.size());
+    if (isMultiLine(s)) align(s, logLevel, static_cast<uint32_t>(logAuth.size()));
 
     // rawLog (no formatting)
     std::string rawLog;
@@ -123,12 +123,12 @@ void CerberusLog::setup(const LogConf& parms)
     // m_warningLogTerminalFormatting_Windows = 0;
     // m_errorLogTerminalFormatting_Windows   = 0;
     // m_debugLogTerminalFormatting_Windows   = 0;
+#ifndef WINDOWS_SYSTEM
     m_infoForm.clear();
     m_warnForm.clear();
     m_errForm.clear();
     m_debForm.clear();
 
-#ifndef WINDOWS_SYSTEM
     if (m_logConf.colorFormatting)
     {
         // determine if wanted color formatting is actually applicable
@@ -141,10 +141,10 @@ void CerberusLog::setup(const LogConf& parms)
 #ifdef WINDOWS_SYSTEM
         m_stdoutHandle_Windows                 = GetStdHandle(STD_OUTPUT_HANDLE);
         m_stderrHandle_Windows                 = GetStdHandle(STD_ERROR_HANDLE);
-        m_infoLogTerminalFormatting_Windows    = parseFormattingData_Windows(setup.infoRole);
-        m_warningLogTerminalFormatting_Windows = parseFormattingData_Windows(setup.warningRole);
-        m_errorLogTerminalFormatting_Windows   = parseFormattingData_Windows(setup.errorRole);
-        m_debugLogTerminalFormatting_Windows   = parseFormattingData_Windows(setup.debugRole);
+        m_infoLogTerminalFormatting_Windows    = parseFormattingData_Windows(parms.infoRole);
+        m_warningLogTerminalFormatting_Windows = parseFormattingData_Windows(parms.warningRole);
+        m_errorLogTerminalFormatting_Windows   = parseFormattingData_Windows(parms.errorRole);
+        m_debugLogTerminalFormatting_Windows   = parseFormattingData_Windows(parms.debugRole);
 #else
         m_infoForm = parseFormdata(parms.infoRole);
         m_warnForm = parseFormdata(parms.warningRole);
@@ -218,58 +218,7 @@ std::string CerberusLog::toFormattedLog(const std::string& str, LogLevel ll, con
                                         const std::string& t)
 {
 #ifdef WINDOWS_SYSTEM
-#error "IMPLEMENTATION WRONG, please rewrite"
-    // remake this part under windows !!
-
-    switch (logLevel)
-    {
-        case LL_Info:  // writes on stdout
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << CerberusUtils::strPrint("%s [", timestamp.c_str());
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows,
-                                    instance->m_infoLogTerminalFormatting_Windows);
-            std::cout << "INF";
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), s.c_str());
-            std::cout << std::endl;
-            break;
-
-        case LL_Warning:  // writes on stdout
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << CerberusUtils::strPrint("%s [", timestamp.c_str());
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows,
-                                    instance->m_warningLogTerminalFormatting_Windows);
-            std::cout << "WRN";
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cout << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), s.c_str());
-            std::cout << std::endl;
-            break;
-
-        case LL_Error:  // writes on stderr
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cerr << CerberusUtils::strPrint("%s [", timestamp.c_str());
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows,
-                                    instance->m_errorLogTerminalFormatting_Windows);
-            std::cerr << "ERR";
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cerr << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), s.c_str());
-            std::cerr << std::endl;
-            break;
-
-        case LL_Debug:  // writes on stderr
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cerr << CerberusUtils::strPrint("%s [", timestamp.c_str());
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows,
-                                    instance->m_debugLogTerminalFormatting_Windows);
-            std::cerr << "DBG";
-            SetConsoleTextAttribute(instance->m_stdoutHandle_Windows, EndOfFormatting_Windows);
-            std::cerr << CerberusUtils::strPrint("] %s%s", logAuthor.c_str(), s.c_str());
-            std::cerr << std::endl;
-            break;
-
-        default:
-            break;
-    }
+    return toRawLog(str, ll, a, t);
 #else
 
     switch (ll)

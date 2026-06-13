@@ -15,7 +15,7 @@ namespace crb
     {
         class CerberusRegister;
 
-        class CERBERUS_EXPORT Recordable
+        class Recordable
         {
             friend class ::crb::core::CerberusRegister;
             friend class ::crb::Cerberus;
@@ -23,10 +23,10 @@ namespace crb
            public:
             // Return a string containing the object type (and socket type if present) and ID,
             // like "Thread ID:123456"
-            static std::string toStr(const Recordable& obj);
+            CERBERUS_EXPORT static std::string toStr(const Recordable& obj);
 
             // Same as above
-            std::string toObjStr();
+            CERBERUS_EXPORT std::string toObjStr();
 
        private:
             HASH32 m_id;
@@ -34,26 +34,26 @@ namespace crb
             static std::string toThreadStr(const Recordable& obj);
 
        protected:
-            Recordable();
+            CERBERUS_EXPORT Recordable();
 
        public:
             Recordable(const Recordable& other) = delete;
 
-            virtual ~Recordable();
+            CERBERUS_EXPORT virtual ~Recordable();
 
             // Register this instance in the Cerberus framework register.
             // After this call, all other registered objects will be capable of
             // getting a reference to this instance and use it
-            virtual void checkIn(const std::string& name);
+            CERBERUS_EXPORT virtual void checkIn(const std::string& name);
 
             // Un-register this instance from the Cerberus framework register.
-            virtual void checkOut();
+            CERBERUS_EXPORT virtual void checkOut();
 
             // Checks if the object is registered
-            bool isRegistered() const;
+            CERBERUS_EXPORT bool isRegistered() const;
 
             // Returns the object ID
-            HASH32 id() const;
+            CERBERUS_EXPORT HASH32 id() const;
 
             // Performs a dynamic cast of this object into T. Throws an exception if the cast is not possible
             // Checking the object type() before casting is a good practice

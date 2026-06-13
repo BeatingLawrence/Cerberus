@@ -27,30 +27,31 @@ namespace crb
         static void defaultTimeoutCallback(void* ctx);
 
        public:
-        Timer();
+        CERBERUS_EXPORT Timer();
 
-        Timer(const TimeFrame& time, TimerType type = TT_OneShot, const DateTime& delay = DateTime());
+        CERBERUS_EXPORT Timer(const TimeFrame& time, TimerType type = TT_OneShot,
+                              const DateTime& delay = DateTime());
 
         Timer(const Timer& other) = delete;
 
-        ~Timer();
+        CERBERUS_EXPORT ~Timer();
 
-        void setTime(const TimeFrame& time, const DateTime& delay = DateTime());
+        CERBERUS_EXPORT void setTime(const TimeFrame& time, const DateTime& delay = DateTime());
 
-        void setTime(const DateTime& delay);
+        CERBERUS_EXPORT void setTime(const DateTime& delay);
 
-        void start();
+        CERBERUS_EXPORT void start();
 
-        void stop();
+        CERBERUS_EXPORT void stop();
 
-        bool isRunning();
-        bool expired();
+        CERBERUS_EXPORT bool isRunning();
+        CERBERUS_EXPORT bool expired();
 
         // Sets a callback to be executed when the timer expires
-        void provideTimeoutCallback(timerCallback callback, void* ctx);
+        CERBERUS_EXPORT void provideTimeoutCallback(timerCallback callback, void* ctx);
 
         // Sets a recipient to be notified when the timer expires
-        void setRecipient(HASH32 recipientId);
+        CERBERUS_EXPORT void setRecipient(HASH32 recipientId);
     };
 }  // namespace crb
 

@@ -1,6 +1,9 @@
 #include "jsondata.h"
 
 #include "src/cerberus.h"
+#include "src/exception/exception.h"
+
+#include <limits>
 
 using namespace crb;
 
@@ -307,7 +310,7 @@ crb::ConstIterator<JsonData> JsonData::end() const
     return ((&m_elements.back()) + 1);
 }
 //=============================================================================
-JsonData JsonData::getAt(SIZE index)
+JsonData JsonData::getAt(crb::SIZE index)
 {
     if (index >= size()) return JsonData();
     return m_elements[index];
@@ -353,7 +356,15 @@ bool JsonData::isArray() const { return m_type == JDT_Array; }
 //=============================================================================
 bool JsonData::isObject() const { return m_type == JDT_Object; }
 //=============================================================================
-crb::SIZE JsonData::size() const { return m_elements.size(); }
+crb::SIZE JsonData::size() const
+{
+    if (m_elements.size() > std::numeric_limits<SIZE>::max())
+    {
+        throw cIllegalStateExc("JSON container has too many elements");
+    }
+
+    return static_cast<SIZE>(m_elements.size());
+}
 //=============================================================================
 bool JsonData::empty() const { return m_elements.empty(); }
 //=============================================================================
@@ -605,9 +616,9 @@ void JsonData::toStr(std::string &str, uint8_t level) const
     str.append("\n").append(indent).append("end");
 }
 //=============================================================================
-SIZE JsonData::memfp() const
+crb::LSIZE JsonData::memfp() const
 {
-    SIZE s = sizeof(JsonData);
+    crb::LSIZE s = sizeof(JsonData);
     for (auto &el : m_elements) s += el.memfp();
     return s;
 }

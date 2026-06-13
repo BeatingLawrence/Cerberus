@@ -140,7 +140,7 @@ SplittedTime TimeFrame::splittedTime() const
     ret.seconds = seconds();
 
     uint64_t time   = m_us % US_IN_S;
-    ret.nanoseconds = time * 1000u;
+    ret.nanoseconds = static_cast<uint32_t>(time * 1000u);
 
     return ret;
 }

@@ -14,7 +14,7 @@
 
 namespace crb
 {
-    class CERBERUS_EXPORT RTFifo
+    class RTFifo
     {
        public:
         struct Meta
@@ -43,33 +43,36 @@ namespace crb
         alignas(64) std::atomic<uint32_t> m_tail;
 
        public:
-        RTFifo();
-        RTFifo(uint32_t capPow2, SIZE blockBytes, SIZE align = 64, bool lockMemory = true);
+        CERBERUS_EXPORT RTFifo();
+        CERBERUS_EXPORT RTFifo(uint32_t capPow2, SIZE blockBytes, SIZE align = 64,
+                               bool lockMemory = true);
 
-        ~RTFifo();
+        CERBERUS_EXPORT ~RTFifo();
 
         RTFifo(const RTFifo& other) = delete;
         RTFifo& operator=(const RTFifo& other) = delete;
 
-        void init(uint32_t capPow2, SIZE blockBytes, SIZE align = 64, bool lockMemory = true);
-        void shutdown();
+        CERBERUS_EXPORT void init(uint32_t capPow2, SIZE blockBytes, SIZE align = 64,
+                                  bool lockMemory = true);
+        CERBERUS_EXPORT void shutdown();
 
         // Producer (RT): returns pointer to a writable block or nullptr on overflow (drop-newest).
-        uint8_t* tryBeginWrite(uint32_t* outSlot = nullptr);
+        CERBERUS_EXPORT uint8_t* tryBeginWrite(uint32_t* outSlot = nullptr);
 
         // Producer (RT): publish the written block.
-        void endWrite(uint32_t slot, SIZE len, uint64_t seq);
+        CERBERUS_EXPORT void endWrite(uint32_t slot, SIZE len, uint64_t seq);
 
         // Consumer: returns pointer to a readable block or nullptr if empty.
-        const uint8_t* tryBeginRead(uint32_t* outSlot = nullptr, SIZE* outLen = nullptr,
-                                    uint64_t* outSeq = nullptr) const;
+        CERBERUS_EXPORT const uint8_t* tryBeginRead(uint32_t* outSlot = nullptr,
+                                                    SIZE* outLen = nullptr,
+                                                    uint64_t* outSeq = nullptr) const;
 
         // Consumer: release the block.
-        void endRead();
+        CERBERUS_EXPORT void endRead();
 
         // Consumer: wait for data availability and drain eventfd.
         // timeoutMs < 0 blocks indefinitely. Returns OR_TimedOut on timeout.
-        OpRes waitData(int timeoutMs = -1) const;
+        CERBERUS_EXPORT OpRes waitData(int timeoutMs = -1) const;
 
         // eventfd used to signal transitions from empty to non-empty.
         int eventFd() const { return m_eventFd; }

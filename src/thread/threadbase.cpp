@@ -1,5 +1,15 @@
 #include "threadbase.h"
 
+#ifdef WINDOWS_SYSTEM
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 #include <cstring>
 
 #include "../exception/exception.h"
@@ -20,6 +30,11 @@ ThreadBase::ThreadBase(ThreadPeriodicity periodicity)
       m_rescheduling(false),
       m_periodicity(periodicity)
 {
+#ifdef WINDOWS_SYSTEM
+    m_cond = new CONDITION_VARIABLE;
+    InitializeConditionVariable(static_cast<CONDITION_VARIABLE*>(m_cond));
+    return;
+#else
     pthread_condattr_t attr{};
 
     int ret = pthread_condattr_init(&attr);
@@ -31,17 +46,30 @@ ThreadBase::ThreadBase(ThreadPeriodicity periodicity)
     if (ret) throw cSystemExc("pthread_cond_init error %s", strerror(ret));
 
     pthread_condattr_destroy(&attr);
+#endif
 }
 //=============================================================================
-ThreadBase::~ThreadBase() { pthread_cond_destroy(&m_cond); }
+ThreadBase::~ThreadBase()
+{
+#ifdef WINDOWS_SYSTEM
+    delete static_cast<CONDITION_VARIABLE*>(m_cond);
+    m_cond = nullptr;
+#else
+    pthread_cond_destroy(&m_cond);
+#endif
+}
 //=============================================================================
 void ThreadBase::setPausedFlag(bool state)
 {
     m_pausedFlag = state;
 
+#ifdef WINDOWS_SYSTEM
+    WakeConditionVariable(static_cast<CONDITION_VARIABLE*>(m_cond));
+#else
     int ret = pthread_cond_signal(&m_cond);
 
     if (ret) throw cSystemExc("pthread_cond_signal error %s", strerror(ret));
+#endif
 }
 //=============================================================================
 void ThreadBase::newMsg_first()
@@ -60,9 +88,25 @@ void ThreadBase::pause()
 
     while (m_pausedFlag)
     {
+#ifdef WINDOWS_SYSTEM
+        BOOL ret = 0;
+        if (m_mutex.m_type == Recursive)
+        {
+            ret = SleepConditionVariableCS(static_cast<CONDITION_VARIABLE*>(m_cond),
+                                           static_cast<CRITICAL_SECTION*>(m_mutex.m_pmutex), INFINITE);
+        }
+        else
+        {
+            ret = SleepConditionVariableSRW(static_cast<CONDITION_VARIABLE*>(m_cond),
+                                            static_cast<SRWLOCK*>(m_mutex.m_pmutex), INFINITE, 0);
+        }
+
+        if (!ret) throw cSystemExc("SleepConditionVariable error %lu", static_cast<unsigned long>(GetLastError()));
+#else
         int ret = pthread_cond_wait(&m_cond, &m_mutex.m_pmutex);  // this call internally unlocks the mutex
 
         if (ret) throw cSystemExc("pthread_cond_wait error %s", strerror(ret));
+#endif
     }
 }
 //=============================================================================

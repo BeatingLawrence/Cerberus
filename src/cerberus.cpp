@@ -3,6 +3,7 @@
 #include <openssl/conf.h>
 #include <openssl/ssl.h>
 
+#include <limits>
 #include <sstream>
 
 #include "core/cerberuscore.h"
@@ -124,10 +125,10 @@ namespace
         if (readStringOpt(ini, "logSetup.fileLogConf.fileNameFmt", sval))
             conf.logSetup.fileLogConf.fileNameFmt = sval;
         if (readIntOpt(ini, "logSetup.fileLogConf.logDirMaxSize", ival))
-            conf.logSetup.fileLogConf.logDirMaxSize = static_cast<SIZE>(ival);
+            conf.logSetup.fileLogConf.logDirMaxSize = static_cast<crb::SIZE>(ival);
 
         if (readIntOpt(ini, "coreSetup.threadPool", ival))
-            conf.coreSetup.threadPool = static_cast<SIZE>(ival);
+            conf.coreSetup.threadPool = static_cast<crb::SIZE>(ival);
         if (readIntOpt(ini, "coreSetup.backupThreadMaxTime", ival))
             conf.coreSetup.backupThreadMaxTime = static_cast<uint32_t>(ival);
         if (readStringOpt(ini, "coreSetup.coreSet", sval))
@@ -368,13 +369,21 @@ CerbVersion Cerberus::cerberusVersion()
     CerbVersion ret;
     std::string ver = CERBERUS_VERSION;
     std::string typ;
+    auto checkedVersionPart = [](int64_t value) {
+        if (value < 0 || value > std::numeric_limits<uint16_t>::max())
+        {
+            throw cIllegalArgExc("version component out of range");
+        }
+
+        return static_cast<uint16_t>(value);
+    };
 
     auto splitted = CerberusUtils::split(ver, ".");
-    ret.major     = CerberusUtils::stringToInt(splitted.left).value;
+    ret.major     = checkedVersionPart(CerberusUtils::stringToInt(splitted.left).value);
     splitted      = CerberusUtils::split(splitted.right, ".");
-    ret.minor     = CerberusUtils::stringToInt(splitted.left).value;
+    ret.minor     = checkedVersionPart(CerberusUtils::stringToInt(splitted.left).value);
     splitted      = CerberusUtils::split(splitted.right, ".");
-    ret.patch     = CerberusUtils::stringToInt(splitted.left).value;
+    ret.patch     = checkedVersionPart(CerberusUtils::stringToInt(splitted.left).value);
 
     switch (CerberusUtils::stringToInt(splitted.right).value)
     {

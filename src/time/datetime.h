@@ -36,7 +36,7 @@ namespace crb
         DateTime();
 
         // Construct a DateTime object from POSIX timespec data
-        DateTime(uint32_t seconds, uint32_t nanoseconds);
+        DateTime(int64_t seconds, int64_t nanoseconds);
 
         // Check if the instance is valid
         bool isValid() const;
@@ -116,7 +116,7 @@ namespace crb
 
         // Set the time according to the seconds and nanoseconds (timespec struct).
         // Please note that nanosecond precision is lost
-        DateTime& fromTimespec(uint32_t seconds, uint32_t nanoseconds = 0);
+        DateTime& fromTimespec(int64_t seconds, int64_t nanoseconds = 0);
 
         // Return the current system time
         static DateTime current();

@@ -26,28 +26,28 @@
         {                                                                                          \
             return crb::ByteBuffer((crb::BYTE*)&m_value, sizeof(c_struct));              \
         }                                                                                          \
-        virtual crb::SIZE memfp() const { return sizeof(slot_type); }                         \
+        virtual crb::LSIZE memfp() const { return sizeof(slot_type); }                        \
     };
 
 namespace crb
 {
-    class CERBERUS_EXPORT SlotBase : public Clonable
+    class SlotBase : public Clonable
     {
        private:
         HASH32 m_id;
 
        protected:
-        SlotBase(const std::string& name = std::string());
-        SlotBase(HASH32 id);
+        CERBERUS_EXPORT SlotBase(const std::string& name = std::string());
+        CERBERUS_EXPORT SlotBase(HASH32 id);
 
        public:
-        virtual ~SlotBase();
+        CERBERUS_EXPORT virtual ~SlotBase();
 
         // Set the ID, recomputing hash
-        SlotBase& setId(const std::string& name);
-        SlotBase& setId(HASH32 id);
+        CERBERUS_EXPORT SlotBase& setId(const std::string& name);
+        CERBERUS_EXPORT SlotBase& setId(HASH32 id);
 
-        HASH32 id() const;
+        CERBERUS_EXPORT HASH32 id() const;
 
         virtual Clonable* clone() const = 0;
 
@@ -91,12 +91,12 @@ namespace crb
     };
 
     template <typename T>
-    class CERBERUS_EXPORT Slot : public SlotBase
+    class Slot : public SlotBase
     {
        protected:
         T m_value;
 
-        Slot(const T& value = {}, const std::string& name = "")
+        Slot(const T& value, const std::string& name)
             : SlotBase(name),
               m_value(value) {};
 
@@ -118,7 +118,7 @@ namespace crb
 
     //====================================================================================
 
-    class CERBERUS_EXPORT BoolSlot : public Slot<bool>
+    class BoolSlot : public Slot<bool>
     {
         BoolSlot(bool value = false, const std::string& name = "")
             : Slot<bool>(value, name) {};
@@ -133,10 +133,10 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(bool)); }
 
-        virtual SIZE memfp() const { return sizeof(BoolSlot); }
+        virtual LSIZE memfp() const { return sizeof(BoolSlot); }
     };
 
-    class CERBERUS_EXPORT BufferSlot : public Slot<ByteBuffer>
+    class BufferSlot : public Slot<ByteBuffer>
     {
         BufferSlot(const ByteBuffer& value = ByteBuffer(), const std::string& name = "")
             : Slot<ByteBuffer>(value, name) {};
@@ -151,10 +151,10 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return m_value; }
 
-        virtual SIZE memfp() const { return sizeof(BufferSlot); }
+        virtual LSIZE memfp() const { return sizeof(BufferSlot); }
     };
 
-    class CERBERUS_EXPORT ByteSlot : public Slot<BYTE>
+    class ByteSlot : public Slot<BYTE>
     {
         ByteSlot(BYTE value = 0, const std::string& name = "")
             : Slot<BYTE>(value, name) {};
@@ -169,10 +169,10 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(BYTE)); }
 
-        virtual SIZE memfp() const { return sizeof(ByteSlot); }
+        virtual LSIZE memfp() const { return sizeof(ByteSlot); }
     };
 
-    class CERBERUS_EXPORT DictionarySlot : public Slot<Dictionary>
+    class DictionarySlot : public Slot<Dictionary>
     {
         DictionarySlot(Dictionary value = Dictionary(), const std::string& name = "")
             : Slot<Dictionary>(value, name) {};
@@ -187,10 +187,10 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return ByteBuffer(m_value.toString()); }
 
-        virtual SIZE memfp() const { return sizeof(DictionarySlot) + m_value.memfp(); }
+        virtual LSIZE memfp() const { return sizeof(DictionarySlot) + m_value.memfp(); }
     };
 
-    class CERBERUS_EXPORT DoubleSlot : public Slot<double>
+    class DoubleSlot : public Slot<double>
     {
         DoubleSlot(double value = 0.0f, const std::string& name = "")
             : Slot<double>(value, name) {};
@@ -205,10 +205,10 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(double)); }
 
-        virtual SIZE memfp() const { return sizeof(DoubleSlot); }
+        virtual LSIZE memfp() const { return sizeof(DoubleSlot); }
     };
 
-    class CERBERUS_EXPORT FloatSlot : public Slot<float>
+    class FloatSlot : public Slot<float>
     {
         FloatSlot(float value = 0.0f, const std::string& name = "")
             : Slot<float>(value, name) {};
@@ -223,10 +223,10 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(float)); }
 
-        virtual SIZE memfp() const { return sizeof(FloatSlot); }
+        virtual LSIZE memfp() const { return sizeof(FloatSlot); }
     };
 
-    class CERBERUS_EXPORT Int32Slot : public Slot<int32_t>
+    class Int32Slot : public Slot<int32_t>
     {
         Int32Slot(int32_t value = 0, const std::string& name = "")
             : Slot<int32_t>(value, name) {};
@@ -241,10 +241,10 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(int32_t)); }
 
-        virtual SIZE memfp() const { return sizeof(Int32Slot); }
+        virtual LSIZE memfp() const { return sizeof(Int32Slot); }
     };
 
-    class CERBERUS_EXPORT Int64Slot : public Slot<int64_t>
+    class Int64Slot : public Slot<int64_t>
     {
         Int64Slot(int64_t value = 0, const std::string& name = "")
             : Slot<int64_t>(value, name) {};
@@ -259,10 +259,10 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(int64_t)); }
 
-        virtual SIZE memfp() const { return sizeof(Int64Slot); }
+        virtual LSIZE memfp() const { return sizeof(Int64Slot); }
     };
 
-    class CERBERUS_EXPORT UInt64Slot : public Slot<uint64_t>
+    class UInt64Slot : public Slot<uint64_t>
     {
         UInt64Slot(uint64_t value = 0, const std::string& name = "")
             : Slot<uint64_t>(value, name) {};
@@ -277,10 +277,10 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return ByteBuffer((BYTE*)&m_value, sizeof(uint64_t)); }
 
-        virtual SIZE memfp() const { return sizeof(UInt64Slot); }
+        virtual LSIZE memfp() const { return sizeof(UInt64Slot); }
     };
 
-    class CERBERUS_EXPORT JsonSlot : public Slot<JsonData>
+    class JsonSlot : public Slot<JsonData>
     {
         JsonSlot(JsonData value = JsonData(), const std::string& name = "")
             : Slot<JsonData>(value, name) {};
@@ -298,10 +298,10 @@ namespace crb
             return m_value.generate().value;
         }  // throw an exception if conversion fails?
 
-        virtual SIZE memfp() const { return sizeof(JsonSlot) + m_value.memfp(); }
+        virtual LSIZE memfp() const { return sizeof(JsonSlot) + m_value.memfp(); }
     };
 
-    class CERBERUS_EXPORT StringSlot : public Slot<std::string>
+    class StringSlot : public Slot<std::string>
     {
         StringSlot(std::string value = std::string(), const std::string& name = "")
             : Slot<std::string>(value, name) {};
@@ -316,10 +316,13 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return ByteBuffer(m_value); }
 
-        virtual SIZE memfp() const { return sizeof(StringSlot) + m_value.capacity(); }
+        virtual LSIZE memfp() const
+        {
+            return static_cast<LSIZE>(sizeof(StringSlot)) + static_cast<LSIZE>(m_value.capacity());
+        }
     };
 
-    class CERBERUS_EXPORT VoidPSlot : public Slot<void*>
+    class VoidPSlot : public Slot<void*>
     {
         VoidPSlot(void* value = nullptr, const std::string& name = "")
             : Slot<void*>(value, name) {};
@@ -334,10 +337,10 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { throw cUsageErrorExc("void* is not convertible to a buffer"); }
 
-        virtual SIZE memfp() const { return sizeof(VoidPSlot); }
+        virtual LSIZE memfp() const { return sizeof(VoidPSlot); }
     };
 
-    class CERBERUS_EXPORT HostSlot : public Slot<Host>
+    class HostSlot : public Slot<Host>
     {
         HostSlot(const Host& value = Host(), const std::string& name = "")
             : Slot<Host>(value, name) {};
@@ -352,10 +355,13 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return ByteBuffer(m_value.toString()); }
 
-        virtual SIZE memfp() const { return sizeof(HostSlot) + m_value.hostname.capacity(); }
+        virtual LSIZE memfp() const
+        {
+            return static_cast<LSIZE>(sizeof(HostSlot)) + static_cast<LSIZE>(m_value.hostname.capacity());
+        }
     };
 
-    class CERBERUS_EXPORT TaskSlot : public Slot<Task>
+    class TaskSlot : public Slot<Task>
     {
         TaskSlot(Task value = {}, const std::string& name = "")
             : Slot<Task>(value, name) {};
@@ -370,10 +376,10 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { throw cUsageErrorExc("Task is not convertible to a buffer"); }
 
-        virtual SIZE memfp() const { return sizeof(TaskSlot); }
+        virtual LSIZE memfp() const { return sizeof(TaskSlot); }
     };
 
-    class CERBERUS_EXPORT ResultSlot : public Slot<OpRes>
+    class ResultSlot : public Slot<OpRes>
     {
         ResultSlot(OpRes value = OpRes(), const std::string& name = "")
             : Slot<OpRes>(value, name) {};
@@ -388,7 +394,7 @@ namespace crb
 
         virtual ByteBuffer toBuffer() const { return ByteBuffer(m_value.toStr()); }
 
-        virtual SIZE memfp() const { return sizeof(ResultSlot) + m_value.memfp(); }
+        virtual LSIZE memfp() const { return sizeof(ResultSlot) + m_value.memfp(); }
     };
 
 }  // namespace crb

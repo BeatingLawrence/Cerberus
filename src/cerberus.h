@@ -13,6 +13,8 @@
 #include "time/timeframe.h"   // IWYU pragma: export
 #include "types.h"
 
+#include <thread>
+
 namespace crb
 {
     namespace core
@@ -63,7 +65,7 @@ namespace crb
             {
                 while (usage.load() != 0)
                 {
-                    asm("nop");
+                    std::this_thread::yield();
                 }
             }
 

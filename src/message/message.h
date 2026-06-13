@@ -10,7 +10,7 @@
 
 namespace crb
 {
-    class CERBERUS_EXPORT Message : public Clonable
+    class Message : public Clonable
     {
        private:
         mutable std::vector<slot_ptr> m_slots;
@@ -19,8 +19,8 @@ namespace crb
 
         mutable std::vector<HASH32> m_recipientIds;
 
-        slot_ptr* _slot(const std::string& name);
-        const slot_ptr* _slot(const std::string& name) const;
+        CERBERUS_EXPORT slot_ptr* _slot(const std::string& name);
+        CERBERUS_EXPORT const slot_ptr* _slot(const std::string& name) const;
 
         Message(HASH32 id = CRB_INVALID_ID);
 
@@ -29,18 +29,18 @@ namespace crb
         Message& operator=(const Message& other) = delete;
 
        public:
-        static msg_ptr create(HASH32 id = CRB_INVALID_ID);
+        static CERBERUS_EXPORT msg_ptr create(HASH32 id = CRB_INVALID_ID);
 
-        virtual ~Message();
+        CERBERUS_EXPORT virtual ~Message();
 
         // get the number of slots
-        size_t count() const;
+        CERBERUS_EXPORT size_t count() const;
 
         // add a slot copying it
-        Message& addSlot(const slot_ptr& slot);
+        CERBERUS_EXPORT Message& addSlot(const slot_ptr& slot);
 
         // add a slot moving it
-        Message& addSlot(slot_ptr&& slot);
+        CERBERUS_EXPORT Message& addSlot(slot_ptr&& slot);
 
         // add a slot specifying just the type and name (no content)
         template <typename T>
@@ -56,10 +56,10 @@ namespace crb
         }
 
         // get a slot
-        slot_ptr& getSlotAt(size_t index);
-        slot_ptr getSlotAt(size_t index) const;
-        slot_ptr& getSlot(const std::string& name);
-        slot_ptr getSlot(const std::string& name) const;
+        CERBERUS_EXPORT slot_ptr& getSlotAt(size_t index);
+        CERBERUS_EXPORT slot_ptr getSlotAt(size_t index) const;
+        CERBERUS_EXPORT slot_ptr& getSlot(const std::string& name);
+        CERBERUS_EXPORT slot_ptr getSlot(const std::string& name) const;
 
         // quick access helper. Access directly to the underlying object of one slot (value type)
         template <typename T>
@@ -105,44 +105,44 @@ namespace crb
         }
 
         // return the ID of this message
-        HASH32 id() const;
+        CERBERUS_EXPORT HASH32 id() const;
 
         // checks if the ID of this equals the given ID
-        bool is(HASH32 id) const;
+        CERBERUS_EXPORT bool is(HASH32 id) const;
 
         // return the first recipient of the message (if any)
-        HASH32 recipient() const;
+        CERBERUS_EXPORT HASH32 recipient() const;
 
         // get all recipients
-        const std::vector<HASH32>& recipients() const;
+        CERBERUS_EXPORT const std::vector<HASH32>& recipients() const;
 
         // check if at least one recipient is valid
-        bool hasValidRecipient() const;
+        CERBERUS_EXPORT bool hasValidRecipient() const;
 
         // set a single recipient (clears any existing recipients)
-        void setRecipient(HASH32 id) const;
+        CERBERUS_EXPORT void setRecipient(HASH32 id) const;
 
         // set recipients
-        void setRecipients(const std::vector<HASH32>& ids) const;
+        CERBERUS_EXPORT void setRecipients(const std::vector<HASH32>& ids) const;
 
         // add a recipient
-        void addRecipient(HASH32 id) const;
+        CERBERUS_EXPORT void addRecipient(HASH32 id) const;
 
         // clear all recipients
-        void clearRecipients() const;
+        CERBERUS_EXPORT void clearRecipients() const;
 
         // convert the message to a plain buffer
-        ByteBuffer toBuffer() const;
+        CERBERUS_EXPORT ByteBuffer toBuffer() const;
 
         // iterators
-        ConstIterator<slot_ptr> begin() const;
-        ConstIterator<slot_ptr> end() const;
+        CERBERUS_EXPORT ConstIterator<slot_ptr> begin() const;
+        CERBERUS_EXPORT ConstIterator<slot_ptr> end() const;
 
         // clone this message and all of its slots
-        virtual Clonable* clone() const;
+        CERBERUS_EXPORT virtual Clonable* clone() const;
 
         // calculate the memory footprint of this message, iterating over all of its slots
-        virtual SIZE memfp() const;
+        CERBERUS_EXPORT virtual LSIZE memfp() const;
     };
 }  // namespace crb
 

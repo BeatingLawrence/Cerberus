@@ -1,5 +1,167 @@
 #include "./serialport.h"
 
+#ifdef WINDOWS_SYSTEM
+
+#include <utility>
+
+using namespace crb;
+
+SerialPort::SerialPort()
+    : m_fd(-1),
+      m_device(),
+      m_config(),
+      m_recvBuffer()
+{
+}
+
+SerialPort::SerialPort(const std::string& device)
+    : SerialPort()
+{
+    m_device = device;
+}
+
+SerialPort::SerialPort(SerialPort&& other)
+    : m_fd(other.m_fd),
+      m_device(std::move(other.m_device)),
+      m_config(other.m_config),
+      m_recvBuffer(std::move(other.m_recvBuffer))
+{
+    other.m_fd = -1;
+}
+
+SerialPort::~SerialPort() { close(); }
+
+SerialPort& SerialPort::operator=(SerialPort&& other)
+{
+    if (this == &other) return *this;
+    close();
+    m_fd         = other.m_fd;
+    m_device     = std::move(other.m_device);
+    m_config     = other.m_config;
+    m_recvBuffer = std::move(other.m_recvBuffer);
+    other.m_fd   = -1;
+    return *this;
+}
+
+OpRes SerialPort::applyConfig() { return OR_Unavailable; }
+OpRes SerialPort::recvInternal(ByteBuffer& buffer)
+{
+    (void)buffer;
+    return OR_Unavailable;
+}
+OpRes SerialPort::setModemBit(int bit, bool state)
+{
+    (void)bit;
+    (void)state;
+    return OR_Unavailable;
+}
+BoolOpRes SerialPort::getModemBit(int bit) const
+{
+    (void)bit;
+    return OR_Unavailable;
+}
+OpRes SerialPort::open(const std::string& device, const SerialPortConfig& config)
+{
+    m_device = device;
+    m_config = config;
+    return OR_Unavailable;
+}
+OpRes SerialPort::open(const std::string& device, uint32_t baudrate)
+{
+    SerialPortConfig config;
+    config.baudrate = baudrate;
+    return open(device, config);
+}
+OpRes SerialPort::close()
+{
+    m_fd = -1;
+    return OR_OK;
+}
+OpRes SerialPort::reset() { return OR_Unavailable; }
+bool SerialPort::isOpen() const { return false; }
+const std::string& SerialPort::device() const { return m_device; }
+OpRes SerialPort::configure(const SerialPortConfig& config)
+{
+    m_config = config;
+    return OR_Unavailable;
+}
+OpRes SerialPort::setBaudrate(uint32_t baudrate)
+{
+    m_config.baudrate = baudrate;
+    return OR_Unavailable;
+}
+OpRes SerialPort::setDataBits(uint8_t bits)
+{
+    m_config.dataBits = bits;
+    return OR_Unavailable;
+}
+OpRes SerialPort::setParity(SerialParity parity)
+{
+    m_config.parity = parity;
+    return OR_Unavailable;
+}
+OpRes SerialPort::setStopBits(SerialStopBits bits)
+{
+    m_config.stopBits = bits;
+    return OR_Unavailable;
+}
+OpRes SerialPort::setFlowControl(SerialFlowControl flow)
+{
+    m_config.flowControl = flow;
+    return OR_Unavailable;
+}
+OpRes SerialPort::setCanonical(bool enable)
+{
+    m_config.canonical = enable;
+    return OR_Unavailable;
+}
+OpRes SerialPort::setReadMode(bool blocking, uint8_t vmin, const TimeFrame& vtime)
+{
+    m_config.readBlocking = blocking;
+    m_config.vmin         = vmin;
+    m_config.vtime        = vtime;
+    return OR_Unavailable;
+}
+OpRes SerialPort::send(const ByteBuffer& buffer, bool donotblock)
+{
+    (void)buffer;
+    (void)donotblock;
+    return OR_Unavailable;
+}
+OpRes SerialPort::recv(ByteBuffer& buffer, const TimeFrame& timeout)
+{
+    (void)buffer;
+    (void)timeout;
+    return OR_Unavailable;
+}
+OpRes SerialPort::recv(ByteBuffer& buffer)
+{
+    (void)buffer;
+    return OR_Unavailable;
+}
+OpRes SerialPort::canRead() { return OR_Unavailable; }
+OpRes SerialPort::waitRead(const TimeFrame& timeout)
+{
+    (void)timeout;
+    return OR_Unavailable;
+}
+OpRes SerialPort::waitWrite(const TimeFrame& timeout)
+{
+    (void)timeout;
+    return OR_Unavailable;
+}
+OpRes SerialPort::flushInput() { return OR_Unavailable; }
+OpRes SerialPort::flushOutput() { return OR_Unavailable; }
+OpRes SerialPort::flush() { return OR_Unavailable; }
+OpRes SerialPort::setDTR(bool state) { return setModemBit(0, state); }
+OpRes SerialPort::setRTS(bool state) { return setModemBit(0, state); }
+BoolOpRes SerialPort::getCTS() const { return getModemBit(0); }
+BoolOpRes SerialPort::getDSR() const { return getModemBit(0); }
+BoolOpRes SerialPort::getDCD() const { return getModemBit(0); }
+BoolOpRes SerialPort::getRI() const { return getModemBit(0); }
+
+#else
+
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -693,3 +855,4 @@ BoolOpRes SerialPort::getDSR() const { return getModemBit(TIOCM_DSR); }
 BoolOpRes SerialPort::getDCD() const { return getModemBit(TIOCM_CAR); }
 //=============================================================================
 BoolOpRes SerialPort::getRI() const { return getModemBit(TIOCM_RI); }
+#endif

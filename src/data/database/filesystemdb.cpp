@@ -3,6 +3,7 @@
 // #include "../../cerberus.h"
 #include "../../exception/exception.h"
 #include <boost/regex.hpp>
+#include <limits>
 #include <numeric>
 #include <optional>
 #include <unordered_map>
@@ -13,6 +14,16 @@ using namespace crb;
 
 namespace
 {
+    int checkedColumnIndex(size_t index, const char* field)
+    {
+        if (index > static_cast<size_t>(std::numeric_limits<int>::max()))
+        {
+            throw cIllegalArgExc("%s out of range", field);
+        }
+
+        return static_cast<int>(index);
+    }
+
     OpRes buildInsertRowFromUpdate(const DBRow* src, const DBTableProto& tableProto, const DBTableProto& blockProto,
                                    const std::vector<int>& blockToTable, DBRow& dst)
     {
@@ -20,7 +31,8 @@ namespace
 
         dst.clear();
         dst.bindPrototype(&tableProto);
-        for (size_t t = 0; t < tableProto.size(); ++t) dst.append(tableProto[t].defaultValue());
+        for (size_t t = 0; t < tableProto.size(); ++t)
+            dst.append(tableProto[checkedColumnIndex(t, "table prototype index")].defaultValue());
 
         for (size_t bi = 0; bi < blockToTable.size(); ++bi)
         {
@@ -307,7 +319,8 @@ OpRes FilesystemDB::_skipTable(Table& tab, LSIZE* endPos)
     {
         for (SIZE j = 0; j < tab.proto.size(); j++)
         {
-            auto raw = _parseFieldRaw(tab.proto[j].type(), tab.proto[j].mod());
+            const int col = checkedColumnIndex(j, "table prototype index");
+            auto raw = _parseFieldRaw(tab.proto[col].type(), tab.proto[col].mod());
             condret(raw);
         }
     }
@@ -341,7 +354,8 @@ OpResData<DBTableBlock> FilesystemDB::_getTable(Table& tab)
 
         for (SIZE j = 0; j < tab.proto.size(); j++)  // for each column
         {
-            auto cell = _parseField(tab.proto[j].type(), tab.proto[j].mod());
+            const int col = checkedColumnIndex(j, "table prototype index");
+            auto cell = _parseField(tab.proto[col].type(), tab.proto[col].mod());
             condret(cell);
 
             row.append(cell.value);
@@ -473,7 +487,8 @@ FilesystemDB::ParsedQuery FilesystemDB::_splitQuery(const std::string& query) co
 int FilesystemDB::_columnIndex(const DBTableProto& proto, const std::string& name) const
 {
     for (size_t i = 0; i < proto.size(); ++i)
-        if (proto[i].name() == name) return static_cast<int>(i);
+        if (proto[checkedColumnIndex(i, "prototype search index")].name() == name)
+            return checkedColumnIndex(i, "prototype search index");
     return -1;
 }
 //=============================================================================
@@ -771,7 +786,7 @@ OpRes FilesystemDB::updateBlock(const DBTableBlock& block, UpdatePolicy policy)
 
     for (size_t i = 0; i < bproto.size(); ++i)
     {
-        const auto& bc = bproto[i];
+        const auto& bc = bproto[checkedColumnIndex(i, "block prototype index")];
         int tIdx       = _columnIndex(tproto, bc.name());
         if (tIdx < 0) return OR_WrongArgument;
 
@@ -852,7 +867,8 @@ OpRes FilesystemDB::updateBlock(const DBTableBlock& block, UpdatePolicy policy)
                 condret(cur);
                 starts[c] = cur.value;
 
-                auto raw = _parseFieldRaw(tproto[c].type(), tproto[c].mod());
+                const int col = checkedColumnIndex(c, "table prototype index");
+                auto raw = _parseFieldRaw(tproto[col].type(), tproto[col].mod());
                 condret(raw);
 
                 auto after = m_file.getCursor();
@@ -862,7 +878,7 @@ OpRes FilesystemDB::updateBlock(const DBTableBlock& block, UpdatePolicy policy)
                 if (c == static_cast<size_t>(tPk))
                 {
                     DBCell cell(raw.value.buf);
-                    std::string key = _cellToString(cell, tproto[c].type());
+                    std::string key = _cellToString(cell, tproto[col].type());
                     auto it         = updateRows.find(key);
                     if (it != updateRows.end())
                     {

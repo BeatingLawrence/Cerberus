@@ -56,10 +56,10 @@ namespace crb
        public:
         // Construct a SharedByteBuffer allocating size bytes. The buffer is not initialized and may contain
         // garbage
-        SharedByteBuffer(SIZE size);
+        SharedByteBuffer(LSIZE size);
 
         // Construct a SharedByteBuffer allocating size bytes. The buffer is initialized using val value
-        SharedByteBuffer(SIZE size, uint8_t val);
+        SharedByteBuffer(LSIZE size, uint8_t val);
 
         // Construct a SharedByteBuffer using a given ByteBuffer instance.
         // Do not attempt to call any method on the ByteBuffer object after this call,
@@ -90,15 +90,15 @@ namespace crb
         const BYTE* data() const;
 
         // Append len bytes read from the given buffer to this SharedByteBuffer. [OWN]
-        void appendFrom(const BYTE* buffer, SIZE len);
+        void appendFrom(const BYTE* buffer, LSIZE len);
 
         // Assigns the content of the given buffer to this SharedByteBuffer. Existing content will be
         // discarded. [OWN]
-        void assignFrom(const BYTE* buffer, SIZE len);
+        void assignFrom(const BYTE* buffer, LSIZE len);
 
         // Copy the content of this SharedByteBuffer to the given buffer. No more than maxLen bytes will be
         // copied. If maxLen is 0, all the content of this SharedByteBuffer will be copied
-        void copyTo(BYTE* buffer, SIZE maxLen = 0);
+        void copyTo(BYTE* buffer, LSIZE maxLen = 0);
 
         // Checks if this SharedByteBuffer instance is equal to other
         bool operator==(const SharedByteBuffer& other);
@@ -120,22 +120,22 @@ namespace crb
         SharedByteBuffer& operator=(const char* str);
 
         // Obtain another SharedByteBuffer instance that contains len bytes copied from position pos
-        SharedByteBuffer subBuffer(SIZE pos, SIZE len);
+        SharedByteBuffer subBuffer(LSIZE pos, LSIZE len);
 
         // Append the given c-string str to the end of this buffer.
         // The string must end with a \0, that will NOT be appended. [OWN]
         void appendString(const char* str);
 
         // Get the current buffer size
-        SIZE size() const;
+        LSIZE size() const;
 
         // Change the size of the SharedByteBuffer.
         // If the new size is less than the current one, data loss may take place. [OWN]
-        void resize(SIZE size);
+        void resize(LSIZE size);
 
         // Assign first len bytes of another SharedByteBuffer value to this instance, the memory is
         // deep-copied. [OWN] If len is 0, all the buffer is assigned
-        void assign(const SharedByteBuffer& other, SIZE len = 0);
+        void assign(const SharedByteBuffer& other, LSIZE len = 0);
 
         // Assign the c-string str value to this buffer.
         // After this call the size will be equal to the size of the given string. [OWN]

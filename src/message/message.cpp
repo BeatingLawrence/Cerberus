@@ -143,9 +143,9 @@ ConstIterator<slot_ptr> Message::end() const
 //=============================================================================
 Clonable* Message::clone() const { return new Message(*this); }
 //=============================================================================
-SIZE Message::memfp() const
+crb::LSIZE Message::memfp() const
 {
-    SIZE s = sizeof(Message);
+    crb::LSIZE s = sizeof(Message);
     for (auto&& el : m_slots) s += el.memFootprint();
     return s;
 }

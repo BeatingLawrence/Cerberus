@@ -17,7 +17,7 @@ namespace
 
     bool validateCellForColumn(const DBCell& cell, const DBColumn& col)
     {
-        const SIZE sz      = cell.raw().size();
+        const crb::LSIZE sz = cell.raw().size();
         const DBDataType t = col.type();
         const DBMOD mod    = col.mod();
 
@@ -89,6 +89,26 @@ namespace
     std::string trimCopy(const std::string& str)
     {
         return CerberusUtils::removeBlank_copy(str);
+    }
+
+    int checkedColumnIndex(size_t index, const char* field)
+    {
+        if (index > static_cast<size_t>(std::numeric_limits<int>::max()))
+        {
+            throw cIllegalArgExc("%s out of range", field);
+        }
+
+        return static_cast<int>(index);
+    }
+
+    crb::SIZE checkedDbSize(crb::LSIZE size, const char* field)
+    {
+        if (size > std::numeric_limits<crb::SIZE>::max())
+        {
+            throw cIllegalArgExc("%s out of range", field);
+        }
+
+        return static_cast<crb::SIZE>(size);
     }
 }  // namespace
 
@@ -236,7 +256,7 @@ ByteBuffer DBCell::serialize(DBDataType type, DBMOD mod) const
 
         case DDT_VarBit:
         {
-            SIZE s = m_value.size();
+            crb::SIZE s = checkedDbSize(m_value.size(), "varbit size");
             ByteBuffer bb;
             bb.appendFrom(&s, CerberusUtils::reqBytes(s));
             return bb.append(m_value.trim(CerberusUtils::qceil(s, 8)));
@@ -247,7 +267,7 @@ ByteBuffer DBCell::serialize(DBDataType type, DBMOD mod) const
             // logDebug("varchar ser [%s] %s", m_value.toString().c_str(), m_value.toHex().c_str());
             uint8_t req = CerberusUtils::reqBytes(cleanMod);
             ByteBuffer bb(req, 0);
-            SIZE s = m_value.size() > cleanMod ? cleanMod : m_value.size();
+            crb::SIZE s = checkedDbSize(m_value.size() > cleanMod ? cleanMod : m_value.size(), "varchar size");
             bb.copyFrom(&s, req);
             bb.append(m_value);
             return bb;
@@ -565,7 +585,7 @@ void DBRow::append(const DBCell& value)
         if (m_values.size() >= m_protoRef->size())
             throw cIllegalArgExc("row append overflow: too many fields for bound prototype");
 
-        const DBColumn& col = (*m_protoRef)[m_values.size()];
+        const DBColumn& col = (*m_protoRef)[checkedColumnIndex(m_values.size(), "row append index")];
         if (!validateCellForColumn(value, col))
             throw cIllegalArgExc("row append type mismatch for column %s", col.name().c_str());
     }
@@ -583,7 +603,7 @@ bool DBRow::verify(const DBTableProto& proto) const
 
     for (size_t i = 0; i < m_values.size(); ++i)
     {
-        if (!validateCellForColumn(m_values[i], proto[i])) return false;
+        if (!validateCellForColumn(m_values[i], proto[checkedColumnIndex(i, "row verify index")])) return false;
     }
 
     return true;
@@ -626,13 +646,13 @@ DBCell& DBRow::operator[](const std::string& column)
     return m_values.at(static_cast<size_t>(idx));
 }
 //=============================================================================
-Iterator<DBCell> DBRow::begin() { return &(*m_values.begin()); }
+Iterator<DBCell> DBRow::begin() { return m_values.empty() ? nullptr : m_values.data(); }
 //=============================================================================
-Iterator<DBCell> DBRow::end() { return &(*m_values.end()); }
+Iterator<DBCell> DBRow::end() { return m_values.empty() ? nullptr : m_values.data() + m_values.size(); }
 //=============================================================================
-ConstIterator<DBCell> DBRow::begin() const { return &(*m_values.begin()); }
+ConstIterator<DBCell> DBRow::begin() const { return m_values.empty() ? nullptr : m_values.data(); }
 //=============================================================================
-ConstIterator<DBCell> DBRow::end() const { return &(*m_values.end()); }
+ConstIterator<DBCell> DBRow::end() const { return m_values.empty() ? nullptr : m_values.data() + m_values.size(); }
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -706,9 +726,9 @@ OpRes DBTableProto::renameColumn(const std::string& oldName, const std::string& 
     return OR_OK;
 }
 //=============================================================================
-const DBColumn& DBTableProto::operator[](int index) const { return m_types.at(index); }
+const DBColumn& DBTableProto::operator[](int index) const { return m_types.at(static_cast<size_t>(index)); }
 //=============================================================================
-DBColumn& DBTableProto::operator[](int index) { return m_types.at(index); }
+DBColumn& DBTableProto::operator[](int index) { return m_types.at(static_cast<size_t>(index)); }
 //=============================================================================
 void DBTableProto::clear() { m_types.clear(); }
 //=============================================================================
@@ -723,13 +743,13 @@ std::string DBTableProto::name() const { return m_name; }
 //=============================================================================
 void DBTableProto::setName(const std::string& name) { m_name = name; }
 //=============================================================================
-Iterator<DBColumn> DBTableProto::begin() { return &(*m_types.begin()); }
+Iterator<DBColumn> DBTableProto::begin() { return m_types.empty() ? nullptr : m_types.data(); }
 //=============================================================================
-Iterator<DBColumn> DBTableProto::end() { return &(*m_types.end()); }
+Iterator<DBColumn> DBTableProto::end() { return m_types.empty() ? nullptr : m_types.data() + m_types.size(); }
 //=============================================================================
-ConstIterator<DBColumn> DBTableProto::begin() const { return &(*m_types.begin()); }
+ConstIterator<DBColumn> DBTableProto::begin() const { return m_types.empty() ? nullptr : m_types.data(); }
 //=============================================================================
-ConstIterator<DBColumn> DBTableProto::end() const { return &(*m_types.end()); }
+ConstIterator<DBColumn> DBTableProto::end() const { return m_types.empty() ? nullptr : m_types.data() + m_types.size(); }
 //=============================================================================
 //=============================================================================
 //=============================================================================
@@ -766,7 +786,8 @@ OpRes DBTableBlock::append(const DBRow& row)
     try
     {
         for (size_t i = 0; i < row.size(); ++i) normalized.append(row[i]);
-        for (size_t i = row.size(); i < m_prototype.size(); ++i) normalized.append(m_prototype[i].defaultValue());
+        for (size_t i = row.size(); i < m_prototype.size(); ++i)
+            normalized.append(m_prototype[checkedColumnIndex(i, "prototype default index")].defaultValue());
     }
     catch (const std::exception& e)
     {
@@ -799,7 +820,8 @@ void DBTableBlock::setPrototype(const DBTableProto& prototype)
     for (auto& row : m_rows)
     {
         row.bindPrototype(&m_prototype);
-        for (size_t i = row.size(); i < m_prototype.size(); ++i) row.append(m_prototype[i].defaultValue());
+        for (size_t i = row.size(); i < m_prototype.size(); ++i)
+            row.append(m_prototype[checkedColumnIndex(i, "prototype default index")].defaultValue());
     }
 }
 //=============================================================================
@@ -869,13 +891,13 @@ bool DBTableBlock::operator==(const DBTableBlock& other) const
 //=============================================================================
 bool DBTableBlock::operator!=(const DBTableBlock& other) const { return !((*this) == other); }
 //=============================================================================
-Iterator<DBRow> DBTableBlock::begin() { return &(*m_rows.begin()); }
+Iterator<DBRow> DBTableBlock::begin() { return m_rows.empty() ? nullptr : m_rows.data(); }
 //=============================================================================
-Iterator<DBRow> DBTableBlock::end() { return &(*m_rows.end()); }
+Iterator<DBRow> DBTableBlock::end() { return m_rows.empty() ? nullptr : m_rows.data() + m_rows.size(); }
 //=============================================================================
-ConstIterator<DBRow> DBTableBlock::begin() const { return &(*m_rows.begin()); }
+ConstIterator<DBRow> DBTableBlock::begin() const { return m_rows.empty() ? nullptr : m_rows.data(); }
 //=============================================================================
-ConstIterator<DBRow> DBTableBlock::end() const { return &(*m_rows.end()); }
+ConstIterator<DBRow> DBTableBlock::end() const { return m_rows.empty() ? nullptr : m_rows.data() + m_rows.size(); }
 //=============================================================================
 std::string DBTableBlock::toString() const
 {
@@ -884,7 +906,7 @@ std::string DBTableBlock::toString() const
     {
         for (size_t i = 0; i < m_prototype.size(); ++i)
         {
-            const auto& col = m_prototype[i];
+            const auto& col = m_prototype[checkedColumnIndex(i, "prototype print index")];
             std::string t   = CerberusUtils::fromDBDataType(col.type());
             std::string modStr;
             switch (col.type())
@@ -946,7 +968,9 @@ std::string DBTableBlock::toString() const
     {
         for (size_t i = 0; i < row.size(); ++i)
         {
-            DBDataType t = m_prototype.size() > i ? m_prototype[i].type() : DDT_Int;
+            DBDataType t =
+                m_prototype.size() > i ? m_prototype[checkedColumnIndex(i, "prototype print index")].type()
+                                       : DDT_Int;
             ss << cellStr(row[i], t);
             if (i + 1 < row.size()) ss << " | ";
         }

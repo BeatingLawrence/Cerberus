@@ -13,7 +13,7 @@ namespace crb
 
     class Directory;
 
-    class CERBERUS_EXPORT File
+    class File
     {
         friend class ::crb::Socket;
         friend class ::crb::Directory;
@@ -45,7 +45,7 @@ namespace crb
         //      OR_InvalidPath if it's not a regular file
         //      OR_NotFound if it does not exist
         //      OR_SystemFailure if a system error occurred
-        static OpRes existsAsFile(const std::string& path);
+        CERBERUS_EXPORT static OpRes existsAsFile(const std::string& path);
 
         // Check wether a directory exists on filesystem
         // This method returns:
@@ -53,133 +53,134 @@ namespace crb
         //      OR_InvalidPath if it's not a directory
         //      OR_NotFound if it does not exist
         //      OR_SystemFailure if a system error occurred
-        static OpRes existsAsDirectory(const std::string& path);
+        CERBERUS_EXPORT static OpRes existsAsDirectory(const std::string& path);
 
         // Create a directory
-        static OpRes createDirectory(const std::string& path);
+        CERBERUS_EXPORT static OpRes createDirectory(const std::string& path);
 
         // Delete a file or directory. If path is a directory, it must be empty
-        static OpRes remove(const std::string& path);
+        CERBERUS_EXPORT static OpRes remove(const std::string& path);
 
         // Erase a span of bytes from a file, starting at offset start for length span.
         // The content after the erased block is shifted forward.
         // Uses a temporary file under the same directory and replaces the original on success.
-        OpRes erase(LSIZE start, LSIZE span);
+        CERBERUS_EXPORT OpRes erase(LSIZE start, LSIZE span);
 
         // Move a file referenced by oldPath to newPath
-        static OpRes move(const std::string& oldPath, const std::string& newPath);
+        CERBERUS_EXPORT static OpRes move(const std::string& oldPath, const std::string& newPath);
 
         // Check if a given directory is empty
         // This method returns OR_OK if the directory is empty,
         // OR_NotEmpty if the directory is not empty, or other values to signal system errors
-        static OpRes isEmptyDirectory(const std::string& path);
+        CERBERUS_EXPORT static OpRes isEmptyDirectory(const std::string& path);
 
         // Stat the file or directory
-        static OpResData<FileMetadata> stat(const std::string& path);
+        CERBERUS_EXPORT static OpResData<FileMetadata> stat(const std::string& path);
 
         // Open a new temp file and return it.
         // If path is not empty, it must refer to the directory where
         // the file will be created. If path is empty, P_tmpdir macro will be used
-        static File tmpFile(const Path& path = Path(), FileOpenMode openMode = FOM_ReadWrite);
+        CERBERUS_EXPORT static File tmpFile(const Path& path = Path(),
+                                            FileOpenMode openMode = FOM_ReadWrite);
 
         // Copy len bytes from src file to the dst file.
         // If len is equal to 0, the copy will continue till EOF (of any file)
         // The current cursor state of both files will be used.
         // Please note that this method uses in-kernel data transfer when possible,
         // and so it's much more efficient and faster.
-        static OpRes zeroCopy(File& src, File& dst, LSIZE len = 0);
+        CERBERUS_EXPORT static OpRes zeroCopy(File& src, File& dst, LSIZE len = 0);
 
         // Create a File instance
-        File(FileOpenMode openMode = FOM_Read);
-        File(const Path& path, FileOpenMode openMode = FOM_Read);
+        CERBERUS_EXPORT File(FileOpenMode openMode = FOM_Read);
+        CERBERUS_EXPORT File(const Path& path, FileOpenMode openMode = FOM_Read);
 
-        File(const File& other);
-        File(File&& other);
+        CERBERUS_EXPORT File(const File& other);
+        CERBERUS_EXPORT File(File&& other);
 
-        File& operator=(const File& other);
+        CERBERUS_EXPORT File& operator=(const File& other);
 
-        ~File();
+        CERBERUS_EXPORT ~File();
 
         // Get file metadata (see FileMetadata structure)
-        OpResData<FileMetadata> stat();
+        CERBERUS_EXPORT OpResData<FileMetadata> stat();
 
         // Set the path of the file
-        void path(const Path& path);
+        CERBERUS_EXPORT void path(const Path& path);
 
         // Set the open mode of the file. This method will throw
         // an exception if the file is already open
-        void setOpenMode(FileOpenMode openMode);
+        CERBERUS_EXPORT void setOpenMode(FileOpenMode openMode);
 
         // Tell if the instance can write with the currently set open mode
-        bool canWrite() const;
+        CERBERUS_EXPORT bool canWrite() const;
 
         // Get the filename associated to this instance
-        std::string name() const;
+        CERBERUS_EXPORT std::string name() const;
 
         // Get the set path
-        Path path() const;
+        CERBERUS_EXPORT Path path() const;
 
         // Get the complete absolute path of the file
-        Path completePath() const;
+        CERBERUS_EXPORT Path completePath() const;
 
         // Get the directory path
-        Path directory() const;
+        CERBERUS_EXPORT Path directory() const;
 
         // Check if the file is currently open
-        bool isOpen() const;
+        CERBERUS_EXPORT bool isOpen() const;
 
         // Open the file with the set file path and open mode.
         // If the path is empty, OR_InvalidPath is returned.
         // If the open fails, OR_Failure is returned, and info about the error
         // are written inside str.
-        OpRes open();
+        CERBERUS_EXPORT OpRes open();
 
         // Close the file if open
-        void close();
+        CERBERUS_EXPORT void close();
 
         // Close the current file and reopen it
-        OpRes reopen();
+        CERBERUS_EXPORT OpRes reopen();
 
         // Close the file if open, and remove it from filesystem
-        OpRes remove();
+        CERBERUS_EXPORT OpRes remove();
 
         // Move the current file to another path name
-        OpRes move(const Path& newPath);
+        CERBERUS_EXPORT OpRes move(const Path& newPath);
 
         // Get the file size
-        SizeOpRes size() const;
+        CERBERUS_EXPORT SizeOpRes size() const;
 
         // Write buffer to file
-        OpRes write(const ByteBuffer& bytes);
+        CERBERUS_EXPORT OpRes write(const ByteBuffer& bytes);
 
         // Write a single line of text on file
-        OpRes writeLine(const std::string& line = "");
+        CERBERUS_EXPORT OpRes writeLine(const std::string& line = "");
 
         // Write the buffer at the end of the file, effectively increasing its size.
         // This method temporary closes and reopen the file with append flag if that
         // was not present while opening. After that, it reopens the file again with the
         // previous open mode.
-        OpRes writeExpand(const ByteBuffer& bytes);
+        CERBERUS_EXPORT OpRes writeExpand(const ByteBuffer& bytes);
 
         // Insert the given buffer at the cursor position, increasing the file size.
         // This method makes use of tempfile
-        OpRes insert(const ByteBuffer& bytes);
+        CERBERUS_EXPORT OpRes insert(const ByteBuffer& bytes);
 
         // Read the file starting from start pos till the end of file.
         // If the call reach EOF and was able to read some data, an optional EOF will
         // be added to the return opres. If EOF is reached with no data retrieved, an EOF error
         // is returned
-        OpRes read(ByteBuffer& buf, LSIZE start = 0) const;
+        CERBERUS_EXPORT OpRes read(ByteBuffer& buf, LSIZE start = 0) const;
 
         // Read span buf from file starting from start pos
-        OpRes read(ByteBuffer& buf, LSIZE start, LSIZE span) const;
+        CERBERUS_EXPORT OpRes read(ByteBuffer& buf, LSIZE start, LSIZE span) const;
 
         // Read a chunk of data from the current cursor position
-        OpRes readChunk(ByteBuffer& buf, LSIZE chunksize) const;
+        CERBERUS_EXPORT OpRes readChunk(ByteBuffer& buf, LSIZE chunksize) const;
 
         // Read a chunk of data from the current cursor position until a sequence is found.
         // The read sequence is inserted into the returned buffer
-        OpResData<ByteBuffer> readUntil(const ByteBuffer& sequence) const;
+        CERBERUS_EXPORT OpResData<ByteBuffer> readUntil(const ByteBuffer& sequence) const;
 
         // Advance the cursor until the wanted sequence is found.
         // The position before this call is not reset, thus only the
@@ -187,30 +188,30 @@ namespace crb
         // Please note: this method will return the sequence starting
         // position but will leave the file cursor at the end of the sequence
         // (the byte after the sequence, or EOF)
-        SizeOpRes search(const ByteBuffer& sequence) const;
+        CERBERUS_EXPORT SizeOpRes search(const ByteBuffer& sequence) const;
 
         // Read a single line till \n or EOF
         // If the EOF is reached and the bytes read are zero, OR_EOF is returned
         // If an error occurs during read, OR_Failure is returned
-        StringOpRes readLine() const;
+        CERBERUS_EXPORT StringOpRes readLine() const;
 
         // Move the cursor to the absolute position pos
-        OpRes seek(LSIZE pos) const;
+        CERBERUS_EXPORT OpRes seek(LSIZE pos) const;
 
         // Move the cursor back or forth according to the sign of the parameter pos
-        OpRes seekOffset(OFFSET pos) const;
+        CERBERUS_EXPORT OpRes seekOffset(OFFSET pos) const;
 
         // Move the cursor to the end of file
-        OpRes seekToEOF() const;
+        CERBERUS_EXPORT OpRes seekToEOF() const;
 
         // Reset the cursor moving it to the beginning of the file
-        void resetCursor() const;
+        CERBERUS_EXPORT void resetCursor() const;
 
         // Get the cursor position.
-        SizeOpRes getCursor() const;
+        CERBERUS_EXPORT SizeOpRes getCursor() const;
 
         // Check if this file and other file are equal (same size, same content)
-        BoolOpRes isEqual(File& other) const;
+        CERBERUS_EXPORT BoolOpRes isEqual(File& other) const;
     };
 }  // namespace crb
 

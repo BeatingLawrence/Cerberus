@@ -8,8 +8,22 @@
 #include "../../core/cerberusutils.h"
 
 #ifdef WINDOWS_SYSTEM
+#include <fcntl.h>
+#include <io.h>
+#include <sys/stat.h>
 #include <windows.h>
 #include <shlwapi.h>
+#define fseeko _fseeki64
+#define ftello _ftelli64
+#define fdopen _fdopen
+#define fileno _fileno
+#define O_APPEND _O_APPEND
+#define O_CREAT _O_CREAT
+#define O_EXCL _O_EXCL
+#define O_RDWR _O_RDWR
+#define O_BINARY _O_BINARY
+#define S_IREAD _S_IREAD
+#define S_IWRITE _S_IWRITE
 #else
 #include <dirent.h>
 #include <fcntl.h>
@@ -20,6 +34,54 @@
 #define MAXIMUM_COPY_BLOCKSIZE 4096u  // 4k block size
 
 using namespace crb;
+
+#ifdef WINDOWS_SYSTEM
+namespace
+{
+DateTime fileTimeToDateTime(const FILETIME& ft)
+{
+    ULARGE_INTEGER value{};
+    value.LowPart  = ft.dwLowDateTime;
+    value.HighPart = ft.dwHighDateTime;
+
+    constexpr uint64_t windowsToUnixEpoch100ns = 116444736000000000ULL;
+    if (value.QuadPart < windowsToUnixEpoch100ns) return DateTime();
+
+    const uint64_t unix100ns = value.QuadPart - windowsToUnixEpoch100ns;
+    DateTime ret;
+    ret.fromTimespec(static_cast<int64_t>(unix100ns / 10000000ULL),
+                     static_cast<int64_t>((unix100ns % 10000000ULL) * 100ULL));
+    return ret;
+}
+
+FileMetadata fileMetadataFromWin32(const WIN32_FILE_ATTRIBUTE_DATA& stat_struct)
+{
+    FileMetadata metadata = {};
+    metadata.type = (stat_struct.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? FT_DIR : FT_REG;
+
+    metadata.linkrefs = 1;
+    metadata.size     = (static_cast<LSIZE>(stat_struct.nFileSizeHigh) << 32) | stat_struct.nFileSizeLow;
+    metadata.ownUID   = 0;
+    metadata.ownGID   = 0;
+
+    metadata.mode.user  = FP_READ;
+    metadata.mode.group = FP_READ;
+    metadata.mode.other = FP_READ;
+    if (!(stat_struct.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
+    {
+        metadata.mode.user |= FP_WRITE;
+        metadata.mode.group |= FP_WRITE;
+        metadata.mode.other |= FP_WRITE;
+    }
+
+    metadata.accTime = fileTimeToDateTime(stat_struct.ftLastAccessTime);
+    metadata.modTime = fileTimeToDateTime(stat_struct.ftLastWriteTime);
+    metadata.chgTime = metadata.modTime;
+    metadata.creTime = fileTimeToDateTime(stat_struct.ftCreationTime);
+    return metadata;
+}
+}  // namespace
+#endif
 
 //=============================================================================
 OpRes File::existsAsFile(const std::string& path)
@@ -149,7 +211,16 @@ OpRes File::remove(const std::string& path)
 OpRes File::move(const std::string& oldPath, const std::string& newPath)
 {
 #ifdef WINDOWS_SYSTEM
-    throw cerberusImplementationMissExc("MOVE NOT IMPLEMENTED YET");
+    if (MoveFileExA(oldPath.c_str(), newPath.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) == 0)
+    {
+        DWORD err = GetLastError();
+        return {OR_SystemFailure,
+                CerberusUtils::strPrint("MoveFileExA failed from '%s' to '%s' with error %lu",
+                                        oldPath.c_str(), newPath.c_str(),
+                                        static_cast<unsigned long>(err))};
+    }
+
+    return OR_OK;
 #else
     if (::rename(oldPath.c_str(), newPath.c_str()) == -1) return {OR_Failure, strerror(errno)};
 
@@ -202,12 +273,22 @@ OpRes File::isEmptyDirectory(const std::string& path)
 //=============================================================================
 OpResData<FileMetadata> crb::File::stat(const std::string& path)
 {
+#if defined(WINDOWS_SYSTEM)
+    WIN32_FILE_ATTRIBUTE_DATA stat_struct = {};
+
+    if (GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &stat_struct) == 0)
+    {
+        DWORD err = GetLastError();
+        if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) return OR_NotFound;
+        return OR_SystemFailure;
+    }
+
+    return fileMetadataFromWin32(stat_struct);
+
+#else
     FileMetadata metadata = {};
 
-#if defined(WINDOWS_SYSTEM)
-    throw cerberusImplementationMissExc("stat implementation missing");
-
-#elif defined(LINUX_SYSTEM)
+#if defined(LINUX_SYSTEM)
     struct statx stat_struct = {};
 
     int flags = 0;
@@ -233,11 +314,37 @@ OpResData<FileMetadata> crb::File::stat(const std::string& path)
 
     metadata.fromStat(stat_struct);
     return metadata;
+#endif
 }
 //=============================================================================
 File File::tmpFile(const Path& path, FileOpenMode openMode)
 {
     Path pth = path;
+#ifdef WINDOWS_SYSTEM
+    char tempDir[MAX_PATH + 1] = {};
+    if (pth.empty())
+    {
+        DWORD len = GetTempPathA(MAX_PATH, tempDir);
+        if (len == 0 || len > MAX_PATH) throw cSystemExc("GetTempPathA error");
+    }
+    else
+    {
+        std::string dir = pth.toStr();
+        DWORD len       = GetFullPathNameA(dir.c_str(), MAX_PATH, tempDir, nullptr);
+        if (len == 0 || len > MAX_PATH) throw cSystemExc("GetFullPathNameA error");
+    }
+
+    char tempPath[MAX_PATH + 1] = {};
+    if (GetTempFileNameA(tempDir, "crb", 0, tempPath) == 0) throw cSystemExc("GetTempFileNameA error");
+
+    int flags = O_RDWR | O_BINARY;
+    if (openMode == FOM_ReadWriteAppend) flags |= O_APPEND;
+
+    int newfd = ::_open(tempPath, flags, S_IREAD | S_IWRITE);
+    if (newfd == -1) throw cSystemExc("open temp file error: %s", strerror(errno));
+
+    return std::move(File(newfd, Path(tempPath), openMode));
+#else
     if (pth.empty()) pth.fromStr(P_tmpdir);
 
     pth.append("XXXXXX");
@@ -249,12 +356,32 @@ File File::tmpFile(const Path& path, FileOpenMode openMode)
     if (newfd == -1) throw cSystemExc("mkstemp error: %s", strerror(errno));
 
     return std::move(File(newfd, Path(pstring), openMode));
+#endif
 }
 //=============================================================================
 OpRes File::zeroCopy(File& src, File& dst, LSIZE len)
 {
 #if defined(WINDOWS_SYSTEM)
-    throw cImplMissExc("zerocopy implementation missing");
+    LSIZE blocksize = MAXIMUM_COPY_BLOCKSIZE;
+    if (len && len < blocksize) blocksize = len;
+    ByteBuffer buf;
+
+    while (true)
+    {
+        auto r = src.readChunk(buf, blocksize);
+        if (r.res == OR_Failure) return r;
+
+        if (r.res == OR_EOF) break;
+
+        condret(dst.write(buf));
+
+        if (!len) continue;
+
+        len -= blocksize;
+        if (len < blocksize) blocksize = len;
+
+        if (len == 0) break;
+    }
 
 #elif defined(LINUX_SYSTEM)
     throw cImplMissExc("zerocopy implementation missing");
@@ -338,6 +465,10 @@ OpResData<FileMetadata> File::stat()
 {
     if (!isOpen()) return File::stat(m_path.toStr());
 
+#if defined(WINDOWS_SYSTEM)
+    return File::stat(m_path.toStr());
+
+#else
     FileMetadata metadata = {};
 
 #if defined(LINUX_SYSTEM)
@@ -364,6 +495,7 @@ OpResData<FileMetadata> File::stat()
 
     metadata.fromStat(stat_struct);
     return metadata;
+#endif
 }
 //=============================================================================
 bool File::canWrite() const { return (m_openMode != FOM_Read); }
@@ -414,7 +546,7 @@ std::string File::getOpenModeString()
 //=============================================================================
 OpRes File::_seek(LSIZE pos) const
 {
-    if (fseeko(m_file, (off_t)pos, SEEK_SET) == -1)
+    if (fseeko(m_file, static_cast<int64_t>(pos), SEEK_SET) == -1)
         return {OR_Failure, CerberusUtils::strPrint("fseek fail: %s", strerror(errno))};
 
     return OR_OK;
@@ -445,9 +577,9 @@ OpRes File::_read_cursor(ByteBuffer& buf, LSIZE span) const
     buf.resize(span);  // create room for at most span bytes
 
     clearerr(m_file);
-    size_t ret = fread(buf.data(), 1, span, m_file);
+    size_t ret = fread(buf.data(), 1, static_cast<size_t>(span), m_file);
 
-    buf.resize(span);  // re-adjust to actual read bytes count
+    buf.resize(static_cast<LSIZE>(ret));  // re-adjust to actual read bytes count
 
     if (ferror(m_file)) return OR_Failure;
 
@@ -473,7 +605,11 @@ File::File(int fd, const Path& path, FileOpenMode openMode)
     if (m_file == NULL)
     {
         auto err = errno;
+#ifdef WINDOWS_SYSTEM
+        ::_close(m_fd);  // RAII
+#else
         ::close(m_fd);  // RAII
+#endif
         throw cSystemExc("fdopen error: %s", strerror(err));
     }
 
@@ -533,12 +669,15 @@ OpRes File::erase(LSIZE start, LSIZE span)
 
     // create temp file in same directory when possible
     std::string dirStr = m_path.toStr();
+#ifdef WINDOWS_SYSTEM
+    auto slash = dirStr.find_last_of("/\\");
+#else
     auto slash = dirStr.find_last_of('/');
+#endif
     Path tempDir;
     if (slash != std::string::npos && slash > 0)
         tempDir = Path(dirStr.substr(0, slash));
     File tmp = File::tmpFile(tempDir, FOM_ReadWriteTrunc);
-    condret(tmp.open());
 
     // copy head
     if (start > 0)
@@ -567,11 +706,29 @@ OpRes File::erase(LSIZE start, LSIZE span)
 //=============================================================================
 OpRes File::move(const Path& newPath)
 {
+#ifdef WINDOWS_SYSTEM
+    const bool wasOpen = isOpen();
+    if (wasOpen) close();
+
+    auto res = move(m_path.toStr(), newPath.toStr());
+
+    if (res.ok()) path(newPath);
+
+    if (wasOpen)
+    {
+        auto reopenRes = open();
+        if (res.fail()) return res;
+        return reopenRes;
+    }
+
+    return res;
+#else
     auto res = move(m_path.toStr(), newPath.toStr());
 
     if (res.ok()) path(newPath);
 
     return res;
+#endif
 }
 //=============================================================================
 SizeOpRes File::size() const
@@ -662,9 +819,19 @@ OpRes File::insert(const ByteBuffer& bytes)
     condret(zeroCopy(*this, tmp));            // copy remaining bytes
 
     // overwrite this file with the temporary one
+#ifdef WINDOWS_SYSTEM
+    std::string tmpPath = tmp.completePath().toStr();
+    std::string dstPath = completePath().toStr();
+    tmp.close();
+    close();
+    condret(File::move(tmpPath, dstPath));
+
+    condret(open());
+#else
     condret(File::move(tmp.completePath().toStr(), completePath().toStr()));
 
     condret(reopen());
+#endif
 
     return OR_OK;
 }
@@ -702,8 +869,9 @@ SizeOpRes File::search(const ByteBuffer& sequence) const
 
     clearerr(m_file);
     char c          = 0;
-    size_t seqindex = 0;
-    size_t seqlast  = sequence.size() - 1;
+    LSIZE seqindex = 0;
+    LSIZE seqlast  = sequence.size() - 1;
+    LSIZE seqsize  = sequence.size();
 
     while (true)
     {
@@ -714,7 +882,7 @@ SizeOpRes File::search(const ByteBuffer& sequence) const
 
         if (c == sequence[seqindex])
         {
-            if (seqindex == seqlast) return getCursor().expect().value - sequence.size();
+            if (seqindex == seqlast) return getCursor().expect().value - seqsize;
             seqindex++;
         }
         else if (seqindex)
@@ -777,7 +945,7 @@ OpRes File::seekOffset(OFFSET pos) const
 
     clearerr(m_file);
 
-    if (fseeko(m_file, (off_t)pos, SEEK_CUR) == -1) return {OR_Failure, strerror(errno)};
+    if (fseeko(m_file, static_cast<int64_t>(pos), SEEK_CUR) == -1) return {OR_Failure, strerror(errno)};
 
     return OR_OK;
 }
@@ -788,7 +956,7 @@ OpRes File::seekToEOF() const
 
     clearerr(m_file);
 
-    if (fseeko(m_file, (off_t)0, SEEK_END) == -1) return {OR_Failure, strerror(errno)};
+    if (fseeko(m_file, static_cast<int64_t>(0), SEEK_END) == -1) return {OR_Failure, strerror(errno)};
 
     return OR_OK;
 }
@@ -800,7 +968,7 @@ SizeOpRes File::getCursor() const
     if (!isOpen()) return OR_BadConditions;
 
     auto pos = ftello(m_file);
-    if (pos == (off_t)-1) return {OR_Failure, strerror(errno)};
+    if (pos == static_cast<decltype(pos)>(-1)) return {OR_Failure, strerror(errno)};
     return (LSIZE)pos;
 }
 //=============================================================================

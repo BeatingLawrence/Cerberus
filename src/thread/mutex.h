@@ -9,7 +9,9 @@
  *  This interface offers locking, unlocking and conditional-locking of mutexes.
  */
 
+#ifndef WINDOWS_SYSTEM
 #include <pthread.h>
+#endif
 
 #include "../Cerberus_global.h"
 #include "../types.h"
@@ -18,22 +20,27 @@ namespace crb
 {
     class ThreadBase;
 
-    class CERBERUS_EXPORT Mutex
+    class Mutex
     {
         friend class ::crb::ThreadBase;
 
        private:
+#ifdef WINDOWS_SYSTEM
+        void* m_pmutex;
+        MutexType m_type;
+#else
         pthread_mutex_t m_pmutex;
+#endif
         bool m_valid;
 
        public:
-        Mutex(MutexType type = Simple);
+        CERBERUS_EXPORT Mutex(MutexType type = Simple);
 
         Mutex(const Mutex& other) = delete;
 
-        Mutex(Mutex&& other);
+        CERBERUS_EXPORT Mutex(Mutex&& other);
 
-        ~Mutex();
+        CERBERUS_EXPORT ~Mutex();
 
         // Takes mutex ownership. If block is true, this call will block or not,
         // depending on the state of the mutex and it will always return true.
@@ -41,11 +48,11 @@ namespace crb
         // avoiding mutex locking. If block is false and the mutex is lockable, this call will not block and
         // will return true, effectively locking the mutex. An excption will be thrown if the instance is
         // invalid
-        bool lock(bool block = true);
+        CERBERUS_EXPORT bool lock(bool block = true);
 
         // Unlocks the mutex. Do not attempt to call this before lock().
         // An excption will be thrown if the instance is invalid
-        void unlock();
+        CERBERUS_EXPORT void unlock();
     };
 }  // namespace crb
 

@@ -55,12 +55,21 @@
 #include "../time/timeframe.h"
 #include "./threadbase.h"
 
+#ifndef WINDOWS_SYSTEM
+#include <pthread.h>
+#endif
+
 namespace crb
 {
-    class CERBERUS_EXPORT Thread : public ThreadBase
+    class Thread : public ThreadBase
     {
        private:
+#ifdef WINDOWS_SYSTEM
+        void* m_threadHandle;
+        unsigned m_threadId;
+#else
         pthread_t m_pthread;
+#endif
 
         SplittedTime m_time;
         time::SysTimer m_periodTimer;
@@ -69,7 +78,11 @@ namespace crb
         void* m_stack;
         LSIZE m_stackSize;
 
+#ifdef WINDOWS_SYSTEM
+        static unsigned __stdcall _staticThread(void* context);
+#else
         static void* _staticThread(void* context);
+#endif
 
         void _thread();
 
@@ -95,59 +108,60 @@ namespace crb
         std::string m_threadName;
 
        protected:
-        virtual int tick();
+        CERBERUS_EXPORT virtual int tick();
 
-        virtual void warmUp();
+        CERBERUS_EXPORT virtual void warmUp();
 
-        virtual void coolDown();
+        CERBERUS_EXPORT virtual void coolDown();
 
        public:
-        // Set thread name (pthread) if supported by the platform.
-        void setThreadName(const std::string& name);
+        // Set thread name if supported by the platform.
+        CERBERUS_EXPORT void setThreadName(const std::string& name);
         const std::string& getThreadName() const { return m_threadName; }
 
         // Construct a thread with optional stack size.
         // If periodicity is TP_Periodic, TP_Periodic_realtime, or TP_PeriodicMessage a valid time must be specified.
-        Thread(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize = 0,
-               const CoreSet& coreSet = CoreSet());
+        CERBERUS_EXPORT Thread(ThreadPeriodicity periodicity, const TimeFrame& time,
+                               LSIZE stackSize = 0, const CoreSet& coreSet = CoreSet());
 
         // Construct a non-periodic thread with optional stack size
-        Thread(LSIZE stackSize = 0, const CoreSet& coreSet = CoreSet());
+        CERBERUS_EXPORT Thread(LSIZE stackSize = 0, const CoreSet& coreSet = CoreSet());
 
         // Construct a non-timed thread with given periodicity and optional stack size.
         // TP_Continuos_realtime uses realtime scheduling without a period timer.
-        Thread(ThreadPeriodicity periodicity, LSIZE stackSize = 0, const CoreSet& coreSet = CoreSet());
+        CERBERUS_EXPORT Thread(ThreadPeriodicity periodicity, LSIZE stackSize = 0,
+                               const CoreSet& coreSet = CoreSet());
 
         Thread(const Thread& other) = delete;
 
         Thread(Thread&& other) = delete;
 
-        virtual ~Thread();
+        CERBERUS_EXPORT virtual ~Thread();
 
-        void checkIn(const std::string& name) override;
+        CERBERUS_EXPORT void checkIn(const std::string& name) override;
 
-        SplittedTime getTime() const;
+        CERBERUS_EXPORT SplittedTime getTime() const;
 
-        bool isOverrun() const;
+        CERBERUS_EXPORT bool isOverrun() const;
 
         // Put the calling thread in sleep state for a given time
-        static void sleep(const TimeFrame& time);
+        CERBERUS_EXPORT static void sleep(const TimeFrame& time);
 
         // Block until thread terminates and return the last tick() exit value.
         // If stop is true, the Thread is also started and terminated.
-        IntOpRes join(bool stop = false);
+        CERBERUS_EXPORT IntOpRes join(bool stop = false);
 
         // Detach the Thread from the owner Thread
-        OpRes detach();
+        CERBERUS_EXPORT OpRes detach();
 
         // Set a custom callback to be executed as tick()
-        void provideTickCallback(threadTickCallback callback);
+        CERBERUS_EXPORT void provideTickCallback(threadTickCallback callback);
 
         // Set a custom callback to be executed as warmUp()
-        void provideWarmUpCallback(threadCallback callback);
+        CERBERUS_EXPORT void provideWarmUpCallback(threadCallback callback);
 
         // Set a custom callback to be executed as coolDown()
-        void provideCoolDownCallback(threadCallback callback);
+        CERBERUS_EXPORT void provideCoolDownCallback(threadCallback callback);
 
        private:
         // Set default core set for new threads (empty = no default affinity).

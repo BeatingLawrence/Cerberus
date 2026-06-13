@@ -27,45 +27,45 @@ namespace crb
 
        public:
         // construct a client using a default receive buffer size of 8K
-        HTTPClient(size_t bufsize = MEM_8K);
+        CERBERUS_EXPORT HTTPClient(size_t bufsize = MEM_8K);
 
-        virtual ~HTTPClient();
+        CERBERUS_EXPORT virtual ~HTTPClient();
 
         // using Socket::close;
         using Socket::TLS_deinit;
         using Socket::TLS_ignoreHangup;
         using Socket::TLS_init;
 
-        void setRemote(const Host &host);
+        CERBERUS_EXPORT void setRemote(const Host &host);
 
         // Make the client persistent.
         // A persistent client automatically reconnects to the server if the connection
         // drops, when the application makes a request. Also, a persistent client does not
         // close the connection after a response has been retrieved
-        void persistent(bool persistent = true);
+        CERBERUS_EXPORT void persistent(bool persistent = true);
 
         // Connect to the remote (if not already connected) and
         // send an HTTP request using the given data
-        crb::OpRes makeRequest(const HTTPRequest &request);
+        CERBERUS_EXPORT crb::OpRes makeRequest(const HTTPRequest &request);
 
         // Block until a response is available to be read, then, if connection is
         // not persistent, close the socket
-        crb::OpResData<HTTPResponse> getResponse(const TimeFrame &timeout = TimeFrame(1000),
-                                                      const TimeFrame &cyc     = TimeFrame());
+        CERBERUS_EXPORT crb::OpResData<HTTPResponse> getResponse(const TimeFrame &timeout = TimeFrame(1000),
+                                                                 const TimeFrame &cyc = TimeFrame());
 
         // If the server never stops to send data, the getStream() method must be used instead.
         // This version downloads the payload partially (up to buffer size) and then returns.
         // The application must keep calling this method to get the stream data.
         // NOTE: all the calls will return the same HTTPResponse data, but with different payloads.
-        crb::OpResData<HTTPResponse> getStream(const TimeFrame &timeout = TimeFrame(1000));
+        CERBERUS_EXPORT crb::OpResData<HTTPResponse> getStream(const TimeFrame &timeout = TimeFrame(1000));
 
         // Get HTTP data. This method is a combination of makeRequest and getResponse
-        crb::OpResData<HTTPResponse> get(const HTTPRequest &request,
-                                              const TimeFrame &timeout    = TimeFrame(1000),
-                                              const TimeFrame &cycTimeout = TimeFrame());
+        CERBERUS_EXPORT crb::OpResData<HTTPResponse> get(const HTTPRequest &request,
+                                                         const TimeFrame &timeout = TimeFrame(1000),
+                                                         const TimeFrame &cycTimeout = TimeFrame());
 
         // Force client connection close
-        OpRes disconnect();
+        CERBERUS_EXPORT OpRes disconnect();
     };
 }  // namespace crb
 

@@ -57,8 +57,8 @@ TEST(SharedByteBufferTest, SubBuffer)
 
     //
     EXPECT_TRUE(b2 == "World");
-    EXPECT_EQ(b2.size(), 5);
-    EXPECT_EQ(b1.size(), 13);
+    EXPECT_EQ(b2.size(), static_cast<crb::LSIZE>(5));
+    EXPECT_EQ(b1.size(), static_cast<crb::LSIZE>(13));
     // EXPECT_EQ(b1.instances(), 1);
     // EXPECT_EQ(b2.instances(), 1);
     //
@@ -68,7 +68,8 @@ TEST(SharedByteBufferTest, SubBuffer)
     char b[20] = {};
     b2.copyTo((crb::BYTE*)&b[0]);
 
-    logInfo(CerberusUtils::strPrint("b1: %u, b2: %u", b1.size(), b2.size()));
+    logInfo(CerberusUtils::strPrint("b1: %llu, b2: %llu", static_cast<unsigned long long>(b1.size()),
+                                     static_cast<unsigned long long>(b2.size())));
     logInfo(b);
     logInfo(a);
 
@@ -76,13 +77,13 @@ TEST(SharedByteBufferTest, SubBuffer)
 
     char c[20] = {};
     bb.copyTo((crb::BYTE*)&c[0]);
-    logInfo(CerberusUtils::strPrint("bb: %u", bb.size()));
+    logInfo(CerberusUtils::strPrint("bb: %llu", static_cast<unsigned long long>(bb.size())));
     logInfo(c);
 
     auto bbb = bb.subBuffer(0, 5);
 
     char d[20] = {};
     bbb.copyTo((crb::BYTE*)&d[0]);
-    logInfo(CerberusUtils::strPrint("bbb: %u", bbb.size()));
+    logInfo(CerberusUtils::strPrint("bbb: %llu", static_cast<unsigned long long>(bbb.size())));
     logInfo(d);
 }

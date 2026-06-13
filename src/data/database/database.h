@@ -12,9 +12,9 @@ namespace crb
         db::IDatabase* m_db;
 
        public:
-        Database(DBBackend backend = DBB_Filesystem);
+        CERBERUS_EXPORT Database(DBBackend backend = DBB_Filesystem);
 
-        virtual ~Database();
+        CERBERUS_EXPORT virtual ~Database();
 
         inline OpRes init(const std::string& parameters) { return m_db->init(parameters); }
 

@@ -1,9 +1,17 @@
 #include "cerberusutils.h"
 
 #include <inttypes.h>
-#ifndef APPLE_SYSTEM
+#if defined(WINDOWS_SYSTEM)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#elif defined(LINUX_SYSTEM)
 #include <sys/sysinfo.h>
-#else
+#elif defined(APPLE_SYSTEM)
 #include <sys/sysctl.h>
 #endif
 
@@ -12,6 +20,8 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <limits>
 
 #include "../cerberus.h"              // IWYU pragma: export
 #include "../data/filesystem/file.h"  // IWYU pragma: export
@@ -235,7 +245,7 @@ bool CerberusUtils::startsWith(const std::string& str1, const std::string& str2)
 {
     if (str2.size() > str1.size()) return false;
 
-    for (int i = 0; i < str2.size(); i++)
+    for (SIZE i = 0; i < str2.size(); i++)
         if (str1[i] != str2[i])
         {
             return false;
@@ -254,9 +264,9 @@ bool CerberusUtils::endsWith(const std::string& str1, const std::string& str2)
 {
     if (str2.size() > str1.size()) return false;
 
-    int diff = str1.size() - str2.size();
+    SIZE diff = static_cast<SIZE>(str1.size() - str2.size());
 
-    for (int i = 0; i < str2.size(); i++)
+    for (SIZE i = 0; i < str2.size(); i++)
         if (str1[diff + i] != str2[i])
         {
             return false;
@@ -301,7 +311,8 @@ void CerberusUtils::replaceAll(std::string& str, const std::string& find, const 
     }
 }
 //=============================================================================
-StringOpRes replaceAll_regex(const std::string& str, const std::string& pattern, const std::string& replace)
+StringOpRes CerberusUtils::replaceAll_regex(const std::string& str, const std::string& pattern,
+                                            const std::string& replace)
 {
     if (str.empty()) return OR_Empty;
 
@@ -342,7 +353,7 @@ std::string CerberusUtils::hex(const ByteBuffer& buffer)
     return ret;
 }
 //=============================================================================
-std::string CerberusUtils::truncStr(const std::string& str, SIZE size)
+std::string CerberusUtils::truncStr(const std::string& str, crb::SIZE size)
 {
     if (size >= str.size())
     {
@@ -383,7 +394,15 @@ StringOpRes CerberusUtils::substrUntil_regex(const std::string& str, const std::
         {
             // at least one match found
 
-            uint32_t pos = m[invert ? m.size() - 1 : 0].first - str.begin();
+            const size_t matchIndex64 = invert ? m.size() - 1 : 0;
+            if (matchIndex64 > static_cast<size_t>(std::numeric_limits<int>::max()))
+                return {OR_Failure, "regex match index too large"};
+
+            const int matchIndex = static_cast<int>(matchIndex64);
+            size_t pos64 = static_cast<size_t>(m[matchIndex].first - str.begin());
+            if (pos64 > std::numeric_limits<SIZE>::max()) return {OR_Failure, "regex match position too large"};
+
+            SIZE pos = static_cast<SIZE>(pos64);
             return str.substr(0, pos);
         }
     }
@@ -408,7 +427,15 @@ StringOpRes CerberusUtils::substrFrom_regex(const std::string& str, const std::s
         {
             // at least one match found
 
-            uint32_t pos = m[invert ? m.size() - 1 : 0].second - str.begin();
+            const size_t matchIndex64 = invert ? m.size() - 1 : 0;
+            if (matchIndex64 > static_cast<size_t>(std::numeric_limits<int>::max()))
+                return {OR_Failure, "regex match index too large"};
+
+            const int matchIndex = static_cast<int>(matchIndex64);
+            size_t pos64 = static_cast<size_t>(m[matchIndex].second - str.begin());
+            if (pos64 > std::numeric_limits<SIZE>::max()) return {OR_Failure, "regex match position too large"};
+
+            SIZE pos = static_cast<SIZE>(pos64);
             return str.substr(pos);
         }
     }
@@ -500,7 +527,7 @@ HASH32 CerberusUtils::hash_fnv1a(const ByteBuffer& buf)
     HASH32 hash   = FNV_OFFSET_BASIS;
     const BYTE* b = buf.data();
 
-    for (SIZE i = 0; i < buf.size(); i++)
+    for (crb::LSIZE i = 0; i < buf.size(); i++)
     {
         hash = hash ^ (HASH32)(*b);
         hash = hash * FNV_PRIME;
@@ -512,6 +539,12 @@ HASH32 CerberusUtils::hash_fnv1a(const ByteBuffer& buf)
 //=============================================================================
 StringOpRes CerberusUtils::completePath(const std::string& path)
 {
+#ifdef WINDOWS_SYSTEM
+    std::error_code ec;
+    auto comp = std::filesystem::canonical(path, ec);
+    if (ec) return OR_Failure;
+    return comp.string();
+#else
     auto comp = ::realpath(path.c_str(), NULL);
 
     if (comp == NULL) return OR_Failure;
@@ -519,6 +552,7 @@ StringOpRes CerberusUtils::completePath(const std::string& path)
     std::string ret(comp);
     free(comp);
     return ret;
+#endif
 }
 //=============================================================================
 DBDataType CerberusUtils::toDBDataType(const std::string& type)
@@ -631,7 +665,12 @@ uint8_t CerberusUtils::reqBytes(LSIZE num)
 OpResData<CoreSet> CerberusUtils::getOnlineCoreSet()
 {
     int cores = 0;
-#ifndef APPLE_SYSTEM
+#if defined(WINDOWS_SYSTEM)
+    DWORD activeCores = GetActiveProcessorCount(ALL_PROCESSOR_GROUPS);
+    if (activeCores == 0 || activeCores > static_cast<DWORD>(std::numeric_limits<int>::max()))
+        return OpResData<CoreSet>(OR_Failure, "GetActiveProcessorCount fail");
+    cores = static_cast<int>(activeCores);
+#elif !defined(APPLE_SYSTEM)
     cores = get_nprocs();
     if (cores <= 0) return OpResData<CoreSet>(OR_Failure, "get_nprocs fail");
 #else

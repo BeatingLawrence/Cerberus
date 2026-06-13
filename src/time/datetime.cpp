@@ -1,6 +1,9 @@
 #include "datetime.h"
 
+#include <climits>
 #include <string.h>
+
+#include <chrono>
 
 #include "src/cerberus.h"
 #include "src/core/cerberusutils.h"
@@ -21,18 +24,42 @@ static inline tm toTm(const DateTime& dt)
     t.tm_isdst = -1;
     return t;
 }
+
+static void addTmSeconds(tm& time, uint64_t seconds)
+{
+    while (seconds > static_cast<uint64_t>(INT_MAX))
+    {
+        time.tm_sec += INT_MAX;
+        mktime(&time);
+        seconds -= static_cast<uint64_t>(INT_MAX);
+    }
+
+    time.tm_sec += static_cast<int>(seconds);
+}
+
+static void subtractTmSeconds(tm& time, uint64_t seconds)
+{
+    while (seconds > static_cast<uint64_t>(INT_MAX))
+    {
+        time.tm_sec -= INT_MAX;
+        mktime(&time);
+        seconds -= static_cast<uint64_t>(INT_MAX);
+    }
+
+    time.tm_sec -= static_cast<int>(seconds);
+}
 //=============================================================================
 time_t DateTime::normalize() const
 {
     if (m_offset.isNegative())
     {
         m_offset.setNegative(false);
-        m_time.tm_sec -= ((m_offset.toMicroseconds() / 1000000u) + 1);
+        subtractTmSeconds(m_time, (m_offset.toMicroseconds() / 1000000u) + 1);
         m_offset.setMicroseconds(1000000u - (m_offset.microseconds() % 1000000u));
     }
     else if (m_offset.toMicroseconds() >= 1000000u)
     {
-        m_time.tm_sec += (m_offset.toMicroseconds() / 1000000u);
+        addTmSeconds(m_time, m_offset.toMicroseconds() / 1000000u);
         m_offset.setMicroseconds(m_offset.toMicroseconds() % 1000000u);
     }
 
@@ -44,15 +71,19 @@ DateTime::DateTime()
       m_offset(0),
       m_zone()
 {
+#ifndef WINDOWS_SYSTEM
     m_time.tm_zone = &m_zone[0];
+#endif
 }
 //=============================================================================
-DateTime::DateTime(uint32_t seconds, uint32_t nanoseconds)
+DateTime::DateTime(int64_t seconds, int64_t nanoseconds)
     : m_time(),
       m_offset(0),
       m_zone()
 {
+#ifndef WINDOWS_SYSTEM
     m_time.tm_zone = &m_zone[0];
+#endif
     fromTimespec(seconds, nanoseconds);
 }
 //=============================================================================
@@ -64,9 +95,9 @@ bool DateTime::isValid() const
 //=============================================================================
 bool DateTime::usingDst() const { return m_time.tm_isdst > 0; }
 //=============================================================================
-uint32_t DateTime::microseconds() const { return m_offset.microseconds(); }
+uint32_t DateTime::microseconds() const { return static_cast<uint32_t>(m_offset.microseconds()); }
 //=============================================================================
-uint32_t DateTime::milliseconds() const { return m_offset.milliseconds(); }
+uint32_t DateTime::milliseconds() const { return static_cast<uint32_t>(m_offset.milliseconds()); }
 //=============================================================================
 uint32_t DateTime::seconds() const { return m_time.tm_sec; }
 //=============================================================================
@@ -152,7 +183,8 @@ DateTime &DateTime::setMilliseconds(uint64_t x)
 //=============================================================================
 DateTime &DateTime::setSeconds(uint64_t x)
 {
-    m_time.tm_sec = x;
+    m_time.tm_sec = 0;
+    addTmSeconds(m_time, x);
     normalize();
     return *this;
 }
@@ -286,13 +318,17 @@ uint64_t DateTime::toEpochMilliseconds() const
     return static_cast<uint64_t>(seconds) * 1000u + static_cast<uint64_t>(milliseconds());
 }
 //=============================================================================
-DateTime &DateTime::fromTimespec(uint32_t seconds, uint32_t nanoseconds)
+DateTime &DateTime::fromTimespec(int64_t seconds, int64_t nanoseconds)
 {
-    m_offset.setMicroseconds(nanoseconds / 1000u);
+    m_offset.setMicroseconds(static_cast<uint64_t>(nanoseconds / 1000));
 
-    time_t t = seconds;
+    time_t t = static_cast<time_t>(seconds);
 
+#ifdef WINDOWS_SYSTEM
+    if (localtime_s(&m_time, &t) != 0)
+#else
     if (!localtime_r(&t, &m_time))
+#endif
     {
         throw cSystemExc("gmtime failure: %u", errno);
     }
@@ -303,6 +339,13 @@ DateTime &DateTime::fromTimespec(uint32_t seconds, uint32_t nanoseconds)
 //=============================================================================
 DateTime DateTime::current()
 {
+#ifdef WINDOWS_SYSTEM
+    const auto now = std::chrono::system_clock::now();
+    const auto duration = now.time_since_epoch();
+    const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
+    const auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration - seconds);
+    return DateTime(seconds.count(), nanoseconds.count());
+#else
     timespec ts = {};
 
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
@@ -311,5 +354,6 @@ DateTime DateTime::current()
     }
 
     return DateTime(ts.tv_sec, ts.tv_nsec);
+#endif
 }
 //=============================================================================

@@ -144,7 +144,7 @@ TEST(directoryTest, get)
     d.toStr(s);
     logInfo("%s", s.c_str());
 
-    logInfo("size of logs dir: %u", d.size());
+    logInfo("size of logs dir: %llu", static_cast<unsigned long long>(d.size()));
 
     if (d.files().empty()) return;
     logInfo("path of first file: %s", d.files().front().completePath().toStr().c_str());
@@ -223,7 +223,7 @@ TEST(csvDataFileTest, loadReadWrite)
     EXPECT_TRUE(res.ok());
     EXPECT_TRUE(res.hasOptional(OR_Failure));  // one row discarded
 
-    EXPECT_EQ(csv.size(), (SIZE)2);
+    EXPECT_EQ(csv.size(), static_cast<crb::SIZE>(2));
     EXPECT_EQ(csv.columnPos("price"), 1);
     EXPECT_EQ(csv.type(0), DT_Integer);
     EXPECT_EQ(csv.type(1), DT_Double);
@@ -242,7 +242,7 @@ TEST(csvDataFileTest, loadReadWrite)
     rec.addValue(Opaque(true));
     csv.addRecord(rec);
 
-    EXPECT_EQ(csv.size(), (SIZE)3);
+    EXPECT_EQ(csv.size(), static_cast<crb::SIZE>(3));
     auto last = csv.read(2, 0);
     EXPECT_EQ(last.getInt(), 3);
 
@@ -281,7 +281,7 @@ TEST(csvDataFileTest, largeSequential)
     CSVDataFile csv(fname);
     auto res = csv.load();
     ASSERT_TRUE(res.ok());
-    EXPECT_EQ(csv.size(), (SIZE)rows);
+    EXPECT_EQ(csv.size(), static_cast<crb::SIZE>(rows));
 
     // spot-check column types
     EXPECT_EQ(csv.type(0), DT_Integer);
@@ -371,8 +371,9 @@ TEST(fileTest, insertion_readUntil)
     auto rr = f.readUntil("THIS_IS_INSERTED");
     ASSERT_TRUE(rr.ok());
 
-    EXPECT_EQ(rr.value.size(), 100);
+    EXPECT_EQ(rr.value.size(), static_cast<crb::LSIZE>(100));
 
-    logInfo("readUntil returned %u bytes: %s", rr.value.size(), rr.value.toString().c_str());
+    logInfo("readUntil returned %llu bytes: %s", static_cast<unsigned long long>(rr.value.size()),
+            rr.value.toString().c_str());
     f.close();
 }

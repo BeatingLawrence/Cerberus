@@ -7,7 +7,8 @@
   },
   "configurePresets": [
     {
-      "name": "local",
+      "name": "gcc",
+      "displayName": "GCC",
       "generator": "Unix Makefiles",
       "cacheVariables": {
         "CMAKE_MAKE_PROGRAM": {
@@ -28,7 +29,7 @@
         },
         "CMAKE_INSTALL_PREFIX": {
           "type": "PATH",
-          "value": "${sourceDir}/build/dist-local"
+          "value": "${sourceDir}/build/dist-gcc"
         }
       }
     },
@@ -61,6 +62,100 @@
           "type": "PATH",
           "value": "${sourceDir}/build/dist-remote-arm64"
         }
+      }
+    },
+    {
+      "name": "msvc",
+      "displayName": "MSVC x64 Library",
+      "generator": "Ninja Multi-Config",
+      "binaryDir": "${sourceDir}/build/msvc",
+      "cacheVariables": {
+        "GOOGLETEST": {
+          "type": "BOOL",
+          "value": "OFF"
+        },
+        "POSTGRESQL": {
+          "type": "BOOL",
+          "value": "OFF"
+        },
+        "CMAKE_CONFIGURATION_TYPES": {
+          "type": "STRING",
+          "value": "Debug;Release"
+        },
+        "CMAKE_INSTALL_PREFIX": {
+          "type": "PATH",
+          "value": "${sourceDir}/build/dist-msvc"
+        }
+      }
+    },
+    {
+      "name": "msvc-test",
+      "displayName": "MSVC x64 Tests",
+      "inherits": "msvc",
+      "binaryDir": "${sourceDir}/build/msvc-test",
+      "cacheVariables": {
+        "GOOGLETEST": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "msvc-debug",
+      "displayName": "Build MSVC x64 Debug",
+      "configurePreset": "msvc",
+      "configuration": "Debug",
+      "targets": [
+        "Cerberus"
+      ]
+    },
+    {
+      "name": "msvc-release",
+      "displayName": "Build MSVC x64 Release",
+      "configurePreset": "msvc",
+      "configuration": "Release",
+      "targets": [
+        "Cerberus"
+      ]
+    },
+    {
+      "name": "msvc-test-debug",
+      "displayName": "Build MSVC x64 Tests Debug",
+      "configurePreset": "msvc-test",
+      "configuration": "Debug",
+      "targets": [
+        "cerberus-test"
+      ]
+    },
+    {
+      "name": "msvc-test-release",
+      "displayName": "Build MSVC x64 Tests Release",
+      "configurePreset": "msvc-test",
+      "configuration": "Release",
+      "targets": [
+        "cerberus-test"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "msvc-test-debug",
+      "displayName": "Run MSVC x64 Tests Debug",
+      "configurePreset": "msvc-test",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "msvc-test-release",
+      "displayName": "Run MSVC x64 Tests Release",
+      "configurePreset": "msvc-test",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
       }
     }
   ]

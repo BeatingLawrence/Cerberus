@@ -1,13 +1,27 @@
 #include "thread.h"
 
+#ifdef WINDOWS_SYSTEM
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <process.h>
+#include <windows.h>
+#else
 #include <limits.h>
 #include <pthread.h>
 #include <sched.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#endif
 
 #include <cerrno>
+#include <cstdint>
 #include <cstring>
+#include <limits>
+#include <string>
 
 #include "../cerberus.h"
 #include "../core/signalhandler.h"
@@ -18,11 +32,124 @@ using namespace crb;
 
 CoreSet Thread::s_defaultCoreSet;
 
+#ifdef WINDOWS_SYSTEM
+namespace
+{
+std::string windowsErrorString(DWORD error)
+{
+    char* message = nullptr;
+    DWORD len = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                                   FORMAT_MESSAGE_IGNORE_INSERTS,
+                               nullptr, error, 0, reinterpret_cast<LPSTR>(&message), 0, nullptr);
+
+    std::string ret = CerberusUtils::strPrint("Windows error %lu", static_cast<unsigned long>(error));
+    if (len != 0 && message != nullptr)
+    {
+        ret.append(": ");
+        ret.append(message, len);
+        LocalFree(message);
+    }
+
+    return ret;
+}
+
+void closeThreadHandle(void*& handle)
+{
+    if (!handle) return;
+    CloseHandle(static_cast<HANDLE>(handle));
+    handle = nullptr;
+}
+
+void terminateCreatedThread(void*& handle)
+{
+    if (!handle) return;
+    TerminateThread(static_cast<HANDLE>(handle), 1);
+    closeThreadHandle(handle);
+}
+
+void setWindowsThreadName(HANDLE handle, const std::string& name)
+{
+    if (!handle || name.empty()) return;
+
+    using SetThreadDescriptionFn = HRESULT(WINAPI*)(HANDLE, PCWSTR);
+    HMODULE kernel = GetModuleHandleA("Kernel32.dll");
+    if (!kernel) return;
+
+    auto setThreadDescription = reinterpret_cast<SetThreadDescriptionFn>(
+        GetProcAddress(kernel, "SetThreadDescription"));
+    if (!setThreadDescription) return;
+
+    std::wstring wideName(name.begin(), name.end());
+    setThreadDescription(handle, wideName.c_str());
+}
+
+GROUP_AFFINITY coreSetToWindowsGroupAffinity(const CoreSet& coreSet)
+{
+    GROUP_AFFINITY affinity{};
+    bool groupSelected = false;
+    constexpr int maskBits = static_cast<int>(std::numeric_limits<KAFFINITY>::digits);
+    const WORD groupCount = GetActiveProcessorGroupCount();
+
+    for (int core : coreSet.cores)
+    {
+        if (core < 0)
+        {
+            throw cIllegalArgExc("Invalid core index in CoreSet");
+        }
+
+        DWORD localCore = static_cast<DWORD>(core);
+        WORD targetGroup = 0;
+        bool found = false;
+
+        for (WORD group = 0; group < groupCount; ++group)
+        {
+            DWORD groupCores = GetActiveProcessorCount(group);
+            if (localCore < groupCores)
+            {
+                targetGroup = group;
+                found = true;
+                break;
+            }
+
+            localCore -= groupCores;
+        }
+
+        if (!found || localCore >= static_cast<DWORD>(maskBits))
+        {
+            throw cIllegalArgExc("Invalid core index in CoreSet");
+        }
+
+        if (!groupSelected)
+        {
+            affinity.Group = targetGroup;
+            groupSelected = true;
+        }
+        else if (affinity.Group != targetGroup)
+        {
+            throw cIllegalArgExc("CoreSet spans multiple Windows processor groups");
+        }
+
+        affinity.Mask |= (static_cast<KAFFINITY>(1) << localCore);
+    }
+
+    return affinity;
+}
+}  // namespace
+#endif
+
 //=============================================================================
+#ifdef WINDOWS_SYSTEM
+unsigned __stdcall Thread::_staticThread(void* context)
+#else
 void* Thread::_staticThread(void* context)
+#endif
 {
     ((Thread*)context)->_thread();
+#ifdef WINDOWS_SYSTEM
+    return 0;
+#else
     return nullptr;
+#endif
 }
 //=============================================================================
 void Thread::_thread()
@@ -32,7 +159,9 @@ void Thread::_thread()
 #endif
 
     // set system thread name if supported
-#if defined(APPLE_SYSTEM)
+#if defined(WINDOWS_SYSTEM)
+    setWindowsThreadName(GetCurrentThread(), m_threadName);
+#elif defined(APPLE_SYSTEM)
     if (!m_threadName.empty()) pthread_setname_np(CerberusUtils::truncStr(m_threadName, 63).c_str());
 #elif defined(LINUX_SYSTEM)
     if (!m_threadName.empty())
@@ -157,6 +286,63 @@ void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, LS
         m_periodTimer.setTime(time);
     }
 
+#ifdef WINDOWS_SYSTEM
+    const bool isRealtime = (periodicity == ThreadPeriodicity::TP_Periodic_realtime ||
+                             periodicity == ThreadPeriodicity::TP_Continuos_realtime);
+
+    if (stackSize > static_cast<LSIZE>(std::numeric_limits<unsigned>::max()))
+    {
+        throw cIllegalArgExc("Invalid stack size: too large for Windows thread creation");
+    }
+
+    CoreSet effectiveCoreSet = coreSet;
+    if (effectiveCoreSet.empty() && !s_defaultCoreSet.empty())
+    {
+        effectiveCoreSet = s_defaultCoreSet;
+    }
+
+    unsigned threadId = 0;
+    uintptr_t handle = _beginthreadex(nullptr, static_cast<unsigned>(stackSize), &_staticThread, this,
+                                      CREATE_SUSPENDED, &threadId);
+
+    if (handle == 0)
+    {
+        throw cSystemExc("_beginthreadex function failed: %s", strerror(errno));
+    }
+
+    m_threadHandle = reinterpret_cast<void*>(handle);
+    m_threadId     = threadId;
+
+    if (!effectiveCoreSet.empty())
+    {
+        GROUP_AFFINITY affinity = coreSetToWindowsGroupAffinity(effectiveCoreSet);
+        if (!SetThreadGroupAffinity(static_cast<HANDLE>(m_threadHandle), &affinity, nullptr))
+        {
+            DWORD err = GetLastError();
+            terminateCreatedThread(m_threadHandle);
+            throw cSystemExc("SetThreadGroupAffinity function failed: %s", windowsErrorString(err).c_str());
+        }
+    }
+
+    if (isRealtime)
+    {
+        if (!SetThreadPriority(static_cast<HANDLE>(m_threadHandle), THREAD_PRIORITY_TIME_CRITICAL))
+        {
+            DWORD err = GetLastError();
+            terminateCreatedThread(m_threadHandle);
+            throw cSystemExc("SetThreadPriority function failed: %s", windowsErrorString(err).c_str());
+        }
+    }
+
+    setWindowsThreadName(static_cast<HANDLE>(m_threadHandle), m_threadName);
+
+    if (ResumeThread(static_cast<HANDLE>(m_threadHandle)) == static_cast<DWORD>(-1))
+    {
+        DWORD err = GetLastError();
+        terminateCreatedThread(m_threadHandle);
+        throw cSystemExc("ResumeThread function failed: %s", windowsErrorString(err).c_str());
+    }
+#else
     pthread_attr_t attr{};
 
     if (pthread_attr_init(&attr))  // default attributes
@@ -316,11 +502,18 @@ void Thread::_construct(ThreadPeriodicity periodicity, const TimeFrame& time, LS
 
         if (schedRet) throw cSystemExc("pthread_setschedparam function failed: %s", strerror(schedRet));
     }
+#endif
 }
 //=============================================================================
 int Thread::tick() { return m_tickCallback(next(), this); }
 //=============================================================================
-void Thread::setThreadName(const std::string& name) { m_threadName = name; }
+void Thread::setThreadName(const std::string& name)
+{
+    m_threadName = name;
+#ifdef WINDOWS_SYSTEM
+    setWindowsThreadName(static_cast<HANDLE>(m_threadHandle), m_threadName);
+#endif
+}
 //=============================================================================
 void Thread::setDefaultCoreSet(const CoreSet& coreSet) { s_defaultCoreSet = coreSet; }
 //=============================================================================
@@ -331,10 +524,24 @@ void Thread::coolDown() { m_coolDownCallback(this); }
 void Thread::sleep(const TimeFrame& time)
 {
     auto splitted = time.splittedTime();
+#ifdef WINDOWS_SYSTEM
+    uint64_t milliseconds = static_cast<uint64_t>(splitted.seconds) * 1000u +
+                            static_cast<uint64_t>((splitted.nanoseconds + 999999u) / 1000000u);
+
+    while (milliseconds > 0)
+    {
+        constexpr DWORD maxSleepChunk = INFINITE - 1u;
+        DWORD chunk = milliseconds > static_cast<uint64_t>(maxSleepChunk) ? maxSleepChunk
+                                                                          : static_cast<DWORD>(milliseconds);
+        Sleep(chunk);
+        milliseconds -= chunk;
+    }
+#else
     timespec t{};
     t.tv_nsec = splitted.nanoseconds;
     t.tv_sec  = splitted.seconds;
     nanosleep(&t, NULL);
+#endif
 }
 //=============================================================================
 void Thread::checkIn(const std::string& name)
@@ -345,7 +552,12 @@ void Thread::checkIn(const std::string& name)
 //=============================================================================
 Thread::Thread(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stackSize, const CoreSet& coreSet)
     : ThreadBase(periodicity),
+#ifdef WINDOWS_SYSTEM
+      m_threadHandle(nullptr),
+      m_threadId(0),
+#else
       m_pthread(),
+#endif
       m_time{},
       m_periodTimer(),
       m_overrun(false),
@@ -364,7 +576,12 @@ Thread::Thread(ThreadPeriodicity periodicity, const TimeFrame& time, LSIZE stack
 //=============================================================================
 Thread::Thread(LSIZE stackSize, const CoreSet& coreSet)
     : ThreadBase(TP_Message),
+#ifdef WINDOWS_SYSTEM
+      m_threadHandle(nullptr),
+      m_threadId(0),
+#else
       m_pthread(),
+#endif
       m_time{},
       m_periodTimer(),
       m_overrun(false),
@@ -383,7 +600,12 @@ Thread::Thread(LSIZE stackSize, const CoreSet& coreSet)
 //=============================================================================
 Thread::Thread(ThreadPeriodicity periodicity, LSIZE stackSize, const CoreSet& coreSet)
     : ThreadBase(periodicity),
+#ifdef WINDOWS_SYSTEM
+      m_threadHandle(nullptr),
+      m_threadId(0),
+#else
       m_pthread(),
+#endif
       m_time{},
       m_periodTimer(),
       m_overrun(false),
@@ -403,12 +625,17 @@ Thread::Thread(ThreadPeriodicity periodicity, LSIZE stackSize, const CoreSet& co
 Thread::~Thread()
 {
     checkOut();
+#ifdef WINDOWS_SYSTEM
+    closeThreadHandle(m_threadHandle);
+    m_threadId = 0;
+#else
     if (m_stack)
     {
         munmap(m_stack, m_stackSize);
         m_stack     = nullptr;
         m_stackSize = 0;
     }
+#endif
 }
 //=============================================================================
 SplittedTime Thread::getTime() const { return m_time; }
@@ -417,13 +644,32 @@ bool Thread::isOverrun() const { return m_overrun; }
 //=============================================================================
 IntOpRes Thread::join(bool stop)
 {
-    if (isDead()) return m_retValue;
-
     if (stop)
     {
         terminate();  // set termination flag
         start();      // force the thread to run
     }
+
+#ifdef WINDOWS_SYSTEM
+    if (!m_threadHandle)
+    {
+        if (isDead()) return m_retValue;
+        return OR_ThreadNotJoinable;
+    }
+
+    DWORD ret = WaitForSingleObject(static_cast<HANDLE>(m_threadHandle), INFINITE);
+    if (ret == WAIT_FAILED)
+    {
+        IntOpRes toReturn(OR_Failure);
+        toReturn.reason = windowsErrorString(GetLastError());
+        return toReturn;
+    }
+
+    closeThreadHandle(m_threadHandle);
+    m_threadId = 0;
+    return m_retValue;
+#else
+    if (isDead()) return m_retValue;
 
     int ret = pthread_join(m_pthread, NULL);
 
@@ -442,10 +688,17 @@ IntOpRes Thread::join(bool stop)
     }
 
     return m_retValue;
+#endif
 }
 //=============================================================================
 crb::OpRes Thread::detach()
 {
+#ifdef WINDOWS_SYSTEM
+    if (!m_threadHandle) return OR_ThreadNotJoinable;
+    closeThreadHandle(m_threadHandle);
+    m_threadId = 0;
+    return OR_OK;
+#else
     int ret = pthread_detach(m_pthread);
 
     if (ret)
@@ -456,6 +709,7 @@ crb::OpRes Thread::detach()
     }
 
     return OR_OK;
+#endif
 }
 //=============================================================================
 void Thread::provideTickCallback(threadTickCallback callback) { m_tickCallback = callback; }

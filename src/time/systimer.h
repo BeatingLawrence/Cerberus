@@ -1,10 +1,13 @@
 #ifndef CERBERUS_TIME_SYSTIMER_H
 #define CERBERUS_TIME_SYSTIMER_H
 
+#include <atomic>
+#include <chrono>
+
+#ifndef WINDOWS_SYSTEM
 #include <signal.h>
 #include <time.h>
-
-#include <atomic>
+#endif
 
 #include "../types.h"
 #include "./timeframe.h"
@@ -21,13 +24,17 @@ namespace crb
 
             static void defaultTimeoutCallback(void* ctx);
 
+#ifndef WINDOWS_SYSTEM
             static void mainCallback(sigval val);
+#endif
 
             bool ensureTimer();
 
             std::atomic_bool m_running;
 
+#ifndef WINDOWS_SYSTEM
             timer_t m_timerId;
+#endif
 
             bool m_timerCreated;
 
@@ -36,7 +43,11 @@ namespace crb
             TimeFrame m_time;
 
             uint64_t m_periodNs;
+#ifdef WINDOWS_SYSTEM
+            std::chrono::steady_clock::time_point m_nextDeadline;
+#else
             timespec m_nextDeadline;
+#endif
             bool m_deadlineArmed;
             bool m_overrun;
 

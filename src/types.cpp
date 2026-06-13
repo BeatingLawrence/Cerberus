@@ -1,6 +1,15 @@
 #include "./types.h"
 
+#ifdef WINDOWS_SYSTEM
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#ifdef ADDR_ANY
+#undef ADDR_ANY
+#endif
+#else
 #include <netdb.h>
+#include <netinet/in.h>
+#endif
 
 #include <boost/regex.hpp>
 #include <cstring>
@@ -11,10 +20,10 @@
 #include "src/cerberus.h"
 
 #ifdef WINDOWS_SYSTEM
-// define constants here
-#error "Please define constants"
+const uint32_t crb::Host::ADDR_ANY       = 0x00000000u;
+const uint32_t crb::Host::ADDR_LOOPBACK  = 0x0100007Fu;
+const uint32_t crb::Host::ADDR_BROADCAST = 0xFFFFFFFFu;
 #else
-#include <netinet/in.h>
 const uint32_t crb::Host::ADDR_ANY       = INADDR_ANY;
 const uint32_t crb::Host::ADDR_LOOPBACK  = INADDR_LOOPBACK;
 const uint32_t crb::Host::ADDR_BROADCAST = INADDR_BROADCAST;
@@ -230,21 +239,25 @@ crb::OpRes crb::Host::resolve()
         logDebug("DNS lookup: server failure [%s]", hostname.c_str());
         return OR_ResolveServerFailure;
     }
+#ifdef EAI_NODATA
     else if (ret == EAI_NODATA)
     {
         logDebug("DNS lookup: hostname exists but has no ip associated [%s]", hostname.c_str());
         return OR_ResolveNoData;
     }
+#endif
     else if (ret == EAI_NONAME)
     {
         logDebug("DNS lookup: hostname was not found [%s]", hostname.c_str());
         return OR_ResolveNotFound;
     }
+#ifdef EAI_SYSTEM
     else if (ret == EAI_SYSTEM)
     {
         logDebug("DNS lookup: system failure, %s [%s]", strerror(errno), hostname.c_str());
         return OR_ResolveSystemFailure;
     }
+#endif
     else
     {
         logDebug("DNS lookup: failure, %s [%s]", gai_strerror(ret), hostname.c_str());
@@ -434,9 +447,9 @@ bool crb::OpRes::hasOptional(Result opt)
     return false;
 }
 //=============================================================================
-crb::SIZE crb::OpRes::memfp() const
+crb::LSIZE crb::OpRes::memfp() const
 {
-    SIZE s = reason.capacity();
+    crb::LSIZE s = reason.capacity();
     for (auto& el : optional) s += sizeof(Result);
     return s;
 }
@@ -529,9 +542,9 @@ std::string crb::Dictionary::toString() const
     return ret;
 }
 //=============================================================================
-crb::SIZE crb::Dictionary::memfp() const
+crb::LSIZE crb::Dictionary::memfp() const
 {
-    SIZE s = 0;
+    crb::LSIZE s = 0;
     for (auto& el : *this) s += el.sz();
     return s;
 }

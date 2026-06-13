@@ -16,30 +16,30 @@ namespace crb
         virtual int tick() override;
 
        public:
-        Player(bool manualTrigger = false, LSIZE stackSize = 0);
+        CERBERUS_EXPORT Player(bool manualTrigger = false, LSIZE stackSize = 0);
 
         Player(const Player& other) = delete;
 
-        virtual ~Player();
+        CERBERUS_EXPORT virtual ~Player();
 
         // check if the player has done
-        bool end();
+        CERBERUS_EXPORT bool end();
 
         // check if the player is busy
-        bool running();
+        CERBERUS_EXPORT bool running();
 
         // start task execution
-        OpRes start();
+        CERBERUS_EXPORT OpRes start();
 
         // assign a new task that will replace the current one
-        OpRes assign(playerCallback cb, void* ctx = nullptr, void* data = nullptr);
+        CERBERUS_EXPORT OpRes assign(playerCallback cb, void* ctx = nullptr, void* data = nullptr);
 
         // assign a new task and run it
-        OpRes run(playerCallback cb, void* ctx = nullptr, void* data = nullptr);
+        CERBERUS_EXPORT OpRes run(playerCallback cb, void* ctx = nullptr, void* data = nullptr);
 
         // set a new task-end callback. This function will be called
         // when the task ends and will contain the task result
-        OpRes setTaskEndCB(taskEndCallback cb, void* ctx = nullptr, void* data = nullptr);
+        CERBERUS_EXPORT OpRes setTaskEndCB(taskEndCallback cb, void* ctx = nullptr, void* data = nullptr);
     };
 
 }  // namespace crb

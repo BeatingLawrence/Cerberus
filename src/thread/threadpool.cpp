@@ -219,57 +219,57 @@ size_t ThreadPool::size() const
     return m_pool.size();
 }
 //=============================================================================
-SIZE ThreadPool::queuedCount() const
+crb::SIZE ThreadPool::queuedCount() const
 {
     MutexLocker ml(m_poolMutex);
-    return (SIZE)m_queue.size();
+    return (crb::SIZE)m_queue.size();
 }
 //=============================================================================
-SIZE ThreadPool::busyCount() const
+crb::SIZE ThreadPool::busyCount() const
 {
     MutexLocker ml(m_poolMutex);
 
-    SIZE busy = 0;
+    crb::SIZE busy = 0;
     for (auto& el : m_pool)
         if (!el.player->end()) ++busy;
 
     return busy;
 }
 //=============================================================================
-SIZE ThreadPool::idleCount() const
+crb::SIZE ThreadPool::idleCount() const
 {
     MutexLocker ml(m_poolMutex);
 
-    SIZE busy = 0;
+    crb::SIZE busy = 0;
     for (auto& el : m_pool)
         if (!el.player->end()) ++busy;
 
-    return (SIZE)m_pool.size() - busy;
+    return (crb::SIZE)m_pool.size() - busy;
 }
 //=============================================================================
-SIZE ThreadPool::fixedCount() const
+crb::SIZE ThreadPool::fixedCount() const
 {
     MutexLocker ml(m_poolMutex);
 
-    SIZE n = 0;
+    crb::SIZE n = 0;
     for (auto& el : m_pool)
         if (!el.backup) ++n;
 
     return n;
 }
 //=============================================================================
-SIZE ThreadPool::backupCount() const
+crb::SIZE ThreadPool::backupCount() const
 {
     MutexLocker ml(m_poolMutex);
 
-    SIZE n = 0;
+    crb::SIZE n = 0;
     for (auto& el : m_pool)
         if (el.backup) ++n;
 
     return n;
 }
 //=============================================================================
-SIZE ThreadPool::maxQueue() const
+crb::SIZE ThreadPool::maxQueue() const
 {
     MutexLocker ml(m_poolMutex);
     return m_maxQueue;

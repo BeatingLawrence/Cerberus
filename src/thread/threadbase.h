@@ -1,7 +1,9 @@
 #ifndef CERBERUS_THREAD_THREADBASE_H
 #define CERBERUS_THREAD_THREADBASE_H
 
+#ifndef WINDOWS_SYSTEM
 #include <pthread.h>
+#endif
 
 #include "../core/recordable.h"
 #include "./recipient.h"
@@ -14,14 +16,18 @@ namespace crb
        private:
         mutable Mutex m_mutex;
 
+#ifdef WINDOWS_SYSTEM
+        void* m_cond;
+#else
         pthread_cond_t m_cond;
+#endif
 
         bool m_pausedFlag, m_terminateFlag, m_dead, m_rescheduling;
 
         // Call this method with the mutex locked!
         void setPausedFlag(bool state);
 
-        virtual void newMsg_first() override;
+        CERBERUS_EXPORT virtual void newMsg_first() override;
 
        protected:
         ThreadBase() = delete;
@@ -30,37 +36,37 @@ namespace crb
 
         ThreadBase(ThreadBase &&other) = delete;
 
-        ThreadBase(ThreadPeriodicity periodicity);
+        CERBERUS_EXPORT ThreadBase(ThreadPeriodicity periodicity);
 
-        virtual ~ThreadBase();
+        CERBERUS_EXPORT virtual ~ThreadBase();
 
         ThreadPeriodicity m_periodicity;
 
-        void pause();
+        CERBERUS_EXPORT void pause();
 
-        bool getTerminateFlag() const;
+        CERBERUS_EXPORT bool getTerminateFlag() const;
 
-        bool getPausedFlag() const;
+        CERBERUS_EXPORT bool getPausedFlag() const;
 
-        void dead();
+        CERBERUS_EXPORT void dead();
 
-        void reschedule();
+        CERBERUS_EXPORT void reschedule();
 
-        void resetRescheduling();
+        CERBERUS_EXPORT void resetRescheduling();
 
-        bool isRescheduling();
+        CERBERUS_EXPORT bool isRescheduling();
 
         // stop only if the queue is empty
-        void queueCheckStop();
+        CERBERUS_EXPORT void queueCheckStop();
 
        public:
-        void start();
+        CERBERUS_EXPORT void start();
 
-        void stop();
+        CERBERUS_EXPORT void stop();
 
-        void terminate();
+        CERBERUS_EXPORT void terminate();
 
-        bool isDead();
+        CERBERUS_EXPORT bool isDead();
 
         inline ThreadPeriodicity getPeriodicity() const { return m_periodicity; }
 
