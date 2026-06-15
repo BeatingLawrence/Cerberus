@@ -1,8 +1,8 @@
 #include "filesystemdb.h"
 
 // #include "../../cerberus.h"
+#include "../../core/cerberusregex.h"
 #include "../../exception/exception.h"
-#include <boost/regex.hpp>
 #include <limits>
 #include <numeric>
 #include <optional>
@@ -595,8 +595,8 @@ bool FilesystemDB::_matchRow(const DBQueryCondition& cond, int colIndex, const D
         }
         case DBQC_Regex: {
             std::string s = _cellToString(cell, colType);
-            boost::regex rx(cond.regexPattern, boost::regex::perl | boost::regex::optimize);
-            return boost::regex_search(s, rx);
+            CerberusRegex rx(cond.regexPattern, CerberusRegex::Perl | CerberusRegex::Optimize);
+            return rx.search(s);
         }
         case DBQC_None:
         default:

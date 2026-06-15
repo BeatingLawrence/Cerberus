@@ -7,7 +7,7 @@ namespace crb
 {
     namespace core
     {
-#ifndef WINDOWS_SYSTEM
+#if !defined(WINDOWS_SYSTEM) && !defined(_WIN32) && !defined(WIN32)
         void fillTerminationSignalSet(sigset_t& set);
         void maskTerminationSignalsForCurrentThread();
         const char* signalName(int signo);
@@ -25,7 +25,7 @@ namespace crb
             int tick() override;
             void dispatchSignal(int signo);
 
-#ifndef WINDOWS_SYSTEM
+#if !defined(WINDOWS_SYSTEM) && !defined(_WIN32) && !defined(WIN32)
             sigset_t m_signalSet{};
 #endif
         };

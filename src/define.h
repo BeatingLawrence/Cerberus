@@ -1,7 +1,7 @@
 #ifndef CERBERUS_DEFINE_H
 #define CERBERUS_DEFINE_H
 
-#ifdef WINDOWS_SYSTEM
+#if defined(WINDOWS_SYSTEM) || defined(_WIN32) || defined(WIN32)
 
 #include <windows.h>
 

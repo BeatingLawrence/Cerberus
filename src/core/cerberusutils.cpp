@@ -1,6 +1,9 @@
 #include "cerberusutils.h"
 
 #include <inttypes.h>
+#if (defined(__GNUG__) || defined(__clang__)) && !defined(_MSC_VER)
+#include <cxxabi.h>
+#endif
 #if defined(WINDOWS_SYSTEM)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -32,9 +35,44 @@
 
 using namespace crb;
 
+namespace
+{
+bool isEdgeBlank(char c)
+{
+    return c == ' ' || c == '\t' || c == '\r' || c == '\n';
+}
+}  // namespace
+
 std::regex CerberusUtils::isNumberRegex("\\-?[0-9]+(?:\\.[0-9]+)?", std::regex_constants::ECMAScript |
                                                                         std::regex_constants::optimize |
                                                                         std::regex_constants::icase);
+
+//=============================================================================
+std::string CerberusUtils::demangleTypeName(const char* name)
+{
+    if (!name) return std::string();
+
+#if (defined(__GNUG__) || defined(__clang__)) && !defined(_MSC_VER)
+    int status = 0;
+    char* demangled = abi::__cxa_demangle(name, nullptr, nullptr, &status);
+    std::string ret = (status == 0 && demangled) ? demangled : name;
+    free(demangled);
+    return ret;
+#else
+    std::string ret(name);
+    const char* prefixes[] = {"class ", "struct ", "enum "};
+    for (const char* prefix : prefixes)
+    {
+        size_t len = strlen(prefix);
+        if (ret.compare(0, len, prefix) == 0)
+        {
+            ret.erase(0, len);
+            break;
+        }
+    }
+    return ret;
+#endif
+}
 
 //=============================================================================
 std::string CerberusUtils::strPrint(std::string format, ...)
@@ -106,7 +144,7 @@ std::string CerberusUtils::removeBlankBefore(const std::string& str)
     size_t pos = 0;
     for (auto&& el : str)
     {
-        if (el != ' ' && el != 0x9) break;  // space or TAB
+        if (!isEdgeBlank(el)) break;
         pos++;
     }
 
@@ -118,7 +156,7 @@ std::string CerberusUtils::removeBlankAfter(const std::string& str)
     size_t len = str.size();
     for (auto it = str.rbegin(); it != str.rend(); it++)
     {
-        if (*it != ' ' && *it != 0x9) break;  // space or TAB
+        if (!isEdgeBlank(*it)) break;
         len--;
     }
 

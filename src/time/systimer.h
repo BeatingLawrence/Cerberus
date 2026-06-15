@@ -4,7 +4,7 @@
 #include <atomic>
 #include <chrono>
 
-#ifndef WINDOWS_SYSTEM
+#if !defined(WINDOWS_SYSTEM) && !defined(_WIN32) && !defined(WIN32)
 #include <signal.h>
 #include <time.h>
 #endif
@@ -24,7 +24,7 @@ namespace crb
 
             static void defaultTimeoutCallback(void* ctx);
 
-#ifndef WINDOWS_SYSTEM
+#if !defined(WINDOWS_SYSTEM) && !defined(_WIN32) && !defined(WIN32)
             static void mainCallback(sigval val);
 #endif
 
@@ -32,7 +32,7 @@ namespace crb
 
             std::atomic_bool m_running;
 
-#ifndef WINDOWS_SYSTEM
+#if !defined(WINDOWS_SYSTEM) && !defined(_WIN32) && !defined(WIN32)
             timer_t m_timerId;
 #endif
 
@@ -43,7 +43,7 @@ namespace crb
             TimeFrame m_time;
 
             uint64_t m_periodNs;
-#ifdef WINDOWS_SYSTEM
+#if defined(WINDOWS_SYSTEM) || defined(_WIN32) || defined(WIN32)
             std::chrono::steady_clock::time_point m_nextDeadline;
 #else
             timespec m_nextDeadline;

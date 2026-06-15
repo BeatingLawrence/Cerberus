@@ -24,7 +24,7 @@ namespace crb
 {
     class File;
 
-#ifdef WINDOWS_SYSTEM
+#if defined(WINDOWS_SYSTEM) || defined(_WIN32) || defined(WIN32)
     using SocketHandle = uintptr_t;
 #else
     using SocketHandle = int;

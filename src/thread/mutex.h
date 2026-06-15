@@ -9,7 +9,7 @@
  *  This interface offers locking, unlocking and conditional-locking of mutexes.
  */
 
-#ifndef WINDOWS_SYSTEM
+#if !defined(WINDOWS_SYSTEM) && !defined(_WIN32) && !defined(WIN32)
 #include <pthread.h>
 #endif
 
@@ -25,7 +25,7 @@ namespace crb
         friend class ::crb::ThreadBase;
 
        private:
-#ifdef WINDOWS_SYSTEM
+#if defined(WINDOWS_SYSTEM) || defined(_WIN32) || defined(WIN32)
         void* m_pmutex;
         MutexType m_type;
 #else

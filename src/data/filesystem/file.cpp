@@ -914,13 +914,18 @@ StringOpRes File::readLine() const
         if (line.ends_with('\n'))  // full line
         {
             line.pop_back();
+            if (line.ends_with('\r')) line.pop_back();
             break;
         }
+
+        if (getCursor().value == size().value) break;
     }
 
     if (ferror(m_file)) return {OR_Failure, strerror(errno)};
 
-    if (feof(m_file)) return OR_EOF;
+    if (line.empty() && feof(m_file)) return OR_EOF;
+
+    if (line.ends_with('\r')) line.pop_back();
 
     if (getCursor().value == size().value) return StringOpRes(line).addOptional(OR_EOF);  // helper
 

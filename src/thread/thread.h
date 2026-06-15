@@ -55,7 +55,7 @@
 #include "../time/timeframe.h"
 #include "./threadbase.h"
 
-#ifndef WINDOWS_SYSTEM
+#if !defined(WINDOWS_SYSTEM) && !defined(_WIN32) && !defined(WIN32)
 #include <pthread.h>
 #endif
 
@@ -64,7 +64,7 @@ namespace crb
     class Thread : public ThreadBase
     {
        private:
-#ifdef WINDOWS_SYSTEM
+#if defined(WINDOWS_SYSTEM) || defined(_WIN32) || defined(WIN32)
         void* m_threadHandle;
         unsigned m_threadId;
 #else
@@ -78,7 +78,7 @@ namespace crb
         void* m_stack;
         LSIZE m_stackSize;
 
-#ifdef WINDOWS_SYSTEM
+#if defined(WINDOWS_SYSTEM) || defined(_WIN32) || defined(WIN32)
         static unsigned __stdcall _staticThread(void* context);
 #else
         static void* _staticThread(void* context);

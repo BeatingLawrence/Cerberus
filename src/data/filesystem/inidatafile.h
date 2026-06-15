@@ -4,8 +4,7 @@
 #include <list>
 #define MAIN_SECTION "MAIN"
 
-#include <boost/regex.hpp>
-
+#include "../../core/cerberusregex.h"
 #include "file.h"
 
 namespace crb
@@ -15,7 +14,7 @@ namespace crb
        private:
         File m_file;
 
-        boost::regex m_isValidRegex;
+        CerberusRegex m_isValidRegex;
 
         struct Line
         {

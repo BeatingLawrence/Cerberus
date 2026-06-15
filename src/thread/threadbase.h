@@ -1,7 +1,7 @@
 #ifndef CERBERUS_THREAD_THREADBASE_H
 #define CERBERUS_THREAD_THREADBASE_H
 
-#ifndef WINDOWS_SYSTEM
+#if !defined(WINDOWS_SYSTEM) && !defined(_WIN32) && !defined(WIN32)
 #include <pthread.h>
 #endif
 
@@ -16,7 +16,7 @@ namespace crb
        private:
         mutable Mutex m_mutex;
 
-#ifdef WINDOWS_SYSTEM
+#if defined(WINDOWS_SYSTEM) || defined(_WIN32) || defined(WIN32)
         void* m_cond;
 #else
         pthread_cond_t m_cond;

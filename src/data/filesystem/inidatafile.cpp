@@ -1,7 +1,5 @@
 #include "inidatafile.h"
 
-#include <boost/regex.hpp>
-
 #include "../../core/cerberusutils.h"
 #include "../../types.h"
 #include "src/cerberus.h"
@@ -9,7 +7,7 @@
 using namespace crb;
 
 //=============================================================================
-bool IniDataFile::isValid(const std::string& line) { return boost::regex_match(line, m_isValidRegex); }
+bool IniDataFile::isValid(const std::string& line) { return m_isValidRegex.match(line); }
 //=============================================================================
 IniDataFile::Line* IniDataFile::search(const std::string& key, int16_t sectionId)
 {
@@ -222,7 +220,7 @@ void IniDataFile::printDebug()
 IniDataFile::IniDataFile(const std::string& fileName)
     : m_file(fileName),
       m_isValidRegex("[a-z][^=]*[=]{1} *[^=]+",
-                     boost::regex::ECMAScript | boost::regex::optimize | boost::regex::icase)
+                     CerberusRegex::ECMAScript | CerberusRegex::Optimize | CerberusRegex::ICase)
 {
     // noop
 }

@@ -1,7 +1,7 @@
 #ifndef CERBERUS_TYPES_H
 #define CERBERUS_TYPES_H
 
-#ifndef WINDOWS_SYSTEM
+#if !defined(WINDOWS_SYSTEM) && !defined(_WIN32) && !defined(WIN32)
 #include <sys/stat.h>
 #include <sys/types.h>
 #endif
@@ -340,7 +340,7 @@ namespace crb
                 return;
             }
 
-#ifdef WINDOWS_SYSTEM
+#if defined(WINDOWS_SYSTEM) || defined(_WIN32) || defined(WIN32)
             absolute = str.front() == '/' || str.front() == '\\';
 #else
             absolute = str.front() == '/';
@@ -348,7 +348,7 @@ namespace crb
 
             for (auto& el : str)
             {
-#ifdef WINDOWS_SYSTEM
+#if defined(WINDOWS_SYSTEM) || defined(_WIN32) || defined(WIN32)
                 const bool separator = el == '/' || el == '\\';
 #else
                 const bool separator = el == '/';

@@ -5,6 +5,18 @@ This is the Cerberus Framework
 -Boost (libboost-regex-dev on debian)
 -OpenSSL (libssl-dev on debian)
 
+#### Linux/Debian dependencies
+Install the system development packages before configuring CMake:
+
+```
+sudo apt install libboost-regex-dev libssl-dev
+```
+
+Cerberus always asks CMake to use the static Boost.Regex library when using the
+system Boost package. On Debian, `libboost-regex-dev` provides the required
+headers and static library, so no `CERBERUS_BOOST_ROOT` path is needed for a
+normal Linux build.
+
 #### Quick Start
 1. Local build for the current machine:
    `cmake --preset gcc -B build/gcc-debug -DCMAKE_BUILD_TYPE=Debug`
@@ -76,6 +88,3 @@ Do not use the MinGW OpenSSL package for MSVC builds.
 #### Gtest
 Gtest library will be automatically fetched from internet, compiled and linked if not present in the system.
 This will only happen if GOOGLETEST CMake option is set
-
-Important note: on Windows, Gtest library must have been compiled with RunTime Library set to "SHARED".
-Please refer to https://github.com/google/googletest to get the sources of google test library.

@@ -50,6 +50,7 @@ function(cerberus_link_boost_regex target)
     cmake_policy(SET CMP0167 OLD)
   endif()
 
+  set(Boost_USE_STATIC_LIBS ON)
   find_package(Boost QUIET COMPONENTS regex)
 
   if(POLICY CMP0167)

@@ -67,6 +67,36 @@ TEST(iniDataFileTest, read)  // BEFORE TEST, prepare a read.ini file containing 
     // EXPECT_EQ(file.read_integer("double_value").f, 0.2030f);
 }
 
+TEST(iniDataFileTest, readLineEndings)
+{
+    struct Case
+    {
+        const char* fileName;
+        const char* content;
+    };
+
+    const Case cases[] = {
+        {"line_endings_lf.ini", "[SERVER]\nhost=100.100.0.201\n"},
+        {"line_endings_crlf.ini", "[SERVER]\r\nhost=100.100.0.201\r\n"},
+        {"line_endings_no_newline.ini", "[SERVER]\r\nhost=100.100.0.201\r"},
+    };
+
+    for (const auto& testCase : cases)
+    {
+        File writer(testCase.fileName, crb::FOM_ReadWriteTrunc);
+        ASSERT_TRUE(writer.open().ok());
+        ASSERT_TRUE(writer.write(testCase.content).ok());
+        writer.close();
+
+        IniDataFile ini(testCase.fileName);
+        ASSERT_TRUE(ini.load().ok()) << testCase.fileName;
+        EXPECT_STREQ(ini.read("host", "SERVER").value.get().c_str(), "100.100.0.201") << testCase.fileName;
+
+        File cleanup(testCase.fileName);
+        cleanup.remove();
+    }
+}
+
 TEST(iniDataFileTest, write)
 {
     File del("write.ini");

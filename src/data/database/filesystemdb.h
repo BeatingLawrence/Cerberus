@@ -3,7 +3,6 @@
 
 #include "../../data/filesystem/file.h"
 #include "idatabase.h"
-#include <boost/regex.hpp>
 
 namespace crb
 {
@@ -59,7 +58,6 @@ namespace crb
                 std::optional<long double> min;
                 std::optional<long double> max;
                 std::string exactStr;
-                boost::regex rx;
             };
 
             File m_file;

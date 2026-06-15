@@ -1,8 +1,6 @@
 #ifndef CERBERUS_BASESLOT_H
 #define CERBERUS_BASESLOT_H
 
-#include <boost/core/demangle.hpp>
-
 #include "../Cerberus_global.h"
 #include "../core/cerberusutils.h"
 #include "../data/data.h"  // IWYU pragma: export
@@ -64,8 +62,8 @@ namespace crb
             {
                 throw cIllegalArgExc(
                     CerberusUtils::strPrint("Invalid slot cast from %s to %s",
-                                            boost::core::demangle(typeid(*this).name()).c_str(),
-                                            boost::core::demangle(typeid(T).name()).c_str())
+                                            CerberusUtils::demangleTypeName(typeid(*this).name()).c_str(),
+                                            CerberusUtils::demangleTypeName(typeid(T).name()).c_str())
                         .c_str());
             }
 
@@ -81,8 +79,8 @@ namespace crb
             {
                 throw cIllegalArgExc(
                     CerberusUtils::strPrint("Invalid slot cast from %s to %s",
-                                            boost::core::demangle(typeid(*this).name()).c_str(),
-                                            boost::core::demangle(typeid(T).name()).c_str())
+                                            CerberusUtils::demangleTypeName(typeid(*this).name()).c_str(),
+                                            CerberusUtils::demangleTypeName(typeid(T).name()).c_str())
                         .c_str());
             }
 

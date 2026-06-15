@@ -30,6 +30,7 @@ namespace crb
         CERBERUS_EXPORT static std::string strPrint_uint(uint64_t v);
         CERBERUS_EXPORT static std::string strPrint_int(int64_t v);
         CERBERUS_EXPORT static std::string strPrint_float(long double v);
+        CERBERUS_EXPORT static std::string demangleTypeName(const char* name);
 
         // Return the lower case version of str
         CERBERUS_EXPORT static std::string toLower(const std::string& str);
