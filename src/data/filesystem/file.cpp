@@ -25,6 +25,7 @@
 #define S_IREAD _S_IREAD
 #define S_IWRITE _S_IWRITE
 #else
+#include <errno.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -84,15 +85,16 @@ FileMetadata fileMetadataFromWin32(const WIN32_FILE_ATTRIBUTE_DATA& stat_struct)
 #endif
 
 //=============================================================================
-OpRes File::existsAsFile(const std::string& path)
+OpRes File::existsAsFile(const Path& path)
 {
     if (path.empty())
     {
         return OR_WrongArgument;
     }
 
+    const std::string pathStr = path.toStr();
 #ifdef WINDOWS_SYSTEM
-    DWORD attr = GetFileAttributesA(path.c_str());
+    DWORD attr = GetFileAttributesA(pathStr.c_str());
 
     if (attr != INVALID_FILE_ATTRIBUTES)
     {
@@ -106,7 +108,7 @@ OpRes File::existsAsFile(const std::string& path)
     return OR_SystemFailure;
 #else
     struct stat stat_struct;
-    int ret = ::stat(path.c_str(), &stat_struct);
+    int ret = ::stat(pathStr.c_str(), &stat_struct);
 
     if (ret == 0)
     {
@@ -124,10 +126,11 @@ OpRes File::existsAsFile(const std::string& path)
 #endif
 }
 //=============================================================================
-OpRes File::existsAsDirectory(const std::string& path)
+OpRes File::existsAsDirectory(const Path& path)
 {
+    const std::string pathStr = path.toStr();
 #ifdef WINDOWS_SYSTEM
-    DWORD attr = GetFileAttributesA(path.c_str());
+    DWORD attr = GetFileAttributesA(pathStr.c_str());
 
     if (attr != INVALID_FILE_ATTRIBUTES)
     {
@@ -141,7 +144,7 @@ OpRes File::existsAsDirectory(const std::string& path)
     return OR_SystemFailure;
 #else
     struct stat stat_struct;
-    int ret = ::stat(path.c_str(), &stat_struct);
+    int ret = ::stat(pathStr.c_str(), &stat_struct);
 
     if (ret == 0)
     {
@@ -159,11 +162,12 @@ OpRes File::existsAsDirectory(const std::string& path)
 #endif
 }
 //=============================================================================
-OpRes File::createDirectory(const std::string& path)
+OpRes File::createDirectory(const Path& path)
 {
+    const std::string pathStr = path.toStr();
 #ifdef WINDOWS_SYSTEM
 
-    if (CreateDirectoryA(path.c_str(), NULL) == 0)
+    if (CreateDirectoryA(pathStr.c_str(), NULL) == 0)
     {
         DWORD err = GetLastError();
         if (err == ERROR_ALREADY_EXISTS) return OR_AlreadyPresent;
@@ -173,7 +177,7 @@ OpRes File::createDirectory(const std::string& path)
     }
 
 #else
-    int ret = mkdir(path.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+    int ret = mkdir(pathStr.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 
     if (ret == -1)
     {
@@ -185,10 +189,11 @@ OpRes File::createDirectory(const std::string& path)
     return OR_OK;
 }
 //=============================================================================
-OpRes File::remove(const std::string& path)
+OpRes File::remove(const Path& path)
 {
+    const std::string pathStr = path.toStr();
 #ifdef WINDOWS_SYSTEM
-    DWORD attr = GetFileAttributesA(path.c_str());
+    DWORD attr = GetFileAttributesA(pathStr.c_str());
 
     if (attr == INVALID_FILE_ATTRIBUTES)
     {
@@ -197,52 +202,86 @@ OpRes File::remove(const std::string& path)
         return OR_SystemFailure;
     }
 
-    BOOL ok = (attr & FILE_ATTRIBUTE_DIRECTORY) ? RemoveDirectoryA(path.c_str()) : DeleteFileA(path.c_str());
+    BOOL ok = (attr & FILE_ATTRIBUTE_DIRECTORY) ? RemoveDirectoryA(pathStr.c_str()) : DeleteFileA(pathStr.c_str());
     if (ok == 0) return OR_SystemFailure;
 
     return OR_OK;
 #else
-    if (::remove(path.c_str()) == -1) return {OR_Failure, strerror(errno)};
+    if (::remove(pathStr.c_str()) == -1) return {OR_Failure, strerror(errno)};
 
     return OR_OK;
 #endif
 }
 //=============================================================================
-OpRes File::move(const std::string& oldPath, const std::string& newPath)
+OpRes File::move(const Path& oldPath, const Path& newPath)
 {
+    const std::string oldPathStr = oldPath.toStr();
+    const std::string newPathStr = newPath.toStr();
 #ifdef WINDOWS_SYSTEM
-    if (MoveFileExA(oldPath.c_str(), newPath.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) == 0)
+    if (MoveFileExA(oldPathStr.c_str(), newPathStr.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) == 0)
     {
         DWORD err = GetLastError();
         return {OR_SystemFailure,
                 CerberusUtils::strPrint("MoveFileExA failed from '%s' to '%s' with error %lu",
-                                        oldPath.c_str(), newPath.c_str(),
+                                        oldPathStr.c_str(), newPathStr.c_str(),
                                         static_cast<unsigned long>(err))};
     }
 
     return OR_OK;
 #else
-    if (::rename(oldPath.c_str(), newPath.c_str()) == -1) return {OR_Failure, strerror(errno)};
+    if (::rename(oldPathStr.c_str(), newPathStr.c_str()) == -1)
+    {
+        if (errno != EXDEV) return {OR_Failure, strerror(errno)};
+
+        File src(oldPath, FOM_Read);
+        condret(src.open());
+
+        File dst(newPath, FOM_ReadWriteTrunc);
+        auto dstOpen = dst.open();
+        if (dstOpen.fail())
+        {
+            src.close();
+            return dstOpen;
+        }
+
+        auto copy = File::zeroCopy(src, dst);
+        src.close();
+        dst.close();
+
+        if (copy.fail())
+        {
+            File::remove(newPath);
+            return copy;
+        }
+
+        auto removeOld = File::remove(oldPath);
+        if (removeOld.fail())
+        {
+            File::remove(newPath);
+            return removeOld;
+        }
+    }
 
     return OR_OK;
 #endif
 }
 //=============================================================================
-OpRes File::isEmptyDirectory(const std::string& path)
+OpRes File::isEmptyDirectory(const Path& path)
 {
+    const std::string pathStr = path.toStr();
 #ifdef WINDOWS_SYSTEM
 
     OpRes dir = existsAsDirectory(path);
     if (dir.fail()) return dir;
 
-    if (PathIsDirectoryEmptyA(path.c_str()) == TRUE) return OR_OK;
+    if (PathIsDirectoryEmptyA(pathStr.c_str()) == TRUE) return OR_OK;
 
     return OR_NotEmpty;
 
 #else
     int n = 0;
     struct dirent* d;
-    DIR* dir = opendir(path.c_str());
+    DIR* dir = opendir(pathStr.c_str());
 
     if (dir == NULL) return OR_InvalidPath;
 
@@ -271,12 +310,13 @@ OpRes File::isEmptyDirectory(const std::string& path)
 #endif
 }
 //=============================================================================
-OpResData<FileMetadata> crb::File::stat(const std::string& path)
+OpResData<FileMetadata> crb::File::stat(const Path& path)
 {
+    const std::string pathStr = path.toStr();
 #if defined(WINDOWS_SYSTEM)
     WIN32_FILE_ATTRIBUTE_DATA stat_struct = {};
 
-    if (GetFileAttributesExA(path.c_str(), GetFileExInfoStandard, &stat_struct) == 0)
+    if (GetFileAttributesExA(pathStr.c_str(), GetFileExInfoStandard, &stat_struct) == 0)
     {
         DWORD err = GetLastError();
         if (err == ERROR_FILE_NOT_FOUND || err == ERROR_PATH_NOT_FOUND) return OR_NotFound;
@@ -296,7 +336,7 @@ OpResData<FileMetadata> crb::File::stat(const std::string& path)
 
     unsigned int mask = STATX_BASIC_STATS | STATX_BTIME;
 
-    int ret = ::statx(AT_FDCWD, path.c_str(), flags, mask, &stat_struct);
+    int ret = ::statx(AT_FDCWD, pathStr.c_str(), flags, mask, &stat_struct);
 
     if (ret == -1) return {OR_Failure, "statx error", strerror(errno)};
 
@@ -359,9 +399,61 @@ File File::tmpFile(const Path& path, FileOpenMode openMode)
 #endif
 }
 //=============================================================================
-OpRes File::zeroCopy(File& src, File& dst, LSIZE len)
+OpRes File::_zeroCopy(File& src, File& dst, LSIZE len, bool eof)
 {
-#if defined(WINDOWS_SYSTEM)
+    if (!src.isOpen() || !dst.isOpen()) return OR_BadConditions;
+    if (!eof && len == 0) return OR_OK;
+
+#if defined(LINUX_SYSTEM)
+    LSIZE remaining = len;
+    if (eof)
+    {
+        auto sz = src.size();
+        condret_str(sz, "size() error");
+        auto pos = src.getCursor();
+        condret_str(pos, "getCursor() error");
+        if (pos.value >= sz.value) return OR_OK;
+        remaining = sz.value - pos.value;
+    }
+
+    if (dst.m_openMode != FOM_ReadWriteAppend)
+    {
+        auto srcPos = src.getCursor();
+        condret_str(srcPos, "getCursor() error");
+        auto dstPos = dst.getCursor();
+        condret_str(dstPos, "getCursor() error");
+
+        off_t srcOffset = static_cast<off_t>(srcPos.value);
+        off_t dstOffset = static_cast<off_t>(dstPos.value);
+
+        while (remaining > 0)
+        {
+            size_t chunk = remaining > MAXIMUM_COPY_BLOCKSIZE ? MAXIMUM_COPY_BLOCKSIZE : static_cast<size_t>(remaining);
+            ssize_t ret = ::copy_file_range(src.m_fd, &srcOffset, dst.m_fd, &dstOffset, chunk, 0);
+            if (ret > 0)
+            {
+                remaining -= static_cast<LSIZE>(ret);
+                continue;
+            }
+            if (ret == 0)
+            {
+                condret(src.seek(static_cast<LSIZE>(srcOffset)));
+                condret(dst.seek(static_cast<LSIZE>(dstOffset)));
+                return OR_OK;
+            }
+            if (errno != EXDEV && errno != EINVAL && errno != ENOSYS && errno != EOPNOTSUPP)
+                return {OR_Failure, strerror(errno)};
+            break;
+        }
+
+        condret(src.seek(static_cast<LSIZE>(srcOffset)));
+        condret(dst.seek(static_cast<LSIZE>(dstOffset)));
+        if (remaining == 0) return OR_OK;
+    }
+
+    if (!eof) len = remaining;
+#endif
+
     LSIZE blocksize = MAXIMUM_COPY_BLOCKSIZE;
     if (len && len < blocksize) blocksize = len;
     ByteBuffer buf;
@@ -375,45 +467,21 @@ OpRes File::zeroCopy(File& src, File& dst, LSIZE len)
 
         condret(dst.write(buf));
 
-        if (!len) continue;
+        if (eof) continue;
+        if (!len) break;
 
         len -= blocksize;
         if (len < blocksize) blocksize = len;
 
         if (len == 0) break;
     }
-
-#elif defined(LINUX_SYSTEM)
-    throw cImplMissExc("zerocopy implementation missing");
-
-#elif defined(APPLE_SYSTEM)
-    // user-space copy for macos, sadly..
-
-    LSIZE blocksize = MAXIMUM_COPY_BLOCKSIZE;
-    if (len && len < blocksize) blocksize = len;
-    ByteBuffer buf;
-
-    while (true)  // maybe we can put this code in a userCopy() static function
-    {
-        auto r = src.readChunk(buf, blocksize);
-        if (r.res == OR_Failure) return r;
-
-        if (r.res == OR_EOF) break;
-
-        condret(dst.write(buf));
-
-        if (!len) continue;  // if len == 0 do not count
-
-        len -= blocksize;
-        if (len < blocksize) blocksize = len;
-
-        if (len == 0) break;
-    }
-
-#endif
 
     return OR_OK;
 }
+//=============================================================================
+OpRes File::zeroCopy(File& src, File& dst, LSIZE len) { return _zeroCopy(src, dst, len, false); }
+//=============================================================================
+OpRes File::zeroCopy(File& src, File& dst) { return _zeroCopy(src, dst, 0, true); }
 //=============================================================================
 File::File(FileOpenMode openMode)
     : m_path(),
@@ -463,10 +531,10 @@ File::~File()
 //=============================================================================
 OpResData<FileMetadata> File::stat()
 {
-    if (!isOpen()) return File::stat(m_path.toStr());
+    if (!isOpen()) return File::stat(m_path);
 
 #if defined(WINDOWS_SYSTEM)
-    return File::stat(m_path.toStr());
+    return File::stat(m_path);
 
 #else
     FileMetadata metadata = {};
@@ -655,7 +723,7 @@ OpRes File::remove()
 {
     if (isOpen()) close();
 
-    return remove(m_path.toStr());
+    return remove(m_path);
 }
 //=============================================================================
 OpRes File::erase(LSIZE start, LSIZE span)
@@ -697,7 +765,7 @@ OpRes File::erase(LSIZE start, LSIZE span)
     tmp.close();
     close();
 
-    auto mv = File::move(tmp.path().toStr(), m_path.toStr());
+    auto mv = File::move(tmp.path(), m_path);
     condret_str(mv, "move temp in erase");
 
     // reopen with previous open mode
@@ -710,7 +778,7 @@ OpRes File::move(const Path& newPath)
     const bool wasOpen = isOpen();
     if (wasOpen) close();
 
-    auto res = move(m_path.toStr(), newPath.toStr());
+    auto res = move(m_path, newPath);
 
     if (res.ok()) path(newPath);
 
@@ -723,7 +791,7 @@ OpRes File::move(const Path& newPath)
 
     return res;
 #else
-    auto res = move(m_path.toStr(), newPath.toStr());
+    auto res = move(m_path, newPath);
 
     if (res.ok()) path(newPath);
 
@@ -735,7 +803,7 @@ SizeOpRes File::size() const
 {
     if (!isOpen())
     {
-        auto st = File::stat(m_path.toStr());
+        auto st = File::stat(m_path);
         if (st.fail()) return st;
 
         return st.value.size;
@@ -820,15 +888,15 @@ OpRes File::insert(const ByteBuffer& bytes)
 
     // overwrite this file with the temporary one
 #ifdef WINDOWS_SYSTEM
-    std::string tmpPath = tmp.completePath().toStr();
-    std::string dstPath = completePath().toStr();
+    Path tmpPath = tmp.completePath();
+    Path dstPath = completePath();
     tmp.close();
     close();
     condret(File::move(tmpPath, dstPath));
 
     condret(open());
 #else
-    condret(File::move(tmp.completePath().toStr(), completePath().toStr()));
+    condret(File::move(tmp.completePath(), completePath()));
 
     condret(reopen());
 #endif

@@ -67,8 +67,9 @@ namespace
             case DDT_Money:
                 return DBCell((int64_t)0);
             case DDT_Real:
+                return DBCell(0.0f);
             case DDT_Double:
-                return DBCell((long double)0.0);
+                return DBCell(0.0);
             case DDT_Boolean:
                 return DBCell(false);
             case DDT_Bit:
@@ -147,6 +148,11 @@ DBCell::DBCell(float value)
 {
 }
 //=============================================================================
+DBCell::DBCell(double value)
+    : m_value((BYTE*)&value, sizeof(value))
+{
+}
+//=============================================================================
 DBCell::DBCell(long double value)
     : m_value((BYTE*)&value, sizeof(value))
 {
@@ -183,6 +189,8 @@ void DBCell::set(const std::string& str) { m_value = str; }
 void DBCell::set(const char* str) { m_value = str; }
 //=============================================================================
 void DBCell::set(int64_t value) { m_value.assignFrom((BYTE*)&value, sizeof(value)); }
+//=============================================================================
+void DBCell::set(double value) { m_value.assignFrom((BYTE*)&value, sizeof(value)); }
 //=============================================================================
 void DBCell::set(long double value) { m_value.assignFrom((BYTE*)&value, sizeof(value)); }
 //=============================================================================
@@ -324,9 +332,27 @@ int64_t DBCell::toInt() const
 //=============================================================================
 long double DBCell::toReal() const
 {
-    long double ret = 0.0f;
-    m_value.copyTo(&ret, sizeof(ret));
-    return ret;
+    switch (m_value.size())
+    {
+        case sizeof(float):
+        {
+            float v = 0.0f;
+            m_value.copyTo(&v, sizeof(v));
+            return static_cast<long double>(v);
+        }
+        case sizeof(double):
+        {
+            double v = 0.0;
+            m_value.copyTo(&v, sizeof(v));
+            return static_cast<long double>(v);
+        }
+        default:
+        {
+            long double v = 0.0L;
+            m_value.copyTo(&v, sizeof(v));
+            return v;
+        }
+    }
 }
 //=============================================================================
 bool DBCell::toBool() const

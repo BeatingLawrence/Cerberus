@@ -367,6 +367,40 @@ TEST(fileTest, tempFile)
     f.close();
 }
 
+TEST(fileTest, zeroCopyLengthSemantics)
+{
+    {
+        File src("zerocopy_source.txt", FOM_ReadWriteTrunc);
+        ASSERT_TRUE(src.open().ok());
+        ASSERT_TRUE(src.write("abcdef").ok());
+    }
+
+    File src("zerocopy_source.txt", FOM_Read);
+    File dst("zerocopy_dest.txt", FOM_ReadWriteTrunc);
+    ASSERT_TRUE(src.open().ok());
+    ASSERT_TRUE(dst.open().ok());
+
+    ASSERT_TRUE(File::zeroCopy(src, dst, 0).ok());
+    EXPECT_EQ(dst.size().expect().value, 0);
+
+    ASSERT_TRUE(File::zeroCopy(src, dst, 3).ok());
+    EXPECT_EQ(dst.size().expect().value, 3);
+
+    ByteBuffer buf;
+    ASSERT_TRUE(dst.read(buf).ok());
+    EXPECT_STREQ(buf.toString().c_str(), "abc");
+
+    ASSERT_TRUE(File::zeroCopy(src, dst).ok());
+    dst.resetCursor();
+    ASSERT_TRUE(dst.read(buf).ok());
+    EXPECT_STREQ(buf.toString().c_str(), "abcdef");
+
+    src.close();
+    dst.close();
+    File::remove("zerocopy_source.txt");
+    File::remove("zerocopy_dest.txt");
+}
+
 TEST(fileTest, insertion_readUntil)
 {
     {

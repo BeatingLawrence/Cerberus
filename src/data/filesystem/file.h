@@ -35,6 +35,8 @@ namespace crb
 
         OpRes _read_cursor(ByteBuffer& buf, LSIZE span) const;
 
+        static OpRes _zeroCopy(File& src, File& dst, LSIZE len, bool eof);
+
         File(int fd, const Path& path,
              FileOpenMode openMode);  // used internally, set openmode to FOM_ReadWrite
 
@@ -45,7 +47,7 @@ namespace crb
         //      OR_InvalidPath if it's not a regular file
         //      OR_NotFound if it does not exist
         //      OR_SystemFailure if a system error occurred
-        CERBERUS_EXPORT static OpRes existsAsFile(const std::string& path);
+        CERBERUS_EXPORT static OpRes existsAsFile(const Path& path);
 
         // Check wether a directory exists on filesystem
         // This method returns:
@@ -53,13 +55,13 @@ namespace crb
         //      OR_InvalidPath if it's not a directory
         //      OR_NotFound if it does not exist
         //      OR_SystemFailure if a system error occurred
-        CERBERUS_EXPORT static OpRes existsAsDirectory(const std::string& path);
+        CERBERUS_EXPORT static OpRes existsAsDirectory(const Path& path);
 
         // Create a directory
-        CERBERUS_EXPORT static OpRes createDirectory(const std::string& path);
+        CERBERUS_EXPORT static OpRes createDirectory(const Path& path);
 
         // Delete a file or directory. If path is a directory, it must be empty
-        CERBERUS_EXPORT static OpRes remove(const std::string& path);
+        CERBERUS_EXPORT static OpRes remove(const Path& path);
 
         // Erase a span of bytes from a file, starting at offset start for length span.
         // The content after the erased block is shifted forward.
@@ -67,15 +69,15 @@ namespace crb
         CERBERUS_EXPORT OpRes erase(LSIZE start, LSIZE span);
 
         // Move a file referenced by oldPath to newPath
-        CERBERUS_EXPORT static OpRes move(const std::string& oldPath, const std::string& newPath);
+        CERBERUS_EXPORT static OpRes move(const Path& oldPath, const Path& newPath);
 
         // Check if a given directory is empty
         // This method returns OR_OK if the directory is empty,
         // OR_NotEmpty if the directory is not empty, or other values to signal system errors
-        CERBERUS_EXPORT static OpRes isEmptyDirectory(const std::string& path);
+        CERBERUS_EXPORT static OpRes isEmptyDirectory(const Path& path);
 
         // Stat the file or directory
-        CERBERUS_EXPORT static OpResData<FileMetadata> stat(const std::string& path);
+        CERBERUS_EXPORT static OpResData<FileMetadata> stat(const Path& path);
 
         // Open a new temp file and return it.
         // If path is not empty, it must refer to the directory where
@@ -83,12 +85,11 @@ namespace crb
         CERBERUS_EXPORT static File tmpFile(const Path& path = Path(),
                                             FileOpenMode openMode = FOM_ReadWrite);
 
-        // Copy len bytes from src file to the dst file.
-        // If len is equal to 0, the copy will continue till EOF (of any file)
-        // The current cursor state of both files will be used.
-        // Please note that this method uses in-kernel data transfer when possible,
-        // and so it's much more efficient and faster.
-        CERBERUS_EXPORT static OpRes zeroCopy(File& src, File& dst, LSIZE len = 0);
+        // Copy from src file to dst file using their current cursor positions.
+        // Linux uses copy_file_range() with a user-space fallback. Windows and
+        // MACOSX currently use the portable user-space fallback.
+        CERBERUS_EXPORT static OpRes zeroCopy(File& src, File& dst, LSIZE len);
+        CERBERUS_EXPORT static OpRes zeroCopy(File& src, File& dst);
 
         // Create a File instance
         CERBERUS_EXPORT File(FileOpenMode openMode = FOM_Read);

@@ -16,6 +16,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "../../core/cerberusutils.h"
@@ -35,6 +36,7 @@ namespace crb
 
         CERBERUS_EXPORT DBCell(int64_t value);
         CERBERUS_EXPORT DBCell(float value);
+        CERBERUS_EXPORT DBCell(double value);
         CERBERUS_EXPORT DBCell(long double value);
         CERBERUS_EXPORT DBCell(bool value);
         CERBERUS_EXPORT DBCell(const std::vector<bool>& value);
@@ -45,6 +47,7 @@ namespace crb
         void set(const std::string& str);
         void set(const char* str);
         void set(int64_t value);
+        void set(double value);
         void set(long double value);
         void set(bool value);
         void set(const std::vector<bool>& value);
@@ -154,8 +157,10 @@ namespace crb
         void append(uint32_t v) { append(DBCell((int64_t)v)); }
         void append(uint16_t v) { append(DBCell((int64_t)v)); }
         void append(uint8_t v) { append(DBCell((int64_t)v)); }
+        template <typename T, typename = std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>>>
+        void append(T v) { append(DBCell(static_cast<int64_t>(v))); }
         void append(long double v) { append(DBCell(v)); }
-        void append(double v) { append(DBCell((long double)v)); }
+        void append(double v) { append(DBCell(v)); }
         void append(float v) { append(DBCell(v)); }
         void append(bool v) { append(DBCell(v)); }
         void append(const std::string& v) { append(DBCell(v)); }

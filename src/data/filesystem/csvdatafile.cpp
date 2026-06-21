@@ -413,7 +413,7 @@ static OpRes rewriteSegment(File& src, LSIZE start, LSIZE end, const std::string
     tmp.close();
     src.close();
 
-    auto mv = File::move(tmp.path().toStr(), src.path().toStr());
+    auto mv = File::move(tmp.path(), src.path());
     if (mv.fail()) return mv;
 
     src.setOpenMode(FOM_ReadWrite);
