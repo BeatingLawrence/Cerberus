@@ -47,7 +47,7 @@ endif()
                                         Version
                                           ||
 #]]#                                      V
-project(Cerberus LANGUAGES CXX VERSION 2.0.0.1)
+project(Cerberus LANGUAGES CXX VERSION 2.0.10)
 message(STATUS ${CMAKE_PROJECT_VERSION})
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
